@@ -1,0 +1,45 @@
+database:
+  host: "10.10.13.126"
+  port: 5432
+  dbname: "gse_sprint"
+  user: "gse_dev"
+  password: "gse_dev@0123321"
+  schema: "scm"                              # schema chứa bảng (để trống = public)
+  table_name: "output_fast_shipping_distinct"
+  input_column: "receiver_address"
+  ground_truth_column: ""                    # để trống nếu không có ground truth
+  limit: 1000                                 # số dòng lấy để thực nghiệm (null = tất cả)
+
+models:
+  phobert:
+    enabled: true
+    model_name: "vinai/phobert-base"
+    result_column: "normalized_phobert"
+    max_seq_length: 256
+    batch_size: 32
+    device: "auto"                            # auto | cuda | cpu
+
+  siamese_mgte:
+    enabled: true
+    model_name: "Alibaba-NLP/gte-multilingual-base"
+    result_column: "normalized_mgte"
+    batch_size: 32
+    device: "auto"
+
+  llm:
+    enabled: true
+    model_name: "Qwen/Qwen3-4B"
+    result_column: "normalized_llm"
+    use_quantization: true
+    max_new_tokens: 256
+    temperature: 0.3
+    device: "auto"
+
+experiment:
+  standard_addresses_schema: "scm"             # schema của bảng địa chỉ chuẩn
+  standard_addresses_table: "output_fast_shipping_distinct"  # dùng chính bảng này làm corpus
+  standard_addresses_column: "receiver_address"
+  output_report_path: "reports/experiment_report.html"
+  save_csv: true
+  csv_path: "reports/experiment_results.csv"
+  log_level: "INFO"
