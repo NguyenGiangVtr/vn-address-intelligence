@@ -39,8 +39,8 @@ models:
 
 experiment:
   standard_addresses_schema: "scm"             # schema của bảng địa chỉ chuẩn
-  standard_addresses_table: "output_fast_shipping_distinct"  # dùng chính bảng này làm corpus
-  standard_addresses_column: "receiver_address"
+  standard_addresses_table: "address"  # dùng chính bảng này làm corpus
+  standard_addresses_column: "street_address"
   corpus_limit: 200                          # giới hạn corpus để thực nghiệm nhanh (null = tất cả)
   output_report_path: "reports/experiment_report.html"
   save_csv: true
