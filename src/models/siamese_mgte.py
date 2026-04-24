@@ -32,10 +32,14 @@ class SiameseMGTE:
     ):
         self.model_name = model_name
         self.batch_size = batch_size
-        self.device     = "cuda" if (device == "auto" and torch.cuda.is_available()) else device
+        self.device     = "cuda" if (device == "auto" and torch.cuda.is_available()) else ("cpu" if device == "auto" else device)
 
         logger.info("🔄 Loading mGTE: %s (device=%s)", model_name, self.device)
-        self.model = SentenceTransformer(model_name, device=self.device)
+        self.model = SentenceTransformer(
+            model_name, 
+            device=self.device,
+            trust_remote_code=True
+        )
         self.model.eval()
 
         self._corpus: List[str]             = []

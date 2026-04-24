@@ -16,18 +16,28 @@ import torch
 logger = logging.getLogger(__name__)
 
 
-_PROMPT_TEMPLATE = """Bạn là chuyên gia chuẩn hóa địa chỉ Việt Nam.
+_PROMPT_TEMPLATE = """Bạn là chuyên gia về địa chỉ Việt Nam. 
+Nhiệm vụ của bạn là chuẩn hóa địa chỉ thô và trích xuất thành cấu trúc JSON chính xác theo định dạng Google Maps.
 
 Địa chỉ cần chuẩn hóa: {query}
-
-Danh sách địa chỉ ứng viên (chọn hoặc điều chỉnh một trong các ứng viên này):
+Danh sách địa chỉ ứng viên tham khảo:
 {candidates}
 
-Yêu cầu:
-1. Phân tích địa chỉ gốc
-2. Chọn hoặc tạo địa chỉ chuẩn 4 tầng (Số nhà + Đường, Phường/Xã, Quận/Huyện, Tỉnh/Thành phố)
-3. Chỉ trả về 1 dòng theo đúng format:
-KET_QUA: <địa chỉ chuẩn>
+Cấu trúc JSON yêu cầu:
+{{
+  "street_number": "Số nhà chính xác (VD: 268 hoặc 123/45/6)",
+  "route": "Tên đường/phố (không gồm số nhà, VD: Lý Thường Kiệt)",
+  "level_3": "Phường/Xã/Thị trấn",
+  "level_2": "Quận/Huyện/Thành phố thuộc tỉnh",
+  "level_1": "Tỉnh/Thành phố trực thuộc Trung ương",
+  "postal_code": "Mã bưu chính (thường 6 chữ số)",
+  "country": "Việt Nam",
+  "full_address": "Địa chỉ đầy đủ đã chuẩn hóa"
+}}
+
+Lưu ý: 
+- Nếu không có thông tin, hãy để giá trị là null.
+- Chỉ trả về duy nhất một khối JSON, không giải thích thêm.
 """
 
 
@@ -48,7 +58,7 @@ class LLMQwen3:
         self.model_name     = model_name
         self.max_new_tokens = max_new_tokens
         self.temperature    = temperature
-        self.device         = device
+        self.device         = "cuda" if (device == "auto" and torch.cuda.is_available()) else ("cpu" if device == "auto" else device)
 
         logger.info("🔄 Loading Qwen3 LLM: %s ...", model_name)
         try:
@@ -141,18 +151,20 @@ class LLMQwen3:
                 )
             response = self.tokenizer.decode(out[0], skip_special_tokens=True)
 
-            # Parse "KET_QUA: ..."
-            match = re.search(r"KET_QUA\s*:\s*(.+)", response, re.IGNORECASE)
-            if match:
-                addr = match.group(1).strip()
-                # Confidence: similarity với candidate gần nhất
-                conf = max(
-                    SequenceMatcher(None, addr.lower(), c.lower()).ratio()
-                    for c in candidates
-                ) if candidates else 0.5
-                return addr, conf
-            else:
-                return self._rule_fallback(query, candidates)
+            # Trích xuất JSON từ phản hồi
+            import json
+            json_match = re.search(r'\{.*\}', response, re.DOTALL)
+            if json_match:
+                try:
+                    data = json.loads(json_match.group())
+                    addr = data.get("full_address") or "null"
+                    # Gán data vào chính kết quả trả về để pipeline có thể dùng
+                    return data, 0.95
+                except:
+                    pass
+            
+            # Nếu không parse được JSON, dùng rule-based fallback
+            return self._rule_fallback(query, candidates)
 
         except Exception as exc:
             logger.warning("⚠️ LLM inference lỗi: %s", exc)

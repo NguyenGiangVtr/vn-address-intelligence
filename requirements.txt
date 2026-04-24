@@ -3,6 +3,7 @@ torch>=2.0.0
 sentence-transformers>=2.7.0
 transformers>=4.40.0
 FlagEmbedding>=1.2.0
+datasets>=2.18.0
 
 # PhoBERT word segmentation
 pyvi>=0.1.1

@@ -129,6 +129,7 @@ def main(config_path: str, skip_llm: bool = False):
     db_cfg   = cfg["database"]
     exp_cfg  = cfg["experiment"]
     mod_cfg  = cfg["models"]
+    batch_sz = db_cfg.get("db_batch_size", 100)
 
     # 1. Kết nối DB ──────────────────────────────────────────────────────────
     db = DBConnector(db_cfg)
@@ -148,6 +149,7 @@ def main(config_path: str, skip_llm: bool = False):
         table=exp_cfg["standard_addresses_table"],
         col=exp_cfg["standard_addresses_column"],
         schema=exp_cfg.get("standard_addresses_schema", ""),
+        limit=exp_cfg.get("corpus_limit"),
     )
 
     logger.info("Queries: %d | Corpus: %d | Ground-truth: %s",
@@ -166,7 +168,7 @@ def main(config_path: str, skip_llm: bool = False):
         col_pb = mod_cfg["phobert"]["result_column"]
         detail_data[col_pb] = pb_results
 
-        db.save_results(db_cfg["table_name"], col_pb, df["id"].tolist(), pb_results)
+        db.save_results(db_cfg["table_name"], col_pb, df["id"].tolist(), pb_results, batch_size=batch_sz)
 
         if has_gt:
             gts = df["standard_address"].tolist()
@@ -181,7 +183,7 @@ def main(config_path: str, skip_llm: bool = False):
         col_mg = mod_cfg["siamese_mgte"]["result_column"]
         detail_data[col_mg] = mg_results
 
-        db.save_results(db_cfg["table_name"], col_mg, df["id"].tolist(), mg_results)
+        db.save_results(db_cfg["table_name"], col_mg, df["id"].tolist(), mg_results, batch_size=batch_sz)
 
         if has_gt:
             gts = df["standard_address"].tolist()
@@ -200,7 +202,7 @@ def main(config_path: str, skip_llm: bool = False):
         col_llm = mod_cfg["llm"]["result_column"]
         detail_data[col_llm] = llm_results
 
-        db.save_results(db_cfg["table_name"], col_llm, df["id"].tolist(), llm_results)
+        db.save_results(db_cfg["table_name"], col_llm, df["id"].tolist(), llm_results, batch_size=batch_sz)
 
         if has_gt:
             gts = df["standard_address"].tolist()

@@ -1,0 +1,37 @@
+{
+  "STREET_PREFIX": {
+    "đ.": "Đường",
+    "đ": "Đường",
+    "đ. ": "Đường",
+    "đường": "Đường",
+    "ql": "Quốc lộ",
+    "ql.": "Quốc lộ",
+    "tl": "Tỉnh lộ",
+    "tl.": "Tỉnh lộ",
+    "đt": "Đường tỉnh"
+  },
+  "ALLEY_PREFIX": {
+    "h.": "Hẻm",
+    "h": "Hẻm",
+    "ng": "Ngõ",
+    "ng.": "Ngõ",
+    "k.": "Kiệt",
+    "k": "Kiệt",
+    "ngách": "Ngách"
+  },
+  "HOUSE_PREFIX": {
+    "s.": "Số",
+    "số": "Số",
+    "n.": "Nhà",
+    "p.": "Phòng",
+    "p": "Phòng",
+    "lô": "Lô",
+    "căn": "Căn"
+  },
+  "BUILDING_PREFIX": {
+    "cc": "Chung cư",
+    "kđt": "Khu đô thị",
+    "tòa": "Tòa nhà",
+    "tháp": "Tháp"
+  }
+}
