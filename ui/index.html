@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VN Address Intelligence | Dashboard</title>
+    <meta name="description" content="Hệ thống làm giàu và chuẩn hóa dữ liệu địa chỉ thông minh Việt Nam 2025">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="dark-theme">
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo-area">
+                <div class="logo-icon"></div>
+                <h1>VNAI <span>v2.0</span></h1>
+            </div>
+            <nav class="nav-menu">
+                <a href="#overview" class="nav-item active" data-page="overview">
+                    <i class="fa-solid fa-chart-line"></i> Tổng quan
+                </a>
+                <a href="#admin-v2" class="nav-item" data-page="admin-v2">
+                    <i class="fa-solid fa-building-columns"></i> Hành chính V2
+                </a>
+                <a href="#osm" class="nav-item" data-page="osm">
+                    <i class="fa-solid fa-map-location-dot"></i> OSM Data Hub
+                </a>
+                <a href="#ai-hub" class="nav-item" data-page="ai-hub">
+                    <i class="fa-solid fa-brain"></i> AI Training
+                </a>
+                <a href="#settings" class="nav-item" data-page="settings">
+                    <i class="fa-solid fa-gears"></i> Cấu hình
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="status-indicator">
+                    <span class="dot pulse"></span>
+                    Crawl 5M: Active
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="top-header">
+                <div class="search-bar">
+                    <input type="text" placeholder="Tìm kiếm địa chỉ, nghị định, hoặc đơn vị hành chính...">
+                </div>
+                <div class="user-profile">
+                    <div class="notifications">
+                        <i class="fa-regular fa-bell"></i>
+                    </div>
+                    <div class="avatar">G</div>
+                </div>
+            </header>
+
+            <section id="page-content">
+                <!-- Overview Page (Default) -->
+                <div class="page active" id="overview">
+                    <div class="welcome-header">
+                        <h2>Chào mừng, <span>Giang Nguyen</span></h2>
+                        <p>Hệ thống hiện đang quản lý 1.2M+ bản ghi địa lý.</p>
+                    </div>
+
+                    <div class="stats-grid">
+                        <div class="stat-card glass">
+                            <div class="stat-info">
+                                <h3>Master Data</h3>
+                                <div class="value" id="stat-master-total">...</div>
+                                <p>Đơn vị hành chính</p>
+                            </div>
+                            <div class="stat-chart">
+                                <canvas id="chart-master"></canvas>
+                            </div>
+                        </div>
+                        <div class="stat-card glass primary">
+                            <div class="stat-info">
+                                <h3>OSM Entities</h3>
+                                <div class="value" id="stat-osm-total">...</div>
+                                <p>Thực thể bản đồ</p>
+                            </div>
+                            <div class="stat-growth">+12.5k / 3m</div>
+                        </div>
+                        <div class="stat-card glass">
+                            <div class="stat-info">
+                                <h3>Training Hub</h3>
+                                <div class="value" id="stat-ai-total">...</div>
+                                <p>Mẫu gán nhãn BIO</p>
+                            </div>
+                        </div>
+                        <div class="stat-card glass">
+                            <div class="stat-info">
+                                <h3>Queue</h3>
+                                <div class="value" id="stat-queue-total">...</div>
+                                <p>Hàng đợi chuẩn hóa</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="content-row">
+                        <div class="data-table-container glass">
+                            <h3>Tiến độ Làm giàu dữ liệu GSO</h3>
+                            <div class="table-scroll">
+                                <table id="enrichment-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Tỉnh/Thành</th>
+                                            <th>Trạng thái</th>
+                                            <th>Nghị định</th>
+                                            <th>Diện tích</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <!-- Data injected via JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="activity-feed glass">
+                            <h3>Hoạt động gần đây</h3>
+                            <ul class="activity-list" id="recent-activity">
+                                <li>
+                                    <span class="time">Vừa xong</span>
+                                    <p>Đã nạp 1.245 entities từ Ba Đình, Hà Nội</p>
+                                </li>
+                                <li>
+                                    <span class="time">10 phút trước</span>
+                                    <p>Hoàn tất Ward Mapping cho Tỉnh Nam Định</p>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Admin V2 Page -->
+                <div class="page" id="admin-v2">
+                    <div class="welcome-header">
+                        <h2>🏛️ Quản lý Đơn vị Hành chính 2025</h2>
+                        <p>Danh sách các đơn vị mới cập nhật theo Nghị quyết Chính phủ.</p>
+                    </div>
+                    <div class="data-table-container glass full-width">
+                         <table id="full-admin-table">
+                            <thead>
+                                <tr><th>ID</th><th>Tên Tỉnh</th><th>Mã GSO</th><th>Nghị quyết</th><th>Trạng thái</th></tr>
+                            </thead>
+                            <tbody></tbody>
+                         </table>
+                    </div>
+                </div>
+
+                <!-- OSM Hub Page -->
+                <div class="page" id="osm">
+                    <div class="welcome-header">
+                        <h2>🗺️ OpenStreetMap Data Hub</h2>
+                        <p>Tiến trình thu thập 5,000,000 bản ghi thực địa.</p>
+                    </div>
+                    <div class="stats-grid">
+                         <div class="stat-card glass"><div class="stat-info"><h3>Tổng Raw Entities</h3><div class="value" id="osm-raw-val">...</div></div></div>
+                         <div class="stat-card glass"><div class="stat-info"><h3>Đường phố</h3><div class="value" id="osm-street-val">...</div></div></div>
+                         <div class="stat-card glass"><div class="stat-info"><h3>Tòa nhà</h3><div class="value" id="osm-build-val">...</div></div></div>
+                    </div>
+                </div>
+
+                <!-- AI Training Page -->
+                <div class="page" id="ai-hub">
+                    <div class="welcome-header">
+                        <h2>🧠 AI Training & NER Hub</h2>
+                        <p>Quản lý tập dữ liệu huấn luyện PhoBERT và MGTE.</p>
+                    </div>
+                    <div class="content-row">
+                        <div class="data-table-container glass">
+                            <h3>Mẫu dữ liệu NER (Synthetic)</h3>
+                            <div class="table-scroll">
+                                <table id="ner-samples-table">
+                                    <thead>
+                                        <tr><th>Input Text</th><th>BIO Tags</th><th>Confidence</th></tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="activity-feed glass">
+                            <h3>Model Status</h3>
+                            <div class="model-status">
+                                <div class="model-item">
+                                    <strong>PhoBERT NER:</strong> <span class="badge done">Ready</span>
+                                </div>
+                                <div class="model-item">
+                                    <strong>MGTE Embedding:</strong> <span class="badge pending">Tuning</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>

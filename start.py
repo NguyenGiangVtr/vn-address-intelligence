@@ -3,10 +3,13 @@ import os
 
 # Thêm thư mục dự án vào PYTHONPATH
 project_root = os.path.dirname(os.path.abspath(__file__))
-vnai_dir = os.path.join(project_root, "vn_address_intelligence")
-if vnai_dir not in sys.path:
-    sys.path.append(vnai_dir)
+if project_root not in sys.path:
+    sys.path.append(project_root)
 
 if __name__ == "__main__":
-    from vn_address_intelligence.main import cli
-    cli()
+    if len(sys.argv) > 1 and sys.argv[1] == "serve-ui":
+        import uvicorn
+        uvicorn.run("app.api.server:app", host="0.0.0.0", port=8080, reload=True)
+    else:
+        from app.main import cli
+        cli()

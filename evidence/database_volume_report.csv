@@ -1,0 +1,8 @@
+﻿Table,Description,Count
+mat.province,Provinces,97
+mat.district,Districts,767
+mat.ward,Wards,15563
+osm.raw_entities,OSM Raw Entities,1352703
+osm.streets,OSM Streets,119435
+ath.training_datasets,Training Samples,25130
+prq.address_cleansing_queue,Processing Queue,505094

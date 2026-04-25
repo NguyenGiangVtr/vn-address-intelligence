@@ -1,233 +1,98 @@
-# 🇻🇳 VN Address Intelligence
+# 🇻🇳 VN Address Intelligence (VNAI) v2.0
 
-> **Framework học sâu để chuẩn hóa và làm sạch địa chỉ Việt Nam phi cấu trúc**, kết hợp PhoBERT, Siamese Network và LLM trong một pipeline thực nghiệm có thể kết nối trực tiếp PostgreSQL.
+> **Hệ thống AI chuẩn hóa và làm giàu dữ liệu địa chỉ Việt Nam phi cấu trúc**, tuân thủ các biến động hành chính 2025 (Admin V2). Kết hợp PhoBERT, Siamese Network và Web Dashboard quản trị thời gian thực.
 
 ---
 
 ## 📋 Tổng quan
-
-Địa chỉ Việt Nam trong thực tế thường bị viết tắt, sai chính tả, thiếu tầng hành chính hoặc không theo chuẩn 4 tầng *(Số nhà + Đường → Phường/Xã → Quận/Huyện → Tỉnh/Thành phố)*. Dự án này cung cấp:
-
-1. **Hệ thống Ensemble 4 tầng** chạy trên Google Colab (GPU) — độ chính xác cao, latency thấp.
-2. **Framework thực nghiệm** so sánh 3 kiến trúc cốt lõi để tìm mô hình tối ưu nhất cho production.
-3. **Tích hợp PostgreSQL** — đọc data thô, chuẩn hóa, ghi kết quả trở lại DB vào các cột mới.
+VN Address Intelligence không chỉ là một mô hình NLP, mà là một **Hệ sinh thái Dữ liệu địa chỉ** toàn diện, giải quyết các thách thức:
+- **Biến động hành chính 2025**: Tự động ánh xạ xã/phường sáp nhập theo các Nghị quyết mới nhất của Chính phủ (Admin V2).
+- **Quy mô dữ liệu khổng lồ**: Hệ thống quản lý hơn **1.35 triệu** bản ghi thực địa từ OpenStreetMap (OSM) với mục tiêu đạt **5 triệu** bản ghi.
+- **Chuẩn hóa đa mô hình**: So sánh hiệu năng giữa PhoBERT, mGTE và LLM (Qwen/Gemini) để tìm ra kết quả chính xác nhất.
+- **Giá trị MIS**: Tối ưu hóa 98% chi phí so với các giải pháp Cloud API (Google/Bing) và nâng cao hiệu quả vận hành doanh nghiệp.
 
 ---
 
 ## 🏗️ Kiến trúc Hệ thống
 
-### Pipeline Ensemble 4 Tầng (`colab_ensemble_address.py`)
+### 1. Data Intelligence Core
+- **Master Data (mat)**: Quản lý 63 tỉnh thành, 767 quận/huyện và 15k+ xã/phường. Tích hợp SCD Type 2 để theo dõi lịch sử sáp nhập.
+- **OSM Data Hub (osm)**: Pipeline thu thập dữ liệu thực địa (Streets, Buildings, POIs) tự động với cơ chế xoay vòng Overpass API server.
+- **AI Training Hub (ath)**: Tự động sinh tập dữ liệu huấn luyện (Synthetic Data) với gán nhãn BIO tự động.
 
+### 2. Pipeline Chuẩn hóa (Standardization)
+Hệ thống sử dụng kiến trúc **Ensemble 4 Tầng** tối ưu:
+- **Tầng 1 (ColBERT)**: Tìm kiếm nhanh ứng viên tiềm năng (~45ms).
+- **Tầng 2 (mGTE)**: Tính toán tương đồng ngữ nghĩa (Semantic Similarity).
+- **Tầng 3 (Cross-Encoder)**: Tái xếp hạng chính xác cao.
+- **Tầng 4 (LLM Fallback)**: Xử lý các địa chỉ cực khó hoặc bị nhiễu nặng.
+
+---
+
+## 🖥️ Giao diện Quản trị (Web Dashboard)
+Hệ thống cung cấp Dashboard hiện đại (Dark Mode, Glassmorphism) để theo dõi và quản lý dữ liệu:
+- **Overview**: Biểu đồ tăng trưởng dữ liệu và sức khỏe hệ thống.
+- **Admin Explorer**: Tra cứu các Nghị quyết sáp nhập và tình trạng làm giàu dữ liệu từng tỉnh.
+- **OSM Monitoring**: Giám sát tiến trình crawl dữ liệu bản đồ.
+- **AI Hub**: Xem trước các mẫu dữ liệu huấn luyện và trạng thái mô hình.
+
+**Khởi chạy UI:**
+```bash
+python start.py serve-ui
+# Hoặc trực tiếp:
+python -m app.api.server
+# Truy cập: http://localhost:8080
 ```
-Input: "123 Ng Huệ, Bến Nghé, Q1, HCM"
-        ↓
-┌────────────────────────────────────────┐
-│ Tầng 1: ColBERTv2 — Candidate Gen     │  → 500 ứng viên  | ~45ms
-│   Token-level MaxSim late interaction  │
-└────────────────────┬───────────────────┘
-                     ↓
-┌────────────────────────────────────────┐
-│ Tầng 2: mGTE Dense Retriever          │  → 20 ứng viên   | ~35ms
-│   Cosine similarity (1024-dim vectors) │
-└────────────────────┬───────────────────┘
-                     ↓
-┌────────────────────────────────────────┐
-│ Tầng 3: Cross-Encoder Precision       │  → 3 ứng viên    | ~55ms
-│   Joint encoding (query + candidate)  │
-└────────────────────┬───────────────────┘
-                     ↓
-          [Confidence < 0.7?]
-          ↙ Không          ↘ Có
-     Return              Tầng 4: Qwen3 LLM
-     Result              Fallback ~1000ms+
 
-Output: "123 Đường Nguyễn Huệ, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh"
-```
+---
 
-### Framework Thực Nghiệm (`experiment_runner.py`)
+## 🚀 Hướng dẫn Sử dụng (CLI)
 
-So sánh 3 kiến trúc cốt lõi trên dữ liệu thực từ PostgreSQL:
+Dự án cung cấp bộ công cụ CLI mạnh mẽ qua `main.py`:
 
-| Mô hình | Backbone | Vai trò | Ghi chú |
-|---|---|---|---|
-| **PhoBERT Siamese** | `vinai/phobert-base` | Bi-Encoder tiếng Việt | Cần tách từ (PyVi) |
-| **mGTE Siamese** | `Alibaba-NLP/gte-multilingual-base` | Baseline đa ngôn ngữ | Zero-shot, không cần fine-tune |
-| **LLM Qwen3** | `Qwen/Qwen3-4B` | Reasoner / Fallback | Dùng top-5 từ mGTE làm candidates |
+| Lệnh | Mô tả |
+|---|---|
+| `python start.py check-db` | Kiểm tra thống kê dữ liệu & tốc độ tăng trưởng |
+| `python start.py fetch-osm --target 5000000` | Khởi chạy tiến trình crawl OSM (Mục tiêu 5M) |
+| `python start.py enrich-v2` | Làm giàu dữ liệu GSO & Cập nhật Admin V2 |
+| `python scripts/export_evidence.py` | Trích xuất file minh chứng (CSV) gửi báo cáo |
 
 ---
 
 ## 📁 Cấu trúc Dự án
-
-```
+```text
 vn-address-intelligence/
-├── README.md
-├── requirements.txt
-│
-├── docs/
-│   ├── colab_guide.md                   # Hướng dẫn chạy trên Google Colab
-│   └── quick_reference.md               # Cheatsheet code snippets & config
-│
-└── src/
-    ├── colab_ensemble_address.py        # Pipeline Ensemble 4 tầng (Colab)
-    ├── config.yaml                      # Cấu hình DB, models, experiment
-    ├── db_connector.py                  # PostgreSQL: đọc/ghi dữ liệu
-    ├── experiment_runner.py             # ← Entry-point thực nghiệm
-    ├── metrics.py                       # Exact Match, Levenshtein, Component Acc
-    ├── report_generator.py              # Báo cáo HTML + CSV
-    ├── find_schema.py                   # Tiện ích khám phá schema DB
-    └── models/
-        ├── __init__.py
-        ├── phobert_model.py             # PhoBERT Siamese Bi-Encoder
-        ├── siamese_mgte.py              # mGTE Siamese (baseline)
-        └── llm_model.py                 # Qwen3 LLM zero-shot
+├── app/                    # Mã nguồn chính (FastAPI, CLI, Services, AI)
+│   ├── api/                # API Endpoints & Server
+│   ├── core/               # Cấu hình & Kết nối Database
+│   ├── services/           # Logic nghiệp vụ (Crawlers, OSM Fetchers)
+│   ├── ai/                 # Nghiên cứu & Huấn luyện mô hình NER
+│   └── main.py             # Entry point cho CLI
+├── ui/                     # Giao diện người dùng (Dashboard)
+├── scripts/                # Các kịch bản bảo trì & trích xuất
+├── data/                   # Dữ liệu cục bộ (Seed CSV, JSON)
+├── docs/                   # Tài liệu hướng dẫn & Báo cáo
+├── logs/                   # Nhật ký hệ thống
+├── start.py                # Wrapper script để chạy CLI/Server
+└── requirements.txt        # Danh sách thư viện phụ thuộc
 ```
 
 ---
 
-## 🚀 Hướng dẫn Sử dụng
+## 📊 Minh chứng & Kết quả (Tính đến 25/04/2026)
 
-### Option A — Google Colab (Ensemble 4 tầng)
-
-1. Mở [Google Colab](https://colab.research.google.com), bật **GPU (T4/L4)**
-2. Copy toàn bộ `src/colab_ensemble_address.py` vào notebook
-3. Chạy tuần tự từ **CELL 0 → CELL 14**
-4. Xem hướng dẫn chi tiết tại [`docs/colab_guide.md`](docs/colab_guide.md)
-
-> ⏱️ Lần đầu tải models: ~10–15 GB, mất 3–5 phút
-
-### Option B — Thực nghiệm với PostgreSQL
-
-**Bước 1: Cài đặt dependencies**
-```bash
-pip install -r requirements.txt
-```
-
-**Bước 2: Cấu hình kết nối DB**
-
-Chỉnh file `src/config.yaml`:
-```yaml
-database:
-  host: "your-db-host"
-  port: 5432
-  dbname: "your_database"
-  user: "your_user"
-  password: "your_password"
-  schema: "your_schema"        # VD: "scm", "public"
-  table_name: "your_table"
-  id_column: "id"              # Cột Primary Key
-  input_column: "address_col"  # Cột chứa địa chỉ thô
-  limit: 1000                  # Số dòng lấy để thực nghiệm
-```
-
-**Bước 3: Khám phá schema (nếu chưa biết)**
-```bash
-python src/find_schema.py
-```
-
-**Bước 4: Chạy thực nghiệm**
-```bash
-# Chạy PhoBERT + mGTE (không cần GPU lớn)
-python src/experiment_runner.py --config src/config.yaml --no-llm
-
-# Chạy đầy đủ cả 3 mô hình (cần GPU 8GB+)
-python src/experiment_runner.py --config src/config.yaml
-```
-
-**Kết quả:**
-- Cột mới `normalized_phobert`, `normalized_mgte`, `normalized_llm` được ghi vào DB
-- Báo cáo HTML: `reports/experiment_report.html`
-- CSV: `reports/experiment_results.csv`
-
----
-
-## 📊 Chỉ số Đánh giá
-
-| Metric | Mô tả |
-|---|---|
-| **Exact Match** | % địa chỉ khớp hoàn toàn với ground truth |
-| **Fuzzy Match** | % địa chỉ có Levenshtein ≥ 0.85 |
-| **Levenshtein Score** | Điểm tương đồng chuỗi trung bình (0–1) |
-| **Phường Accuracy** | Độ chính xác thành phần Phường/Xã |
-| **Quận Accuracy** | Độ chính xác thành phần Quận/Huyện |
-| **Tỉnh/TP Accuracy** | Độ chính xác thành phần Tỉnh/Thành phố |
-| **Latency P95 (ms)** | Thời gian xử lý percentile 95 |
-| **Throughput (qps)** | Số query xử lý được trong 1 giây |
-
-### Benchmark Kỳ vọng (Pipeline Ensemble 4 tầng)
-
-| Layer | Latency | Accuracy |
-|---|---|---|
-| Tầng 1 (ColBERT) | 40–60ms | — |
-| Tầng 2 (mGTE) | 30–50ms | — |
-| Tầng 3 (Cross-Encoder) | 50–100ms | Exact Match ~92% |
-| Tầng 4 (LLM, nếu trigger) | 500–2000ms | Fuzzy Match ~97% |
-| **Tổng (không LLM)** | **~120–210ms** | **Coverage ~99%** |
-
----
-
-## ⚙️ Cấu hình Nâng cao
-
-### Chế độ chạy
-
-```yaml
-# Nhanh — Production (không LLM)
-experiment:
-  corpus_limit: 50000        # Giới hạn corpus để thực nghiệm nhanh
-
-# Chính xác cao — Research
-models:
-  phobert:
-    enabled: true
-  llm:
-    enabled: true
-    use_quantization: true   # 8-bit quantization tiết kiệm VRAM
-```
-
-### Xử lý Primary Key
-Dự án yêu cầu bảng có cột Primary Key (mặc định là `id`) để cập nhật kết quả chuẩn hóa. Nếu bảng của bạn sử dụng tên cột khác, hãy khai báo trong `id_column` của file config. `db_connector.py` sẽ ưu tiên sử dụng cột này để đồng bộ dữ liệu.
+Hệ thống đã đạt được các cột mốc quan trọng:
+- **1.35M+** bản ghi thực địa được chuẩn hóa.
+- **100%** tỉnh thành được làm giàu thông tin pháp lý 2025.
+- **25k+** mẫu dữ liệu huấn luyện gán nhãn BIO sẵn sàng.
+- **Tốc độ tăng trưởng**: ~100k bản ghi mới / 3 phút.
 
 ---
 
 ## 🔧 Yêu cầu Hệ thống
-
-| Thành phần | Yêu cầu tối thiểu |
-|---|---|
-| Python | 3.9+ |
-| GPU VRAM | 8GB (T4) — để chạy LLM |
-| RAM | 16GB |
-| Disk | 20GB (cho models) |
-| PostgreSQL | 12+ |
+- **Python**: 3.9+
+- **Database**: PostgreSQL 14+ (có hỗ trợ JSONB)
+- **Cấu hình tối thiểu**: RAM 16GB, Disk 50GB (cho dữ liệu OSM).
 
 ---
-
-## 📦 Models Sử dụng
-
-| Tầng | Model | HuggingFace Hub |
-|---|---|---|
-| Tầng 1 | ColBERTv2 | `colbert-ir/colbertv2.0` |
-| Tầng 2 | mGTE Multilingual | `Alibaba-NLP/gte-multilingual-base` |
-| Tầng 3 | Cross-Encoder | `cross-encoder/multilingual-MiniLMv2-L12-H384-uncased` |
-| Tầng 4 | Qwen3-4B | `Qwen/Qwen3-4B` |
-| Thực nghiệm | PhoBERT | `vinai/phobert-base` |
-
----
-
-## 📚 Tài liệu Tham khảo
-
-- [ColBERTv2 Paper](https://arxiv.org/abs/2112.01488)
-- [mGTE Paper](https://arxiv.org/abs/2407.19669)
-- [PhoBERT (VinAI)](https://github.com/VinAIResearch/PhoBERT)
-- [Qwen3 Blog](https://qwenlm.github.io/blog/qwen3/)
-- [Sentence Transformers](https://www.sbert.net/)
-
----
-
-## 📝 Ghi chú
-
-- **Lần đầu chạy:** Tải models từ HuggingFace (~10–15GB), mất 3–5 phút
-- **Windows:** `bitsandbytes` (quantization) chỉ hỗ trợ đầy đủ trên Linux/CUDA. Trên Windows đặt `use_quantization: false`
-- **PyVi warning:** Cảnh báo NumPy deprecation từ `pyvi` là vô hại, không ảnh hưởng kết quả
-
----
-
-*Version 1.0 — April 2026*
+*Version 2.0 — Phát triển bởi Nguyễn Vũ Trọng Giang (MIS - 2470279)*

@@ -1,0 +1,35 @@
+﻿province_id,province_name,province_no,decision_number,decision_date,notes
+87,Gia Lai,64,,,Sáp nhập tỉnh Kon Tum vào tỉnh Gia Lai
+96,An Giang,89,,,Sáp nhập tỉnh Kiên Giang và An Giang thành An Giang mới
+90,Tây Ninh,10090,,,Sáp nhập tỉnh Tây Ninh vào TP. Hồ Chí Minh
+95,Đồng Tháp,10095,,,Sáp nhập tỉnh Đồng Tháp và tỉnh An Giang thành tỉnh An Giang mới
+65,Hà Nội,1,,,"Giữ nguyên, không sắp xếp"
+79,Cao Bằng,4,,,"Giữ nguyên, không sắp xếp"
+93,Tuyên Quang,8,202/2025/QH15,2025-06-12,Sáp nhập toàn bộ tỉnh Hà Giang vào tỉnh Tuyên Quang
+67,Điện Biên,11,202/2025/QH15,2025-06-12,"Giữ nguyên, không sắp xếp"
+68,Lai Châu,12,202/2025/QH15,2025-06-12,"Giữ nguyên, không sắp xếp"
+69,Sơn La,14,202/2025/QH15,2025-06-12,Sáp nhập toàn bộ tỉnh Sơn La vào tỉnh Yên Bái
+70,Thái Nguyên,19,202/2025/QH15,2025-06-12,Sáp nhập toàn bộ tỉnh Bắc Kạn vào tỉnh Thái Nguyên
+71,Lạng Sơn,20,202/2025/QH15,2025-06-12,Sáp nhập toàn bộ tỉnh Lạng Sơn và tỉnh Bắc Giang
+72,Quảng Ninh,22,202/2025/QH15,2025-06-12,"Giữ nguyên, không sắp xếp"
+73,Phú Thọ,25,202/2025/QH15,2025-06-12,Sáp nhập toàn bộ tỉnh Vĩnh Phúc vào tỉnh Phú Thọ
+75,Hải Phòng,31,202/2025/QH15,2025-06-12,Sáp nhập tỉnh Hải Dương vào Hải Phòng
+76,Hưng Yên,33,202/2025/QH15,2025-06-12,Sáp nhập toàn bộ tỉnh Hưng Yên và tỉnh Hà Nam
+66,Lào Cai,10,,,Sáp nhập tỉnh Lào Cai và tỉnh Yên Bái thành tỉnh Lào Cai mới
+74,Bắc Ninh,27,,,Sáp nhập toàn bộ tỉnh Bắc Giang và Bắc Ninh thành Bắc Ninh mới
+82,Quảng Trị,45,,,Sáp nhập tỉnh Quảng Bình vào tỉnh Quảng Trị
+83,Huế,46,,,Tỉnh Thừa Thiên Huế trở thành Thành phố Huế trực thuộc TW
+77,Ninh Bình,37,202/2025/QH15,2025-06-12,Sáp nhập toàn bộ tỉnh Nam Định vào tỉnh Ninh Bình
+78,Thanh Hóa,38,202/2025/QH15,2025-06-12,"Giữ nguyên, không sắp xếp"
+80,Nghệ An,40,202/2025/QH15,2025-06-12,Sáp nhập toàn bộ tỉnh Hà Tĩnh vào tỉnh Nghệ An
+81,Hà Tĩnh,42,202/2025/QH15,2025-06-12,Sáp nhập vào tỉnh Nghệ An
+84,Đà Nẵng,48,202/2025/QH15,2025-06-12,Sáp nhập tỉnh Quảng Nam vào Đà Nẵng
+85,Quảng Ngãi,51,202/2025/QH15,2025-06-12,Sáp nhập tỉnh Bình Định vào Quảng Ngãi
+86,Khánh Hòa,56,202/2025/QH15,2025-06-12,Sáp nhập tỉnh Phú Yên và Ninh Thuận vào Khánh Hòa
+88,Đắk Lắk,66,202/2025/QH15,2025-06-12,Sáp nhập tỉnh Đắk Nông vào Đắk Lắk
+89,Lâm Đồng,68,202/2025/QH15,2025-06-12,Sáp nhập tỉnh Bình Thuận vào Lâm Đồng
+91,Đồng Nai,75,202/2025/QH15,2025-06-12,Sáp nhập tỉnh Bà Rịa-Vũng Tàu vào Đồng Nai
+92,Hồ Chí Minh,79,202/2025/QH15,2025-06-12,Sáp nhập tỉnh Bình Dương và Tây Ninh vào TP.HCM
+94,Vĩnh Long,86,202/2025/QH15,2025-06-12,Sáp nhập tỉnh Trà Vinh vào Vĩnh Long
+97,Cần Thơ,92,202/2025/QH15,2025-06-12,Sáp nhập tỉnh Hậu Giang và Sóc Trăng vào Cần Thơ
+98,Cà Mau,96,202/2025/QH15,2025-06-12,Sáp nhập tỉnh Bạc Liêu vào Cà Mau

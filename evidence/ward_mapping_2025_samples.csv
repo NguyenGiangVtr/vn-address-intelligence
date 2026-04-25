@@ -1,0 +1,101 @@
+﻿ward_mapping_id,old_ward,new_ward,relationship_type,updated_note
+1,,,,Kiên Giang (58) + An Giang (57) → An Giang (96)
+2,,,,Kiên Giang (58) + An Giang (57) → An Giang (96)
+3,,,,Bắc Giang (15) + Bắc Ninh (18) → Bắc Ninh (74)
+4,,,,Bắc Giang (15) + Bắc Ninh (18) → Bắc Ninh (74)
+5,,,,Bạc Liêu (62) + Cà Mau (63) → Cà Mau (98)
+6,,,,Bạc Liêu (62) + Cà Mau (63) → Cà Mau (98)
+7,,,,Cao Bằng → Cao Bằng (79)
+8,,,,Sóc Trăng (61) + Hậu Giang (60) + Cần Thơ (59) → Cần Thơ (97)
+9,,,,Sóc Trăng (61) + Hậu Giang (60) + Cần Thơ (59) → Cần Thơ (97)
+10,,,,Sóc Trăng (61) + Hậu Giang (60) + Cần Thơ (59) → Cần Thơ (97)
+11,,,,Quảng Nam (33) + Đà Nẵng (32) → Đà Nẵng (84)
+12,,,,Quảng Nam (33) + Đà Nẵng (32) → Đà Nẵng (84)
+13,,,,Phú Yên (36) + Đắk Lắk (42) → Đắk Lắk (88)
+14,,,,Phú Yên (36) + Đắk Lắk (42) → Đắk Lắk (88)
+15,,,,Điện Biên (7) → Điện Biên (67)
+16,,,,Bình Phước (45) + Đồng Nai (48) → Đồng Nai (91)
+17,,,,Bình Phước (45) + Đồng Nai (48) → Đồng Nai (91)
+18,,,,Tiền Giang (52) + Đồng Tháp (56) → Đồng Tháp (95)
+19,,,,Tiền Giang (52) + Đồng Tháp (56) → Đồng Tháp (95)
+20,,,,Gia Lai (41) + Bình Định (35) → Gia Lai (87)
+21,,,,Gia Lai (41) + Bình Định (35) → Gia Lai (87)
+22,,,,Hà Nội (1) → Hà Nội (65)
+23,,,,Hà Tĩnh (28) → Hà Tĩnh (81)
+24,,,,Hải Dương (19) + Hải Phòng (20) → Hải Phòng (75)
+25,,,,Hải Dương (19) + Hải Phòng (20) → Hải Phòng (75)
+26,,,,Thừa Thiên Huế (31) → Huế (83)
+27,,,2.0,Bình Dương (47) + TPHCM (50) + Bà Rịa - Vũng Tàu (49) → Hồ Chí Minh (92)
+28,,,2.0,Bình Dương (47) + TPHCM (50) + Bà Rịa - Vũng Tàu (49) → Hồ Chí Minh (92)
+29,,,2.0,Bình Dương (47) + TPHCM (50) + Bà Rịa - Vũng Tàu (49) → Hồ Chí Minh (92)
+30,,,,Thái Bình (22) + Hưng Yên (21) → Hưng Yên (76)
+31,,,,Thái Bình (22) + Hưng Yên (21) → Hưng Yên (76)
+32,,,,Khánh Hòa (37) + Ninh Thuận (38) → Khánh Hòa (86)
+33,,,,Khánh Hòa (37) + Ninh Thuận (38) → Khánh Hòa (86)
+34,,,,Lai Châu (8) → Lai Châu (68)
+35,,,,Đắk Nông (43) + Lâm Đồng (44) + Bình Thuận (39) → Lâm Đồng (89)
+36,,,,Đắk Nông (43) + Lâm Đồng (44) + Bình Thuận (39) → Lâm Đồng (89)
+37,,,,Đắk Nông (43) + Lâm Đồng (44) + Bình Thuận (39) → Lâm Đồng (89)
+38,,,,Lạng Sơn (13) → Lạng Sơn (71)
+39,,,,Lào Cai (6) + Yên Bái (10) → Lào Cai (66)
+40,,,,Lào Cai (6) + Yên Bái (10) → Lào Cai (66)
+41,,,,Nghệ An (27) → Nghệ An (80)
+42,,,,Hà Nam (23) + Ninh Bình (25) + Nam Định (24) → Ninh Bình (77)
+43,,,,Hà Nam (23) + Ninh Bình (25) + Nam Định (24) → Ninh Bình (77)
+44,,,,Hà Nam (23) + Ninh Bình (25) + Nam Định (24) → Ninh Bình (77)
+45,,,,Hòa Bình (11) + Vĩnh Phúc (17) + Phú Thọ (16) → Phú Thọ (73)
+46,,,,Hòa Bình (11) + Vĩnh Phúc (17) + Phú Thọ (16) → Phú Thọ (73)
+47,,,,Hòa Bình (11) + Vĩnh Phúc (17) + Phú Thọ (16) → Phú Thọ (73)
+48,,,,Quảng Ngãi (34) + Kon Tum (40) → Quảng Ngãi (85)
+49,,,,Quảng Ngãi (34) + Kon Tum (40) → Quảng Ngãi (85)
+50,,,,Quảng Ninh → Quảng Ninh (72)
+51,,,,Quảng Bình (29) + Quảng Trị (30) → Quảng Trị (82)
+52,,,,Quảng Bình (29) + Quảng Trị (30) → Quảng Trị (82)
+53,,,,Sơn La (9) → Sơn La (69)
+54,,,,Long An (51) + Tây Ninh (46) → Tây Ninh (90)
+55,,,,Long An (51) + Tây Ninh (46) → Tây Ninh (90)
+56,,,,Bắc Kạn (4) + Thái Nguyên (12) → Thái Nguyên (70)
+57,,,,Bắc Kạn (4) + Thái Nguyên (12) → Thái Nguyên (70)
+58,,,,Thanh Hóa (26) → Thanh Hóa (78)
+59,,,,Bến Tre (53) + Vĩnh Long (55) + Trà Vinh (54) → Vĩnh Long (94)
+60,,,,Bến Tre (53) + Vĩnh Long (55) + Trà Vinh (54) → Vĩnh Long (94)
+61,,,,Bến Tre (53) + Vĩnh Long (55) + Trà Vinh (54) → Vĩnh Long (94)
+62,,,,Hà Giang (2) + Tuyên Quang (5) → Tuyên Quang (93)
+63,,,,Hà Giang (2) + Tuyên Quang (5) → Tuyên Quang (93)
+64,Điện Biên,Hoàn Kiếm,2.0,"1. Sắp xếp toàn bộ diện tích tự nhiên, quy mô dân số của các phường Hàng Bạc, Hàng Bồ, Hàng Buồm, Hàng Đào, Hàng Gai, Hàng Mã, Lý Thái Tổ và một phần diện tích tự nhiên, quy mô dân số của các phường Cửa Đông, Cửa Nam, Điện Biên, Đồng Xuân, Hàng Bông, Hàng Trống, Tràng Tiền thành phường mới có tên gọi là phường Hoàn Kiếm."
+65,Đồng Xuân,Hoàn Kiếm,2.0,"1. Sắp xếp toàn bộ diện tích tự nhiên, quy mô dân số của các phường Hàng Bạc, Hàng Bồ, Hàng Buồm, Hàng Đào, Hàng Gai, Hàng Mã, Lý Thái Tổ và một phần diện tích tự nhiên, quy mô dân số của các phường Cửa Đông, Cửa Nam, Điện Biên, Đồng Xuân, Hàng Bông, Hàng Trống, Tràng Tiền thành phường mới có tên gọi là phường Hoàn Kiếm."
+66,Hàng Mã,Hoàn Kiếm,1.0,"1. Sắp xếp toàn bộ diện tích tự nhiên, quy mô dân số của các phường Hàng Bạc, Hàng Bồ, Hàng Buồm, Hàng Đào, Hàng Gai, Hàng Mã, Lý Thái Tổ và một phần diện tích tự nhiên, quy mô dân số của các phường Cửa Đông, Cửa Nam, Điện Biên, Đồng Xuân, Hàng Bông, Hàng Trống, Tràng Tiền thành phường mới có tên gọi là phường Hoàn Kiếm."
+67,Hàng Buồm,Hoàn Kiếm,1.0,"1. Sắp xếp toàn bộ diện tích tự nhiên, quy mô dân số của các phường Hàng Bạc, Hàng Bồ, Hàng Buồm, Hàng Đào, Hàng Gai, Hàng Mã, Lý Thái Tổ và một phần diện tích tự nhiên, quy mô dân số của các phường Cửa Đông, Cửa Nam, Điện Biên, Đồng Xuân, Hàng Bông, Hàng Trống, Tràng Tiền thành phường mới có tên gọi là phường Hoàn Kiếm."
+68,Hàng Đào,Hoàn Kiếm,1.0,"1. Sắp xếp toàn bộ diện tích tự nhiên, quy mô dân số của các phường Hàng Bạc, Hàng Bồ, Hàng Buồm, Hàng Đào, Hàng Gai, Hàng Mã, Lý Thái Tổ và một phần diện tích tự nhiên, quy mô dân số của các phường Cửa Đông, Cửa Nam, Điện Biên, Đồng Xuân, Hàng Bông, Hàng Trống, Tràng Tiền thành phường mới có tên gọi là phường Hoàn Kiếm."
+69,Hàng Bồ,Hoàn Kiếm,1.0,"1. Sắp xếp toàn bộ diện tích tự nhiên, quy mô dân số của các phường Hàng Bạc, Hàng Bồ, Hàng Buồm, Hàng Đào, Hàng Gai, Hàng Mã, Lý Thái Tổ và một phần diện tích tự nhiên, quy mô dân số của các phường Cửa Đông, Cửa Nam, Điện Biên, Đồng Xuân, Hàng Bông, Hàng Trống, Tràng Tiền thành phường mới có tên gọi là phường Hoàn Kiếm."
+70,Cửa Đông,Hoàn Kiếm,2.0,"1. Sắp xếp toàn bộ diện tích tự nhiên, quy mô dân số của các phường Hàng Bạc, Hàng Bồ, Hàng Buồm, Hàng Đào, Hàng Gai, Hàng Mã, Lý Thái Tổ và một phần diện tích tự nhiên, quy mô dân số của các phường Cửa Đông, Cửa Nam, Điện Biên, Đồng Xuân, Hàng Bông, Hàng Trống, Tràng Tiền thành phường mới có tên gọi là phường Hoàn Kiếm."
+71,Lý Thái Tổ,Hoàn Kiếm,1.0,"1. Sắp xếp toàn bộ diện tích tự nhiên, quy mô dân số của các phường Hàng Bạc, Hàng Bồ, Hàng Buồm, Hàng Đào, Hàng Gai, Hàng Mã, Lý Thái Tổ và một phần diện tích tự nhiên, quy mô dân số của các phường Cửa Đông, Cửa Nam, Điện Biên, Đồng Xuân, Hàng Bông, Hàng Trống, Tràng Tiền thành phường mới có tên gọi là phường Hoàn Kiếm."
+72,Hàng Bạc,Hoàn Kiếm,1.0,"1. Sắp xếp toàn bộ diện tích tự nhiên, quy mô dân số của các phường Hàng Bạc, Hàng Bồ, Hàng Buồm, Hàng Đào, Hàng Gai, Hàng Mã, Lý Thái Tổ và một phần diện tích tự nhiên, quy mô dân số của các phường Cửa Đông, Cửa Nam, Điện Biên, Đồng Xuân, Hàng Bông, Hàng Trống, Tràng Tiền thành phường mới có tên gọi là phường Hoàn Kiếm."
+73,Hàng Gai,Hoàn Kiếm,1.0,"1. Sắp xếp toàn bộ diện tích tự nhiên, quy mô dân số của các phường Hàng Bạc, Hàng Bồ, Hàng Buồm, Hàng Đào, Hàng Gai, Hàng Mã, Lý Thái Tổ và một phần diện tích tự nhiên, quy mô dân số của các phường Cửa Đông, Cửa Nam, Điện Biên, Đồng Xuân, Hàng Bông, Hàng Trống, Tràng Tiền thành phường mới có tên gọi là phường Hoàn Kiếm."
+74,Hàng Trống,Hoàn Kiếm,2.0,"1. Sắp xếp toàn bộ diện tích tự nhiên, quy mô dân số của các phường Hàng Bạc, Hàng Bồ, Hàng Buồm, Hàng Đào, Hàng Gai, Hàng Mã, Lý Thái Tổ và một phần diện tích tự nhiên, quy mô dân số của các phường Cửa Đông, Cửa Nam, Điện Biên, Đồng Xuân, Hàng Bông, Hàng Trống, Tràng Tiền thành phường mới có tên gọi là phường Hoàn Kiếm."
+75,Cửa Nam,Hoàn Kiếm,2.0,"1. Sắp xếp toàn bộ diện tích tự nhiên, quy mô dân số của các phường Hàng Bạc, Hàng Bồ, Hàng Buồm, Hàng Đào, Hàng Gai, Hàng Mã, Lý Thái Tổ và một phần diện tích tự nhiên, quy mô dân số của các phường Cửa Đông, Cửa Nam, Điện Biên, Đồng Xuân, Hàng Bông, Hàng Trống, Tràng Tiền thành phường mới có tên gọi là phường Hoàn Kiếm."
+228,Trung Văn,Thanh Xuân,2.0,"22. Sắp xếp một phần diện tích tự nhiên, quy mô dân số của các phường Nhân Chính, Thanh Xuân Bắc, Thanh Xuân Trung, Thượng Đình, Trung Hoà và Trung Văn thành phường mới có tên gọi là phường Thanh Xuân."
+76,Hàng Bông,Hoàn Kiếm,2.0,"1. Sắp xếp toàn bộ diện tích tự nhiên, quy mô dân số của các phường Hàng Bạc, Hàng Bồ, Hàng Buồm, Hàng Đào, Hàng Gai, Hàng Mã, Lý Thái Tổ và một phần diện tích tự nhiên, quy mô dân số của các phường Cửa Đông, Cửa Nam, Điện Biên, Đồng Xuân, Hàng Bông, Hàng Trống, Tràng Tiền thành phường mới có tên gọi là phường Hoàn Kiếm."
+77,Tràng Tiền,Hoàn Kiếm,2.0,"1. Sắp xếp toàn bộ diện tích tự nhiên, quy mô dân số của các phường Hàng Bạc, Hàng Bồ, Hàng Buồm, Hàng Đào, Hàng Gai, Hàng Mã, Lý Thái Tổ và một phần diện tích tự nhiên, quy mô dân số của các phường Cửa Đông, Cửa Nam, Điện Biên, Đồng Xuân, Hàng Bông, Hàng Trống, Tràng Tiền thành phường mới có tên gọi là phường Hoàn Kiếm."
+78,Hàng Trống,Cửa Nam,2.0,"2. Sắp xếp toàn bộ diện tích tự nhiên, quy mô dân số của các phường Hàng Bài, Phan Chu Trinh, Trần Hưng Đạo, một phần diện tích tự nhiên, quy mô dân số của các phường Cửa Nam, Nguyễn Du, Phạm Đình Hổ và phần còn lại của các phường Hàng Bông, Hàng Trống, Tràng Tiền sau khi sắp xếp theo quy định tại khoản 1 Điều này thành phường mới có tên gọi là phường Cửa Nam."
+79,Cửa Nam,Cửa Nam,2.0,"2. Sắp xếp toàn bộ diện tích tự nhiên, quy mô dân số của các phường Hàng Bài, Phan Chu Trinh, Trần Hưng Đạo, một phần diện tích tự nhiên, quy mô dân số của các phường Cửa Nam, Nguyễn Du, Phạm Đình Hổ và phần còn lại của các phường Hàng Bông, Hàng Trống, Tràng Tiền sau khi sắp xếp theo quy định tại khoản 1 Điều này thành phường mới có tên gọi là phường Cửa Nam."
+80,Hàng Bông,Cửa Nam,2.0,"2. Sắp xếp toàn bộ diện tích tự nhiên, quy mô dân số của các phường Hàng Bài, Phan Chu Trinh, Trần Hưng Đạo, một phần diện tích tự nhiên, quy mô dân số của các phường Cửa Nam, Nguyễn Du, Phạm Đình Hổ và phần còn lại của các phường Hàng Bông, Hàng Trống, Tràng Tiền sau khi sắp xếp theo quy định tại khoản 1 Điều này thành phường mới có tên gọi là phường Cửa Nam."
+81,Tràng Tiền,Cửa Nam,2.0,"2. Sắp xếp toàn bộ diện tích tự nhiên, quy mô dân số của các phường Hàng Bài, Phan Chu Trinh, Trần Hưng Đạo, một phần diện tích tự nhiên, quy mô dân số của các phường Cửa Nam, Nguyễn Du, Phạm Đình Hổ và phần còn lại của các phường Hàng Bông, Hàng Trống, Tràng Tiền sau khi sắp xếp theo quy định tại khoản 1 Điều này thành phường mới có tên gọi là phường Cửa Nam."
+82,Trần Hưng Đạo,Cửa Nam,1.0,"2. Sắp xếp toàn bộ diện tích tự nhiên, quy mô dân số của các phường Hàng Bài, Phan Chu Trinh, Trần Hưng Đạo, một phần diện tích tự nhiên, quy mô dân số của các phường Cửa Nam, Nguyễn Du, Phạm Đình Hổ và phần còn lại của các phường Hàng Bông, Hàng Trống, Tràng Tiền sau khi sắp xếp theo quy định tại khoản 1 Điều này thành phường mới có tên gọi là phường Cửa Nam."
+83,Phan Chu Trinh,Cửa Nam,1.0,"2. Sắp xếp toàn bộ diện tích tự nhiên, quy mô dân số của các phường Hàng Bài, Phan Chu Trinh, Trần Hưng Đạo, một phần diện tích tự nhiên, quy mô dân số của các phường Cửa Nam, Nguyễn Du, Phạm Đình Hổ và phần còn lại của các phường Hàng Bông, Hàng Trống, Tràng Tiền sau khi sắp xếp theo quy định tại khoản 1 Điều này thành phường mới có tên gọi là phường Cửa Nam."
+84,Hàng Bài,Cửa Nam,1.0,"2. Sắp xếp toàn bộ diện tích tự nhiên, quy mô dân số của các phường Hàng Bài, Phan Chu Trinh, Trần Hưng Đạo, một phần diện tích tự nhiên, quy mô dân số của các phường Cửa Nam, Nguyễn Du, Phạm Đình Hổ và phần còn lại của các phường Hàng Bông, Hàng Trống, Tràng Tiền sau khi sắp xếp theo quy định tại khoản 1 Điều này thành phường mới có tên gọi là phường Cửa Nam."
+85,Nguyễn Du,Cửa Nam,2.0,"2. Sắp xếp toàn bộ diện tích tự nhiên, quy mô dân số của các phường Hàng Bài, Phan Chu Trinh, Trần Hưng Đạo, một phần diện tích tự nhiên, quy mô dân số của các phường Cửa Nam, Nguyễn Du, Phạm Đình Hổ và phần còn lại của các phường Hàng Bông, Hàng Trống, Tràng Tiền sau khi sắp xếp theo quy định tại khoản 1 Điều này thành phường mới có tên gọi là phường Cửa Nam."
+86,Phạm Đình Hổ,Cửa Nam,2.0,"2. Sắp xếp toàn bộ diện tích tự nhiên, quy mô dân số của các phường Hàng Bài, Phan Chu Trinh, Trần Hưng Đạo, một phần diện tích tự nhiên, quy mô dân số của các phường Cửa Nam, Nguyễn Du, Phạm Đình Hổ và phần còn lại của các phường Hàng Bông, Hàng Trống, Tràng Tiền sau khi sắp xếp theo quy định tại khoản 1 Điều này thành phường mới có tên gọi là phường Cửa Nam."
+87,Trúc Bạch,Ba Đình,1.0,"3. Sắp xếp toàn bộ diện tích tự nhiên, quy mô dân số của phường Quán Thánh, phường Trúc Bạch, một phần diện tích tự nhiên, quy mô dân số của các phường Cửa Nam, Điện Biên, Đội Cấn, Kim Mã, Ngọc Hà, một phần diện tích tự nhiên của phường Thụy Khuê, phần còn lại của phường Cửa Đông và phường Đồng Xuân sau khi sắp xếp theo quy định tại khoản 1 Điều này thành phường mới có tên gọi là phường Ba Đình."
+88,Quán Thánh,Ba Đình,1.0,"3. Sắp xếp toàn bộ diện tích tự nhiên, quy mô dân số của phường Quán Thánh, phường Trúc Bạch, một phần diện tích tự nhiên, quy mô dân số của các phường Cửa Nam, Điện Biên, Đội Cấn, Kim Mã, Ngọc Hà, một phần diện tích tự nhiên của phường Thụy Khuê, phần còn lại của phường Cửa Đông và phường Đồng Xuân sau khi sắp xếp theo quy định tại khoản 1 Điều này thành phường mới có tên gọi là phường Ba Đình."
+102,Ngọc Khánh,Ngọc Hà,2.0,"4. Sắp xếp toàn bộ diện tích tự nhiên, quy mô dân số của phường Vĩnh Phúc, phường Liễu Giai, một phần diện tích tự nhiên, quy mô dân số của các phường Cống Vị, Kim Mã, Ngọc Khánh, Nghĩa Đô, phần còn lại của phường Đội Cấn và phường Ngọc Hà sau khi sắp xếp theo quy định tại khoản 3 Điều này thành phường mới có tên gọi là phường Ngọc Hà."
+89,Ngọc Hà,Ba Đình,2.0,"3. Sắp xếp toàn bộ diện tích tự nhiên, quy mô dân số của phường Quán Thánh, phường Trúc Bạch, một phần diện tích tự nhiên, quy mô dân số của các phường Cửa Nam, Điện Biên, Đội Cấn, Kim Mã, Ngọc Hà, một phần diện tích tự nhiên của phường Thụy Khuê, phần còn lại của phường Cửa Đông và phường Đồng Xuân sau khi sắp xếp theo quy định tại khoản 1 Điều này thành phường mới có tên gọi là phường Ba Đình."
+90,Điện Biên,Ba Đình,2.0,"3. Sắp xếp toàn bộ diện tích tự nhiên, quy mô dân số của phường Quán Thánh, phường Trúc Bạch, một phần diện tích tự nhiên, quy mô dân số của các phường Cửa Nam, Điện Biên, Đội Cấn, Kim Mã, Ngọc Hà, một phần diện tích tự nhiên của phường Thụy Khuê, phần còn lại của phường Cửa Đông và phường Đồng Xuân sau khi sắp xếp theo quy định tại khoản 1 Điều này thành phường mới có tên gọi là phường Ba Đình."
+91,Đội Cấn,Ba Đình,2.0,"3. Sắp xếp toàn bộ diện tích tự nhiên, quy mô dân số của phường Quán Thánh, phường Trúc Bạch, một phần diện tích tự nhiên, quy mô dân số của các phường Cửa Nam, Điện Biên, Đội Cấn, Kim Mã, Ngọc Hà, một phần diện tích tự nhiên của phường Thụy Khuê, phần còn lại của phường Cửa Đông và phường Đồng Xuân sau khi sắp xếp theo quy định tại khoản 1 Điều này thành phường mới có tên gọi là phường Ba Đình."
+92,Kim Mã,Ba Đình,2.0,"3. Sắp xếp toàn bộ diện tích tự nhiên, quy mô dân số của phường Quán Thánh, phường Trúc Bạch, một phần diện tích tự nhiên, quy mô dân số của các phường Cửa Nam, Điện Biên, Đội Cấn, Kim Mã, Ngọc Hà, một phần diện tích tự nhiên của phường Thụy Khuê, phần còn lại của phường Cửa Đông và phường Đồng Xuân sau khi sắp xếp theo quy định tại khoản 1 Điều này thành phường mới có tên gọi là phường Ba Đình."
+93,Đồng Xuân,Ba Đình,2.0,"3. Sắp xếp toàn bộ diện tích tự nhiên, quy mô dân số của phường Quán Thánh, phường Trúc Bạch, một phần diện tích tự nhiên, quy mô dân số của các phường Cửa Nam, Điện Biên, Đội Cấn, Kim Mã, Ngọc Hà, một phần diện tích tự nhiên của phường Thụy Khuê, phần còn lại của phường Cửa Đông và phường Đồng Xuân sau khi sắp xếp theo quy định tại khoản 1 Điều này thành phường mới có tên gọi là phường Ba Đình."
+94,Cửa Đông,Ba Đình,2.0,"3. Sắp xếp toàn bộ diện tích tự nhiên, quy mô dân số của phường Quán Thánh, phường Trúc Bạch, một phần diện tích tự nhiên, quy mô dân số của các phường Cửa Nam, Điện Biên, Đội Cấn, Kim Mã, Ngọc Hà, một phần diện tích tự nhiên của phường Thụy Khuê, phần còn lại của phường Cửa Đông và phường Đồng Xuân sau khi sắp xếp theo quy định tại khoản 1 Điều này thành phường mới có tên gọi là phường Ba Đình."
+95,Cửa Nam,Ba Đình,2.0,"3. Sắp xếp toàn bộ diện tích tự nhiên, quy mô dân số của phường Quán Thánh, phường Trúc Bạch, một phần diện tích tự nhiên, quy mô dân số của các phường Cửa Nam, Điện Biên, Đội Cấn, Kim Mã, Ngọc Hà, một phần diện tích tự nhiên của phường Thụy Khuê, phần còn lại của phường Cửa Đông và phường Đồng Xuân sau khi sắp xếp theo quy định tại khoản 1 Điều này thành phường mới có tên gọi là phường Ba Đình."
+96,Thụy Khuê,Ba Đình,2.0,"3. Sắp xếp toàn bộ diện tích tự nhiên, quy mô dân số của phường Quán Thánh, phường Trúc Bạch, một phần diện tích tự nhiên, quy mô dân số của các phường Cửa Nam, Điện Biên, Đội Cấn, Kim Mã, Ngọc Hà, một phần diện tích tự nhiên của phường Thụy Khuê, phần còn lại của phường Cửa Đông và phường Đồng Xuân sau khi sắp xếp theo quy định tại khoản 1 Điều này thành phường mới có tên gọi là phường Ba Đình."
+97,Vĩnh Phúc,Ngọc Hà,1.0,"4. Sắp xếp toàn bộ diện tích tự nhiên, quy mô dân số của phường Vĩnh Phúc, phường Liễu Giai, một phần diện tích tự nhiên, quy mô dân số của các phường Cống Vị, Kim Mã, Ngọc Khánh, Nghĩa Đô, phần còn lại của phường Đội Cấn và phường Ngọc Hà sau khi sắp xếp theo quy định tại khoản 3 Điều này thành phường mới có tên gọi là phường Ngọc Hà."
+98,Cống Vị,Ngọc Hà,2.0,"4. Sắp xếp toàn bộ diện tích tự nhiên, quy mô dân số của phường Vĩnh Phúc, phường Liễu Giai, một phần diện tích tự nhiên, quy mô dân số của các phường Cống Vị, Kim Mã, Ngọc Khánh, Nghĩa Đô, phần còn lại của phường Đội Cấn và phường Ngọc Hà sau khi sắp xếp theo quy định tại khoản 3 Điều này thành phường mới có tên gọi là phường Ngọc Hà."
