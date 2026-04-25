@@ -72,7 +72,7 @@ def check_db():
     """Check database statistics (row counts) with growth rate."""
     from tabulate import tabulate
     click.echo("\n" + "="*60)
-    click.echo("📊 VN ADDRESS INTELLIGENCE - DATABASE MONITORING")
+    click.echo("[STATS] VN ADDRESS INTELLIGENCE - DATABASE MONITORING")
     click.echo("="*60)
     
     stats, growth, time_diff = check_database_stats()
@@ -84,10 +84,10 @@ def check_db():
         table_data.append([table, f"{count:,}", g_str])
     
     headers = ["Table Name", "Total Rows", "Growth (est. 3m)"]
-    click.echo(tabulate(table_data, headers=headers, tablefmt="fancy_grid"))
+    click.echo(tabulate(table_data, headers=headers, tablefmt="grid"))
     
     if time_diff > 0:
-        click.echo(f"\n⏱️ Last check was {int(time_diff)}s ago.")
+        click.echo(f"\n[TIME] Last check was {int(time_diff)}s ago.")
     click.echo("="*60 + "\n")
 
 @cli.command()
