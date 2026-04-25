@@ -6,10 +6,10 @@ Cần đóng gói gọn gàng với các phần khác trong project để có th
 
 ## 1. Database Architecture (PostgreSQL: `vn_address_intelligence_db`)
 Hãy tạo file `.env` với các biến environment, hệ thống sử dụng cấu hình sau:
-    host: 157.66.81.69
+    host: your_db_host
     port: 5432
     user: vnai_admin
-    password: vnai_admin@97GHxafU
+    password: your_db_password
     database: vn_address_intelligence_db
     
 Agent cần sử dụng SQLAlchemy ORM để thiết kế các bảng sau, phân chia theo 4 Domains:

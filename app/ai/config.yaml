@@ -1,9 +1,9 @@
 database:
-  host: "10.10.13.126"
-  port: 5432
-  dbname: "gse_sprint"
-  user: "gse_dev"
-  password: "gse_dev@0123321"
+  host: "${DB_HOST}"
+  port: ${DB_PORT}
+  dbname: "${DB_NAME}"
+  user: "${DB_USER}"
+  password: "${DB_PASS}"
   schema: "scm"                              # schema chứa bảng (để trống = public)
   table_name: "address"
   id_column: "id"                            # cột Primary Key (mặc định 'id')

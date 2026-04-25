@@ -1,8 +1,12 @@
+import os
 import psycopg2
 
 conn = psycopg2.connect(
-    host="10.10.13.126", port=5432,
-    dbname="gse_sprint", user="gse_dev", password="gse_dev@0123321"
+    host=os.getenv("DB_HOST"), 
+    port=os.getenv("DB_PORT", "5432"),
+    dbname=os.getenv("DB_NAME"), 
+    user=os.getenv("DB_USER"), 
+    password=os.getenv("DB_PASS")
 )
 cur = conn.cursor()
 

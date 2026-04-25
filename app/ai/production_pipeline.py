@@ -18,17 +18,14 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 from db_connector import DBConnector
 from models import SiameseMGTE, LLMQwen3, AddressNER
+from utils.config_loader import load_config_with_env
 
 # ──────────────────────────────────────────────────────────────────────────────
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("ProductionPipeline")
 
-def _load_config(path: str) -> dict:
-    with open(path, encoding="utf-8") as f:
-        return yaml.safe_load(f)
-
 def run_pipeline(config_path: str, limit: int = None):
-    cfg = _load_config(config_path)
+    cfg = load_config_with_env(config_path)
     db_cfg = cfg["database"]
     mod_cfg = cfg["models"]
     

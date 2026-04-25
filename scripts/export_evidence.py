@@ -2,9 +2,21 @@ import os
 import pandas as pd
 from sqlalchemy import create_engine, text
 import json
+from dotenv import load_dotenv
+import urllib.parse
 
-# Connection string
-DB_URL = "postgresql://vnai_admin:vnai_admin%4097GHxafU@157.66.81.69:5432/vn_address_intelligence_db"
+# Load .env from root
+load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
+
+# Connection string from environment
+DB_HOST = os.getenv("DB_HOST")
+DB_PORT = os.getenv("DB_PORT", "5432")
+DB_USER = os.getenv("DB_USER")
+DB_PASS = os.getenv("DB_PASS")
+DB_NAME = os.getenv("DB_NAME")
+
+encoded_pass = urllib.parse.quote_plus(DB_PASS or "")
+DB_URL = f"postgresql://{DB_USER}:{encoded_pass}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 engine = create_engine(DB_URL)
 
 OUTPUT_DIR = "evidence"

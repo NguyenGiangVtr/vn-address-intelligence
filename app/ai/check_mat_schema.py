@@ -1,8 +1,7 @@
+from utils.config_loader import load_config_with_env
 import psycopg2
-import yaml
 
-with open("src/config.yaml", encoding="utf-8") as f:
-    cfg = yaml.safe_load(f)["database"]
+cfg = load_config_with_env("app/ai/config.yaml")["database"]
 
 conn = psycopg2.connect(
     host=cfg["host"], port=cfg["port"],

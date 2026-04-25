@@ -206,4 +206,10 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 /docs/private
-/vn_address_intelligence/data/seed
+/app/.env
+/.env
+/logs/
+/data/seed/
+/data/*.json
+/evidence/
+/data/db_stats_history.json
