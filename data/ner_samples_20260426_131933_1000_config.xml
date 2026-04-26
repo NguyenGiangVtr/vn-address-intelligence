@@ -1,0 +1,15 @@
+<View>
+  <Labels name="label" toName="text">
+    <Label value="PCD" background="#f032e6" hotkey="0">Plus Code</Label>
+    <Label value="BLD" background="#f58231" hotkey="1">Tòa nhà/Chung cư</Label>
+    <Label value="POI" background="#911eb4" hotkey="2">Địa danh/Mốc/Địa điểm / Cửa hàng</Label>
+    <Label value="ALY" background="#4363d8" hotkey="3">Hẻm/Ngõ</Label>
+    <Label value="NUM" background="#e6194B" hotkey="4">Số nhà / Lô / P.</Label>
+    <Label value="STR" background="#3cb44b" hotkey="5">Tên đường</Label>
+    <Label value="NHB" background="#469990" hotkey="6">Khu phố/Thôn/Ấp/Làng/Xóm</Label>
+    <Label value="WDS" background="#ffe119" hotkey="7">Phường/Xã</Label>
+    <Label value="DST" background="#800000" hotkey="8">Quận/Huyện</Label>
+    <Label value="PRO" background="#000075" hotkey="9">Tỉnh/Thành phố</Label>
+  </Labels>
+  <Text name="text" value="$text"/>
+</View>

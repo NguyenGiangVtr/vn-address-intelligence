@@ -62,7 +62,7 @@ class AddressCleansingQueue(Base):
     
     id = Column(BigInteger, primary_key=True)
     source_system = Column(String(50))
-    address_raw = Column(Text, nullable=False)
+    raw_address = Column(Text, nullable=False)
     order_count = Column(BigInteger, default=1)
     
     processing_status = Column(String(30), default='PENDING', nullable=False)

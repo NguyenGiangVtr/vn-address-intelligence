@@ -48,7 +48,7 @@ def run_pipeline(config_path: str, limit: int = None):
     # 2. Xử lý Dữ liệu ─────────────────────────────────────────────────────────
     query = f"""
         SELECT id, street_address, ward_name, district_name, province_name 
-        FROM scm.address
+        FROM prq.address_cleansing_queue
         WHERE street_address IS NOT NULL AND address_standardized IS NULL
     """
     if limit: query += f" LIMIT {limit}"
@@ -73,7 +73,9 @@ def run_pipeline(config_path: str, limit: int = None):
                 street_name = street_name.replace(street_name[:len(k)], v)
         
         # C. Tổng hợp context cho LLM
-        context_addr = f"{ner_results.get('NUM', '')} {street_name}, {row['ward_name']}, {row['district_name']}, {row['province_name']}"
+        # Bổ sung NHB (Khu phố/Thôn/Ấp) nếu bóc tách được
+        nhb_part = ner_results.get('NHB', '')
+        context_addr = f"{ner_results.get('NUM', '')} {street_name}, {nhb_part + ', ' if nhb_part else ''}{row['ward_name']}, {row['district_name']}, {row['province_name']}"
         
         # D. LLM Final Normalization
         llm_data, llm_score, _ = llm.normalize(context_addr, []) # Candidates có thể lấy từ retriever nếu cần
@@ -101,7 +103,7 @@ def run_pipeline(config_path: str, limit: int = None):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config", default="src/config.yaml")
+    parser.add_argument("--config", default="app/ai/config.yaml")
     parser.add_argument("--limit", type=int)
     args = parser.parse_args()
     run_pipeline(args.config, args.limit)

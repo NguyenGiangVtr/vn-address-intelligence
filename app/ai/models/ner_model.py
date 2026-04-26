@@ -13,10 +13,12 @@ from transformers import AutoTokenizer, AutoModelForTokenClassification, pipelin
 
 logger = logging.getLogger(__name__)
 
+from constants import get_label_count
+
 class AddressNER:
     """
     Sử dụng PhoBERT Fine-tuned để bóc tách thành phần địa chỉ.
-    Nhãn hỗ trợ: NUM (Số nhà), STR (Đường), ALY (Hẻm), BLD (Tòa nhà), POI (Địa danh).
+    Nhãn hỗ trợ: Xem chi tiết tại app/ai/constants.py
     """
     
     def __init__(self, model_path: str = "vinai/phobert-base", device: str = "auto"):

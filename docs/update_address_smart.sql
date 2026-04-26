@@ -16,15 +16,15 @@ DECLARE
 BEGIN
     FOR r IN
         SELECT 
-            id, address_raw, 
+            id, raw_address, 
             ward_name, district_name, province_name
         FROM scm.address
-        -- Chỉ xử lý dòng chưa có street_address và address_raw không bị trống
+        -- Chỉ xử lý dòng chưa có street_address và raw_address không bị trống
         WHERE street_address IS NULL 
-          AND NULLIF(TRIM(address_raw), '') IS NOT NULL
+          AND NULLIF(TRIM(raw_address), '') IS NOT NULL
     LOOP
         -- 1. Tiền xử lý: Chuyển chuỗi thành mảng
-        arr := string_to_array(regexp_replace(r.address_raw, ',\s+', ',', 'g'), ',');
+        arr := string_to_array(regexp_replace(r.raw_address, ',\s+', ',', 'g'), ',');
         len := array_length(arr, 1);
         v_idx_pointer := len;
 
@@ -104,7 +104,7 @@ BEGIN
         ELSE
             -- Nếu địa chỉ gõ liền không có dấu phẩy (VD: "123 Lê Lợi Phường 1 Quận 1")
             -- Bê nguyên chuỗi gốc vào street_address để AI (PhoBERT) tự bóc tách sau này.
-            v_street_address := TRIM(r.address_raw);
+            v_street_address := TRIM(r.raw_address);
             v_postal_code := NULL;
         END IF;
 

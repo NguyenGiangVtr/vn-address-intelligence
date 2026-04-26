@@ -22,6 +22,8 @@ import numpy as np
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("TrainNER")
 
+from constants import get_ner_label_list
+
 def train_model(json_path: str, output_dir: str = "models/phobert-ner-vn"):
     # 1. Load dữ liệu gán nhãn
     with open(json_path, encoding="utf-8") as f:
@@ -30,8 +32,8 @@ def train_model(json_path: str, output_dir: str = "models/phobert-ner-vn"):
     # Chuyển đổi dữ liệu Label Studio sang định dạng Training
     # (Giả định team gán nhãn theo format Named Entity Recognition của Label Studio)
     
-    # Định nghĩa nhãn (Labels)
-    label_list = ["O", "B-NUM", "I-NUM", "B-STR", "I-STR", "B-ALY", "I-ALY", "B-BLD", "I-BLD", "B-POI", "I-POI"]
+    # Danh sách nhãn đầy đủ lấy từ constants.py
+    label_list = get_ner_label_list()
     label2id = {l: i for i, l in enumerate(label_list)}
     id2label = {i: l for i, l in enumerate(label_list)}
 
