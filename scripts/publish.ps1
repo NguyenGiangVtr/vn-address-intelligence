@@ -31,6 +31,7 @@ foreach ($dir in $SubDirs) {
 Write-Host "[3/4] Dang copy files (dang loai bo file rac)..."
 Copy-Item -Path "app\*" -Destination "$PublishDir\app" -Recurse -Exclude "__pycache__", "*.pyc"
 Copy-Item -Path "ui\*" -Destination "$PublishDir\ui" -Recurse
+Copy-Item -Path "ui\login.html" -Destination "$PublishDir\ui" # Explicit copy
 Copy-Item -Path "scripts\vnai-vps-setup.sh" -Destination "$PublishDir\scripts"
 Copy-Item -Path "requirements.txt" -Destination "$PublishDir"
 Copy-Item -Path "start.py" -Destination "$PublishDir"

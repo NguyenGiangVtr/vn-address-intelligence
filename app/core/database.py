@@ -228,6 +228,19 @@ class TrainingDataset(Base):
     noise_level = Column(String(20)) # low, medium, high
     created_at = Column(DateTime, default=func.now())
 
+class TrainingHistory(Base):
+    __tablename__ = 'training_history'
+    __table_args__ = {'schema': 'ath'}
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    version = Column(String(20))
+    accuracy = Column(Float)
+    f1_score = Column(Float)
+    loss = Column(Float)
+    samples_count = Column(Integer)
+    created_at = Column(DateTime, default=func.now())
+    notes = Column(Text)
+
 # --- DOMAIN 4: Processing Queue (prq) ---
 
 class RawAddress(Base):

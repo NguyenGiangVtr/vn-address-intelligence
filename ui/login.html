@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login — VN Address Intelligence</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background: radial-gradient(circle at top right, #1a1a2e, #0a0a0b);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+        .login-card {
+            background: rgba(22, 22, 24, 0.8);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border-default);
+            border-radius: var(--radius-xl);
+            padding: 40px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: var(--shadow-lg), var(--shadow-glow);
+            animation: fadeIn 0.6s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .login-header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+        .login-logo {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-hover));
+            border-radius: var(--radius-md);
+            margin: 0 auto 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            box-shadow: 0 0 20px var(--accent-glow);
+        }
+        .login-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text-primary);
+            letter-spacing: -0.5px;
+        }
+        .login-subtitle {
+            font-size: 14px;
+            color: var(--text-tertiary);
+            margin-top: 4px;
+        }
+        .login-error {
+            background: rgba(248, 113, 113, 0.1);
+            color: var(--danger);
+            padding: 10px;
+            border-radius: var(--radius-md);
+            font-size: 12px;
+            margin-bottom: 20px;
+            display: none;
+            border: 1px solid rgba(248, 113, 113, 0.2);
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <div class="login-header">
+            <div class="login-logo"><i class="fa-solid fa-bolt"></i></div>
+            <h1 class="login-title">Welcome back</h1>
+            <p class="login-subtitle">VN Address Intelligence SaaS</p>
+        </div>
+
+        <div id="error-msg" class="login-error">Invalid username or password</div>
+
+        <form id="login-form">
+            <div class="form-group">
+                <label class="form-label">Username</label>
+                <input type="text" id="username" class="form-input" placeholder="admin" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Password</label>
+                <input type="password" id="password" class="form-input" placeholder="••••••••" required>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width: 100%; padding: 12px; margin-top: 10px;">
+                Sign In <i class="fa-solid fa-arrow-right" style="margin-left: 8px;"></i>
+            </button>
+        </form>
+
+        <div style="text-align: center; margin-top: 24px; font-size: 12px; color: var(--text-tertiary);">
+            &copy; 2026 VN Address Intelligence. All rights reserved.
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.hostname === "localhost" || window.location.protocol === "file:"
+          ? "http://localhost:8081/api"
+          : "/api";
+
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const user = document.getElementById('username').value;
+            const pass = document.getElementById('password').value;
+            const errorEl = document.getElementById('error-msg');
+            
+            errorEl.style.display = 'none';
+
+            try {
+                const loginUrl = `${API_BASE}/login`;
+                console.log('Attempting login at:', loginUrl);
+
+                const params = new URLSearchParams();
+                params.append('username', user);
+                params.append('password', pass);
+
+                const response = await fetch(loginUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: params
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    localStorage.setItem('vnai_token', data.access_token);
+                    window.location.href = 'index.html';
+                } else {
+                    const errData = await response.json();
+                    console.error('Login failed:', errData);
+                    errorEl.style.display = 'block';
+                }
+            } catch (err) {
+                console.error('Network error:', err);
+                errorEl.textContent = 'Connection error. Please check backend.';
+                errorEl.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>

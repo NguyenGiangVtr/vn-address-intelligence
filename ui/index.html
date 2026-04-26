@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VN Address Intelligence | SaaS Platform</title>
     <meta name="description" content="AI-powered Vietnamese address enrichment and standardization platform">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div class="app-container">
@@ -27,31 +27,31 @@
         <nav class="nav-menu">
             <a href="#" class="nav-item active" data-page="overview">
                 <i class="fa-solid fa-chart-line"></i> Tổng quan
+            <a href="#" class="nav-item active" data-page="overview">
+                <i class="fa-solid fa-house"></i> Overview
             </a>
-            <a href="#" class="nav-item" data-page="parser">
-                <i class="fa-solid fa-wand-magic-sparkles"></i> Address Parser
-            </a>
+            
+            <div class="nav-divider"></div>
+            <div class="nav-section"><div class="nav-section-title">Step 1: Collection</div></div>
             <a href="#" class="nav-item" data-page="batch">
                 <i class="fa-solid fa-layer-group"></i> Batch Processor
                 <span class="badge-count">505K</span>
             </a>
 
             <div class="nav-divider"></div>
-            <div class="nav-section"><div class="nav-section-title">Research</div></div>
-
-            <a href="#" class="nav-item" data-page="ai-hub">
-                <i class="fa-solid fa-brain"></i> AI Training
-            </a>
-            <a href="#" class="nav-item" data-page="experiments">
-                <i class="fa-solid fa-flask-vial"></i> Experiments
-            </a>
-            <a href="#" class="nav-item" data-page="ward-mapper">
-                <i class="fa-solid fa-building-columns"></i> Ward Mapper
+            <div class="nav-section"><div class="nav-section-title">Step 2: Processing</div></div>
+            <a href="#" class="nav-item" data-page="parser">
+                <i class="fa-solid fa-wand-magic-sparkles"></i> Address Parser
             </a>
 
             <div class="nav-divider"></div>
-            <div class="nav-section"><div class="nav-section-title">Data</div></div>
+            <div class="nav-section"><div class="nav-section-title">Step 3 & 4: AI Engine</div></div>
+            <a href="#" class="nav-item" data-page="training">
+                <i class="fa-solid fa-brain"></i> Training Hub
+            </a>
 
+            <div class="nav-divider"></div>
+            <div class="nav-section"><div class="nav-section-title">Data & Management</div></div>
             <a href="#" class="nav-item" data-page="explorer">
                 <i class="fa-solid fa-database"></i> Data Explorer
             </a>
@@ -63,6 +63,9 @@
         <div class="sidebar-footer">
             <div class="status-indicator">
                 <span class="dot pulse"></span> System Online
+            </div>
+            <div style="margin-top: 12px; font-size: 11px; color: var(--text-tertiary);">
+                <i class="fa-solid fa-envelope" style="margin-right: 4px;"></i> giangnguyen.vtr@gmail.com
             </div>
         </div>
     </aside>
@@ -100,17 +103,17 @@
                 <div class="stats-grid">
                     <div class="stat-card">
                         <div class="stat-label">Total Visits</div>
-                        <div class="stat-value" id="stat-visits">0</div>
+                        <div class="stat-value" id="stat-total-visits">0</div>
                         <div class="stat-change positive"><i class="fa-solid fa-eye"></i> All time</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-label">Unique Visitors</div>
-                        <div class="stat-value" id="stat-unique">0</div>
+                        <div class="stat-value" id="stat-unique-ips">0</div>
                         <div class="stat-change positive"><i class="fa-solid fa-user-check"></i> Unique IPs</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-label">Online Users</div>
-                        <div class="stat-value" id="stat-online" style="color:var(--success)">0</div>
+                        <div class="stat-value" id="stat-online-users" style="color:var(--success)">0</div>
                         <div class="stat-change positive"><i class="fa-solid fa-circle-dot pulse"></i> Real-time</div>
                     </div>
                     <div class="stat-card">
@@ -135,6 +138,41 @@
                         <div class="stat-label">Training Data</div>
                         <div class="stat-value" id="stat-training">25,130</div>
                         <div class="stat-change positive"><i class="fa-solid fa-check"></i> Labeled</div>
+                    </div>
+                </div>
+
+                <!-- ══════ AI WORKFLOW LIFECYCLE ══════ -->
+                <div class="card mt-24 mb-24">
+                    <div class="card-header">
+                        <span class="card-title">AI Intelligence Lifecycle</span>
+                    </div>
+                    <div class="card-body" style="padding: 30px">
+                        <div class="workflow-diagram horizontal">
+                            <div class="workflow-step clickable" data-goto="batch">
+                                <div class="step-icon"><i class="fa-solid fa-file-import"></i></div>
+                                <div class="step-content"><h4>1. Thu thập</h4></div>
+                            </div>
+                            <div class="workflow-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+                            <div class="workflow-step clickable" data-goto="parser">
+                                <div class="step-icon"><i class="fa-solid fa-microchip"></i></div>
+                                <div class="step-content"><h4>2. Xử lý NER</h4></div>
+                            </div>
+                            <div class="workflow-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+                            <div class="workflow-step accent">
+                                <div class="step-icon"><i class="fa-solid fa-user-check"></i></div>
+                                <div class="step-content"><h4>3. Gán nhãn</h4></div>
+                            </div>
+                            <div class="workflow-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+                            <div class="workflow-step glow clickable" data-goto="training">
+                                <div class="step-icon"><i class="fa-solid fa-rotate"></i></div>
+                                <div class="step-content"><h4>4. Retrain</h4></div>
+                            </div>
+                            <div class="workflow-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+                            <div class="workflow-step success">
+                                <div class="step-icon"><i class="fa-solid fa-rocket"></i></div>
+                                <div class="step-content"><h4>5. Tăng trưởng</h4></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -418,9 +456,288 @@
                 </div>
             </div>
 
+            <!-- ══════ PAGE: TRAINING HUB ══════ -->
+            <div class="page" id="training">
+                <div class="page-header">
+                    <h2>AI Training Hub</h2>
+                    <p>Huấn luyện và nâng cao độ thông minh cho mô hình NER</p>
+                </div>
+
+                <div class="content-grid sidebar-layout">
+                    <div class="flex-col gap-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <span class="card-title">AI Intelligence Growth</span>
+                                <div class="badge success">v2.4.0 Active</div>
+                            </div>
+                            <div class="card-body">
+                                <div style="height: 250px; position: relative;">
+                                    <canvas id="intelligenceChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <span class="card-title">Training History</span>
+                            </div>
+                            <div class="table-container">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Version</th>
+                                            <th>Accuracy</th>
+                                            <th>F1-Score</th>
+                                            <th>Samples</th>
+                                            <th>Date</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="training-history-table">
+                                        <!-- Data via JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex-col gap-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <span class="card-title">Import Label Studio</span>
+                            </div>
+                            <div class="card-body">
+                                <p class="text-secondary mb-12" style="font-size:12px">
+                                    Tải lên file JSON export từ Label Studio để bổ sung dữ liệu huấn luyện.
+                                </p>
+                                <div class="form-group">
+                                    <label class="form-label">Label Studio JSON</label>
+                                    <input type="file" id="ls-import-file" class="form-input" accept=".json" style="padding: 10px;">
+                                </div>
+                                <button class="btn btn-primary w-full" id="btn-import-ls" style="padding: 12px">
+                                    <i class="fa-solid fa-upload"></i> Import & Retrain
+                                </button>
+                                <div id="import-status" class="mt-12 text-center" style="font-size:12px"></div>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <span class="card-title">Active Model Info</span>
+                            </div>
+                            <div class="card-body">
+                                <div class="flex justify-between mb-12">
+                                    <span class="text-tertiary">Base Model</span>
+                                    <span class="text-primary">PhoBERT-Base</span>
+                                </div>
+                                <div class="flex justify-between mb-12">
+                                    <span class="text-tertiary">Training Method</span>
+                                    <span class="text-primary">Fine-tuning</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-tertiary">Last Retrained</span>
+                                    <span class="text-primary" id="last-retrained-text">2 giờ trước</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ══════ PAGE: WORKFLOW ══════ -->
+            <div class="page" id="workflow">
+                <div class="page-header">
+                    <h2>Quy trình Hoạt động</h2>
+                    <p>Vòng lặp phản hồi giúp AI thông minh hơn mỗi ngày</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-body" style="padding: 60px 40px">
+                        <div class="workflow-diagram">
+                            <div class="workflow-step">
+                                <div class="step-icon"><i class="fa-solid fa-file-import"></i></div>
+                                <div class="step-content">
+                                    <h4>1. Thu thập dữ liệu</h4>
+                                    <p>Địa chỉ thô được thu thập từ các hệ thống hoặc upload hàng loạt.</p>
+                                </div>
+                            </div>
+                            <div class="workflow-arrow"><i class="fa-solid fa-arrow-down"></i></div>
+                            <div class="workflow-step">
+                                <div class="step-icon"><i class="fa-solid fa-microchip"></i></div>
+                                <div class="step-content">
+                                    <h4>2. Xử lý NER</h4>
+                                    <p>AI bóc tách các thực thể (Tỉnh, Quận, Đường...) với độ tin cậy cụ thể.</p>
+                                </div>
+                            </div>
+                            <div class="workflow-arrow"><i class="fa-solid fa-arrow-down"></i></div>
+                            <div class="workflow-step accent">
+                                <div class="step-icon"><i class="fa-solid fa-user-check"></i></div>
+                                <div class="step-content">
+                                    <h4>3. Kiểm soát (Human-in-the-loop)</h4>
+                                    <p>Các địa chỉ có độ tin cậy thấp được gán nhãn lại qua <strong>Label Studio</strong>.</p>
+                                </div>
+                            </div>
+                            <div class="workflow-arrow"><i class="fa-solid fa-arrow-down"></i></div>
+                            <div class="workflow-step glow">
+                                <div class="step-icon"><i class="fa-solid fa-rotate"></i></div>
+                                <div class="step-content">
+                                    <h4>4. Tái huấn luyện (Retrain)</h4>
+                                    <p>Dữ liệu gán nhãn được đẩy ngược lại để huấn luyện mô hình (Fine-tuning).</p>
+                                </div>
+                            </div>
+                            <div class="workflow-arrow"><i class="fa-solid fa-arrow-down"></i></div>
+                            <div class="workflow-step success">
+                                <div class="step-icon"><i class="fa-solid fa-rocket"></i></div>
+                                <div class="step-content">
+                                    <h4>5. Tăng trưởng thông minh</h4>
+                                    <p>AI học mẫu mới, tự động giảm tỷ lệ lỗi trong tương lai.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </section>
     </main>
 </div>
 <script src="app.js"></script>
 </body>
 </html>
+            <!-- ══════ PAGE: TRAINING HUB ══════ -->
+            <div class="page" id="training">
+                <div class="page-header">
+                    <h2>AI Training Hub</h2>
+                    <p>Huấn luyện và nâng cao độ thông minh cho mô hình NER</p>
+                </div>
+
+                <div class="content-grid sidebar-layout">
+                    <div class="flex-col gap-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <span class="card-title">AI Intelligence Growth</span>
+                                <div class="badge success">v2.4.0 Active</div>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="intelligenceChart" height="200"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <span class="card-title">Training History</span>
+                            </div>
+                            <div class="table-container">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Version</th>
+                                            <th>Accuracy</th>
+                                            <th>F1-Score</th>
+                                            <th>Samples</th>
+                                            <th>Date</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="training-history-table">
+                                        <!-- Data via JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex-col gap-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <span class="card-title">Import Label Studio</span>
+                            </div>
+                            <div class="card-body">
+                                <p class="text-secondary mb-12" style="font-size:12px">
+                                    Tải lên file JSON export từ Label Studio để bổ sung dữ liệu huấn luyện.
+                                </p>
+                                <div class="form-group">
+                                    <label class="form-label">Label Studio JSON</label>
+                                    <input type="file" id="ls-import-file" class="form-input" accept=".json">
+                                </div>
+                                <button class="btn btn-primary w-full" id="btn-import-ls">
+                                    <i class="fa-solid fa-upload"></i> Import & Retrain
+                                </button>
+                                <div id="import-status" class="mt-12 text-center" style="font-size:12px"></div>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <span class="card-title">Active Model Info</span>
+                            </div>
+                            <div class="card-body">
+                                <div class="flex justify-between mb-12">
+                                    <span class="text-tertiary">Base Model</span>
+                                    <span class="text-primary">PhoBERT-Base</span>
+                                </div>
+                                <div class="flex justify-between mb-12">
+                                    <span class="text-tertiary">Training Method</span>
+                                    <span class="text-primary">Fine-tuning</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-tertiary">Last Retrained</span>
+                                    <span class="text-primary">2 giờ trước</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ══════ PAGE: WORKFLOW ══════ -->
+            <div class="page" id="workflow">
+                <div class="page-header">
+                    <h2>Quy trình Hoạt động</h2>
+                    <p>Vòng lặp phản hồi giúp AI thông minh hơn mỗi ngày</p>
+                </div>
+
+                <div class="card">
+                    <div class="card-body" style="padding: 40px">
+                        <div class="workflow-diagram">
+                            <div class="workflow-step">
+                                <div class="step-icon"><i class="fa-solid fa-file-import"></i></div>
+                                <div class="step-content">
+                                    <h4>1. Thu thập dữ liệu</h4>
+                                    <p>Địa chỉ thô được thu thập từ các hệ thống hoặc upload hàng loạt.</p>
+                                </div>
+                            </div>
+                            <div class="workflow-arrow"><i class="fa-solid fa-arrow-down"></i></div>
+                            <div class="workflow-step">
+                                <div class="step-icon"><i class="fa-solid fa-microchip"></i></div>
+                                <div class="step-content">
+                                    <h4>2. Xử lý NER</h4>
+                                    <p>AI tiến hành bóc tách các thực thể (Tỉnh, Quận, Đường...) với độ tin cậy cụ thể.</p>
+                                </div>
+                            </div>
+                            <div class="workflow-arrow"><i class="fa-solid fa-arrow-down"></i></div>
+                            <div class="workflow-step">
+                                <div class="step-icon"><i class="fa-solid fa-user-check"></i></div>
+                                <div class="step-content">
+                                    <h4>3. Kiểm soát (Human-in-the-loop)</h4>
+                                    <p>Các địa chỉ có độ tin cậy thấp được gán nhãn lại qua Label Studio.</p>
+                                </div>
+                            </div>
+                            <div class="workflow-arrow"><i class="fa-solid fa-arrow-down"></i></div>
+                            <div class="workflow-step glow">
+                                <div class="step-icon"><i class="fa-solid fa-rotate"></i></div>
+                                <div class="step-content">
+                                    <h4>4. Tái huấn luyện (Retrain)</h4>
+                                    <p>Kết quả từ con người được đẩy ngược lại hệ thống để huấn luyện AI.</p>
+                                </div>
+                            </div>
+                            <div class="workflow-arrow"><i class="fa-solid fa-arrow-down"></i></div>
+                            <div class="workflow-step">
+                                <div class="step-icon"><i class="fa-solid fa-rocket"></i></div>
+                                <div class="step-content">
+                                    <h4>5. Tăng trưởng thông minh</h4>
+                                    <p>AI học được các mẫu mới, giảm thiểu lỗi cho các lượt xử lý sau.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
