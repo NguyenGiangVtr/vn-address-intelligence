@@ -4,13 +4,13 @@ database:
   dbname: "${DB_NAME}"
   user: "${DB_USER}"
   password: "${DB_PASS}"
-  schema: "scm"                              # schema chứa bảng (để trống = public)
-  table_name: "address"
-  id_column: "id"                            # cột Primary Key (mặc định 'id')
-  input_column: "street_address"
-  ground_truth_column: ""                    # để trống nếu không có ground truth
-  limit: 200                                # số dòng lấy để thực nghiệm (null = tất cả)
-  db_batch_size: 100                         # số dòng mỗi lần commit kết quả về DB
+  schema: "prq"                                # schema chứa bảng xử lý chính
+  table_name: "address_cleansing_queue"
+  id_column: "id"                              # cột Primary Key (mặc định 'id')
+  input_column: "raw_address"                  # cột địa chỉ thô đầu vào
+  ground_truth_column: ""                      # để trống nếu không có ground truth
+  limit: 1000                                  # số dòng lấy để thực nghiệm (null = tất cả)
+  db_batch_size: 100                           # số dòng mỗi lần commit kết quả về DB
 
 models:
   phobert:
@@ -19,7 +19,7 @@ models:
     result_column: "normalized_phobert"
     max_seq_length: 256
     batch_size: 32
-    device: "auto"                            # auto | cuda | cpu
+    device: "auto"                              # auto | cuda | cpu
 
   siamese_mgte:
     enabled: true
@@ -38,10 +38,10 @@ models:
     device: "auto"
 
 experiment:
-  standard_addresses_schema: "scm"             # schema của bảng địa chỉ chuẩn
-  standard_addresses_table: "address"  # dùng chính bảng này làm corpus
-  standard_addresses_column: "street_address"
-  corpus_limit: 200                          # giới hạn corpus để thực nghiệm nhanh (null = tất cả)
+  standard_addresses_schema: "prq"               # schema của bảng địa chỉ chuẩn
+  standard_addresses_table: "address_cleansing_queue"
+  standard_addresses_column: "raw_address"
+  corpus_limit: 5000                             # giới hạn corpus để thực nghiệm
   output_report_path: "reports/experiment_report.html"
   save_csv: true
   csv_path: "reports/experiment_results.csv"

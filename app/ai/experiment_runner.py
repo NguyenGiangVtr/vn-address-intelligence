@@ -24,6 +24,7 @@ from db_connector import DBConnector
 from metrics import compute_metrics, print_metrics
 from models import LLMQwen3, PhoBERTSiamese, SiameseMGTE
 from report_generator import generate_html_report, save_csv
+from utils.config_loader import load_config_with_env
 
 # ──────────────────────────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -38,8 +39,7 @@ logger = logging.getLogger("ExperimentRunner")
 # Helpers
 # ──────────────────────────────────────────────────────────────────────────────
 def _load_config(path: str) -> dict:
-    with open(path, encoding="utf-8") as f:
-        return yaml.safe_load(f)
+    return load_config_with_env(path)
 
 
 def _has_ground_truth(df: pd.DataFrame) -> bool:
@@ -238,7 +238,7 @@ if __name__ == "__main__":
         description="Thực nghiệm so sánh PhoBERT / mGTE / LLM"
     )
     parser.add_argument(
-        "--config", default="src/config.yaml", help="Đường dẫn file config YAML"
+        "--config", default="app/ai/config.yaml", help="Đường dẫn file config YAML"
     )
     parser.add_argument(
         "--no-llm", action="store_true", help="Bỏ qua LLM (nhanh hơn)"

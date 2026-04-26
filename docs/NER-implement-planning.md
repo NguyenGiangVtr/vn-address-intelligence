@@ -23,7 +23,7 @@
 ## Bước 2: Chuẩn bị Dữ liệu Huấn luyện (Data Annotation)
 Mô hình PhoBERT cần dữ liệu thực tế để học hỏi ngữ cảnh (ví dụ: chữ "Số" đứng trước số thì là `NUM`, nhưng "Đường số" thì lại là `STR`).
 
-1. **Trích xuất Sample Data:** Query ngẫu nhiên 5.000 - 10.000 dòng `street_address` từ bảng `scm.address` (ưu tiên lấy các dòng có `address_raw` dài và phức tạp).
+1. **Trích xuất Sample Data:** Query ngẫu nhiên 5.000 - 10.000 dòng `street_address` từ bảng `scm.address` (ưu tiên lấy các dòng có `raw_address` dài và phức tạp).
 2. **Cài đặt công cụ gán nhãn:** Deploy các công cụ mã nguồn mở như **Doccano** hoặc **Label Studio** lên server nội bộ.
 3. **Gán nhãn thủ công:** Team Data tiến hành bôi đen và gán nhãn từng từ theo bộ nhãn ở Bước 1. 
 4. **Export dữ liệu:** Xuất dữ liệu đã gán nhãn ra định dạng JSONL hoặc CoNLL để chuẩn bị cho quá trình training.

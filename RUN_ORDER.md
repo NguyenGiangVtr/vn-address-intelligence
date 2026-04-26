@@ -58,7 +58,7 @@ python src/production_pipeline.py --config src/config.yaml
 Bạn có thể kiểm tra kết quả ngay trong bảng `scm.address` bằng câu lệnh SQL:
 ```sql
 SELECT 
-    address_raw, 
+    raw_address, 
     street_address, 
     address_standardized, 
     confidence_score, 

@@ -235,7 +235,7 @@ class RawAddress(Base):
     __table_args__ = {'schema': 'prq'}
     
     id = Column(Integer, primary_key=True, autoincrement=True)
-    address_raw = Column(Text, nullable=False)
+    raw_address = Column(Text, nullable=False)
     status = Column(String(20), default='pending') # pending, ai_processed, human_reviewed, completed
     street_address = Column(Text)
     confidence_score = Column(Float)

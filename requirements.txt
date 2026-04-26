@@ -1,11 +1,29 @@
+# ── Core ──
 sqlalchemy>=2.0.0
 psycopg2-binary>=2.9.0
 python-dotenv>=1.0.0
 requests>=2.31.0
 pandas>=2.0.0
 click>=8.1.0
-overpy>=0.6
 tqdm>=4.66.0
+pyyaml>=6.0
+
+# ── Web API ──
+fastapi>=0.100.0
+uvicorn[standard]>=0.23.0
+gunicorn>=21.2.0
+
+# ── AI / ML ──
 transformers>=4.30.0
 datasets>=2.12.0
 torch>=2.0.0
+sentence-transformers>=2.2.0
+seqeval>=1.2.2
+numpy>=1.24.0
+scikit-learn>=1.3.0
+
+# ── Vietnamese NLP ──
+pyvi>=0.1.1
+
+# ── Data Collection ──
+overpy>=0.6

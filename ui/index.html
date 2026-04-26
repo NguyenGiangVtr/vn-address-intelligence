@@ -3,203 +3,424 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VN Address Intelligence | Dashboard</title>
-    <meta name="description" content="Hệ thống làm giàu và chuẩn hóa dữ liệu địa chỉ thông minh Việt Nam 2025">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <title>VN Address Intelligence | SaaS Platform</title>
+    <meta name="description" content="AI-powered Vietnamese address enrichment and standardization platform">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body class="dark-theme">
-    <div class="app-container">
-        <!-- Sidebar -->
-        <aside class="sidebar">
-            <div class="logo-area">
-                <div class="logo-icon"></div>
-                <h1>VNAI <span>v2.0</span></h1>
+<body>
+<div class="app-container">
+    <!-- Sidebar Overlay (Mobile) -->
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+    <!-- ═══ SIDEBAR ═══ -->
+    <aside class="sidebar">
+        <div class="logo-area">
+            <div class="logo-icon"></div>
+            <h1>VNAI <span>SaaS</span></h1>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Platform</div>
+        </div>
+        <nav class="nav-menu">
+            <a href="#" class="nav-item active" data-page="overview">
+                <i class="fa-solid fa-chart-line"></i> Tổng quan
+            </a>
+            <a href="#" class="nav-item" data-page="parser">
+                <i class="fa-solid fa-wand-magic-sparkles"></i> Address Parser
+            </a>
+            <a href="#" class="nav-item" data-page="batch">
+                <i class="fa-solid fa-layer-group"></i> Batch Processor
+                <span class="badge-count">505K</span>
+            </a>
+
+            <div class="nav-divider"></div>
+            <div class="nav-section"><div class="nav-section-title">Research</div></div>
+
+            <a href="#" class="nav-item" data-page="ai-hub">
+                <i class="fa-solid fa-brain"></i> AI Training
+            </a>
+            <a href="#" class="nav-item" data-page="experiments">
+                <i class="fa-solid fa-flask-vial"></i> Experiments
+            </a>
+            <a href="#" class="nav-item" data-page="ward-mapper">
+                <i class="fa-solid fa-building-columns"></i> Ward Mapper
+            </a>
+
+            <div class="nav-divider"></div>
+            <div class="nav-section"><div class="nav-section-title">Data</div></div>
+
+            <a href="#" class="nav-item" data-page="explorer">
+                <i class="fa-solid fa-database"></i> Data Explorer
+            </a>
+            <a href="#" class="nav-item" data-page="settings">
+                <i class="fa-solid fa-gear"></i> Settings
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="status-indicator">
+                <span class="dot pulse"></span> System Online
             </div>
-            <nav class="nav-menu">
-                <a href="#overview" class="nav-item active" data-page="overview">
-                    <i class="fa-solid fa-chart-line"></i> Tổng quan
-                </a>
-                <a href="#admin-v2" class="nav-item" data-page="admin-v2">
-                    <i class="fa-solid fa-building-columns"></i> Hành chính V2
-                </a>
-                <a href="#osm" class="nav-item" data-page="osm">
-                    <i class="fa-solid fa-map-location-dot"></i> OSM Data Hub
-                </a>
-                <a href="#ai-hub" class="nav-item" data-page="ai-hub">
-                    <i class="fa-solid fa-brain"></i> AI Training
-                </a>
-                <a href="#settings" class="nav-item" data-page="settings">
-                    <i class="fa-solid fa-gears"></i> Cấu hình
-                </a>
-            </nav>
-            <div class="sidebar-footer">
-                <div class="status-indicator">
-                    <span class="dot pulse"></span>
-                    Crawl 5M: Active
-                </div>
+        </div>
+    </aside>
+
+    <!-- ═══ MAIN ═══ -->
+    <main class="main-content">
+        <header class="top-header">
+            <div class="header-left">
+                <button class="menu-toggle" id="menu-toggle">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+                <div class="page-breadcrumb">VN Address AI</div>
+                <div class="breadcrumb-separator">/</div>
+                <span class="page-title" id="current-page-title">Tổng quan</span>
             </div>
-        </aside>
+            <div class="search-bar">
+                <input type="text" id="global-search" placeholder="Search addresses, models, data...">
+            </div>
+            <div class="header-actions">
+                <button class="header-btn" title="Notifications"><i class="fa-regular fa-bell"></i></button>
+                <button class="header-btn" title="Help"><i class="fa-regular fa-circle-question"></i></button>
+                <div class="avatar">G</div>
+            </div>
+        </header>
 
-        <!-- Main Content -->
-        <main class="main-content">
-            <header class="top-header">
-                <div class="search-bar">
-                    <input type="text" placeholder="Tìm kiếm địa chỉ, nghị định, hoặc đơn vị hành chính...">
+        <section id="page-content">
+
+            <!-- ══════ PAGE: OVERVIEW ══════ -->
+            <div class="page active" id="overview">
+                <div class="page-header">
+                    <h2>Dashboard</h2>
+                    <p>Hệ thống Làm giàu và Chuẩn hóa Dữ liệu Địa chỉ Việt Nam</p>
                 </div>
-                <div class="user-profile">
-                    <div class="notifications">
-                        <i class="fa-regular fa-bell"></i>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-label">Total Visits</div>
+                        <div class="stat-value" id="stat-visits">0</div>
+                        <div class="stat-change positive"><i class="fa-solid fa-eye"></i> All time</div>
                     </div>
-                    <div class="avatar">G</div>
+                    <div class="stat-card">
+                        <div class="stat-label">Unique Visitors</div>
+                        <div class="stat-value" id="stat-unique">0</div>
+                        <div class="stat-change positive"><i class="fa-solid fa-user-check"></i> Unique IPs</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Online Users</div>
+                        <div class="stat-value" id="stat-online" style="color:var(--success)">0</div>
+                        <div class="stat-change positive"><i class="fa-solid fa-circle-dot pulse"></i> Real-time</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Queue</div>
+                        <div class="stat-value" id="stat-queue">505,094</div>
+                        <div class="stat-change warning"><i class="fa-solid fa-clock"></i> Pending</div>
+                    </div>
                 </div>
-            </header>
 
-            <section id="page-content">
-                <!-- Overview Page (Default) -->
-                <div class="page active" id="overview">
-                    <div class="welcome-header">
-                        <h2>Chào mừng, <span>Giang Nguyen</span></h2>
-                        <p>Hệ thống hiện đang quản lý 1.2M+ bản ghi địa lý.</p>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-label">Master Data</div>
+                        <div class="stat-value" id="stat-master">16,427</div>
+                        <div class="stat-change positive"><i class="fa-solid fa-arrow-up"></i> P+D+W</div>
                     </div>
+                    <div class="stat-card">
+                        <div class="stat-label">OSM Entities</div>
+                        <div class="stat-value" id="stat-osm">615,547</div>
+                        <div class="stat-change positive"><i class="fa-solid fa-arrow-up"></i> OSM</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Training Data</div>
+                        <div class="stat-value" id="stat-training">25,130</div>
+                        <div class="stat-change positive"><i class="fa-solid fa-check"></i> Labeled</div>
+                    </div>
+                </div>
 
-                    <div class="stats-grid">
-                        <div class="stat-card glass">
-                            <div class="stat-info">
-                                <h3>Master Data</h3>
-                                <div class="value" id="stat-master-total">...</div>
-                                <p>Đơn vị hành chính</p>
-                            </div>
-                            <div class="stat-chart">
-                                <canvas id="chart-master"></canvas>
-                            </div>
+                <div class="content-grid sidebar-layout">
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title">Tiến độ xử lý theo Schema</span>
+                            <button class="btn btn-sm btn-ghost"><i class="fa-solid fa-arrow-rotate-right"></i> Refresh</button>
                         </div>
-                        <div class="stat-card glass primary">
-                            <div class="stat-info">
-                                <h3>OSM Entities</h3>
-                                <div class="value" id="stat-osm-total">...</div>
-                                <p>Thực thể bản đồ</p>
-                            </div>
-                            <div class="stat-growth">+12.5k / 3m</div>
-                        </div>
-                        <div class="stat-card glass">
-                            <div class="stat-info">
-                                <h3>Training Hub</h3>
-                                <div class="value" id="stat-ai-total">...</div>
-                                <p>Mẫu gán nhãn BIO</p>
-                            </div>
-                        </div>
-                        <div class="stat-card glass">
-                            <div class="stat-info">
-                                <h3>Queue</h3>
-                                <div class="value" id="stat-queue-total">...</div>
-                                <p>Hàng đợi chuẩn hóa</p>
-                            </div>
+                        <div class="card-body">
+                            <div class="chart-container"><canvas id="chart-overview"></canvas></div>
                         </div>
                     </div>
-
-                    <div class="content-row">
-                        <div class="data-table-container glass">
-                            <h3>Tiến độ Làm giàu dữ liệu GSO</h3>
-                            <div class="table-scroll">
-                                <table id="enrichment-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Tỉnh/Thành</th>
-                                            <th>Trạng thái</th>
-                                            <th>Nghị định</th>
-                                            <th>Diện tích</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <!-- Data injected via JS -->
-                                    </tbody>
-                                </table>
-                            </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title">Hoạt động gần đây</span>
                         </div>
-                        <div class="activity-feed glass">
-                            <h3>Hoạt động gần đây</h3>
-                            <ul class="activity-list" id="recent-activity">
-                                <li>
-                                    <span class="time">Vừa xong</span>
-                                    <p>Đã nạp 1.245 entities từ Ba Đình, Hà Nội</p>
-                                </li>
-                                <li>
-                                    <span class="time">10 phút trước</span>
-                                    <p>Hoàn tất Ward Mapping cho Tỉnh Nam Định</p>
-                                </li>
+                        <div class="card-body">
+                            <ul class="activity-list" id="activity-feed">
+                                <li class="activity-item"><div class="activity-dot"></div><div><div class="activity-text">Export 1,000 NER samples prelabeled</div><div class="activity-time">2 giờ trước</div></div></li>
+                                <li class="activity-item"><div class="activity-dot" style="background:var(--success)"></div><div><div class="activity-text">Hybrid PreLabeler v2 deployed</div><div class="activity-time">5 giờ trước</div></div></li>
+                                <li class="activity-item"><div class="activity-dot" style="background:var(--warning)"></div><div><div class="activity-text">Ward Mapping: 10,635 rules synced</div><div class="activity-time">1 ngày trước</div></div></li>
+                                <li class="activity-item"><div class="activity-dot" style="background:var(--info)"></div><div><div class="activity-text">OSM crawl completed: 63 provinces</div><div class="activity-time">3 ngày trước</div></div></li>
                             </ul>
                         </div>
                     </div>
                 </div>
 
-                <!-- Admin V2 Page -->
-                <div class="page" id="admin-v2">
-                    <div class="welcome-header">
-                        <h2>🏛️ Quản lý Đơn vị Hành chính 2025</h2>
-                        <p>Danh sách các đơn vị mới cập nhật theo Nghị quyết Chính phủ.</p>
+                <!-- Model Status -->
+                <div class="page-header mt-24"><h2>Model Status</h2></div>
+                <div class="stats-grid">
+                    <div class="model-card">
+                        <div class="model-icon ner"><i class="fa-solid fa-tags"></i></div>
+                        <div class="model-info"><div class="model-name">PhoBERT NER</div><div class="model-desc">Token classification · 10 entities</div></div>
+                        <span class="badge warning">Training</span>
                     </div>
-                    <div class="data-table-container glass full-width">
-                         <table id="full-admin-table">
-                            <thead>
-                                <tr><th>ID</th><th>Tên Tỉnh</th><th>Mã GSO</th><th>Nghị quyết</th><th>Trạng thái</th></tr>
-                            </thead>
-                            <tbody></tbody>
-                         </table>
+                    <div class="model-card">
+                        <div class="model-icon phobert"><i class="fa-solid fa-code-branch"></i></div>
+                        <div class="model-info"><div class="model-name">PhoBERT Siamese</div><div class="model-desc">Bi-Encoder address matching</div></div>
+                        <span class="badge success">Ready</span>
                     </div>
-                </div>
-
-                <!-- OSM Hub Page -->
-                <div class="page" id="osm">
-                    <div class="welcome-header">
-                        <h2>🗺️ OpenStreetMap Data Hub</h2>
-                        <p>Tiến trình thu thập 5,000,000 bản ghi thực địa.</p>
+                    <div class="model-card">
+                        <div class="model-icon mgte"><i class="fa-solid fa-globe"></i></div>
+                        <div class="model-info"><div class="model-name">mGTE Siamese</div><div class="model-desc">Multilingual baseline</div></div>
+                        <span class="badge success">Ready</span>
                     </div>
-                    <div class="stats-grid">
-                         <div class="stat-card glass"><div class="stat-info"><h3>Tổng Raw Entities</h3><div class="value" id="osm-raw-val">...</div></div></div>
-                         <div class="stat-card glass"><div class="stat-info"><h3>Đường phố</h3><div class="value" id="osm-street-val">...</div></div></div>
-                         <div class="stat-card glass"><div class="stat-info"><h3>Tòa nhà</h3><div class="value" id="osm-build-val">...</div></div></div>
+                    <div class="model-card">
+                        <div class="model-icon llm"><i class="fa-solid fa-robot"></i></div>
+                        <div class="model-info"><div class="model-name">LLM Qwen3-4B</div><div class="model-desc">Final normalization</div></div>
+                        <span class="badge info">Standby</span>
                     </div>
                 </div>
+            </div>
 
-                <!-- AI Training Page -->
-                <div class="page" id="ai-hub">
-                    <div class="welcome-header">
-                        <h2>🧠 AI Training & NER Hub</h2>
-                        <p>Quản lý tập dữ liệu huấn luyện PhoBERT và MGTE.</p>
+            <!-- ══════ PAGE: ADDRESS PARSER ══════ -->
+            <div class="page" id="parser">
+                <div class="page-header">
+                    <h2>Address Parser</h2>
+                    <p>Paste địa chỉ thô để NER bóc tách thành phần thực thể realtime</p>
+                </div>
+                <div class="tool-panel">
+                    <div class="tool-input-section">
+                        <div class="tool-section-title">Input</div>
+                        <div class="form-group">
+                            <textarea class="form-textarea" id="parser-input" placeholder="Nhập địa chỉ cần phân tích...&#10;VD: 2695/7 Đường Phạm Thế Hiển, phường 7, Quận 8, TP Hồ Chí Minh"></textarea>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <button class="btn btn-primary" id="btn-parse"><i class="fa-solid fa-wand-magic-sparkles"></i> Phân tích</button>
+                            <button class="btn btn-ghost" id="btn-parse-sample"><i class="fa-solid fa-shuffle"></i> Mẫu ngẫu nhiên</button>
+                        </div>
                     </div>
-                    <div class="content-row">
-                        <div class="data-table-container glass">
-                            <h3>Mẫu dữ liệu NER (Synthetic)</h3>
-                            <div class="table-scroll">
-                                <table id="ner-samples-table">
-                                    <thead>
-                                        <tr><th>Input Text</th><th>BIO Tags</th><th>Confidence</th></tr>
-                                    </thead>
-                                    <tbody></tbody>
+                    <div class="tool-output-section">
+                        <div class="tool-section-title">NER Output</div>
+                        <div class="ner-output" id="parser-output">
+                            <span style="color:var(--text-tertiary)">Kết quả sẽ hiển thị ở đây...</span>
+                        </div>
+                        <div class="mt-16">
+                            <div class="tool-section-title">Extracted Entities</div>
+                            <div class="table-container">
+                                <table id="parser-entities-table">
+                                    <thead><tr><th>Label</th><th>Value</th><th>Confidence</th></tr></thead>
+                                    <tbody id="parser-entities-body"></tbody>
                                 </table>
                             </div>
                         </div>
-                        <div class="activity-feed glass">
-                            <h3>Model Status</h3>
-                            <div class="model-status">
-                                <div class="model-item">
-                                    <strong>PhoBERT NER:</strong> <span class="badge done">Ready</span>
-                                </div>
-                                <div class="model-item">
-                                    <strong>MGTE Embedding:</strong> <span class="badge pending">Tuning</span>
-                                </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ══════ PAGE: BATCH PROCESSOR ══════ -->
+            <div class="page" id="batch">
+                <div class="page-header">
+                    <h2>Batch Processor</h2>
+                    <p>Xử lý hàng loạt từ hàng đợi <code class="text-mono text-accent">prq.address_cleansing_queue</code></p>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-card"><div class="stat-label">Total Queue</div><div class="stat-value" id="batch-total">505,094</div></div>
+                    <div class="stat-card"><div class="stat-label">Processed</div><div class="stat-value text-success" id="batch-done">0</div></div>
+                    <div class="stat-card"><div class="stat-label">Pending</div><div class="stat-value text-warning" id="batch-pending">505,094</div></div>
+                    <div class="stat-card"><div class="stat-label">Throughput</div><div class="stat-value" id="batch-speed">-- qps</div></div>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Batch Control</span>
+                        <div class="flex gap-12">
+                            <button class="btn btn-primary" id="btn-batch-start"><i class="fa-solid fa-play"></i> Start Batch</button>
+                            <button class="btn" id="btn-batch-stop"><i class="fa-solid fa-stop"></i> Stop</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label class="form-label">Batch Size</label>
+                            <input class="form-input" type="number" id="batch-size" value="1000" style="width:200px">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Processing Method</label>
+                            <select class="form-input" id="batch-method" style="width:300px">
+                                <option value="hybrid">Hybrid (NER + Siamese + LLM)</option>
+                                <option value="ner-only">NER Only (PhoBERT)</option>
+                                <option value="siamese-only">Siamese Only (mGTE)</option>
+                            </select>
+                        </div>
+                        <div id="batch-log" class="batch-log mt-16">
+                            Waiting for batch start...
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ══════ PAGE: AI TRAINING ══════ -->
+            <div class="page" id="ai-hub">
+                <div class="page-header">
+                    <h2>AI Training Hub</h2>
+                    <p>Quản lý dữ liệu huấn luyện và theo dõi fine-tuning PhoBERT NER</p>
+                </div>
+                <div class="content-grid">
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title">Export for Annotation</span>
+                            <button class="btn btn-sm" id="btn-export"><i class="fa-solid fa-file-export"></i> Export</button>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-group">
+                                <label class="form-label">Sample Limit</label>
+                                <input class="form-input" type="number" id="export-limit" value="1000" style="width:200px">
+                            </div>
+                            <p style="font-size:12px;color:var(--text-tertiary)">Sử dụng Hybrid PreLabeler để tạo gợi nhãn tự động trước khi gửi cho team gán nhãn trên Label Studio.</p>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title">Training Status</span>
+                        </div>
+                        <div class="card-body">
+                            <div class="flex flex-col gap-12">
+                                <div class="flex items-center justify-between"><span>Labeled Data</span><span class="text-accent">200 / 1,000</span></div>
+                                <div style="height:6px;background:var(--bg-app);border-radius:3px;overflow:hidden"><div style="width:20%;height:100%;background:var(--accent);border-radius:3px"></div></div>
+                                <div class="flex items-center justify-between"><span>Model F1-Score</span><span class="text-warning">Pending training</span></div>
+                                <div class="flex items-center justify-between"><span>NER Labels</span><span class="badge accent">10 entities</span></div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </section>
-        </main>
-    </div>
-    <script src="app.js"></script>
+                <div class="card mt-16">
+                    <div class="card-header"><span class="card-title">NER Label Registry</span></div>
+                    <div class="card-body table-container">
+                        <table id="label-registry">
+                            <thead><tr><th>Code</th><th>Name</th><th>Color</th><th>Hotkey</th><th>Example</th></tr></thead>
+                            <tbody id="label-registry-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ══════ PAGE: EXPERIMENTS ══════ -->
+            <div class="page" id="experiments">
+                <div class="page-header">
+                    <h2>Model Comparison</h2>
+                    <p>So sánh hiệu năng PhoBERT Siamese vs mGTE Siamese vs LLM Qwen3</p>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Run Experiment</span>
+                        <button class="btn btn-primary" id="btn-run-experiment"><i class="fa-solid fa-play"></i> Run</button>
+                    </div>
+                    <div class="card-body">
+                        <p style="font-size:13px;color:var(--text-secondary)">Chạy <code class="text-mono">experiment_runner.py</code> để so sánh 3 mô hình trên tập dữ liệu thực. Kết quả bao gồm Exact Match, Fuzzy Match, Component Accuracy và Latency.</p>
+                        <div class="mt-16 table-container">
+                            <table id="experiment-results">
+                                <thead><tr><th>Metric</th><th>PhoBERT</th><th>mGTE</th><th>LLM</th><th>Target</th></tr></thead>
+                                <tbody>
+                                    <tr><td>Exact Match</td><td>--</td><td>--</td><td>--</td><td>≥ 30%</td></tr>
+                                    <tr><td>Fuzzy Match</td><td>--</td><td>--</td><td>--</td><td>≥ 60%</td></tr>
+                                    <tr><td>Phường Acc</td><td>--</td><td>--</td><td>--</td><td>≥ 80%</td></tr>
+                                    <tr><td>Quận Acc</td><td>--</td><td>--</td><td>--</td><td>≥ 85%</td></tr>
+                                    <tr><td>Tỉnh Acc</td><td>--</td><td>--</td><td>--</td><td>≥ 90%</td></tr>
+                                    <tr><td>Throughput</td><td>--</td><td>--</td><td>--</td><td>≥ 20 qps</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ══════ PAGE: WARD MAPPER ══════ -->
+            <div class="page" id="ward-mapper">
+                <div class="page-header">
+                    <h2>Ward Mapper 2025</h2>
+                    <p>Tra cứu sáp nhập đơn vị hành chính theo Nghị quyết Chính phủ</p>
+                </div>
+                <div class="tool-panel">
+                    <div class="tool-input-section">
+                        <div class="tool-section-title">Tra cứu</div>
+                        <div class="form-group">
+                            <label class="form-label">Tên phường/xã cũ</label>
+                            <input class="form-input" id="ward-search" placeholder="VD: Phường Linh Trung">
+                        </div>
+                        <button class="btn btn-primary" id="btn-ward-search"><i class="fa-solid fa-magnifying-glass"></i> Tìm kiếm</button>
+                    </div>
+                    <div class="tool-output-section">
+                        <div class="tool-section-title">Kết quả ánh xạ</div>
+                        <div id="ward-result" class="ner-output" style="color:var(--text-tertiary)">
+                            Nhập tên phường/xã cũ để tra cứu quy tắc sáp nhập...
+                        </div>
+                        <p class="mt-12" style="font-size:12px;color:var(--text-tertiary)">Tổng: 10,635 quy tắc ánh xạ từ <code class="text-mono">mat.ward_mapping</code></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ══════ PAGE: DATA EXPLORER ══════ -->
+            <div class="page" id="explorer">
+                <div class="page-header">
+                    <h2>Data Explorer</h2>
+                    <p>Duyệt và tìm kiếm dữ liệu trong hàng đợi xử lý</p>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">prq.address_cleansing_queue</span>
+                        <div class="flex gap-12">
+                            <input class="form-input" id="explorer-search" placeholder="Filter by address..." style="width:300px">
+                            <button class="btn btn-sm" id="btn-explorer-refresh"><i class="fa-solid fa-arrow-rotate-right"></i></button>
+                        </div>
+                    </div>
+                    <div class="card-body table-container" style="max-height:500px;overflow-y:auto">
+                        <table id="explorer-table">
+                            <thead><tr><th>ID</th><th>Raw Address</th><th>Ward</th><th>District</th><th>Province</th><th>Status</th></tr></thead>
+                            <tbody id="explorer-body"><tr><td colspan="6" style="color:var(--text-tertiary)">Click Refresh to load data...</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ══════ PAGE: SETTINGS ══════ -->
+            <div class="page" id="settings">
+                <div class="page-header">
+                    <h2>Settings</h2>
+                    <p>Cấu hình hệ thống và kết nối database</p>
+                </div>
+                <div class="content-grid">
+                    <div class="card">
+                        <div class="card-header"><span class="card-title">Database Connection</span></div>
+                        <div class="card-body">
+                            <div class="form-group"><label class="form-label">Host</label><input class="form-input" value="••••••••" disabled></div>
+                            <div class="form-group"><label class="form-label">Port</label><input class="form-input" value="5432" disabled></div>
+                            <div class="form-group"><label class="form-label">Database</label><input class="form-input" value="••••••••" disabled></div>
+                            <p style="font-size:12px;color:var(--text-tertiary)"><i class="fa-solid fa-lock"></i> Credentials loaded from .env file</p>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header"><span class="card-title">System Info</span></div>
+                        <div class="card-body">
+                            <div class="flex flex-col gap-12">
+                                <div class="flex items-center justify-between"><span>Python</span><span class="text-mono">3.11</span></div>
+                                <div class="flex items-center justify-between"><span>PhoBERT</span><span class="text-mono">vinai/phobert-base</span></div>
+                                <div class="flex items-center justify-between"><span>mGTE</span><span class="text-mono">gte-multilingual-base</span></div>
+                                <div class="flex items-center justify-between"><span>LLM</span><span class="text-mono">Qwen/Qwen3-4B</span></div>
+                                <div class="flex items-center justify-between"><span>Deadline</span><span class="badge danger">25/05/2026</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+    </main>
+</div>
+<script src="app.js"></script>
 </body>
 </html>

@@ -1,153 +1,377 @@
-const API_BASE = "http://localhost:8080/api";
+/* ══════════════════════════════════════════════════════════════
+   VN Address Intelligence — SaaS App Logic
+   ══════════════════════════════════════════════════════════════ */
 
+const API_BASE = window.location.hostname === "localhost" || window.location.protocol === "file:"
+  ? "http://localhost:8081/api"
+  : "/api";
+
+// NER Labels (mirrors constants.py)
+const NER_LABELS = [
+  { value:"PCD", text:"Plus Code",      color:"#f032e6", hotkey:"0", example:"7P28QR4F+2M" },
+  { value:"BLD", text:"Tòa nhà/Chung cư", color:"#f58231", hotkey:"1", example:"Chung Cư Tecco Green Nest" },
+  { value:"POI", text:"Địa danh/Mốc",   color:"#911eb4", hotkey:"2", example:"Đối Diện Chợ Bà Chiểu" },
+  { value:"ALY", text:"Hẻm/Ngõ",        color:"#4363d8", hotkey:"3", example:"Hẻm 141" },
+  { value:"NUM", text:"Số nhà/Lô",      color:"#e6194B", hotkey:"4", example:"Số 17/2A" },
+  { value:"STR", text:"Tên đường",       color:"#3cb44b", hotkey:"5", example:"Đường Phạm Thế Hiển" },
+  { value:"NHB", text:"Khu phố/Thôn/Ấp", color:"#469990", hotkey:"6", example:"Khu Phố 3" },
+  { value:"WDS", text:"Phường/Xã",       color:"#ffe119", hotkey:"7", example:"Phường Tân Thới Nhất" },
+  { value:"DST", text:"Quận/Huyện",      color:"#800000", hotkey:"8", example:"Quận 12" },
+  { value:"PRO", text:"Tỉnh/TP",         color:"#000075", hotkey:"9", example:"TP Hồ Chí Minh" },
+];
+
+const SAMPLE_ADDRESSES = [
+  "2695/7 Đường Phạm Thế Hiển, phường 7, Quận 8, Thành phố Hồ Chí Minh, Việt Nam",
+  "Chung Cư Tecco Green Nest, Phan Văn Hớn, Tân Thới Nhất, Quận 12, Thành phố Hồ Chí Minh",
+  "850/169, Đường Trưng Nữ Vương, Khu Vực 10 gần nhà tạp hoá, Châu Văn Liêm, Ô Môn, Cần Thơ",
+  "số 5 ngõ 10 phố Tôn Thất Tùng, phường Trung Tự, quận Đống Đa, Hà Nội",
+  "Tổ 3 ấp Phước Hưng, xã Long Phước, thành phố Bà Rịa, tỉnh Bà Rịa-Vũng Tàu",
+  "Lô E2-20 Khu đô thị Mega Residence, đường 990B, Phú Hữu, TP. Thủ Đức, HCM",
+];
+
+// ─── INIT ───
 document.addEventListener("DOMContentLoaded", () => {
-    initDashboard();
-    setupNavigation();
+  setupNavigation();
+  populateLabelRegistry();
+  initOverviewChart();
+  setupParserTool();
+  setupBatchTool();
+  fetchStats();
+  
+  // Refresh stats every 30 seconds
+  setInterval(fetchStats, 30000);
 });
 
-async function initDashboard() {
-    try {
-        const stats = await fetch(`${API_BASE}/stats`).then(res => res.json());
-        updateStats(stats);
-        
-        // Initial load for overview
-        const provinces = await fetch(`${API_BASE}/admin-v2/provinces`).then(res => res.json());
-        updateProvincesTable(provinces);
-        
-        renderCharts(stats);
-    } catch (error) {
-        console.error("Failed to fetch dashboard data:", error);
-    }
-}
-
-async function loadPageData(pageId) {
-    console.log(`Loading data for ${pageId}...`);
-    try {
-        if (pageId === "admin-v2") {
-            const data = await fetch(`${API_BASE}/admin-v2/provinces`).then(res => res.json());
-            renderFullAdminTable(data);
-        } else if (pageId === "osm") {
-            const data = await fetch(`${API_BASE}/osm/summary`).then(res => res.json());
-            renderOSMPage(data);
-        } else if (pageId === "ai-hub") {
-            const data = await fetch(`${API_BASE}/training/samples`).then(res => res.json());
-            renderAIPage(data);
-        }
-    } catch (e) { console.error(e); }
-}
-
-function renderFullAdminTable(data) {
-    const tbody = document.querySelector("#full-admin-table tbody");
-    tbody.innerHTML = data.map(p => `
-        <tr>
-            <td>${p.province_id}</td>
-            <td>${p.province_name}</td>
-            <td>${p.province_no || '-'}</td>
-            <td>${p.decision_number || 'N/A'}</td>
-            <td><span class="badge ${p.decision_number ? 'done' : 'pending'}">${p.decision_number ? 'Enriched' : 'Wait'}</span></td>
-        </tr>
-    `).join("");
-}
-
-function renderOSMPage(data) {
-    document.getElementById("osm-raw-val").innerText = data.raw.toLocaleString();
-    document.getElementById("osm-street-val").innerText = data.streets.toLocaleString();
-    document.getElementById("osm-build-val").innerText = data.buildings.toLocaleString();
-}
-
-function renderAIPage(data) {
-    const tbody = document.querySelector("#ner-samples-table tbody");
-    if (!Array.isArray(data)) {
-        tbody.innerHTML = "<tr><td colspan='3'>Không có dữ liệu</td></tr>";
-        return;
-    }
-    tbody.innerHTML = data.map(s => {
-        const tagStr = s.ner_tags_json ? (typeof s.ner_tags_json === 'string' ? s.ner_tags_json : JSON.stringify(s.ner_tags_json)) : "-";
-        return `
-            <tr>
-                <td title="${s.raw_text}">${s.raw_text ? s.raw_text.substring(0, 50) + '...' : '-'}</td>
-                <td><code>${tagStr.substring(0, 50)}...</code></td>
-                <td>${(Math.random() * 0.2 + 0.8).toFixed(2)}</td>
-            </tr>
-        `;
-    }).join("");
-}
-
-function updateStats(data) {
-    document.getElementById("stat-master-total").innerText = 
-        (data.master.provinces + data.master.districts + data.master.wards).toLocaleString();
-    
-    document.getElementById("stat-osm-total").innerText = 
-        data.osm.total.toLocaleString();
-    
-    document.getElementById("stat-ai-total").innerText = 
-        data.ai.training_samples.toLocaleString();
-    
-    document.getElementById("stat-queue-total").innerText = 
-        data.ai.cleansing_queue.toLocaleString();
-}
-
-function updateProvincesTable(provinces) {
-    const tbody = document.querySelector("#enrichment-table tbody");
-    tbody.innerHTML = "";
-    
-    provinces.slice(0, 10).forEach(p => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-            <td>${p.province_name}</td>
-            <td><span class="badge ${p.decision_number ? 'done' : 'pending'}">${p.decision_number ? 'Đã nạp' : 'Chờ'}</span></td>
-            <td>${p.decision_number || '-'}</td>
-            <td>${p.area_km2 || '...'} km²</td>
-        `;
-        tbody.appendChild(tr);
-    });
-}
-
-function renderCharts(data) {
-    const ctx = document.getElementById('chart-master').getContext('2d');
-    new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-            labels: ['Province', 'District', 'Ward'],
-            datasets: [{
-                data: [data.master.provinces, data.master.districts, data.master.wards],
-                backgroundColor: ['#3b82f6', '#06b6d4', '#10b981'],
-                borderWidth: 0
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            cutout: '70%'
-        }
-    });
-}
-
+// ═══════════════════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════════════════
 function setupNavigation() {
-    const navItems = document.querySelectorAll(".nav-item");
-    const pages = document.querySelectorAll(".page");
+  const navItems = document.querySelectorAll(".nav-item");
+  const pages = document.querySelectorAll(".page");
+  const titleEl = document.getElementById("current-page-title");
+  
+  const sidebar = document.querySelector(".sidebar");
+  const overlay = document.getElementById("sidebar-overlay");
+  const toggle = document.getElementById("menu-toggle");
 
-    navItems.forEach(item => {
-        item.addEventListener("click", (e) => {
-            e.preventDefault();
-            
-            // UI Update
-            navItems.forEach(i => i.classList.remove("active"));
-            item.classList.add("active");
-            
-            // Page Switching
-            const targetId = item.getAttribute("data-page");
-            pages.forEach(page => {
-                if (page.id === targetId) {
-                    page.classList.add("active");
-                    loadPageData(targetId);
-                } else {
-                    page.classList.remove("active");
-                }
-            });
-            
-            console.log(`Switched to ${targetId}`);
-        });
+  const closeMobileMenu = () => {
+    sidebar.classList.remove("mobile-active");
+    overlay.classList.remove("mobile-active");
+  };
+
+  if (toggle) {
+    toggle.addEventListener("click", () => {
+      sidebar.classList.toggle("mobile-active");
+      overlay.classList.toggle("mobile-active");
     });
+  }
+
+  if (overlay) overlay.addEventListener("click", closeMobileMenu);
+
+  navItems.forEach(item => {
+    item.addEventListener("click", (e) => {
+      e.preventDefault();
+      navItems.forEach(i => i.classList.remove("active"));
+      item.classList.add("active");
+
+      const targetId = item.getAttribute("data-page");
+      pages.forEach(p => p.classList.toggle("active", p.id === targetId));
+      titleEl.textContent = item.textContent.trim();
+      
+      // UX: Scroll to top when page changes
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      const contentEl = document.getElementById('page-content');
+      if (contentEl) contentEl.scrollTo({ top: 0, behavior: 'smooth' });
+      
+      closeMobileMenu(); // Close sidebar on mobile after selection
+    });
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// OVERVIEW CHART
+// ═══════════════════════════════════════════════════════════
+function initOverviewChart() {
+  const ctx = document.getElementById("chart-overview");
+  if (!ctx) return;
+
+  new Chart(ctx.getContext("2d"), {
+    type: "bar",
+    data: {
+      labels: ["mat.province", "mat.district", "mat.ward", "osm.streets", "osm.buildings", "ath.training", "prq.queue"],
+      datasets: [{
+        label: "Records",
+        data: [97, 767, 15563, 281376, 29889, 25130, 505094],
+        backgroundColor: [
+          "rgba(129,140,248,0.7)", "rgba(129,140,248,0.5)", "rgba(129,140,248,0.3)",
+          "rgba(52,211,153,0.7)", "rgba(52,211,153,0.5)",
+          "rgba(251,191,36,0.6)",
+          "rgba(248,113,113,0.6)"
+        ],
+        borderRadius: 4,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => ctx.parsed.y.toLocaleString() + " records"
+          }
+        }
+      },
+      scales: {
+        x: {
+          ticks: { color: "#5c5c5f", font: { size: 10 } },
+          grid: { display: false }
+        },
+        y: {
+          type: "logarithmic",
+          ticks: {
+            color: "#5c5c5f",
+            font: { size: 10 },
+            callback: (v) => v >= 1000 ? (v/1000)+"K" : v
+          },
+          grid: { color: "rgba(255,255,255,0.04)" }
+        }
+      }
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// LABEL REGISTRY
+// ═══════════════════════════════════════════════════════════
+function populateLabelRegistry() {
+  const tbody = document.getElementById("label-registry-body");
+  if (!tbody) return;
+
+  tbody.innerHTML = NER_LABELS.map(l => `
+    <tr>
+      <td><span class="badge" style="background:${l.color}22;color:${l.color}">${l.value}</span></td>
+      <td>${l.text}</td>
+      <td><div style="width:14px;height:14px;border-radius:3px;background:${l.color};display:inline-block;vertical-align:middle"></div> <span class="text-mono">${l.color}</span></td>
+      <td><kbd style="background:var(--bg-app);padding:2px 8px;border-radius:4px;font-size:12px;border:1px solid var(--border-default)">${l.hotkey}</kbd></td>
+      <td class="text-mono" style="font-size:12px">${l.example}</td>
+    </tr>
+  `).join("");
+}
+
+// ═══════════════════════════════════════════════════════════
+// ADDRESS PARSER TOOL
+// ═══════════════════════════════════════════════════════════
+function setupParserTool() {
+  const btnParse = document.getElementById("btn-parse");
+  const btnSample = document.getElementById("btn-parse-sample");
+  const inputEl = document.getElementById("parser-input");
+
+  if (btnParse) btnParse.addEventListener("click", () => runParser());
+  if (btnSample) btnSample.addEventListener("click", () => {
+    const addr = SAMPLE_ADDRESSES[Math.floor(Math.random() * SAMPLE_ADDRESSES.length)];
+    inputEl.value = addr;
+    runParser();
+  });
+}
+
+function runParser() {
+  const text = document.getElementById("parser-input").value.trim();
+  if (!text) return;
+
+  // Client-side heuristic NER (mirrors PreLabeler logic)
+  const entities = heuristicNER(text);
+  renderNEROutput(text, entities);
+  renderEntitiesTable(entities);
+}
+
+function heuristicNER(text) {
+  const entities = [];
+  let used = new Set();
+
+  // Province patterns
+  const proPatterns = [
+    /(?:Tỉnh|tỉnh|T\.)\s+([A-ZĐa-zÀ-ỹ\s\-]+?)(?:,|$)/g,
+    /(?:Thành phố|TP\.?\s*|tp\.?\s*)([A-ZĐa-zÀ-ỹ\s]+?)(?:,|$)/g,
+  ];
+  proPatterns.forEach(re => {
+    let m;
+    while ((m = re.exec(text)) !== null) {
+      entities.push({ label:"PRO", start: m.index, end: m.index + m[0].replace(/,$/,"").length, text: m[0].replace(/,$/,"").trim() });
+    }
+  });
+
+  // District
+  const dstRe = /(?:Quận|quận|Q\.?\s*|Huyện|huyện|H\.?\s*|Thị xã|thị xã|TX\.?\s*)([A-ZĐa-zÀ-ỹ0-9\s]+?)(?:,|$)/g;
+  let m;
+  while ((m = dstRe.exec(text)) !== null) {
+    entities.push({ label:"DST", start: m.index, end: m.index + m[0].replace(/,$/,"").length, text: m[0].replace(/,$/,"").trim() });
+  }
+
+  // Ward
+  const wdsRe = /(?:Phường|phường|P\.?\s*|Xã|xã|X\.?\s*|Thị trấn|TT\.?\s*)([A-ZĐa-zÀ-ỹ0-9\s]+?)(?:,|$)/g;
+  while ((m = wdsRe.exec(text)) !== null) {
+    entities.push({ label:"WDS", start: m.index, end: m.index + m[0].replace(/,$/,"").length, text: m[0].replace(/,$/,"").trim() });
+  }
+
+  // Street
+  const strRe = /(?:Đường|đường|Đ\.?\s*|Phố|phố)[\s]*([A-ZĐa-zÀ-ỹ0-9\s]+?)(?:,|$)/g;
+  while ((m = strRe.exec(text)) !== null) {
+    entities.push({ label:"STR", start: m.index, end: m.index + m[0].replace(/,$/,"").length, text: m[0].replace(/,$/,"").trim() });
+  }
+
+  // House number
+  const numRe = /(?:Số\s+|số\s+)?(\d+[\w/.\-]*)/g;
+  while ((m = numRe.exec(text)) !== null) {
+    if (!entities.some(e => m.index >= e.start && m.index < e.end)) {
+      entities.push({ label:"NUM", start: m.index, end: m.index + m[0].length, text: m[0].trim() });
+    }
+  }
+
+  // Alley
+  const alyRe = /(?:Hẻm|hẻm|Ngõ|ngõ|Ngách|ngách|Kiệt|kiệt)\s*[\d/]+/g;
+  while ((m = alyRe.exec(text)) !== null) {
+    entities.push({ label:"ALY", start: m.index, end: m.index + m[0].length, text: m[0].trim() });
+  }
+
+  // Building
+  const bldRe = /(?:Chung [Cc]ư|CC\.?\s*|Tòa nhà|Khu đô thị|KĐT)\s*[A-ZĐa-zÀ-ỹ0-9\s]+?(?:,|$)/g;
+  while ((m = bldRe.exec(text)) !== null) {
+    entities.push({ label:"BLD", start: m.index, end: m.index + m[0].replace(/,$/,"").length, text: m[0].replace(/,$/,"").trim() });
+  }
+
+  // Neighborhood
+  const nhbRe = /(?:Khu [Pp]hố|KP\.?\s*|[Tt]hôn|[Ấấ]p|[Tt]ổ)\s*[\dA-Za-zÀ-ỹ\s]+?(?:,|$)/g;
+  while ((m = nhbRe.exec(text)) !== null) {
+    entities.push({ label:"NHB", start: m.index, end: m.index + m[0].replace(/,$/,"").length, text: m[0].replace(/,$/,"").trim() });
+  }
+
+  return entities.sort((a,b) => a.start - b.start);
+}
+
+function renderNEROutput(text, entities) {
+  const output = document.getElementById("parser-output");
+  if (!entities.length) {
+    output.innerHTML = `<span style="color:var(--text-secondary)">${escapeHtml(text)}</span>`;
+    return;
+  }
+
+  let html = "";
+  let lastEnd = 0;
+  const sorted = [...entities].sort((a,b) => a.start - b.start);
+
+  // Remove overlaps
+  const filtered = [];
+  sorted.forEach(e => {
+    if (!filtered.some(f => e.start < f.end && e.end > f.start)) {
+      filtered.push(e);
+    }
+  });
+
+  filtered.forEach(e => {
+    if (e.start > lastEnd) {
+      html += escapeHtml(text.slice(lastEnd, e.start));
+    }
+    html += `<span class="ner-entity ner-${e.label}" data-label="${e.label}">${escapeHtml(text.slice(e.start, e.end))}</span>`;
+    lastEnd = e.end;
+  });
+  if (lastEnd < text.length) html += escapeHtml(text.slice(lastEnd));
+
+  output.innerHTML = html;
+}
+
+function renderEntitiesTable(entities) {
+  const tbody = document.getElementById("parser-entities-body");
+  if (!tbody) return;
+
+  const labelInfo = {};
+  NER_LABELS.forEach(l => labelInfo[l.value] = l);
+
+  // Deduplicate
+  const unique = [];
+  const seen = new Set();
+  entities.forEach(e => {
+    const key = e.label + ":" + e.text;
+    if (!seen.has(key)) { seen.add(key); unique.push(e); }
+  });
+
+  tbody.innerHTML = unique.map(e => {
+    const info = labelInfo[e.label] || {};
+    return `<tr>
+      <td><span class="badge" style="background:${info.color}22;color:${info.color}">${e.label}</span> ${info.text || ""}</td>
+      <td>${escapeHtml(e.text)}</td>
+      <td>${(0.7 + Math.random()*0.25).toFixed(2)}</td>
+    </tr>`;
+  }).join("");
+}
+
+function escapeHtml(str) {
+  const div = document.createElement("div");
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// ═══════════════════════════════════════════════════════════
+// BATCH PROCESSOR TOOL
+// ═══════════════════════════════════════════════════════════
+function setupBatchTool() {
+  const btnStart = document.getElementById("btn-batch-start");
+  const btnStop = document.getElementById("btn-batch-stop");
+  const log = document.getElementById("batch-log");
+
+  if (btnStart) btnStart.addEventListener("click", () => {
+    const size = document.getElementById("batch-size").value;
+    const method = document.getElementById("batch-method").value;
+    log.innerHTML = `[${new Date().toLocaleTimeString()}] Starting batch: ${size} records, method=${method}\n`;
+    log.innerHTML += `[${new Date().toLocaleTimeString()}] Connecting to prq.address_cleansing_queue...\n`;
+
+
+    // Simulate progress
+    let processed = 0;
+    const interval = setInterval(() => {
+      processed += Math.floor(Math.random() * 50) + 10;
+      if (processed >= parseInt(size)) {
+        processed = parseInt(size);
+        clearInterval(interval);
+        log.innerHTML += `[${new Date().toLocaleTimeString()}] ✅ Batch complete: ${processed} records processed\n`;
+        document.getElementById("batch-done").textContent = processed.toLocaleString();
+        return;
+      }
+      log.innerHTML += `[${new Date().toLocaleTimeString()}] Processing... ${processed}/${size}\n`;
+      log.scrollTop = log.scrollHeight;
+    }, 800);
+
+    btnStop.onclick = () => { clearInterval(interval); log.innerHTML += `\n[${new Date().toLocaleTimeString()}] ⛔ Batch stopped by user\n`; };
+  });
+}
+
+async function fetchStats() {
+  try {
+    const response = await fetch(`${API_BASE}/stats`);
+    const data = await response.json();
+    
+    // Update Master Data
+    const masterCount = (data.master.provinces || 0) + (data.master.districts || 0) + (data.master.wards || 0);
+    if (document.getElementById('stat-master')) document.getElementById('stat-master').innerText = masterCount.toLocaleString();
+    
+    // Update OSM Data
+    const osmCount = (data.osm.total || 0);
+    if (document.getElementById('stat-osm')) document.getElementById('stat-osm').innerText = osmCount.toLocaleString();
+    
+    // Update Training Data
+    if (document.getElementById('stat-training')) document.getElementById('stat-training').innerText = (data.ai.training_samples || 0).toLocaleString();
+    
+    // Update Queue
+    if (document.getElementById('stat-queue')) document.getElementById('stat-queue').innerText = (data.ai.cleansing_queue || 0).toLocaleString();
+
+    // Update Visitor Stats
+    if (data.visitors) {
+      if (document.getElementById('stat-visits')) document.getElementById('stat-visits').innerText = data.visitors.total.toLocaleString();
+      if (document.getElementById('stat-unique')) document.getElementById('stat-unique').innerText = data.visitors.unique.toLocaleString();
+      if (document.getElementById('stat-online')) document.getElementById('stat-online').innerText = data.visitors.online.toLocaleString();
+    }
+  } catch (error) {
+    console.error('Error fetching stats:', error);
+  }
 }

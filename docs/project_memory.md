@@ -8,7 +8,7 @@ Bảng này là trung tâm dữ liệu mới, được thiết kế để lưu t
 
 | Cột | Ý nghĩa | Trạng thái |
 |---|---|---|
-| `address_raw` | Dữ liệu thô ban đầu | Đầu vào gốc |
+| `raw_address` | Dữ liệu thô ban đầu | Đầu vào gốc |
 | `street_address` | Lõi địa chỉ (Số nhà + Tên đường) | Được bóc tách bởi hàm SQL |
 | `ward_name`, `district_name`, `province_name` | Tên Phường, Quận, Tỉnh chuẩn | Đã có sẵn dữ liệu |
 | `address_standardized` | Địa chỉ đầy đủ sau khi AI xử lý | Kết quả cuối cùng |

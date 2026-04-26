@@ -112,7 +112,7 @@ CREATE TABLE mat.ward (
 * `schema`: `prq`
 * `table`: `raw_addresses`:
     * `id` (PK)
-    * `address_raw` (Text gốc của user)
+    * `raw_address` (Text gốc của user)
     * `status` (Enum: pending, ai_processed, human_reviewed, completed)
     * `street_address` (Lõi địa chỉ bóc ra)
     * `confidence_score` (Float)

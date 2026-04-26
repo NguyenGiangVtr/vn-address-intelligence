@@ -1,12 +1,34 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 import os
+import time
+from datetime import datetime, timedelta
 from app.core.database import SessionLocal, Province, District, Ward, OSMStreet, OSMBuilding, OSMPoi, OSMRawEntity, TrainingDataset, AddressCleansingQueue
 
 app = FastAPI(title="VN Address Intelligence API")
+
+# ── Visitor Stats State ──
+class VisitorStats:
+    def __init__(self):
+        self.total_visits = 0
+        self.unique_ips = set()
+        self.online_users = {} # {ip: last_active_timestamp}
+
+    def track(self, ip: str):
+        self.total_visits += 1
+        self.unique_ips.add(ip)
+        self.online_users[ip] = time.time()
+
+    def get_online_count(self):
+        # Users active in the last 5 minutes
+        threshold = time.time() - 300
+        self.online_users = {ip: t for ip, t in self.online_users.items() if t > threshold}
+        return len(self.online_users)
+
+stats_tracker = VisitorStats()
 
 # Enable CORS for frontend
 app.add_middleware(
@@ -15,6 +37,20 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ── Visitor Tracking Middleware ──
+@app.middleware("http")
+async def track_visitors(request: Request, call_next):
+    # Get client IP (handle proxy headers if on VPS)
+    forwarded = request.headers.get("X-Forwarded-For")
+    ip = forwarded.split(",")[0] if forwarded else request.client.host
+    
+    # Track only page loads and API calls, ignore static assets if needed
+    if not request.url.path.startswith(("/ui", "/favicon.ico")):
+        stats_tracker.track(ip)
+        
+    response = await call_next(request)
+    return response
 
 # Serve UI static files
 app.mount("/ui", StaticFiles(directory="ui"), name="ui")
@@ -56,7 +92,20 @@ def get_stats(db: Session = Depends(get_db)):
         "ai": {
             "training_samples": db.query(TrainingDataset).count(),
             "cleansing_queue": db.query(AddressCleansingQueue).count(),
+        },
+        "visitors": {
+            "total": stats_tracker.total_visits,
+            "unique": len(stats_tracker.unique_ips),
+            "online": stats_tracker.get_online_count()
         }
+    }
+
+@app.get("/api/visitors")
+def get_visitor_stats():
+    return {
+        "total": stats_tracker.total_visits,
+        "unique": len(stats_tracker.unique_ips),
+        "online": stats_tracker.get_online_count()
     }
 
 @app.get("/api/admin-v2/provinces")
