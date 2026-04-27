@@ -499,3 +499,216 @@ document.getElementById('btn-import-ls')?.addEventListener('click', async () => 
     if (timeEl) timeEl.textContent = "Vừa xong";
   }, 3000);
 });
+
+// ═══════════════════════════════════════════════════════════
+// WARD MAPPING LOOKUP LOGIC (V3 - Fixed Search & UI)
+// ═══════════════════════════════════════════════════════════
+let mappingState = {
+  version: 1,
+  provinces: {}, // name -> id
+  districts: {},
+  wards: {}
+};
+
+async function initMappingV3() {
+  const pInput = document.getElementById('mapping-province-input');
+  const dInput = document.getElementById('mapping-district-input');
+  const wInput = document.getElementById('mapping-ward-input');
+  const vRadios = document.getElementsByName('admin-version');
+
+  if (!pInput) return;
+
+  const loadProvinces = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/provinces?version=${mappingState.version}`, { headers: getAuthHeader() });
+      const data = await res.json();
+      const list = document.getElementById('list-provinces');
+      mappingState.provinces = {}; // Clear
+      list.innerHTML = data.map(p => {
+        mappingState.provinces[p.province_name] = p.province_id;
+        return `<option value="${p.province_name}" data-id="${p.province_id}">`;
+      }).join('');
+    } catch (e) { console.error(e); }
+  };
+
+  vRadios.forEach(r => r.addEventListener('change', () => {
+    mappingState.version = r.value;
+    pInput.value = ''; dInput.value = ''; wInput.value = '';
+    mappingState.provinces = {}; mappingState.districts = {}; mappingState.wards = {};
+    loadProvinces();
+  }));
+
+  pInput.addEventListener('input', async () => {
+    const id = mappingState.provinces[pInput.value];
+    if (!id) return;
+    
+    // Clear children
+    dInput.value = ''; wInput.value = '';
+    mappingState.districts = {}; mappingState.wards = {};
+    
+    showDetails('province', id);
+    triggerMappingSearch(); // Auto-trigger
+
+    try {
+      const res = await fetch(`${API_BASE}/districts/${id}?version=${mappingState.version}`, { headers: getAuthHeader() });
+      const data = await res.json();
+      const list = document.getElementById('list-districts');
+      list.innerHTML = data.map(d => {
+        mappingState.districts[d.district_name] = d.district_id;
+        return `<option value="${d.district_name}" data-id="${d.district_id}">`;
+      }).join('');
+    } catch (e) { console.error(e); }
+  });
+
+  dInput.addEventListener('input', async () => {
+    const provinceId = mappingState.provinces[pInput.value];
+    const id = mappingState.districts[dInput.value];
+    if (!id || !provinceId) return; 
+    
+    wInput.value = '';
+    mappingState.wards = {};
+    
+    showDetails('district', id);
+    triggerMappingSearch(); // Auto-trigger
+
+    try {
+      const res = await fetch(`${API_BASE}/wards/${id}?version=${mappingState.version}`, { headers: getAuthHeader() });
+      const data = await res.json();
+      const list = document.getElementById('list-wards');
+      list.innerHTML = data.map(w => {
+        const key = `${w.ward_name} (${dInput.value})`;
+        mappingState.wards[key] = w.ward_id;
+        return `<option value="${key}" data-id="${w.ward_id}">`;
+      }).join('');
+    } catch (e) { console.error(e); }
+  });
+
+  wInput.addEventListener('input', () => {
+    const wardId = mappingState.wards[wInput.value];
+    if (wardId) {
+      showDetails('ward', wardId);
+      triggerMappingSearch(); // Auto-trigger
+    }
+  });
+
+  loadProvinces();
+}
+
+async function showDetails(level, id) {
+  const panel = document.getElementById('unit-details-panel');
+  panel.innerHTML = '<div class="text-center" style="padding:40px"><i class="fa-solid fa-spinner fa-spin fa-2x text-accent"></i></div>';
+  try {
+    const res = await fetch(`${API_BASE}/unit-details/${level}/${id}`, { headers: getAuthHeader() });
+    const u = await res.json();
+    panel.innerHTML = `
+      <div class="flex flex-col gap-12">
+        <div class="text-accent font-700" style="font-size:18px">${u.province_name || u.district_name || u.ward_name}</div>
+        <div class="flex justify-between"><span>Phiên bản:</span><span class="badge info">Admin v${u.admin_version}</span></div>
+        <div class="flex justify-between"><span>Mã GSO:</span><span class="text-mono" id="current-unit-code">${u.province_id || u.district_id || u.ward_id}</span></div>
+        <div class="flex justify-between"><span>Dân số:</span><span class="font-600">${(u.population || 0).toLocaleString()} người</span></div>
+        <div class="flex justify-between"><span>Diện tích:</span><span class="font-600">${u.area_km2 || 0} km²</span></div>
+        <div class="nav-divider"></div>
+        <div>
+          <div class="stat-label">Nghị quyết/Quyết định:</div>
+          <div style="font-size:12px; color:var(--text-secondary); line-height:1.4">${u.decision_number || "Chưa có dữ liệu"}</div>
+        </div>
+      </div>
+    `;
+  } catch (e) { panel.innerHTML = "Lỗi tải thông tin"; }
+}
+
+async function triggerMappingSearch() {
+  const qText = document.getElementById('mapping-search-input').value;
+  const pId = mappingState.provinces[document.getElementById('mapping-province-input').value];
+  const dId = mappingState.districts[document.getElementById('mapping-district-input').value];
+  const wId = mappingState.wards[document.getElementById('mapping-ward-input').value];
+  
+  const tbody = document.getElementById('mapping-results-table');
+  
+  // Xây dựng URL với các tham số ID chính xác
+  let url = `${API_BASE}/lookup/mapping?`;
+  if (wId) url += `ward_id=${wId}`;
+  else if (dId) url += `district_id=${dId}`;
+  else if (pId) url += `province_id=${pId}`;
+  
+  if (qText) url += `${url.endsWith('?') ? '' : '&'}query=${encodeURIComponent(qText)}`;
+  
+  if (url.endsWith('?')) return; // No filter
+  
+  tbody.innerHTML = '<tr><td colspan="7" class="text-center" style="padding:40px"><i class="fa-solid fa-circle-notch fa-spin fa-2x text-accent"></i></td></tr>';
+  
+  try {
+    const res = await fetch(url, { headers: getAuthHeader() });
+    const data = await res.json();
+    if (data.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" class="text-center text-tertiary" style="padding:40px">Không tìm thấy dữ liệu ánh xạ phù hợp</td></tr>';
+      return;
+    }
+    tbody.innerHTML = data.map(m => `
+      <tr>
+        <td class="text-mono" style="color:var(--text-accent)">${m.ward_id_old || "-"}</td>
+        <td>
+          <div class="font-600">${m.ward_name_old || (m.ward_id_old == -1 ? "(Tất cả Xã)" : "N/A")}</div>
+          <div class="text-tertiary" style="font-size:11px">
+            ${[m.district_name_old, m.province_name_old].filter(x => x).join(", ")}
+          </div>
+        </td>
+        <td class="text-tertiary"><i class="fa-solid fa-arrow-right-long"></i></td>
+        <td class="text-mono" style="color:var(--success)">${m.ward_id_new || "-"}</td>
+        <td>
+          <div class="font-600 text-success">${m.ward_name_new || "N/A"}</div>
+          <div class="text-tertiary" style="font-size:11px">${m.province_name_new || ""}</div>
+        </td>
+        <td><div style="max-width:300px; font-size:12px; line-height:1.4">${m.updated_note || ""}</div></td>
+        <td class="text-tertiary" style="font-size:12px">${m.effective_date_from ? new Date(m.effective_date_from).toLocaleDateString('vi-VN') : "-"}</td>
+      </tr>
+    `).join("");
+  } catch (err) { tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger" style="padding:40px">Lỗi kết nối API</td></tr>'; }
+}
+
+document.getElementById('btn-mapping-search')?.addEventListener('click', triggerMappingSearch);
+document.getElementById('mapping-search-input')?.addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') triggerMappingSearch();
+});
+
+// ═══════════════════════════════════════════════════════════
+// NSO SYNC LOGIC
+// ═══════════════════════════════════════════════════════════
+document.getElementById('btn-sync-nso')?.addEventListener('click', async () => {
+  const btn = document.getElementById('btn-sync-nso');
+  const originalHtml = btn.innerHTML;
+  
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Syncing...';
+  btn.disabled = true;
+
+  try {
+    const res = await fetch(`${API_BASE}/sync/nso`, {
+      method: 'POST',
+      headers: getAuthHeader()
+    });
+    const data = await res.json();
+    
+    if (data.status === 'success') {
+      showToast(`✅ Đã đồng bộ ${data.synced_units.toLocaleString()} đơn vị từ NSO vào Version 2!`);
+      // Refresh provinces if current version is 2
+      if (mappingState.version == 2) {
+        initMappingV3(); 
+      }
+    } else {
+      showToast('❌ Lỗi đồng bộ dữ liệu NSO', 'danger');
+    }
+  } catch (e) {
+    console.error(e);
+    showToast('❌ Lỗi kết nối server', 'danger');
+  } finally {
+    btn.innerHTML = originalHtml;
+    btn.disabled = false;
+  }
+});
+
+function showToast(msg, type = 'success') {
+  // Simple alert for now, can be improved to a real toast UI
+  alert(msg);
+}
+
+initMappingV3();

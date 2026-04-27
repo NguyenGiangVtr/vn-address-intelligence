@@ -146,6 +146,14 @@ class Ward(Base):
     ward_name_en = Column(String(200))
     is_active = Column(Boolean)
     type_name_en = Column(String(128))
+    
+    # GSO Extended Info
+    admin_version = Column(Integer, default=1)
+    population = Column(BigInteger)
+    area_km2 = Column(Numeric(10, 2))
+    decision_number = Column(String(200))
+    decision_date = Column(DateTime)
+    notes = Column(Text)
 
 # --- DOMAIN 1: Administrative Master Data (mat) Bổ sung ---
 

@@ -4,12 +4,14 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
+from sqlalchemy import String
 import os
 import time
 import jwt
 from datetime import datetime, timedelta
-from app.core.database import SessionLocal, Province, District, Ward, OSMStreet, OSMBuilding, OSMPoi, OSMRawEntity, TrainingDataset, AddressCleansingQueue
+from app.core.database import SessionLocal, Province, District, Ward, OSMStreet, OSMBuilding, OSMPoi, OSMRawEntity, TrainingDataset, AddressCleansingQueue, WardMapping
 from app.services.auth import verify_password, create_access_token, ALGORITHM, SECRET_KEY
+from app.services.nso_sync import sync_full_nso
 
 app = FastAPI(title="VN Address Intelligence API")
 
@@ -60,6 +62,26 @@ async def track_visitors(request: Request, call_next):
 # Serve UI static files
 app.mount("/ui", StaticFiles(directory="ui"), name="ui")
 
+@app.get("/")
+def read_root():
+    return FileResponse('ui/index.html')
+
+@app.get("/login.html")
+def read_login():
+    return FileResponse('ui/login.html')
+
+@app.get("/style.css")
+def get_css():
+    return FileResponse('ui/style.css')
+
+@app.get("/app.js")
+def get_js():
+    return FileResponse('ui/app.js')
+
+@app.get("/favicon.ico")
+def get_favicon():
+    return FileResponse('ui/login.html') # Just return something to avoid 404 for now
+
 def get_db():
     db = SessionLocal()
     try:
@@ -85,6 +107,140 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         return username
     except Exception:
         raise credentials_exception
+
+@app.get("/api/provinces")
+def get_provinces(version: int = 1, db: Session = Depends(get_db)):
+    return db.query(Province).filter(Province.admin_version == version).order_by(Province.province_name).all()
+
+@app.get("/api/districts/{province_id}")
+def get_districts(province_id: int, version: int = 1, db: Session = Depends(get_db)):
+    return db.query(District).filter(District.province_id == province_id, District.admin_version == version).order_by(District.district_name).all()
+
+@app.get("/api/wards/{district_id}")
+def get_wards(district_id: int, version: int = 1, db: Session = Depends(get_db)):
+    return db.query(Ward).filter(Ward.district_id == district_id, Ward.admin_version == version).order_by(Ward.ward_name).all()
+
+@app.get("/api/unit-details/{level}/{unit_id}")
+def get_unit_details(level: str, unit_id: int, db: Session = Depends(get_db)):
+    if level == "province":
+        return db.query(Province).filter(Province.province_id == unit_id).first()
+    if level == "district":
+        return db.query(District).filter(District.district_id == unit_id).first()
+    if level == "ward":
+        return db.query(Ward).filter(Ward.ward_id == unit_id).first()
+    return {"error": "Invalid level"}
+
+@app.get("/api/lookup/mapping")
+def lookup_mapping(
+    query: str = None, 
+    province_id: int = None,
+    district_id: int = None,
+    ward_id: int = None,
+    db: Session = Depends(get_db)
+):
+    """
+    Tra cứu biến động ĐVHC. Ưu tiên tra cứu chính xác theo ID nếu có.
+    """
+    filters = []
+    
+    # 1. Nếu có ID cụ thể, ưu tiên tra cứu chính xác theo ID
+    if ward_id:
+        filters.append((WardMapping.ward_id_old == ward_id) | (WardMapping.ward_id_new == ward_id))
+    elif district_id:
+        filters.append(WardMapping.district_id_old == district_id)
+        # Nếu chọn tới cấp Huyện mà không chọn Xã: lấy các bản ghi thay đổi của Huyện đó
+        filters.append(WardMapping.ward_id_old == -1)
+    elif province_id:
+        # Nếu chỉ chọn Tỉnh: lấy các bản ghi thay đổi cấp Tỉnh (ward_id_old = -1 và ward_id_new = -1)
+        filters.append((WardMapping.province_id_old == province_id) | (WardMapping.province_id_new == province_id))
+        filters.append(WardMapping.ward_id_old == -1)
+        filters.append(WardMapping.ward_id_new == -1)
+        filters.append(WardMapping.district_id_old == -1)
+    
+    # 2. Nếu có query text (từ ô search tự do), tìm trong note và cast ID
+    if query:
+        text_filter = (
+            (WardMapping.updated_note.ilike(f"%{query}%")) |
+            (WardMapping.ward_id_old.cast(String).ilike(f"%{query}%")) |
+            (WardMapping.ward_id_new.cast(String).ilike(f"%{query}%"))
+        )
+        filters.append(text_filter)
+
+    if not filters:
+        return []
+
+    from sqlalchemy import and_
+    mappings = db.query(WardMapping).filter(and_(*filters)).order_by(WardMapping.effective_date_from.desc()).limit(100).all()
+    
+    # 3. Enrich dữ liệu với Tên
+    enriched_results = []
+    for m in mappings:
+        res = {
+            "id": m.ward_mapping_id,
+            "ward_id_old": m.ward_id_old,
+            "ward_id_new": m.ward_id_new,
+            "district_id_old": m.district_id_old,
+            "province_id_old": m.province_id_old,
+            "province_id_new": m.province_id_new,
+            "updated_note": m.updated_note,
+            "effective_date_from": m.effective_date_from,
+            "effective_date_to": m.effective_date_to,
+            "relationship_type": m.relationship_type,
+            "mapping_total": m.mapping_total,
+            
+            "ward_name_old": "",
+            "district_name_old": "",
+            "province_name_old": "",
+            "ward_name_new": "",
+            "province_name_new": ""
+        }
+        
+        # ── XỬ LÝ TÊN CŨ (V1) ──
+        if m.ward_id_old and m.ward_id_old != -1:
+            w_old = db.query(Ward).filter(Ward.ward_id == m.ward_id_old, Ward.admin_version == 1).first()
+            if w_old:
+                res["ward_name_old"] = w_old.ward_name
+                # Nếu record mapping thiếu district_id_old, lấy từ bản ghi Ward
+                if not m.district_id_old: m.district_id_old = w_old.district_id
+        
+        if m.district_id_old and m.district_id_old != -1:
+            d_old = db.query(District).filter(District.district_id == m.district_id_old, District.admin_version == 1).first()
+            if d_old:
+                res["district_name_old"] = d_old.district_name
+                if not m.province_id_old: m.province_id_old = d_old.province_id
+        
+        if m.province_id_old and m.province_id_old != -1:
+            p_old = db.query(Province).filter(Province.province_id == m.province_id_old, Province.admin_version == 1).first()
+            if p_old: res["province_name_old"] = p_old.province_name
+
+        # ── XỬ LÝ TÊN MỚI (V2) ──
+        if m.ward_id_new and m.ward_id_new != -1:
+            w_new = db.query(Ward).filter(Ward.ward_id == m.ward_id_new, Ward.admin_version == 2).first()
+            if w_new:
+                res["ward_name_new"] = w_new.ward_name
+                if not m.province_id_new: m.province_id_new = w_new.province_id
+        
+        if m.province_id_new and m.province_id_new != -1:
+            p_new = db.query(Province).filter(Province.province_id == m.province_id_new, Province.admin_version == 2).first()
+            if p_new: res["province_name_new"] = p_new.province_name
+
+        # ── XỬ LÝ TRƯỜNG HỢP ĐẶC BIỆT: SÁP NHẬP TỈNH (WARD_ID = -1) ──
+        if m.ward_id_old == -1 and m.ward_id_new == -1:
+            if not res["ward_name_old"]: res["ward_name_old"] = "(Tất cả Xã)"
+            if not res["district_name_old"]: res["district_name_old"] = "(Tất cả Huyện)"
+        elif m.ward_id_old == -1:
+            res["ward_name_old"] = "(Toàn bộ Huyện)"
+
+        enriched_results.append(res)
+        
+    return enriched_results
+
+@app.post("/api/sync/nso")
+def trigger_nso_sync(db: Session = Depends(get_db)):
+    """Kích hoạt đồng bộ dữ liệu từ NSO (danhmuchanhchinh.nso.gov.vn)"""
+    # This should ideally be a background task
+    result = sync_full_nso(db)
+    return result
 
 @app.post("/api/login")
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
@@ -121,6 +277,7 @@ def get_stats(db: Session = Depends(get_db)):
             "provinces": safe_count(db.query(Province)),
             "districts": safe_count(db.query(District)),
             "wards": safe_count(db.query(Ward)),
+            "mappings": safe_count(db.query(WardMapping))
         },
         "osm": {
             "total": safe_count(db.query(OSMRawEntity)),
