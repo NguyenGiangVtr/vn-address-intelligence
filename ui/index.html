@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,707 +10,1114 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
-<div class="app-container">
-    <!-- Sidebar Overlay (Mobile) -->
-    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+    <div class="app-container">
+        <!-- Sidebar Overlay (Mobile) -->
+        <div class="sidebar-overlay" id="sidebar-overlay"></div>
 
-    <!-- ═══ SIDEBAR ═══ -->
-    <aside class="sidebar">
-        <div class="logo-area">
-            <div class="logo-icon"></div>
-            <h1>VNAI <span>SaaS</span></h1>
-        </div>
-
-        <div class="nav-section">
-            <div class="nav-section-title">Platform</div>
-        </div>
-        <nav class="nav-menu">
-            <a href="#" class="nav-item active" data-page="overview">
-                <i class="fa-solid fa-chart-line"></i> Tổng quan
-            <a href="#" class="nav-item active" data-page="overview">
-                <i class="fa-solid fa-house"></i> Overview
-            </a>
-            
-            <div class="nav-divider"></div>
-            <div class="nav-section"><div class="nav-section-title">Step 1: Collection</div></div>
-            <a href="#" class="nav-item" data-page="batch">
-                <i class="fa-solid fa-layer-group"></i> Batch Processor
-                <span class="badge-count">505K</span>
-            </a>
-
-            <div class="nav-divider"></div>
-            <div class="nav-section"><div class="nav-section-title">Step 2: Processing</div></div>
-            <a href="#" class="nav-item" data-page="parser">
-                <i class="fa-solid fa-wand-magic-sparkles"></i> Address Parser
-            </a>
-
-            <div class="nav-divider"></div>
-            <div class="nav-section"><div class="nav-section-title">Step 3 & 4: AI Engine</div></div>
-            <a href="#" class="nav-item" data-page="training">
-                <i class="fa-solid fa-brain"></i> Training Hub
-            </a>
-
-            <div class="nav-divider"></div>
-            <div class="nav-section"><div class="nav-section-title">Data & Management</div></div>
-            <a href="#" class="nav-item" data-page="explorer">
-                <i class="fa-solid fa-database"></i> Data Explorer
-            </a>
-            <a href="#" class="nav-item" data-page="lookup">
-                <i class="fa-solid fa-map-location-dot"></i> ĐVHC Mapping
-            </a>
-            <a href="#" class="nav-item" data-page="settings">
-                <i class="fa-solid fa-gear"></i> Settings
-            </a>
-        </nav>
-
-        <div class="sidebar-footer">
-            <div class="status-indicator">
-                <span class="dot pulse"></span> System Online
+        <!-- ═══ SIDEBAR ═══ -->
+        <aside class="sidebar">
+            <div class="logo-area">
+                <div class="logo-icon"></div>
+                <h1>VNAI <span>SaaS</span></h1>
             </div>
-            <div style="margin-top: 12px; font-size: 11px; color: var(--text-tertiary);">
-                <i class="fa-solid fa-envelope" style="margin-right: 4px;"></i> giangnguyen.vtr@gmail.com
-            </div>
-        </div>
-    </aside>
 
-    <!-- ═══ MAIN ═══ -->
-    <main class="main-content">
-        <header class="top-header">
-            <div class="header-left">
-                <button class="menu-toggle" id="menu-toggle">
-                    <i class="fa-solid fa-bars"></i>
-                </button>
-                <div class="page-breadcrumb">VN Address AI</div>
-                <div class="breadcrumb-separator">/</div>
-                <span class="page-title" id="current-page-title">Tổng quan</span>
+            <div class="nav-section">
+                <div class="nav-section-title">Platform</div>
             </div>
-            <div class="search-bar">
-                <input type="text" id="global-search" placeholder="Search addresses, models, data...">
-            </div>
-            <div class="header-actions">
-                <button class="header-btn" title="Notifications"><i class="fa-regular fa-bell"></i></button>
-                <button class="header-btn" title="Help"><i class="fa-regular fa-circle-question"></i></button>
-                <div class="avatar">G</div>
-            </div>
-        </header>
+            <nav class="nav-menu">
+                <a href="#" class="nav-item active" data-page="overview">
+                    <i class="fa-solid fa-house"></i> Overview
+                </a>
 
-        <section id="page-content">
+                <div class="nav-divider"></div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Step 1: Collection</div>
+                </div>
+                <a href="#" class="nav-item" data-page="batch">
+                    <i class="fa-solid fa-layer-group"></i> Batch Processor
+                    <span class="badge-count">505K</span>
+                </a>
 
-            <!-- ══════ PAGE: OVERVIEW ══════ -->
-            <div class="page active" id="overview">
-                <div class="page-header">
-                    <h2>Dashboard</h2>
-                    <p>Hệ thống Làm giàu và Chuẩn hóa Dữ liệu Địa chỉ Việt Nam</p>
+                <div class="nav-divider"></div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Step 2: Processing</div>
+                </div>
+                <a href="#" class="nav-item" data-page="parser">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> Address Parser
+                </a>
+
+                <div class="nav-divider"></div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Step 3 & 4: AI Engine</div>
+                </div>
+                <a href="#" class="nav-item" data-page="training">
+                    <i class="fa-solid fa-brain"></i> Training Hub
+                </a>
+
+                <div class="nav-divider"></div>
+                <div class="nav-section">
+                    <div class="nav-section-title">Data & Management</div>
+                </div>
+                <a href="#" class="nav-item" data-page="explorer">
+                    <i class="fa-solid fa-database"></i> Data Explorer
+                </a>
+                <a href="#" class="nav-item" data-page="lookup">
+                    <i class="fa-solid fa-map-location-dot"></i> ĐVHC Mapping
+                </a>
+                <a href="#" class="nav-item" data-page="admin-units">
+                    <i class="fa-solid fa-building-user"></i> Quản lý ĐVHC
+                </a>
+                <a href="#" class="nav-item" data-page="nso-sync">
+                    <i class="fa-solid fa-cloud-arrow-down"></i> NSO Sync Center
+                </a>
+                <a href="#" class="nav-item" data-page="settings">
+                    <i class="fa-solid fa-gear"></i> Settings
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="status-indicator">
+                    <span class="dot pulse"></span> System Online
+                </div>
+                <div style="margin-top: 12px; font-size: 11px; color: var(--text-tertiary);">
+                    <i class="fa-solid fa-envelope" style="margin-right: 4px;"></i> giangnguyen.vtr@gmail.com
+                </div>
+            </div>
+        </aside>
+
+        <!-- ═══ MAIN ═══ -->
+        <main class="main-content">
+            <header class="top-header">
+                <div class="header-left">
+                    <button class="menu-toggle" id="menu-toggle">
+                        <i class="fa-solid fa-bars"></i>
+                    </button>
+                    <div class="page-breadcrumb">VN Address AI</div>
+                    <div class="breadcrumb-separator">/</div>
+                    <span class="page-title" id="current-page-title">Tổng quan</span>
+                </div>
+                <div class="search-bar">
+                    <input type="text" id="global-search" placeholder="Search addresses, models, data...">
+                </div>
+                <div class="header-actions">
+                    <button class="header-btn" title="Notifications"><i class="fa-regular fa-bell"></i></button>
+                    <button class="header-btn" title="Help"><i class="fa-regular fa-circle-question"></i></button>
+                    <div class="avatar">G</div>
+                </div>
+            </header>
+
+            <section id="page-content">
+
+                <!-- ══════ PAGE: OVERVIEW ══════ -->
+                <div class="page active" id="overview">
+                    <div class="page-header">
+                        <h2>Dashboard</h2>
+                        <p>Hệ thống Làm giàu và Chuẩn hóa Dữ liệu Địa chỉ Việt Nam</p>
+                    </div>
+
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-label">Total Visits</div>
+                            <div class="stat-value" id="stat-total-visits">0</div>
+                            <div class="stat-change positive"><i class="fa-solid fa-eye"></i> All time</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Unique Visitors</div>
+                            <div class="stat-value" id="stat-unique-ips">0</div>
+                            <div class="stat-change positive"><i class="fa-solid fa-user-check"></i> Unique IPs</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Online Users</div>
+                            <div class="stat-value" id="stat-online-users" style="color:var(--success)">0</div>
+                            <div class="stat-change positive"><i class="fa-solid fa-circle-dot pulse"></i> Real-time
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Queue</div>
+                            <div class="stat-value" id="stat-queue">505,094</div>
+                            <div class="stat-change warning"><i class="fa-solid fa-clock"></i> Pending</div>
+                        </div>
+                    </div>
+
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-label">Master Data</div>
+                            <div class="stat-value" id="stat-master">16,427</div>
+                            <div class="stat-change positive"><i class="fa-solid fa-arrow-up"></i> P+D+W</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">OSM Entities</div>
+                            <div class="stat-value" id="stat-osm">615,547</div>
+                            <div class="stat-change positive"><i class="fa-solid fa-arrow-up"></i> OSM</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Training Data</div>
+                            <div class="stat-value" id="stat-training">25,130</div>
+                            <div class="stat-change positive"><i class="fa-solid fa-check"></i> Labeled</div>
+                        </div>
+                    </div>
+
+                    <!-- ══════ AI WORKFLOW LIFECYCLE ══════ -->
+                    <div class="card mt-24 mb-24">
+                        <div class="card-header">
+                            <span class="card-title">AI Intelligence Lifecycle</span>
+                        </div>
+                        <div class="card-body" style="padding: 30px">
+                            <div class="workflow-diagram horizontal">
+                                <div class="workflow-step clickable" data-goto="batch">
+                                    <div class="step-icon"><i class="fa-solid fa-file-import"></i></div>
+                                    <div class="step-content">
+                                        <h4>1. Thu thập</h4>
+                                    </div>
+                                </div>
+                                <div class="workflow-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+                                <div class="workflow-step clickable" data-goto="parser">
+                                    <div class="step-icon"><i class="fa-solid fa-microchip"></i></div>
+                                    <div class="step-content">
+                                        <h4>2. Xử lý NER</h4>
+                                    </div>
+                                </div>
+                                <div class="workflow-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+                                <div class="workflow-step accent">
+                                    <div class="step-icon"><i class="fa-solid fa-user-check"></i></div>
+                                    <div class="step-content">
+                                        <h4>3. Gán nhãn</h4>
+                                    </div>
+                                </div>
+                                <div class="workflow-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+                                <div class="workflow-step glow clickable" data-goto="training">
+                                    <div class="step-icon"><i class="fa-solid fa-rotate"></i></div>
+                                    <div class="step-content">
+                                        <h4>4. Retrain</h4>
+                                    </div>
+                                </div>
+                                <div class="workflow-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+                                <div class="workflow-step success">
+                                    <div class="step-icon"><i class="fa-solid fa-rocket"></i></div>
+                                    <div class="step-content">
+                                        <h4>5. Tăng trưởng</h4>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="content-grid sidebar-layout">
+                        <div class="card">
+                            <div class="card-header">
+                                <span class="card-title">Tiến độ xử lý theo Schema</span>
+                                <button class="btn btn-sm btn-ghost"><i class="fa-solid fa-arrow-rotate-right"></i>
+                                    Refresh</button>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-container"><canvas id="chart-overview"></canvas></div>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card-header">
+                                <span class="card-title">Hoạt động gần đây</span>
+                            </div>
+                            <div class="card-body">
+                                <ul class="activity-list" id="activity-feed">
+                                    <li class="activity-item">
+                                        <div class="activity-dot"></div>
+                                        <div>
+                                            <div class="activity-text">Export 1,000 NER samples prelabeled</div>
+                                            <div class="activity-time">2 giờ trước</div>
+                                        </div>
+                                    </li>
+                                    <li class="activity-item">
+                                        <div class="activity-dot" style="background:var(--success)"></div>
+                                        <div>
+                                            <div class="activity-text">Hybrid PreLabeler v2 deployed</div>
+                                            <div class="activity-time">5 giờ trước</div>
+                                        </div>
+                                    </li>
+                                    <li class="activity-item">
+                                        <div class="activity-dot" style="background:var(--warning)"></div>
+                                        <div>
+                                            <div class="activity-text">Ward Mapping: 10,635 rules synced</div>
+                                            <div class="activity-time">1 ngày trước</div>
+                                        </div>
+                                    </li>
+                                    <li class="activity-item">
+                                        <div class="activity-dot" style="background:var(--info)"></div>
+                                        <div>
+                                            <div class="activity-text">OSM crawl completed: 63 provinces</div>
+                                            <div class="activity-time">3 ngày trước</div>
+                                        </div>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Model Status -->
+                    <div class="page-header mt-24">
+                        <h2>Model Status</h2>
+                    </div>
+                    <div class="stats-grid">
+                        <div class="model-card">
+                            <div class="model-icon ner"><i class="fa-solid fa-tags"></i></div>
+                            <div class="model-info">
+                                <div class="model-name">PhoBERT NER</div>
+                                <div class="model-desc">Token classification · 10 entities</div>
+                            </div>
+                            <span class="badge warning">Training</span>
+                        </div>
+                        <div class="model-card">
+                            <div class="model-icon phobert"><i class="fa-solid fa-code-branch"></i></div>
+                            <div class="model-info">
+                                <div class="model-name">PhoBERT Siamese</div>
+                                <div class="model-desc">Bi-Encoder address matching</div>
+                            </div>
+                            <span class="badge success">Ready</span>
+                        </div>
+                        <div class="model-card">
+                            <div class="model-icon mgte"><i class="fa-solid fa-globe"></i></div>
+                            <div class="model-info">
+                                <div class="model-name">mGTE Siamese</div>
+                                <div class="model-desc">Multilingual baseline</div>
+                            </div>
+                            <span class="badge success">Ready</span>
+                        </div>
+                        <div class="model-card">
+                            <div class="model-icon llm"><i class="fa-solid fa-robot"></i></div>
+                            <div class="model-info">
+                                <div class="model-name">LLM Qwen3-4B</div>
+                                <div class="model-desc">Final normalization</div>
+                            </div>
+                            <span class="badge info">Standby</span>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-label">Total Visits</div>
-                        <div class="stat-value" id="stat-total-visits">0</div>
-                        <div class="stat-change positive"><i class="fa-solid fa-eye"></i> All time</div>
+                <!-- ══════ PAGE: ADDRESS PARSER ══════ -->
+                <div class="page" id="parser">
+                    <div class="page-header">
+                        <h2>Address Parser</h2>
+                        <p>Paste địa chỉ thô để NER bóc tách thành phần thực thể realtime</p>
                     </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Unique Visitors</div>
-                        <div class="stat-value" id="stat-unique-ips">0</div>
-                        <div class="stat-change positive"><i class="fa-solid fa-user-check"></i> Unique IPs</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Online Users</div>
-                        <div class="stat-value" id="stat-online-users" style="color:var(--success)">0</div>
-                        <div class="stat-change positive"><i class="fa-solid fa-circle-dot pulse"></i> Real-time</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Queue</div>
-                        <div class="stat-value" id="stat-queue">505,094</div>
-                        <div class="stat-change warning"><i class="fa-solid fa-clock"></i> Pending</div>
-                    </div>
-                </div>
-
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-label">Master Data</div>
-                        <div class="stat-value" id="stat-master">16,427</div>
-                        <div class="stat-change positive"><i class="fa-solid fa-arrow-up"></i> P+D+W</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-label">OSM Entities</div>
-                        <div class="stat-value" id="stat-osm">615,547</div>
-                        <div class="stat-change positive"><i class="fa-solid fa-arrow-up"></i> OSM</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Training Data</div>
-                        <div class="stat-value" id="stat-training">25,130</div>
-                        <div class="stat-change positive"><i class="fa-solid fa-check"></i> Labeled</div>
-                    </div>
-                </div>
-
-                <!-- ══════ AI WORKFLOW LIFECYCLE ══════ -->
-                <div class="card mt-24 mb-24">
-                    <div class="card-header">
-                        <span class="card-title">AI Intelligence Lifecycle</span>
-                    </div>
-                    <div class="card-body" style="padding: 30px">
-                        <div class="workflow-diagram horizontal">
-                            <div class="workflow-step clickable" data-goto="batch">
-                                <div class="step-icon"><i class="fa-solid fa-file-import"></i></div>
-                                <div class="step-content"><h4>1. Thu thập</h4></div>
+                    <div class="tool-panel">
+                        <div class="tool-input-section">
+                            <div class="tool-section-title">Input</div>
+                            <div class="form-group">
+                                <textarea class="form-textarea" id="parser-input"
+                                    placeholder="Nhập địa chỉ cần phân tích...&#10;VD: 2695/7 Đường Phạm Thế Hiển, phường 7, Quận 8, TP Hồ Chí Minh"></textarea>
                             </div>
-                            <div class="workflow-arrow"><i class="fa-solid fa-arrow-right"></i></div>
-                            <div class="workflow-step clickable" data-goto="parser">
-                                <div class="step-icon"><i class="fa-solid fa-microchip"></i></div>
-                                <div class="step-content"><h4>2. Xử lý NER</h4></div>
+                            <div class="flex items-center justify-between">
+                                <button class="btn btn-primary" id="btn-parse"><i
+                                        class="fa-solid fa-wand-magic-sparkles"></i> Phân tích</button>
+                                <button class="btn btn-ghost" id="btn-parse-sample"><i class="fa-solid fa-shuffle"></i>
+                                    Mẫu ngẫu nhiên</button>
                             </div>
-                            <div class="workflow-arrow"><i class="fa-solid fa-arrow-right"></i></div>
-                            <div class="workflow-step accent">
-                                <div class="step-icon"><i class="fa-solid fa-user-check"></i></div>
-                                <div class="step-content"><h4>3. Gán nhãn</h4></div>
+                        </div>
+                        <div class="tool-output-section">
+                            <div class="tool-section-title">NER Output</div>
+                            <div class="ner-output" id="parser-output">
+                                <span style="color:var(--text-tertiary)">Kết quả sẽ hiển thị ở đây...</span>
                             </div>
-                            <div class="workflow-arrow"><i class="fa-solid fa-arrow-right"></i></div>
-                            <div class="workflow-step glow clickable" data-goto="training">
-                                <div class="step-icon"><i class="fa-solid fa-rotate"></i></div>
-                                <div class="step-content"><h4>4. Retrain</h4></div>
-                            </div>
-                            <div class="workflow-arrow"><i class="fa-solid fa-arrow-right"></i></div>
-                            <div class="workflow-step success">
-                                <div class="step-icon"><i class="fa-solid fa-rocket"></i></div>
-                                <div class="step-content"><h4>5. Tăng trưởng</h4></div>
+                            <div class="mt-16">
+                                <div class="tool-section-title">Extracted Entities</div>
+                                <div class="table-container">
+                                    <table id="parser-entities-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Label</th>
+                                                <th>Value</th>
+                                                <th>Confidence</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="parser-entities-body"></tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="content-grid sidebar-layout">
+                <!-- ══════ PAGE: BATCH PROCESSOR ══════ -->
+                <div class="page" id="batch">
+                    <div class="page-header">
+                        <h2>Batch Processor</h2>
+                        <p>Xử lý hàng loạt từ hàng đợi <code
+                                class="text-mono text-accent">prq.address_cleansing_queue</code></p>
+                    </div>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-label">Total Queue</div>
+                            <div class="stat-value" id="batch-total">505,094</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Processed</div>
+                            <div class="stat-value text-success" id="batch-done">0</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Pending</div>
+                            <div class="stat-value text-warning" id="batch-pending">505,094</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Throughput</div>
+                            <div class="stat-value" id="batch-throughput">-- items/s</div>
+                        </div>
+                    </div>
                     <div class="card">
                         <div class="card-header">
-                            <span class="card-title">Tiến độ xử lý theo Schema</span>
-                            <button class="btn btn-sm btn-ghost"><i class="fa-solid fa-arrow-rotate-right"></i> Refresh</button>
-                        </div>
-                        <div class="card-body">
-                            <div class="chart-container"><canvas id="chart-overview"></canvas></div>
-                        </div>
-                    </div>
-                    <div class="card">
-                        <div class="card-header">
-                            <span class="card-title">Hoạt động gần đây</span>
-                        </div>
-                        <div class="card-body">
-                            <ul class="activity-list" id="activity-feed">
-                                <li class="activity-item"><div class="activity-dot"></div><div><div class="activity-text">Export 1,000 NER samples prelabeled</div><div class="activity-time">2 giờ trước</div></div></li>
-                                <li class="activity-item"><div class="activity-dot" style="background:var(--success)"></div><div><div class="activity-text">Hybrid PreLabeler v2 deployed</div><div class="activity-time">5 giờ trước</div></div></li>
-                                <li class="activity-item"><div class="activity-dot" style="background:var(--warning)"></div><div><div class="activity-text">Ward Mapping: 10,635 rules synced</div><div class="activity-time">1 ngày trước</div></div></li>
-                                <li class="activity-item"><div class="activity-dot" style="background:var(--info)"></div><div><div class="activity-text">OSM crawl completed: 63 provinces</div><div class="activity-time">3 ngày trước</div></div></li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Model Status -->
-                <div class="page-header mt-24"><h2>Model Status</h2></div>
-                <div class="stats-grid">
-                    <div class="model-card">
-                        <div class="model-icon ner"><i class="fa-solid fa-tags"></i></div>
-                        <div class="model-info"><div class="model-name">PhoBERT NER</div><div class="model-desc">Token classification · 10 entities</div></div>
-                        <span class="badge warning">Training</span>
-                    </div>
-                    <div class="model-card">
-                        <div class="model-icon phobert"><i class="fa-solid fa-code-branch"></i></div>
-                        <div class="model-info"><div class="model-name">PhoBERT Siamese</div><div class="model-desc">Bi-Encoder address matching</div></div>
-                        <span class="badge success">Ready</span>
-                    </div>
-                    <div class="model-card">
-                        <div class="model-icon mgte"><i class="fa-solid fa-globe"></i></div>
-                        <div class="model-info"><div class="model-name">mGTE Siamese</div><div class="model-desc">Multilingual baseline</div></div>
-                        <span class="badge success">Ready</span>
-                    </div>
-                    <div class="model-card">
-                        <div class="model-icon llm"><i class="fa-solid fa-robot"></i></div>
-                        <div class="model-info"><div class="model-name">LLM Qwen3-4B</div><div class="model-desc">Final normalization</div></div>
-                        <span class="badge info">Standby</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- ══════ PAGE: ADDRESS PARSER ══════ -->
-            <div class="page" id="parser">
-                <div class="page-header">
-                    <h2>Address Parser</h2>
-                    <p>Paste địa chỉ thô để NER bóc tách thành phần thực thể realtime</p>
-                </div>
-                <div class="tool-panel">
-                    <div class="tool-input-section">
-                        <div class="tool-section-title">Input</div>
-                        <div class="form-group">
-                            <textarea class="form-textarea" id="parser-input" placeholder="Nhập địa chỉ cần phân tích...&#10;VD: 2695/7 Đường Phạm Thế Hiển, phường 7, Quận 8, TP Hồ Chí Minh"></textarea>
-                        </div>
-                        <div class="flex items-center justify-between">
-                            <button class="btn btn-primary" id="btn-parse"><i class="fa-solid fa-wand-magic-sparkles"></i> Phân tích</button>
-                            <button class="btn btn-ghost" id="btn-parse-sample"><i class="fa-solid fa-shuffle"></i> Mẫu ngẫu nhiên</button>
-                        </div>
-                    </div>
-                    <div class="tool-output-section">
-                        <div class="tool-section-title">NER Output</div>
-                        <div class="ner-output" id="parser-output">
-                            <span style="color:var(--text-tertiary)">Kết quả sẽ hiển thị ở đây...</span>
-                        </div>
-                        <div class="mt-16">
-                            <div class="tool-section-title">Extracted Entities</div>
-                            <div class="table-container">
-                                <table id="parser-entities-table">
-                                    <thead><tr><th>Label</th><th>Value</th><th>Confidence</th></tr></thead>
-                                    <tbody id="parser-entities-body"></tbody>
-                                </table>
+                            <span class="card-title">Batch Control</span>
+                            <div class="flex gap-12">
+                                <button class="btn btn-primary" id="btn-batch-start"><i class="fa-solid fa-play"></i>
+                                    Start Batch</button>
+                                <button class="btn" id="btn-batch-stop"><i class="fa-solid fa-stop"></i> Stop</button>
                             </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- ══════ PAGE: BATCH PROCESSOR ══════ -->
-            <div class="page" id="batch">
-                <div class="page-header">
-                    <h2>Batch Processor</h2>
-                    <p>Xử lý hàng loạt từ hàng đợi <code class="text-mono text-accent">prq.address_cleansing_queue</code></p>
-                </div>
-                <div class="stats-grid">
-                    <div class="stat-card"><div class="stat-label">Total Queue</div><div class="stat-value" id="batch-total">505,094</div></div>
-                    <div class="stat-card"><div class="stat-label">Processed</div><div class="stat-value text-success" id="batch-done">0</div></div>
-                    <div class="stat-card"><div class="stat-label">Pending</div><div class="stat-value text-warning" id="batch-pending">505,094</div></div>
-                    <div class="stat-card"><div class="stat-label">Throughput</div><div class="stat-value" id="batch-throughput">-- items/s</div></div>
-                </div>
-                <div class="card">
-                    <div class="card-header">
-                        <span class="card-title">Batch Control</span>
-                        <div class="flex gap-12">
-                            <button class="btn btn-primary" id="btn-batch-start"><i class="fa-solid fa-play"></i> Start Batch</button>
-                            <button class="btn" id="btn-batch-stop"><i class="fa-solid fa-stop"></i> Stop</button>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        <div class="form-group">
-                            <label class="form-label">Batch Size</label>
-                            <input class="form-input" type="number" id="batch-size" value="1000" style="width:200px">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Processing Method</label>
-                            <select class="form-input" id="batch-method" style="width:300px">
-                                <option value="hybrid">Hybrid (NER + Siamese + LLM)</option>
-                                <option value="ner-only">NER Only (PhoBERT)</option>
-                                <option value="siamese-only">Siamese Only (mGTE)</option>
-                            </select>
-                        </div>
-                        <div id="batch-log" class="batch-log mt-16">
-                            Waiting for batch start...
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- ══════ PAGE: AI TRAINING ══════ -->
-            <div class="page" id="ai-hub">
-                <div class="page-header">
-                    <h2>AI Training Hub</h2>
-                    <p>Quản lý dữ liệu huấn luyện và theo dõi fine-tuning PhoBERT NER</p>
-                </div>
-                <div class="content-grid">
-                    <div class="card">
-                        <div class="card-header">
-                            <span class="card-title">Export for Annotation</span>
-                            <button class="btn btn-sm" id="btn-export"><i class="fa-solid fa-file-export"></i> Export</button>
                         </div>
                         <div class="card-body">
                             <div class="form-group">
-                                <label class="form-label">Sample Limit</label>
-                                <input class="form-input" type="number" id="export-limit" value="1000" style="width:200px">
+                                <label class="form-label">Batch Size</label>
+                                <input class="form-input" type="number" id="batch-size" value="1000"
+                                    style="width:200px">
                             </div>
-                            <p style="font-size:12px;color:var(--text-tertiary)">Sử dụng Hybrid PreLabeler để tạo gợi nhãn tự động trước khi gửi cho team gán nhãn trên Label Studio.</p>
-                        </div>
-                    </div>
-                    <div class="card">
-                        <div class="card-header">
-                            <span class="card-title">Training Status</span>
-                        </div>
-                        <div class="card-body">
-                            <div class="flex flex-col gap-12">
-                                <div class="flex items-center justify-between"><span>Labeled Data</span><span class="text-accent">200 / 1,000</span></div>
-                                <div style="height:6px;background:var(--bg-app);border-radius:3px;overflow:hidden"><div style="width:20%;height:100%;background:var(--accent);border-radius:3px"></div></div>
-                                <div class="flex items-center justify-between"><span>Model F1-Score</span><span class="text-warning">Pending training</span></div>
-                                <div class="flex items-center justify-between"><span>NER Labels</span><span class="badge accent">10 entities</span></div>
+                            <div class="form-group">
+                                <label class="form-label">Processing Method</label>
+                                <select class="form-input" id="batch-method" style="width:300px">
+                                    <option value="hybrid">Hybrid (NER + Siamese + LLM)</option>
+                                    <option value="ner-only">NER Only (PhoBERT)</option>
+                                    <option value="siamese-only">Siamese Only (mGTE)</option>
+                                </select>
+                            </div>
+                            <div id="batch-log" class="batch-log mt-16">
+                                Waiting for batch start...
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="card mt-16">
-                    <div class="card-header"><span class="card-title">NER Label Registry</span></div>
-                    <div class="card-body table-container">
-                        <table id="label-registry">
-                            <thead><tr><th>Code</th><th>Name</th><th>Color</th><th>Hotkey</th><th>Example</th></tr></thead>
-                            <tbody id="label-registry-body"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
 
-            <!-- ══════ PAGE: EXPERIMENTS ══════ -->
-            <div class="page" id="experiments">
-                <div class="page-header">
-                    <h2>Model Comparison</h2>
-                    <p>So sánh hiệu năng PhoBERT Siamese vs mGTE Siamese vs LLM Qwen3</p>
-                </div>
-                <div class="card">
-                    <div class="card-header">
-                        <span class="card-title">Run Experiment</span>
-                        <button class="btn btn-primary" id="btn-run-experiment"><i class="fa-solid fa-play"></i> Run</button>
+                <!-- ══════ PAGE: AI TRAINING ══════ -->
+                <div class="page" id="ai-hub">
+                    <div class="page-header">
+                        <h2>AI Training Hub</h2>
+                        <p>Quản lý dữ liệu huấn luyện và theo dõi fine-tuning PhoBERT NER</p>
                     </div>
-                    <div class="card-body">
-                        <p style="font-size:13px;color:var(--text-secondary)">Chạy <code class="text-mono">experiment_runner.py</code> để so sánh 3 mô hình trên tập dữ liệu thực. Kết quả bao gồm Exact Match, Fuzzy Match, Component Accuracy và Latency.</p>
-                        <div class="mt-16 table-container">
-                            <table id="experiment-results">
-                                <thead><tr><th>Metric</th><th>PhoBERT</th><th>mGTE</th><th>LLM</th><th>Target</th></tr></thead>
-                                <tbody>
-                                    <tr><td>Exact Match</td><td>--</td><td>--</td><td>--</td><td>≥ 30%</td></tr>
-                                    <tr><td>Fuzzy Match</td><td>--</td><td>--</td><td>--</td><td>≥ 60%</td></tr>
-                                    <tr><td>Phường Acc</td><td>--</td><td>--</td><td>--</td><td>≥ 80%</td></tr>
-                                    <tr><td>Quận Acc</td><td>--</td><td>--</td><td>--</td><td>≥ 85%</td></tr>
-                                    <tr><td>Tỉnh Acc</td><td>--</td><td>--</td><td>--</td><td>≥ 90%</td></tr>
-                                    <tr><td>Throughput</td><td>--</td><td>--</td><td>--</td><td>≥ 20 qps</td></tr>
-                                </tbody>
+                    <div class="content-grid">
+                        <div class="card">
+                            <div class="card-header">
+                                <span class="card-title">Export for Annotation</span>
+                                <button class="btn btn-sm" id="btn-export"><i class="fa-solid fa-file-export"></i>
+                                    Export</button>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-group">
+                                    <label class="form-label">Sample Limit</label>
+                                    <input class="form-input" type="number" id="export-limit" value="1000"
+                                        style="width:200px">
+                                </div>
+                                <p style="font-size:12px;color:var(--text-tertiary)">Sử dụng Hybrid PreLabeler để tạo
+                                    gợi nhãn tự động trước khi gửi cho team gán nhãn trên Label Studio.</p>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card-header">
+                                <span class="card-title">Training Status</span>
+                            </div>
+                            <div class="card-body">
+                                <div class="flex flex-col gap-12">
+                                    <div class="flex items-center justify-between"><span>Labeled Data</span><span
+                                            class="text-accent">200 / 1,000</span></div>
+                                    <div style="height:6px;background:var(--bg-app);border-radius:3px;overflow:hidden">
+                                        <div style="width:20%;height:100%;background:var(--accent);border-radius:3px">
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center justify-between"><span>Model F1-Score</span><span
+                                            class="text-warning">Pending training</span></div>
+                                    <div class="flex items-center justify-between"><span>NER Labels</span><span
+                                            class="badge accent">10 entities</span></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card mt-16">
+                        <div class="card-header"><span class="card-title">NER Label Registry</span></div>
+                        <div class="card-body table-container">
+                            <table id="label-registry">
+                                <thead>
+                                    <tr>
+                                        <th>Code</th>
+                                        <th>Name</th>
+                                        <th>Color</th>
+                                        <th>Hotkey</th>
+                                        <th>Example</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="label-registry-body"></tbody>
                             </table>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- ══════ PAGE: WARD MAPPER ══════ -->
-            <div class="page" id="ward-mapper">
-                <div class="page-header">
-                    <h2>Ward Mapper 2025</h2>
-                    <p>Tra cứu sáp nhập đơn vị hành chính theo Nghị quyết Chính phủ</p>
-                </div>
-                <div class="tool-panel">
-                    <div class="tool-input-section">
-                        <div class="tool-section-title">Tra cứu</div>
-                        <div class="form-group">
-                            <label class="form-label">Tên phường/xã cũ</label>
-                            <input class="form-input" id="ward-search" placeholder="VD: Phường Linh Trung">
-                        </div>
-                        <button class="btn btn-primary" id="btn-ward-search"><i class="fa-solid fa-magnifying-glass"></i> Tìm kiếm</button>
-                    </div>
-                    <div class="tool-output-section">
-                        <div class="tool-section-title">Kết quả ánh xạ</div>
-                        <div id="ward-result" class="ner-output" style="color:var(--text-tertiary)">
-                            Nhập tên phường/xã cũ để tra cứu quy tắc sáp nhập...
-                        </div>
-                        <p class="mt-12" style="font-size:12px;color:var(--text-tertiary)">Tổng: 10,635 quy tắc ánh xạ từ <code class="text-mono">mat.ward_mapping</code></p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- ══════ PAGE: DATA EXPLORER ══════ -->
-            <div class="page" id="explorer">
-                <div class="page-header">
-                    <h2>Data Explorer</h2>
-                    <p>Duyệt và tìm kiếm dữ liệu trong hàng đợi xử lý</p>
-                </div>
-                <div class="card">
-                    <div class="card-header">
-                        <span class="card-title">prq.address_cleansing_queue</span>
-                        <div class="flex gap-12">
-                            <input class="form-input" id="explorer-search" placeholder="Filter by address..." style="width:300px">
-                            <button class="btn btn-sm" id="btn-explorer-refresh"><i class="fa-solid fa-arrow-rotate-right"></i></button>
-                        </div>
-                    </div>
-                    <div class="card-body table-container" style="max-height:500px;overflow-y:auto">
-                        <table id="explorer-table">
-                            <thead><tr><th>ID</th><th>Raw Address</th><th>Ward</th><th>District</th><th>Province</th><th>Status</th></tr></thead>
-                            <tbody id="explorer-body"><tr><td colspan="6" style="color:var(--text-tertiary)">Click Refresh to load data...</td></tr></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- ══════ PAGE: SETTINGS ══════ -->
-            <div class="page" id="settings">
-                <div class="page-header">
-                    <h2>Settings</h2>
-                    <p>Cấu hình hệ thống và kết nối database</p>
-                </div>
-                <div class="content-grid">
-                    <div class="card">
-                        <div class="card-header"><span class="card-title">Database Connection</span></div>
-                        <div class="card-body">
-                            <div class="form-group"><label class="form-label">Host</label><input class="form-input" value="••••••••" disabled></div>
-                            <div class="form-group"><label class="form-label">Port</label><input class="form-input" value="5432" disabled></div>
-                            <div class="form-group"><label class="form-label">Database</label><input class="form-input" value="••••••••" disabled></div>
-                            <p style="font-size:12px;color:var(--text-tertiary)"><i class="fa-solid fa-lock"></i> Credentials loaded from .env file</p>
-                        </div>
+                <!-- ══════ PAGE: EXPERIMENTS ══════ -->
+                <div class="page" id="experiments">
+                    <div class="page-header">
+                        <h2>Model Comparison</h2>
+                        <p>So sánh hiệu năng PhoBERT Siamese vs mGTE Siamese vs LLM Qwen3</p>
                     </div>
                     <div class="card">
-                        <div class="card-header"><span class="card-title">System Info</span></div>
+                        <div class="card-header">
+                            <span class="card-title">Run Experiment</span>
+                            <button class="btn btn-primary" id="btn-run-experiment"><i class="fa-solid fa-play"></i>
+                                Run</button>
+                        </div>
                         <div class="card-body">
-                            <div class="flex flex-col gap-12">
-                                <div class="flex items-center justify-between"><span>Python</span><span class="text-mono">3.11</span></div>
-                                <div class="flex items-center justify-between"><span>PhoBERT</span><span class="text-mono">vinai/phobert-base</span></div>
-                                <div class="flex items-center justify-between"><span>mGTE</span><span class="text-mono">gte-multilingual-base</span></div>
-                                <div class="flex items-center justify-between"><span>LLM</span><span class="text-mono">Qwen/Qwen3-4B</span></div>
-                                <div class="flex items-center justify-between"><span>Deadline</span><span class="badge danger">25/05/2026</span></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- ══════ PAGE: TRAINING HUB ══════ -->
-            <div class="page" id="training">
-                <div class="page-header">
-                    <h2>AI Training Hub</h2>
-                    <p>Huấn luyện và nâng cao độ thông minh cho mô hình NER</p>
-                </div>
-
-                <div class="content-grid sidebar-layout">
-                    <div class="flex-col gap-12">
-                        <div class="card">
-                            <div class="card-header">
-                                <span class="card-title">AI Intelligence Growth</span>
-                                <div class="badge success">v2.4.0 Active</div>
-                            </div>
-                            <div class="card-body">
-                                <div style="height: 250px; position: relative;">
-                                    <canvas id="intelligenceChart"></canvas>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="card">
-                            <div class="card-header">
-                                <span class="card-title">Training History</span>
-                            </div>
-                            <div class="table-container">
-                                <table>
+                            <p style="font-size:13px;color:var(--text-secondary)">Chạy <code
+                                    class="text-mono">experiment_runner.py</code> để so sánh 3 mô hình trên tập dữ liệu
+                                thực. Kết quả bao gồm Exact Match, Fuzzy Match, Component Accuracy và Latency.</p>
+                            <div class="mt-16 table-container">
+                                <table id="experiment-results">
                                     <thead>
                                         <tr>
-                                            <th>Version</th>
-                                            <th>Accuracy</th>
-                                            <th>F1-Score</th>
-                                            <th>Samples</th>
-                                            <th>Date</th>
+                                            <th>Metric</th>
+                                            <th>PhoBERT</th>
+                                            <th>mGTE</th>
+                                            <th>LLM</th>
+                                            <th>Target</th>
                                         </tr>
                                     </thead>
-                                    <tbody id="training-history-table">
-                                        <!-- Data via JS -->
+                                    <tbody>
+                                        <tr>
+                                            <td>Exact Match</td>
+                                            <td>--</td>
+                                            <td>--</td>
+                                            <td>--</td>
+                                            <td>≥ 30%</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Fuzzy Match</td>
+                                            <td>--</td>
+                                            <td>--</td>
+                                            <td>--</td>
+                                            <td>≥ 60%</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Phường Acc</td>
+                                            <td>--</td>
+                                            <td>--</td>
+                                            <td>--</td>
+                                            <td>≥ 80%</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Quận Acc</td>
+                                            <td>--</td>
+                                            <td>--</td>
+                                            <td>--</td>
+                                            <td>≥ 85%</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Tỉnh Acc</td>
+                                            <td>--</td>
+                                            <td>--</td>
+                                            <td>--</td>
+                                            <td>≥ 90%</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Throughput</td>
+                                            <td>--</td>
+                                            <td>--</td>
+                                            <td>--</td>
+                                            <td>≥ 20 qps</td>
+                                        </tr>
                                     </tbody>
                                 </table>
                             </div>
                         </div>
                     </div>
+                </div>
 
-                    <div class="flex-col gap-12">
-                        <div class="card">
-                            <div class="card-header">
-                                <span class="card-title">Import Label Studio</span>
+                <!-- ══════ PAGE: WARD MAPPER ══════ -->
+                <div class="page" id="ward-mapper">
+                    <div class="page-header">
+                        <h2>Ward Mapper 2025</h2>
+                        <p>Tra cứu sáp nhập đơn vị hành chính theo Nghị quyết Chính phủ</p>
+                    </div>
+                    <div class="tool-panel">
+                        <div class="tool-input-section">
+                            <div class="tool-section-title">Tra cứu</div>
+                            <div class="form-group">
+                                <label class="form-label">Tên phường/xã cũ</label>
+                                <input class="form-input" id="ward-search" placeholder="VD: Phường Linh Trung">
                             </div>
+                            <button class="btn btn-primary" id="btn-ward-search"><i
+                                    class="fa-solid fa-magnifying-glass"></i> Tìm kiếm</button>
+                        </div>
+                        <div class="tool-output-section">
+                            <div class="tool-section-title">Kết quả ánh xạ</div>
+                            <div id="ward-result" class="ner-output" style="color:var(--text-tertiary)">
+                                Nhập tên phường/xã cũ để tra cứu quy tắc sáp nhập...
+                            </div>
+                            <p class="mt-12" style="font-size:12px;color:var(--text-tertiary)">Tổng: 10,635 quy tắc ánh
+                                xạ từ <code class="text-mono">mat.ward_mapping</code></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ══════ PAGE: DATA EXPLORER ══════ -->
+                <div class="page" id="explorer">
+                    <div class="page-header">
+                        <h2>Data Explorer</h2>
+                        <p>Duyệt và tìm kiếm dữ liệu trong hàng đợi xử lý</p>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title">prq.address_cleansing_queue</span>
+                            <div class="flex gap-12">
+                                <input class="form-input" id="explorer-search" placeholder="Filter by address..."
+                                    style="width:300px">
+                                <button class="btn btn-sm" id="btn-explorer-refresh"><i
+                                        class="fa-solid fa-arrow-rotate-right"></i></button>
+                            </div>
+                        </div>
+                        <div class="card-body table-container" style="max-height:500px;overflow-y:auto">
+                            <table id="explorer-table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Raw Address</th>
+                                        <th>Ward</th>
+                                        <th>District</th>
+                                        <th>Province</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="explorer-body">
+                                    <tr>
+                                        <td colspan="6" style="color:var(--text-tertiary)">Click Refresh to load data...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ══════ PAGE: SETTINGS ══════ -->
+                <div class="page" id="settings">
+                    <div class="page-header">
+                        <h2>Settings</h2>
+                        <p>Cấu hình hệ thống và kết nối database</p>
+                    </div>
+                    <div class="content-grid">
+                        <div class="card">
+                            <div class="card-header"><span class="card-title">Database Connection</span></div>
                             <div class="card-body">
-                                <p class="text-secondary mb-12" style="font-size:12px">
-                                    Tải lên file JSON export từ Label Studio để bổ sung dữ liệu huấn luyện.
-                                </p>
-                                <div class="form-group">
-                                    <label class="form-label">Label Studio JSON</label>
-                                    <input type="file" id="ls-import-file" class="form-input" accept=".json" style="padding: 10px;">
+                                <div class="form-group"><label class="form-label">Host</label><input class="form-input"
+                                        value="••••••••" disabled></div>
+                                <div class="form-group"><label class="form-label">Port</label><input class="form-input"
+                                        value="5432" disabled></div>
+                                <div class="form-group"><label class="form-label">Database</label><input
+                                        class="form-input" value="••••••••" disabled></div>
+                                <p style="font-size:12px;color:var(--text-tertiary)"><i class="fa-solid fa-lock"></i>
+                                    Credentials loaded from .env file</p>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card-header"><span class="card-title">System Info</span></div>
+                            <div class="card-body">
+                                <div class="flex flex-col gap-12">
+                                    <div class="flex items-center justify-between"><span>Python</span><span
+                                            class="text-mono">3.11</span></div>
+                                    <div class="flex items-center justify-between"><span>PhoBERT</span><span
+                                            class="text-mono">vinai/phobert-base</span></div>
+                                    <div class="flex items-center justify-between"><span>mGTE</span><span
+                                            class="text-mono">gte-multilingual-base</span></div>
+                                    <div class="flex items-center justify-between"><span>LLM</span><span
+                                            class="text-mono">Qwen/Qwen3-4B</span></div>
+                                    <div class="flex items-center justify-between"><span>Deadline</span><span
+                                            class="badge danger">25/05/2026</span></div>
                                 </div>
-                                <button class="btn btn-primary w-full" id="btn-import-ls" style="padding: 12px">
-                                    <i class="fa-solid fa-upload"></i> Import & Retrain
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ══════ PAGE: TRAINING HUB ══════ -->
+                <div class="page" id="training">
+                    <div class="page-header">
+                        <h2>AI Training Hub</h2>
+                        <p>Huấn luyện và nâng cao độ thông minh cho mô hình NER</p>
+                    </div>
+
+                    <div class="content-grid sidebar-layout">
+                        <div class="flex-col gap-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <span class="card-title">AI Intelligence Growth</span>
+                                    <div class="badge success">v2.4.0 Active</div>
+                                </div>
+                                <div class="card-body">
+                                    <div style="height: 250px; position: relative;">
+                                        <canvas id="intelligenceChart"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card">
+                                <div class="card-header">
+                                    <span class="card-title">Training History</span>
+                                </div>
+                                <div class="table-container">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>Version</th>
+                                                <th>Accuracy</th>
+                                                <th>F1-Score</th>
+                                                <th>Samples</th>
+                                                <th>Date</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="training-history-table">
+                                            <!-- Data via JS -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex-col gap-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <span class="card-title">Import Label Studio</span>
+                                </div>
+                                <div class="card-body">
+                                    <p class="text-secondary mb-12" style="font-size:12px">
+                                        Tải lên file JSON export từ Label Studio để bổ sung dữ liệu huấn luyện.
+                                    </p>
+                                    <div class="form-group">
+                                        <label class="form-label">Label Studio JSON</label>
+                                        <input type="file" id="ls-import-file" class="form-input" accept=".json"
+                                            style="padding: 10px;">
+                                    </div>
+                                    <button class="btn btn-primary w-full" id="btn-import-ls" style="padding: 12px">
+                                        <i class="fa-solid fa-upload"></i> Import & Retrain
+                                    </button>
+
+                                    <div id="import-status" class="mt-12 text-center" style="font-size:12px"></div>
+                                </div>
+                            </div>
+
+                            <div class="card">
+                                <div class="card-header">
+                                    <span class="card-title">Active Model Info</span>
+                                </div>
+                                <div class="card-body">
+                                    <div class="flex justify-between mb-12">
+                                        <span class="text-tertiary">Base Model</span>
+                                        <span class="text-primary">PhoBERT-Base</span>
+                                    </div>
+                                    <div class="flex justify-between mb-12">
+                                        <span class="text-tertiary">Training Method</span>
+                                        <span class="text-primary">Fine-tuning</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-tertiary">Last Retrained</span>
+                                        <span class="text-primary" id="last-retrained-text">2 giờ trước</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ══════ PAGE: WORKFLOW ══════ -->
+                <div class="page" id="workflow">
+                    <div class="page-header">
+                        <h2>Quy trình Hoạt động</h2>
+                        <p>Vòng lặp phản hồi giúp AI thông minh hơn mỗi ngày</p>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-body" style="padding: 60px 40px">
+                            <div class="workflow-diagram">
+                                <div class="workflow-step">
+                                    <div class="step-icon"><i class="fa-solid fa-file-import"></i></div>
+                                    <div class="step-content">
+                                        <h4>1. Thu thập dữ liệu</h4>
+                                        <p>Địa chỉ thô được thu thập từ các hệ thống hoặc upload hàng loạt.</p>
+                                    </div>
+                                </div>
+                                <div class="workflow-arrow"><i class="fa-solid fa-arrow-down"></i></div>
+                                <div class="workflow-step">
+                                    <div class="step-icon"><i class="fa-solid fa-microchip"></i></div>
+                                    <div class="step-content">
+                                        <h4>2. Xử lý NER</h4>
+                                        <p>AI bóc tách các thực thể (Tỉnh, Quận, Đường...) với độ tin cậy cụ thể.</p>
+                                    </div>
+                                </div>
+                                <div class="workflow-arrow"><i class="fa-solid fa-arrow-down"></i></div>
+                                <div class="workflow-step accent">
+                                    <div class="step-icon"><i class="fa-solid fa-user-check"></i></div>
+                                    <div class="step-content">
+                                        <h4>3. Kiểm soát (Human-in-the-loop)</h4>
+                                        <p>Các địa chỉ có độ tin cậy thấp được gán nhãn lại qua <strong>Label
+                                                Studio</strong>.</p>
+                                    </div>
+                                </div>
+                                <div class="workflow-arrow"><i class="fa-solid fa-arrow-down"></i></div>
+                                <div class="workflow-step glow">
+                                    <div class="step-icon"><i class="fa-solid fa-rotate"></i></div>
+                                    <div class="step-content">
+                                        <h4>4. Tái huấn luyện (Retrain)</h4>
+                                        <p>Dữ liệu gán nhãn được đẩy ngược lại để huấn luyện mô hình (Fine-tuning).</p>
+                                    </div>
+                                </div>
+                                <div class="workflow-arrow"><i class="fa-solid fa-arrow-down"></i></div>
+                                <div class="workflow-step success">
+                                    <div class="step-icon"><i class="fa-solid fa-rocket"></i></div>
+                                    <div class="step-content">
+                                        <h4>5. Tăng trưởng thông minh</h4>
+                                        <p>AI học mẫu mới, tự động giảm tỷ lệ lỗi trong tương lai.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ══════ PAGE: LOOKUP MAPPING ══════ -->
+                <div class="page" id="lookup">
+                    <div class="page-header">
+                        <h2>Tra cứu Biến động ĐVHC</h2>
+                        <p>Theo dõi lịch sử sáp nhập, đổi tên xã phường qua các thời kỳ</p>
+                    </div>
+
+                    <div class="card mb-24">
+                        <div class="card-body">
+                            <div class="flex items-center gap-24 mb-20 p-12"
+                                style="background: var(--bg-elevated); border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
+                                <div class="form-group mb-0 flex items-center gap-16">
+                                    <label class="form-label" style="margin-bottom:0; color: var(--accent);">Phiên bản
+                                        Hành chính:</label>
+                                    <div class="flex gap-4 p-4"
+                                        style="background: var(--bg-app); border-radius: var(--radius-sm);">
+                                        <label class="version-tab">
+                                            <input type="radio" name="admin-version" value="1" checked hidden>
+                                            <span>Version 1 (Cũ)</span>
+                                        </label>
+                                        <label class="version-tab">
+                                            <input type="radio" name="admin-version" value="2" hidden>
+                                            <span>Version 2 (Mới)</span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div style="font-size: 11px; color: var(--text-tertiary);">
+                                    <i class="fa-solid fa-circle-info mr-4"></i> Chọn version để tải danh sách ĐVHC
+                                    tương ứng
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Filters & Search (Full Width) -->
+                    <div class="card mb-24">
+                        <div class="card-body">
+                            <div class="content-grid triple mb-0">
+                                <div class="form-group mb-0">
+                                    <label class="form-label">Tỉnh/Thành</label>
+                                    <div class="input-wrapper">
+                                        <input list="list-provinces" id="mapping-province-input"
+                                            class="form-input has-clear" placeholder="Tìm Tỉnh...">
+                                        <button type="button" class="btn-clear-input"
+                                            onclick="document.getElementById('mapping-province-input').value=''; document.getElementById('mapping-province-input').dispatchEvent(new Event('input'))"
+                                            title="Xóa"><i class="fa-solid fa-xmark"></i></button>
+                                    </div>
+                                    <datalist id="list-provinces"></datalist>
+                                </div>
+                                <div class="form-group mb-0">
+                                    <label class="form-label">Quận/Huyện</label>
+                                    <div class="input-wrapper">
+                                        <input list="list-districts" id="mapping-district-input"
+                                            class="form-input has-clear" placeholder="Tìm Huyện...">
+                                        <button type="button" class="btn-clear-input"
+                                            onclick="document.getElementById('mapping-district-input').value=''; document.getElementById('mapping-district-input').dispatchEvent(new Event('input'))"
+                                            title="Xóa"><i class="fa-solid fa-xmark"></i></button>
+                                    </div>
+                                    <datalist id="list-districts"></datalist>
+                                </div>
+                                <div class="form-group mb-0">
+                                    <label class="form-label">Phường/Xã</label>
+                                    <div class="input-wrapper">
+                                        <input list="list-wards" id="mapping-ward-input" class="form-input has-clear"
+                                            placeholder="Tìm Xã...">
+                                        <button type="button" class="btn-clear-input"
+                                            onclick="document.getElementById('mapping-ward-input').value=''; document.getElementById('mapping-ward-input').dispatchEvent(new Event('input'))"
+                                            title="Xóa"><i class="fa-solid fa-xmark"></i></button>
+                                    </div>
+                                    <datalist id="list-wards"></datalist>
+                                </div>
+                            </div>
+                            <div class="search-box mt-16">
+                                <i class="fa-solid fa-search search-icon"></i>
+                                <input type="text" id="mapping-search-input" class="search-input"
+                                    placeholder="Hoặc gõ mã/tên trực tiếp vào đây...">
+                                <button class="btn btn-primary" id="btn-mapping-search">Tra cứu</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Main Content & Sidebar -->
+                    <div class="content-grid sidebar-layout" style="grid-template-columns: 3fr 1fr; gap: 24px;">
+                        <!-- Main: Mapping Results -->
+                        <div>
+                            <div class="card" style="height: 100%;">
+                                <div class="card-header"
+                                    style="background: var(--accent-glow); border-bottom: 2px solid var(--accent);">
+                                    <span class="card-title text-accent"><i
+                                            class="fa-solid fa-map-location-dot mr-4"></i> Kết quả ánh xạ (Cũ ↔
+                                        Mới)</span>
+                                </div>
+                                <div class="table-container">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>ĐVHC Cũ</th>
+                                                <th><i class="fa-solid fa-arrow-right-long"></i></th>
+                                                <th>ĐVHC Mới</th>
+                                                <th>Ghi chú biến động</th>
+                                                <th>Ngày hiệu lực</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="mapping-results-table">
+                                            <!-- Results via JS -->
+                                            <tr>
+                                                <td colspan="5" class="text-center text-tertiary" style="padding: 40px">
+                                                    Nhập từ khóa để bắt đầu tra cứu</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Sidebar: Detailed Info Panel -->
+                        <div style="position: sticky; top: 24px; align-self: start;">
+                            <div class="card shadow"
+                                style="background: var(--bg-secondary); border: 1px solid var(--accent); box-shadow: 0 4px 24px rgba(0, 255, 128, 0.15);">
+                                <div class="card-header" style="background: var(--bg-hover);">
+                                    <span class="card-title text-accent"><i class="fa-solid fa-circle-info mr-4"></i>
+                                        Thông tin Chi tiết</span>
+                                </div>
+                                <div class="card-body" id="unit-details-panel">
+                                    <div class="text-center text-tertiary" style="padding: 20px">
+                                        <i class="fa-solid fa-hand-pointer mb-12" style="font-size: 24px"></i>
+                                        <p>Chọn một đơn vị hành chính để xem thông tin dân số, diện tích và nghị quyết.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
+                <!-- ══════ PAGE: NSO SYNC CENTER ══════ -->
+                <div class="page full-height-page" id="nso-sync">
+                    <div class="page-header flex-shrink-0">
+                        <h2>NSO Sync Center (v2)</h2>
+                        <p>Đồng bộ dữ liệu hành chính trực tiếp từ Tổng cục Thống kê (NSO)</p>
+                    </div>
+
+                    <div class="content-grid sidebar-layout flex-1 overflow-hidden"
+                        style="grid-template-columns: 2fr 1fr; gap: 24px;">
+                        <!-- Main: Province Sync List -->
+                        <div class="card flex-1 flex flex-column overflow-hidden">
+                            <div class="card-header flex justify-between items-center">
+                                <span class="card-title"><i class="fa-solid fa-list-check mr-8"></i> Danh sách
+                                    Tỉnh/Thành</span>
+                                <div class="flex gap-8">
+                                    <button class="btn btn-sm btn-outline" id="btn-load-nso-provinces"><i
+                                            class="fa-solid fa-rotate mr-4"></i> Tải danh sách NSO</button>
+                                    <button class="btn btn-sm btn-accent" id="btn-sync-all-provinces"><i
+                                            class="fa-solid fa-cloud-arrow-down mr-4"></i> Sync ALL
+                                        (Sequential)</button>
+                                </div>
+                            </div>
+                            <div class="card-body flex flex-column overflow-hidden">
+                                <div class="search-box mb-16 flex-shrink-0">
+                                    <i class="fa-solid fa-search search-icon"></i>
+                                    <input type="text" id="nso-province-filter" class="search-input"
+                                        placeholder="Lọc theo tên tỉnh...">
+                                </div>
+                                <div class="table-container flex-1 overflow-y-auto">
+                                    <table style="width: 100%;">
+                                        <thead
+                                            style="position: sticky; top: 0; background: var(--bg-secondary); z-index: 10;">
+                                            <tr>
+                                                <th>Mã</th>
+                                                <th>Tên Tỉnh</th>
+                                                <th>Loại hình</th>
+                                                <th class="text-right">Thao tác</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="nso-provinces-table">
+                                            <tr>
+                                                <td colspan="4" class="text-center text-tertiary" style="padding: 40px">
+                                                    Chưa có dữ liệu. Bấm "Tải danh sách NSO" để bắt đầu.</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Sidebar: Sync Logs -->
+                        <div class="flex flex-column overflow-hidden" style="height: 100%;">
+                            <div class="card flex-1 flex flex-column overflow-hidden"
+                                style="background: #0d1117; border-color: #30363d;">
+                                <div class="card-header flex justify-between items-center"
+                                    style="border-bottom: 1px solid #30363d;">
+                                    <span class="card-title" style="color: #58a6ff;"><i
+                                            class="fa-solid fa-terminal mr-8"></i> Real-time Sync Logs</span>
+                                    <button class="btn btn-xs btn-ghost" id="btn-clear-nso-logs"
+                                        style="color: #8b949e;"><i class="fa-solid fa-trash-can"></i></button>
+                                </div>
+                                <div class="card-body" id="nso-sync-logs"
+                                    style="flex: 1; overflow-y: auto; font-family: 'Cascadia Code', 'Fira Code', monospace; font-size: 11px; line-height: 1.6; padding: 12px; color: #d1d5db;">
+                                    <div style="color: #8b949e;">[System] Sẵn sàng đồng bộ...</div>
+                                </div>
+                                <div class="p-12" style="background: #161b22; border-top: 1px solid #30363d;">
+                                    <div class="flex justify-between items-center">
+                                        <span id="sync-status-text" style="font-size: 11px; color: #8b949e;">IDLE</span>
+                                        <div class="dot pulse" id="sync-status-dot"
+                                            style="background: #8b949e; width: 8px; height: 8px;"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ═══ ADMIN UNITS MANAGER ═══ -->
+                <div class="page full-height-page" id="admin-units">
+                    <div class="page-body flex-1 flex flex-row gap-16 overflow-hidden p-16">
+                        <!-- Left Sidebar: Hierarchy Filter -->
+                        <div class="card flex flex-column" style="width: 300px; min-width: 300px;">
+                            <div class="card-header">
+                                <span class="card-title"><i class="fa-solid fa-filter mr-8"></i> Bộ lọc ĐVHC</span>
+                            </div>
+                            <div class="card-body p-16">
+                                <div class="form-group mb-16">
+                                    <label class="label-sm">Cấp độ</label>
+                                    <select id="admin-crud-level" class="form-input">
+                                        <option value="province">Tỉnh / Thành phố</option>
+                                        <option value="district">Quận / Huyện</option>
+                                        <option value="ward">Phường / Xã</option>
+                                    </select>
+                                </div>
+                                <div id="admin-filter-parent-province" class="form-group mb-16 hidden">
+                                    <label class="label-sm">Chọn Tỉnh/Thành</label>
+                                    <select id="admin-crud-province-select" class="form-input">
+                                        <option value="">-- Tất cả --</option>
+                                    </select>
+                                </div>
+                                <div id="admin-filter-parent-district" class="form-group mb-16 hidden">
+                                    <label class="label-sm">Chọn Quận/Huyện</label>
+                                    <select id="admin-crud-district-select" class="form-input">
+                                        <option value="">-- Tất cả --</option>
+                                    </select>
+                                </div>
+                                <button id="btn-admin-refresh" class="btn btn-primary w-full mt-16">
+                                    <i class="fa-solid fa-arrows-rotate mr-8"></i> Làm mới danh sách
                                 </button>
-                                <div id="import-status" class="mt-12 text-center" style="font-size:12px"></div>
                             </div>
                         </div>
 
-                        <div class="card">
-                            <div class="card-header">
-                                <span class="card-title">Active Model Info</span>
+                        <!-- Main Data Table -->
+                        <div class="card flex-1 flex flex-column overflow-hidden">
+                            <div class="card-header flex justify-between align-center">
+                                <span class="card-title" id="admin-table-title"><i class="fa-solid fa-list mr-8"></i> Danh sách Tỉnh/Thành</span>
+                                <button class="btn btn-sm btn-accent" id="btn-admin-add-new">
+                                    <i class="fa-solid fa-plus mr-4"></i> Thêm mới
+                                </button>
                             </div>
-                            <div class="card-body">
-                                <div class="flex justify-between mb-12">
-                                    <span class="text-tertiary">Base Model</span>
-                                    <span class="text-primary">PhoBERT-Base</span>
-                                </div>
-                                <div class="flex justify-between mb-12">
-                                    <span class="text-tertiary">Training Method</span>
-                                    <span class="text-primary">Fine-tuning</span>
-                                </div>
-                                <div class="flex justify-between">
-                                    <span class="text-tertiary">Last Retrained</span>
-                                    <span class="text-primary" id="last-retrained-text">2 giờ trước</span>
-                                </div>
+                            <div class="card-body overflow-auto flex-1">
+                                <table class="table w-full">
+                                    <thead class="sticky-header">
+                                        <tr id="admin-table-head">
+                                            <!-- Dynamic headers -->
+                                        </tr>
+                                    </thead>
+                                    <tbody id="admin-table-body">
+                                        <!-- Dynamic rows -->
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     </div>
                 </div>
+
+            </section> <!-- End of page-content -->
+        </main>
+    </div>
+
+    <!-- ═══ MODALS ═══ -->
+    <div id="modal-overlay" class="modal-overlay">
+        <div id="confirm-modal" class="confirm-modal">
+            <div class="modal-header">
+                <i class="fa-solid fa-circle-question text-accent" style="font-size: 24px"></i>
+                <h3>Xác nhận</h3>
             </div>
-
-            <!-- ══════ PAGE: WORKFLOW ══════ -->
-            <div class="page" id="workflow">
-                <div class="page-header">
-                    <h2>Quy trình Hoạt động</h2>
-                    <p>Vòng lặp phản hồi giúp AI thông minh hơn mỗi ngày</p>
-                </div>
-
-                <div class="card">
-                    <div class="card-body" style="padding: 60px 40px">
-                        <div class="workflow-diagram">
-                            <div class="workflow-step">
-                                <div class="step-icon"><i class="fa-solid fa-file-import"></i></div>
-                                <div class="step-content">
-                                    <h4>1. Thu thập dữ liệu</h4>
-                                    <p>Địa chỉ thô được thu thập từ các hệ thống hoặc upload hàng loạt.</p>
-                                </div>
-                            </div>
-                            <div class="workflow-arrow"><i class="fa-solid fa-arrow-down"></i></div>
-                            <div class="workflow-step">
-                                <div class="step-icon"><i class="fa-solid fa-microchip"></i></div>
-                                <div class="step-content">
-                                    <h4>2. Xử lý NER</h4>
-                                    <p>AI bóc tách các thực thể (Tỉnh, Quận, Đường...) với độ tin cậy cụ thể.</p>
-                                </div>
-                            </div>
-                            <div class="workflow-arrow"><i class="fa-solid fa-arrow-down"></i></div>
-                            <div class="workflow-step accent">
-                                <div class="step-icon"><i class="fa-solid fa-user-check"></i></div>
-                                <div class="step-content">
-                                    <h4>3. Kiểm soát (Human-in-the-loop)</h4>
-                                    <p>Các địa chỉ có độ tin cậy thấp được gán nhãn lại qua <strong>Label Studio</strong>.</p>
-                                </div>
-                            </div>
-                            <div class="workflow-arrow"><i class="fa-solid fa-arrow-down"></i></div>
-                            <div class="workflow-step glow">
-                                <div class="step-icon"><i class="fa-solid fa-rotate"></i></div>
-                                <div class="step-content">
-                                    <h4>4. Tái huấn luyện (Retrain)</h4>
-                                    <p>Dữ liệu gán nhãn được đẩy ngược lại để huấn luyện mô hình (Fine-tuning).</p>
-                                </div>
-                            </div>
-                            <div class="workflow-arrow"><i class="fa-solid fa-arrow-down"></i></div>
-                            <div class="workflow-step success">
-                                <div class="step-icon"><i class="fa-solid fa-rocket"></i></div>
-                                <div class="step-content">
-                                    <h4>5. Tăng trưởng thông minh</h4>
-                                    <p>AI học mẫu mới, tự động giảm tỷ lệ lỗi trong tương lai.</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+            <div class="modal-body" id="confirm-message">
+                Bạn có chắc chắn muốn thực hiện hành động này?
             </div>
-
-            <!-- ══════ PAGE: LOOKUP MAPPING ══════ -->
-            <div class="page" id="lookup">
-                <div class="page-header">
-                    <h2>Tra cứu Biến động ĐVHC</h2>
-                    <p>Theo dõi lịch sử sáp nhập, đổi tên xã phường qua các thời kỳ</p>
-                </div>
-
-                <div class="card mb-24">
-                    <div class="card-body">
-                        <div class="flex items-center gap-24 mb-20 p-12" style="background: var(--bg-elevated); border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
-                            <div class="form-group mb-0 flex items-center gap-16">
-                                <label class="form-label" style="margin-bottom:0; color: var(--accent);">Phiên bản Hành chính:</label>
-                                <div class="flex gap-4 p-4" style="background: var(--bg-app); border-radius: var(--radius-sm);">
-                                    <label class="version-tab">
-                                        <input type="radio" name="admin-version" value="1" checked hidden>
-                                        <span>Version 1 (Cũ)</span>
-                                    </label>
-                                    <label class="version-tab">
-                                        <input type="radio" name="admin-version" value="2" hidden>
-                                        <span>Version 2 (Mới)</span>
-                                    </label>
-                                </div>
-                            </div>
-                            <div style="font-size: 11px; color: var(--text-tertiary);">
-                                <i class="fa-solid fa-circle-info mr-4"></i> Chọn version để tải danh sách ĐVHC tương ứng
-                            </div>
-                            <button class="btn btn-sm btn-ghost" id="btn-sync-nso" style="margin-left: auto; border-color: var(--info); color: var(--info);">
-                                <i class="fa-solid fa-cloud-arrow-down"></i> Sync with NSO (v2)
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="content-grid sidebar-layout" style="gap: 20px; margin-top: 24px;">
-                    <div>
-                        <div class="content-grid triple" style="margin-bottom: 16px;">
-                            <div class="form-group mb-0">
-                                <label class="form-label">Tỉnh/Thành</label>
-                                <div class="input-wrapper">
-                                    <input list="list-provinces" id="mapping-province-input" class="form-input has-clear" placeholder="Tìm Tỉnh...">
-                                    <button type="button" class="btn-clear-input" onclick="document.getElementById('mapping-province-input').value=''; document.getElementById('mapping-province-input').dispatchEvent(new Event('input'))" title="Xóa"><i class="fa-solid fa-xmark"></i></button>
-                                </div>
-                                <datalist id="list-provinces"></datalist>
-                            </div>
-                            <div class="form-group mb-0">
-                                <label class="form-label">Quận/Huyện</label>
-                                <div class="input-wrapper">
-                                    <input list="list-districts" id="mapping-district-input" class="form-input has-clear" placeholder="Tìm Huyện...">
-                                    <button type="button" class="btn-clear-input" onclick="document.getElementById('mapping-district-input').value=''; document.getElementById('mapping-district-input').dispatchEvent(new Event('input'))" title="Xóa"><i class="fa-solid fa-xmark"></i></button>
-                                </div>
-                                <datalist id="list-districts"></datalist>
-                            </div>
-                            <div class="form-group mb-0">
-                                <label class="form-label">Phường/Xã</label>
-                                <div class="input-wrapper">
-                                    <input list="list-wards" id="mapping-ward-input" class="form-input has-clear" placeholder="Tìm Xã...">
-                                    <button type="button" class="btn-clear-input" onclick="document.getElementById('mapping-ward-input').value=''; document.getElementById('mapping-ward-input').dispatchEvent(new Event('input'))" title="Xóa"><i class="fa-solid fa-xmark"></i></button>
-                                </div>
-                                <datalist id="list-wards"></datalist>
-                            </div>
-                        </div>
-                        <div class="search-box mt-16">
-                            <i class="fa-solid fa-search search-icon"></i>
-                            <input type="text" id="mapping-search-input" class="search-input" placeholder="Hoặc gõ mã/tên trực tiếp vào đây...">
-                            <button class="btn btn-primary" id="btn-mapping-search">Tra cứu</button>
-                        </div>
-                    </div>
-                    
-                    <!-- Detailed Info Panel -->
-                    <div class="card" style="background: var(--bg-hover); border-color: var(--border-color);">
-                        <div class="card-header"><span class="card-title">Thông tin Chi tiết</span></div>
-                        <div class="card-body" id="unit-details-panel">
-                            <div class="text-center text-tertiary" style="padding: 20px">
-                                <i class="fa-solid fa-circle-info mb-12" style="font-size: 24px"></i>
-                                <p>Chọn một đơn vị để xem thông tin dân số, diện tích và nghị quyết.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card mt-24">
-                    <div class="card-header">
-                        <span class="card-title">Kết quả ánh xạ (Cũ ↔ Mới)</span>
-                    </div>
-                    <div class="table-container">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>ID Cũ</th>
-                                    <th>ĐVHC Cũ</th>
-                                    <th><i class="fa-solid fa-arrow-right-long"></i></th>
-                                    <th>ID Mới</th>
-                                    <th>ĐVHC Mới</th>
-                                    <th>Ghi chú biến động</th>
-                                    <th>Ngày hiệu lực</th>
-                                </tr>
-                            </thead>
-                            <tbody id="mapping-results-table">
-                                <!-- Results via JS -->
-                                <tr><td colspan="7" class="text-center text-tertiary" style="padding: 40px">Nhập từ khóa để bắt đầu tra cứu</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" id="btn-confirm-cancel">Hủy</button>
+                <button class="btn btn-primary" id="btn-confirm-ok">Đồng ý</button>
             </div>
         </div>
+    </div>
 
-        </section>
-    </main>
-</div>
-<script src="app.js"></script>
+    <!-- MODAL: ADMIN UNIT FORM -->
+    <div id="modal-admin-unit" class="modal-overlay hidden">
+        <div class="modal-card" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3 id="admin-modal-title">Thêm Tỉnh/Thành mới</h3>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body p-24">
+                <form id="admin-unit-form">
+                    <input type="hidden" id="admin-form-id">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Tên Đơn vị</label>
+                            <input type="text" id="admin-form-name" class="form-input" placeholder="Ví dụ: Ba Đình" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Mã (GSO Code)</label>
+                            <input type="text" id="admin-form-no" class="form-input" placeholder="Ví dụ: 001">
+                        </div>
+                        <div class="form-group">
+                            <label>Loại hình</label>
+                            <input type="text" id="admin-form-type" class="form-input" placeholder="Quận / Huyện / Phường...">
+                        </div>
+                        <div class="form-group">
+                            <label>Tên tiếng Anh</label>
+                            <input type="text" id="admin-form-name-en" class="form-input" placeholder="...">
+                        </div>
+                    </div>
+                    <div id="admin-form-extra" class="mt-16">
+                        <!-- Dynamic fields based on level (Parent ID) -->
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer flex justify-end gap-12 p-16">
+                <button class="btn btn-outline close-modal">Hủy</button>
+                <button type="submit" form="admin-unit-form" class="btn btn-accent">Lưu dữ liệu</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast-container" class="toast-container"></div>
+    <script src="app.js"></script>
 </body>
+
 </html>

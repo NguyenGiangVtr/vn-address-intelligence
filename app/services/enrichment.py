@@ -50,7 +50,7 @@ def enrich_provinces(file_path):
             query = """
                 UPDATE mat.province 
                 SET decision_number = :num, decision_date = :date, notes = :notes, admin_version = 2
-                WHERE province_code = :code OR province_id::text = :code
+                WHERE province_no = :code OR province_id::text = :code
             """
             conn.execute(sql_text(query), {
                 'num': dec_num, 'date': dec_date, 'notes': notes, 'code': code
@@ -67,7 +67,7 @@ def enrich_wards(file_path):
             p_code_col = [c for c in df.columns if 'M' in c and 'TP' in c][0]
             
             code = str(row.get(code_col, '')).zfill(5)
-            province_code = str(row.get(p_code_col, '')).zfill(2)
+            province_no = str(row.get(p_code_col, '')).zfill(2)
             
             if len(code) != 5 or code == '00nan': continue
             
@@ -83,11 +83,11 @@ def enrich_wards(file_path):
                 WHERE w.district_id = d.district_id 
                   AND d.province_id = p.province_id
                   AND (w.ward_no = :code OR w.ward_id::text = :code)
-                  AND (p.province_code = :p_code OR p.province_id::text = :p_code)
+                  AND (p.province_no = :p_code OR p.province_id::text = :p_code)
             """
             conn.execute(sql_text(query), {
                 'num': dec_num, 'date': dec_date, 'notes': notes, 
-                'code': code, 'p_code': province_code
+                'code': code, 'p_code': province_no
             })
             
             if i % 500 == 0:

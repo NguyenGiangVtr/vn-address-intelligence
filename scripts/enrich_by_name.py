@@ -132,7 +132,7 @@ with engine.connect() as conn:
     for name, q in {
         "Provinces enriched": "SELECT COUNT(*) FROM mat.province WHERE decision_number IS NOT NULL",
         "Wards enriched": "SELECT COUNT(*) FROM mat.ward WHERE decision_number IS NOT NULL",
-        "Province NaN code remaining": "SELECT COUNT(*) FROM mat.province WHERE province_code = 'nan' OR province_code = 'NaN'",
+        "Province NaN code remaining": "SELECT COUNT(*) FROM mat.province WHERE province_no = 'nan' OR province_no = 'NaN'",
     }.items():
         val = conn.execute(text(q)).scalar()
         print(f"  {name:35}: {val}")

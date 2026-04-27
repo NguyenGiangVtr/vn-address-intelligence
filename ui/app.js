@@ -18,16 +18,16 @@ function getAuthHeader() {
 
 // NER Labels (mirrors constants.py)
 const NER_LABELS = [
-  { value:"PCD", text:"Plus Code",      color:"#f032e6", hotkey:"0", example:"7P28QR4F+2M" },
-  { value:"BLD", text:"Tòa nhà/Chung cư", color:"#f58231", hotkey:"1", example:"Chung Cư Tecco Green Nest" },
-  { value:"POI", text:"Địa danh/Mốc",   color:"#911eb4", hotkey:"2", example:"Đối Diện Chợ Bà Chiểu" },
-  { value:"ALY", text:"Hẻm/Ngõ",        color:"#4363d8", hotkey:"3", example:"Hẻm 141" },
-  { value:"NUM", text:"Số nhà/Lô",      color:"#e6194B", hotkey:"4", example:"Số 17/2A" },
-  { value:"STR", text:"Tên đường",       color:"#3cb44b", hotkey:"5", example:"Đường Phạm Thế Hiển" },
-  { value:"NHB", text:"Khu phố/Thôn/Ấp", color:"#469990", hotkey:"6", example:"Khu Phố 3" },
-  { value:"WDS", text:"Phường/Xã",       color:"#ffe119", hotkey:"7", example:"Phường Tân Thới Nhất" },
-  { value:"DST", text:"Quận/Huyện",      color:"#800000", hotkey:"8", example:"Quận 12" },
-  { value:"PRO", text:"Tỉnh/TP",         color:"#000075", hotkey:"9", example:"TP Hồ Chí Minh" },
+  { value: "PCD", text: "Plus Code", color: "#f032e6", hotkey: "0", example: "7P28QR4F+2M" },
+  { value: "BLD", text: "Tòa nhà/Chung cư", color: "#f58231", hotkey: "1", example: "Chung Cư Tecco Green Nest" },
+  { value: "POI", text: "Địa danh/Mốc", color: "#911eb4", hotkey: "2", example: "Đối Diện Chợ Bà Chiểu" },
+  { value: "ALY", text: "Hẻm/Ngõ", color: "#4363d8", hotkey: "3", example: "Hẻm 141" },
+  { value: "NUM", text: "Số nhà/Lô", color: "#e6194B", hotkey: "4", example: "Số 17/2A" },
+  { value: "STR", text: "Tên đường", color: "#3cb44b", hotkey: "5", example: "Đường Phạm Thế Hiển" },
+  { value: "NHB", text: "Khu phố/Thôn/Ấp", color: "#469990", hotkey: "6", example: "Khu Phố 3" },
+  { value: "WDS", text: "Phường/Xã", color: "#ffe119", hotkey: "7", example: "Phường Tân Thới Nhất" },
+  { value: "DST", text: "Quận/Huyện", color: "#800000", hotkey: "8", example: "Quận 12" },
+  { value: "PRO", text: "Tỉnh/TP", color: "#000075", hotkey: "9", example: "TP Hồ Chí Minh" },
 ];
 
 const SAMPLE_ADDRESSES = [
@@ -47,7 +47,9 @@ document.addEventListener("DOMContentLoaded", () => {
   setupParserTool();
   setupBatchTool();
   fetchStats();
-  
+  initNSOSyncTool();
+  initAdminManager();
+
   // Refresh stats every 30 seconds
   setInterval(fetchStats, 30000);
   // Initialize Training Chart if on training page
@@ -58,9 +60,9 @@ let intelligenceChart = null;
 function initIntelligenceChart() {
   const ctx = document.getElementById('intelligenceChart');
   if (!ctx) return;
-  
+
   if (intelligenceChart) intelligenceChart.destroy();
-  
+
   intelligenceChart = new Chart(ctx, {
     type: 'line',
     data: {
@@ -110,7 +112,7 @@ function setupNavigation() {
   const navItems = document.querySelectorAll(".nav-item");
   const pages = document.querySelectorAll(".page");
   const titleEl = document.getElementById("current-page-title");
-  
+
   const sidebar = document.querySelector(".sidebar");
   const overlay = document.getElementById("sidebar-overlay");
   const toggle = document.getElementById("menu-toggle");
@@ -138,12 +140,12 @@ function setupNavigation() {
       const targetId = item.getAttribute("data-page");
       pages.forEach(p => p.classList.toggle("active", p.id === targetId));
       titleEl.textContent = item.textContent.trim();
-      
+
       // UX: Scroll to top when page changes
       window.scrollTo({ top: 0, behavior: 'smooth' });
       const contentEl = document.getElementById('page-content');
       if (contentEl) contentEl.scrollTo({ top: 0, behavior: 'smooth' });
-      
+
       closeMobileMenu(); // Close sidebar on mobile after selection
     });
   });
@@ -203,7 +205,7 @@ function initOverviewChart() {
           ticks: {
             color: "#5c5c5f",
             font: { size: 10 },
-            callback: (v) => v >= 1000 ? (v/1000)+"K" : v
+            callback: (v) => v >= 1000 ? (v / 1000) + "K" : v
           },
           grid: { color: "rgba(255,255,255,0.04)" }
         }
@@ -268,7 +270,7 @@ function heuristicNER(text) {
   proPatterns.forEach(re => {
     let m;
     while ((m = re.exec(text)) !== null) {
-      entities.push({ label:"PRO", start: m.index, end: m.index + m[0].replace(/,$/,"").length, text: m[0].replace(/,$/,"").trim() });
+      entities.push({ label: "PRO", start: m.index, end: m.index + m[0].replace(/,$/, "").length, text: m[0].replace(/,$/, "").trim() });
     }
   });
 
@@ -276,48 +278,48 @@ function heuristicNER(text) {
   const dstRe = /(?:Quận|quận|Q\.?\s*|Huyện|huyện|H\.?\s*|Thị xã|thị xã|TX\.?\s*)([A-ZĐa-zÀ-ỹ0-9\s]+?)(?:,|$)/g;
   let m;
   while ((m = dstRe.exec(text)) !== null) {
-    entities.push({ label:"DST", start: m.index, end: m.index + m[0].replace(/,$/,"").length, text: m[0].replace(/,$/,"").trim() });
+    entities.push({ label: "DST", start: m.index, end: m.index + m[0].replace(/,$/, "").length, text: m[0].replace(/,$/, "").trim() });
   }
 
   // Ward
   const wdsRe = /(?:Phường|phường|P\.?\s*|Xã|xã|X\.?\s*|Thị trấn|TT\.?\s*)([A-ZĐa-zÀ-ỹ0-9\s]+?)(?:,|$)/g;
   while ((m = wdsRe.exec(text)) !== null) {
-    entities.push({ label:"WDS", start: m.index, end: m.index + m[0].replace(/,$/,"").length, text: m[0].replace(/,$/,"").trim() });
+    entities.push({ label: "WDS", start: m.index, end: m.index + m[0].replace(/,$/, "").length, text: m[0].replace(/,$/, "").trim() });
   }
 
   // Street
   const strRe = /(?:Đường|đường|Đ\.?\s*|Phố|phố)[\s]*([A-ZĐa-zÀ-ỹ0-9\s]+?)(?:,|$)/g;
   while ((m = strRe.exec(text)) !== null) {
-    entities.push({ label:"STR", start: m.index, end: m.index + m[0].replace(/,$/,"").length, text: m[0].replace(/,$/,"").trim() });
+    entities.push({ label: "STR", start: m.index, end: m.index + m[0].replace(/,$/, "").length, text: m[0].replace(/,$/, "").trim() });
   }
 
   // House number
   const numRe = /(?:Số\s+|số\s+)?(\d+[\w/.\-]*)/g;
   while ((m = numRe.exec(text)) !== null) {
     if (!entities.some(e => m.index >= e.start && m.index < e.end)) {
-      entities.push({ label:"NUM", start: m.index, end: m.index + m[0].length, text: m[0].trim() });
+      entities.push({ label: "NUM", start: m.index, end: m.index + m[0].length, text: m[0].trim() });
     }
   }
 
   // Alley
   const alyRe = /(?:Hẻm|hẻm|Ngõ|ngõ|Ngách|ngách|Kiệt|kiệt)\s*[\d/]+/g;
   while ((m = alyRe.exec(text)) !== null) {
-    entities.push({ label:"ALY", start: m.index, end: m.index + m[0].length, text: m[0].trim() });
+    entities.push({ label: "ALY", start: m.index, end: m.index + m[0].length, text: m[0].trim() });
   }
 
   // Building
   const bldRe = /(?:Chung [Cc]ư|CC\.?\s*|Tòa nhà|Khu đô thị|KĐT)\s*[A-ZĐa-zÀ-ỹ0-9\s]+?(?:,|$)/g;
   while ((m = bldRe.exec(text)) !== null) {
-    entities.push({ label:"BLD", start: m.index, end: m.index + m[0].replace(/,$/,"").length, text: m[0].replace(/,$/,"").trim() });
+    entities.push({ label: "BLD", start: m.index, end: m.index + m[0].replace(/,$/, "").length, text: m[0].replace(/,$/, "").trim() });
   }
 
   // Neighborhood
   const nhbRe = /(?:Khu [Pp]hố|KP\.?\s*|[Tt]hôn|[Ấấ]p|[Tt]ổ)\s*[\dA-Za-zÀ-ỹ\s]+?(?:,|$)/g;
   while ((m = nhbRe.exec(text)) !== null) {
-    entities.push({ label:"NHB", start: m.index, end: m.index + m[0].replace(/,$/,"").length, text: m[0].replace(/,$/,"").trim() });
+    entities.push({ label: "NHB", start: m.index, end: m.index + m[0].replace(/,$/, "").length, text: m[0].replace(/,$/, "").trim() });
   }
 
-  return entities.sort((a,b) => a.start - b.start);
+  return entities.sort((a, b) => a.start - b.start);
 }
 
 function renderNEROutput(text, entities) {
@@ -329,7 +331,7 @@ function renderNEROutput(text, entities) {
 
   let html = "";
   let lastEnd = 0;
-  const sorted = [...entities].sort((a,b) => a.start - b.start);
+  const sorted = [...entities].sort((a, b) => a.start - b.start);
 
   // Remove overlaps
   const filtered = [];
@@ -371,7 +373,7 @@ function renderEntitiesTable(entities) {
     return `<tr>
       <td><span class="badge" style="background:${info.color}22;color:${info.color}">${e.label}</span> ${info.text || ""}</td>
       <td>${escapeHtml(e.text)}</td>
-      <td>${(0.7 + Math.random()*0.25).toFixed(2)}</td>
+      <td>${(0.7 + Math.random() * 0.25).toFixed(2)}</td>
     </tr>`;
   }).join("");
 }
@@ -413,7 +415,7 @@ function setupBatchTool() {
         document.getElementById("batch-throughput").textContent = `${tps.toLocaleString()} items/s`;
         return;
       }
-      
+
       document.getElementById("batch-throughput").textContent = `${tps.toLocaleString()} items/s`;
       log.innerHTML += `[${new Date().toLocaleTimeString()}] Processing... ${processed.toLocaleString()}/${parseInt(size).toLocaleString()}\n`;
       log.scrollTop = log.scrollHeight;
@@ -428,7 +430,7 @@ async function fetchStats() {
     const response = await fetch(`${API_BASE}/stats`, {
       headers: getAuthHeader()
     });
-    
+
     if (response.status === 401) {
       localStorage.removeItem('vnai_token');
       window.location.href = 'login.html';
@@ -436,15 +438,15 @@ async function fetchStats() {
     }
 
     const data = await response.json();
-    
+
     // Update Master Data
     const masterCount = (data.master.provinces || 0) + (data.master.districts || 0) + (data.master.wards || 0);
     if (document.getElementById('stat-master')) document.getElementById('stat-master').innerText = masterCount.toLocaleString();
-    
+
     // Update OSM Data
     const osmCount = (data.osm.total || 0);
     if (document.getElementById('stat-osm')) document.getElementById('stat-osm').innerText = osmCount.toLocaleString();
-    
+
     // Update Training Data & Queue
     if (data.ai) {
       if (document.getElementById('stat-training')) document.getElementById('stat-training').innerText = (data.ai.training_samples || 0).toLocaleString();
@@ -456,7 +458,7 @@ async function fetchStats() {
       if (document.getElementById('district-count')) document.getElementById('district-count').textContent = data.master.districts.toLocaleString();
       if (document.getElementById('ward-count')) document.getElementById('ward-count').textContent = data.master.wards.toLocaleString();
     }
-    
+
     // Update Visitors
     if (data.visitors) {
       if (document.getElementById('stat-total-visits')) document.getElementById('stat-total-visits').textContent = data.visitors.total.toLocaleString();
@@ -474,18 +476,18 @@ async function fetchStats() {
 document.getElementById('btn-import-ls')?.addEventListener('click', async () => {
   const fileInput = document.getElementById('ls-import-file');
   const statusEl = document.getElementById('import-status');
-  
+
   if (!fileInput.files.length) {
     statusEl.innerHTML = '<span class="text-danger">Vui lòng chọn file JSON</span>';
     return;
   }
-  
+
   statusEl.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Đang tải lên và tái huấn luyện...';
-  
+
   // Simulated delay for training
   setTimeout(() => {
     statusEl.innerHTML = '<span class="text-success">✅ Thành công! Mô hình đã được cập nhật bản v2.4.1</span>';
-    
+
     // Update chart with new point
     if (intelligenceChart) {
       intelligenceChart.data.labels.push('v2.4.1');
@@ -493,7 +495,7 @@ document.getElementById('btn-import-ls')?.addEventListener('click', async () => 
       intelligenceChart.data.datasets[1].data.push(91.5);
       intelligenceChart.update();
     }
-    
+
     // Update last retrained text
     const timeEl = document.getElementById('last-retrained-text');
     if (timeEl) timeEl.textContent = "Vừa xong";
@@ -539,13 +541,25 @@ async function initMappingV3() {
   }));
 
   pInput.addEventListener('input', async () => {
+    if (pInput.value === '') {
+      dInput.value = ''; wInput.value = '';
+      mappingState.districts = {}; mappingState.wards = {};
+      const listD = document.getElementById('list-districts');
+      if (listD) listD.innerHTML = '';
+      const listW = document.getElementById('list-wards');
+      if (listW) listW.innerHTML = '';
+      document.getElementById('unit-details-panel').innerHTML = '<div class="text-center" style="padding:40px; color:var(--text-tertiary)">Chọn một đơn vị để xem chi tiết.</div>';
+      triggerMappingSearch();
+      return;
+    }
+
     const id = mappingState.provinces[pInput.value];
     if (!id) return;
-    
+
     // Clear children
     dInput.value = ''; wInput.value = '';
     mappingState.districts = {}; mappingState.wards = {};
-    
+
     showDetails('province', id);
     triggerMappingSearch(); // Auto-trigger
 
@@ -561,13 +575,26 @@ async function initMappingV3() {
   });
 
   dInput.addEventListener('input', async () => {
+    if (dInput.value === '') {
+      wInput.value = '';
+      mappingState.wards = {};
+      const listW = document.getElementById('list-wards');
+      if (listW) listW.innerHTML = '';
+
+      const provinceId = mappingState.provinces[pInput.value];
+      if (provinceId) showDetails('province', provinceId);
+
+      triggerMappingSearch();
+      return;
+    }
+
     const provinceId = mappingState.provinces[pInput.value];
     const id = mappingState.districts[dInput.value];
-    if (!id || !provinceId) return; 
-    
+    if (!id || !provinceId) return;
+
     wInput.value = '';
     mappingState.wards = {};
-    
+
     showDetails('district', id);
     triggerMappingSearch(); // Auto-trigger
 
@@ -584,6 +611,13 @@ async function initMappingV3() {
   });
 
   wInput.addEventListener('input', () => {
+    if (wInput.value === '') {
+      const districtId = mappingState.districts[dInput.value];
+      if (districtId) showDetails('district', districtId);
+      triggerMappingSearch();
+      return;
+    }
+
     const wardId = mappingState.wards[wInput.value];
     if (wardId) {
       showDetails('ward', wardId);
@@ -604,7 +638,7 @@ async function showDetails(level, id) {
       <div class="flex flex-col gap-12">
         <div class="text-accent font-700" style="font-size:18px">${u.province_name || u.district_name || u.ward_name}</div>
         <div class="flex justify-between"><span>Phiên bản:</span><span class="badge info">Admin v${u.admin_version}</span></div>
-        <div class="flex justify-between"><span>Mã GSO:</span><span class="text-mono" id="current-unit-code">${u.province_id || u.district_id || u.ward_id}</span></div>
+        <div class="flex justify-between"><span>Mã GSO:</span><span class="text-mono" id="current-unit-code">${u.province_no || u.province_no || u.district_no || u.ward_no || "N/A"}</span></div>
         <div class="flex justify-between"><span>Dân số:</span><span class="font-600">${(u.population || 0).toLocaleString()} người</span></div>
         <div class="flex justify-between"><span>Diện tích:</span><span class="font-600">${u.area_km2 || 0} km²</span></div>
         <div class="nav-divider"></div>
@@ -622,48 +656,51 @@ async function triggerMappingSearch() {
   const pId = mappingState.provinces[document.getElementById('mapping-province-input').value];
   const dId = mappingState.districts[document.getElementById('mapping-district-input').value];
   const wId = mappingState.wards[document.getElementById('mapping-ward-input').value];
-  
+
   const tbody = document.getElementById('mapping-results-table');
-  
+
+  // Lấy giá trị version từ UI
+  const version = document.querySelector('input[name="admin-version"]:checked')?.value;
+
   // Xây dựng URL với các tham số ID chính xác
   let url = `${API_BASE}/lookup/mapping?`;
   if (wId) url += `ward_id=${wId}`;
   else if (dId) url += `district_id=${dId}`;
   else if (pId) url += `province_id=${pId}`;
-  
+
+  if (version) url += `${url.endsWith('?') ? '' : '&'}version=${version}`;
+
   if (qText) url += `${url.endsWith('?') ? '' : '&'}query=${encodeURIComponent(qText)}`;
-  
+
   if (url.endsWith('?')) return; // No filter
-  
-  tbody.innerHTML = '<tr><td colspan="7" class="text-center" style="padding:40px"><i class="fa-solid fa-circle-notch fa-spin fa-2x text-accent"></i></td></tr>';
-  
+
+  tbody.innerHTML = '<tr><td colspan="5" class="text-center" style="padding:40px"><i class="fa-solid fa-circle-notch fa-spin fa-2x text-accent"></i></td></tr>';
+
   try {
     const res = await fetch(url, { headers: getAuthHeader() });
     const data = await res.json();
     if (data.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="7" class="text-center text-tertiary" style="padding:40px">Không tìm thấy dữ liệu ánh xạ phù hợp</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="5" class="text-center text-tertiary" style="padding:40px">Không tìm thấy dữ liệu ánh xạ phù hợp</td></tr>';
       return;
     }
     tbody.innerHTML = data.map(m => `
       <tr>
-        <td class="text-mono" style="color:var(--text-accent)">${m.ward_id_old || "-"}</td>
         <td>
-          <div class="font-600">${m.ward_name_old || (m.ward_id_old == -1 ? "(Tất cả Xã)" : "N/A")}</div>
-          <div class="text-tertiary" style="font-size:11px">
-            ${[m.district_name_old, m.province_name_old].filter(x => x).join(", ")}
+          <div class="font-600" style="font-size:14px; color:var(--text-accent)">${m.ward_name_old || (m.ward_id_old == -1 ? "(Tất cả Xã)" : "N/A")}</div>
+          <div class="text-tertiary" style="font-size:12px">
+            ${[m.district_name_old, m.province_name_old].filter(x => x).join(" - ")}
           </div>
         </td>
-        <td class="text-tertiary"><i class="fa-solid fa-arrow-right-long"></i></td>
-        <td class="text-mono" style="color:var(--success)">${m.ward_id_new || "-"}</td>
+        <td class="text-tertiary" style="vertical-align:middle"><i class="fa-solid fa-arrow-right-long"></i></td>
         <td>
-          <div class="font-600 text-success">${m.ward_name_new || "N/A"}</div>
-          <div class="text-tertiary" style="font-size:11px">${m.province_name_new || ""}</div>
+          <div class="font-600" style="font-size:14px; color:var(--success)">${m.ward_name_new || "N/A"}</div>
+          <div class="text-tertiary" style="font-size:12px">${m.province_name_new || ""}</div>
         </td>
         <td><div style="max-width:300px; font-size:12px; line-height:1.4">${m.updated_note || ""}</div></td>
         <td class="text-tertiary" style="font-size:12px">${m.effective_date_from ? new Date(m.effective_date_from).toLocaleDateString('vi-VN') : "-"}</td>
       </tr>
     `).join("");
-  } catch (err) { tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger" style="padding:40px">Lỗi kết nối API</td></tr>'; }
+  } catch (err) { tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger" style="padding:40px">Lỗi kết nối API</td></tr>'; }
 }
 
 document.getElementById('btn-mapping-search')?.addEventListener('click', triggerMappingSearch);
@@ -672,43 +709,465 @@ document.getElementById('mapping-search-input')?.addEventListener('keypress', (e
 });
 
 // ═══════════════════════════════════════════════════════════
-// NSO SYNC LOGIC
+// NSO SYNC LOGIC (v2 - Batch & Real-time Logs)
 // ═══════════════════════════════════════════════════════════
-document.getElementById('btn-sync-nso')?.addEventListener('click', async () => {
-  const btn = document.getElementById('btn-sync-nso');
-  const originalHtml = btn.innerHTML;
-  
-  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Syncing...';
-  btn.disabled = true;
+let nsoProvinces = [];
+let logPollingInterval = null;
 
-  try {
-    const res = await fetch(`${API_BASE}/sync/nso`, {
-      method: 'POST',
-      headers: getAuthHeader()
-    });
-    const data = await res.json();
-    
-    if (data.status === 'success') {
-      showToast(`✅ Đã đồng bộ ${data.synced_units.toLocaleString()} đơn vị từ NSO vào Version 2!`);
-      // Refresh provinces if current version is 2
-      if (mappingState.version == 2) {
-        initMappingV3(); 
-      }
-    } else {
-      showToast('❌ Lỗi đồng bộ dữ liệu NSO', 'danger');
-    }
-  } catch (e) {
-    console.error(e);
-    showToast('❌ Lỗi kết nối server', 'danger');
-  } finally {
-    btn.innerHTML = originalHtml;
-    btn.disabled = false;
-  }
-});
+function initNSOSyncTool() {
+  const btnLoad = document.getElementById('btn-load-nso-provinces');
+  const btnSyncAll = document.getElementById('btn-sync-all-provinces');
+  const filterInput = document.getElementById('nso-province-filter');
+  const logsContainer = document.getElementById('nso-sync-logs');
+  const clearLogsBtn = document.getElementById('btn-clear-nso-logs');
 
-function showToast(msg, type = 'success') {
-  // Simple alert for now, can be improved to a real toast UI
-  alert(msg);
+  if (!btnLoad) return;
+
+  btnLoad.addEventListener('click', loadNSOProvinces);
+  btnSyncAll?.addEventListener('click', syncAllProvinces);
+  filterInput.addEventListener('input', renderNSOProvincesTable);
+  clearLogsBtn.addEventListener('click', async () => {
+    await fetch(`${API_BASE}/sync/nso/logs`, { method: 'DELETE', headers: getAuthHeader() });
+    logsContainer.innerHTML = '<div style="color: #8b949e;">[System] Logs cleared.</div>';
+  });
+
+  // Start log polling
+  startLogPolling();
 }
 
+async function loadNSOProvinces() {
+  const btn = document.getElementById('btn-load-nso-provinces');
+  const tbody = document.getElementById('nso-provinces-table');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang tải...';
+  tbody.innerHTML = '<tr><td colspan="4" class="text-center"><i class="fa-solid fa-spinner fa-spin fa-2x"></i></td></tr>';
+
+  try {
+    const res = await fetch(`${API_BASE}/nso/provinces`, { headers: getAuthHeader() });
+    nsoProvinces = await res.json();
+    renderNSOProvincesTable();
+  } catch (e) {
+    tbody.innerHTML = '<tr><td colspan="4" class="text-center text-danger">Lỗi tải dữ liệu NSO</td></tr>';
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-rotate mr-4"></i> Tải danh sách NSO';
+  }
+}
+
+function renderNSOProvincesTable() {
+  const tbody = document.getElementById('nso-provinces-table');
+  const filter = document.getElementById('nso-province-filter').value.toLowerCase();
+
+  const filtered = nsoProvinces.filter(p =>
+    p.TenTinh.toLowerCase().includes(filter) || p.MaTinh.includes(filter)
+  );
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" class="text-center text-tertiary">Không tìm thấy tỉnh nào phù hợp.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(p => `
+    <tr>
+      <td><span class="text-mono">${p.MaTinh}</span></td>
+      <td><strong>${p.TenTinh}</strong></td>
+      <td><span class="badge info">${p.LoaiHinh}</span></td>
+      <td class="text-right">
+        <button class="btn btn-xs btn-accent btn-sync-province" 
+                data-code="${p.MaTinh}" data-name="${p.TenTinh}">
+          <i class="fa-solid fa-cloud-arrow-down"></i> Sync
+        </button>
+      </td>
+    </tr>
+  `).join("");
+
+  // Add listeners to new buttons
+  document.querySelectorAll('.btn-sync-province').forEach(btn => {
+    btn.addEventListener('click', () => syncSingleProvince(btn));
+  });
+}
+
+async function syncSingleProvince(btn) {
+  const code = btn.getAttribute('data-code');
+  const name = btn.getAttribute('data-name');
+
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+
+  updateSyncStatus('SYNCING', 'var(--warning)');
+
+  try {
+    const res = await fetch(`${API_BASE}/sync/nso/province`, {
+      method: 'POST',
+      headers: { ...getAuthHeader(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, name })
+    });
+    const result = await res.json();
+
+    if (result.status === 'success') {
+      showToast(`✅ Hoàn thành ${name}`);
+    } else {
+      showToast(`❌ Lỗi ${name}: ${result.message}`, 'danger');
+    }
+  } catch (e) {
+    showToast(`❌ Lỗi kết nối khi sync ${name}`, 'danger');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-down"></i> Sync';
+    updateSyncStatus('IDLE', '#8b949e');
+  }
+}
+
+function updateSyncStatus(text, color) {
+  document.getElementById('sync-status-text').textContent = text;
+  document.getElementById('sync-status-dot').style.background = color;
+}
+
+function startLogPolling() {
+  if (logPollingInterval) clearInterval(logPollingInterval);
+
+  logPollingInterval = setInterval(async () => {
+    const logsContainer = document.getElementById('nso-sync-logs');
+    if (!logsContainer) return;
+
+    try {
+      const res = await fetch(`${API_BASE}/sync/nso/logs`, { headers: getAuthHeader() });
+      const logs = await res.json();
+
+      const html = logs.map(l => {
+        let color = '#8b949e';
+        if (l.level === 'success') color = '#3fb950';
+        if (l.level === 'error') color = '#f85149';
+        if (l.level === 'warning') color = '#d29922';
+
+        return `<div style="margin-bottom: 4px;">
+          <span style="color: #484f58;">[${l.time}]</span> 
+          <span style="color: ${color}">${l.message}</span>
+        </div>`;
+      }).join("");
+
+      if (logsContainer.innerHTML !== html) {
+        logsContainer.innerHTML = html;
+        logsContainer.scrollTop = logsContainer.scrollHeight;
+      }
+    } catch (e) { /* Ignore polling errors */ }
+  }, 2000);
+}
+
+async function syncAllProvinces() {
+  const btn = document.getElementById('btn-sync-all-provinces');
+  if (nsoProvinces.length === 0) {
+    showToast('Vui lòng tải danh sách Tỉnh trước', 'warning');
+    return;
+  }
+
+  const confirmMsg = `Hệ thống sẽ bắt đầu đồng bộ tuần tự ${nsoProvinces.length} tỉnh/thành. Quá trình này có thể kéo dài vài phút tùy thuộc vào tốc độ mạng. Bạn có chắc chắn muốn bắt đầu?`;
+  const isConfirmed = await showConfirm(confirmMsg);
+  if (!isConfirmed) return;
+
+  btn.disabled = true;
+  const originalHtml = btn.innerHTML;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Syncing All...';
+
+  try {
+    for (let i = 0; i < nsoProvinces.length; i++) {
+      const p = nsoProvinces[i];
+      updateSyncStatus(`SYNCING (${i + 1}/${nsoProvinces.length})`, 'var(--warning)');
+
+      // Update UI to highlight current province (optional but good)
+      // For now we just call the sync
+      try {
+        const res = await fetch(`${API_BASE}/sync/nso/province`, {
+          method: 'POST',
+          headers: { ...getAuthHeader(), 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code: p.MaTinh, name: p.TenTinh })
+        });
+        const result = await res.json();
+        console.log(`Sync ${p.TenTinh} result:`, result);
+      } catch (err) {
+        console.error(`Failed to sync ${p.TenTinh}`, err);
+      }
+    }
+    showToast('✅ Đã hoàn thành đồng bộ toàn bộ danh sách!', 'success');
+  } catch (e) {
+    showToast('❌ Lỗi trong quá trình đồng bộ hàng loạt', 'danger');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = originalHtml;
+    updateSyncStatus('IDLE', '#8b949e');
+  }
+}
+
+function showToast(message, type = 'success') {
+  const container = document.getElementById('toast-container');
+  if (!container) return;
+
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+
+  const icon = type === 'success' ? 'fa-circle-check' :
+    type === 'danger' ? 'fa-circle-xmark' :
+      type === 'warning' ? 'fa-triangle-exclamation' : 'fa-circle-info';
+
+  toast.innerHTML = `
+    <i class="fa-solid ${icon} toast-icon"></i>
+    <div class="toast-content">${message}</div>
+    <div class="toast-close"><i class="fa-solid fa-xmark"></i></div>
+  `;
+
+  container.appendChild(toast);
+
+  // Auto remove
+  const timer = setTimeout(() => {
+    removeToast(toast);
+  }, 4000);
+
+  toast.querySelector('.toast-close').addEventListener('click', () => {
+    clearTimeout(timer);
+    removeToast(toast);
+  });
+}
+
+function removeToast(toast) {
+  toast.classList.add('hiding');
+  setTimeout(() => {
+    toast.remove();
+  }, 3000);
+}
+
+function showConfirm(message) {
+  return new Promise((resolve) => {
+    const overlay = document.getElementById('modal-overlay');
+    const msgEl = document.getElementById('confirm-message');
+    const btnOk = document.getElementById('btn-confirm-ok');
+    const btnCancel = document.getElementById('btn-confirm-cancel');
+
+    if (!overlay || !msgEl) {
+      resolve(confirm(message)); // Fallback
+      return;
+    }
+
+    msgEl.textContent = message;
+    overlay.classList.add('active');
+
+    const cleanUp = (result) => {
+      overlay.classList.remove('active');
+      btnOk.removeEventListener('click', onOk);
+      btnCancel.removeEventListener('click', onCancel);
+      resolve(result);
+    };
+
+    const onOk = () => cleanUp(true);
+    const onCancel = () => cleanUp(false);
+
+    btnOk.addEventListener('click', onOk);
+    btnCancel.addEventListener('click', onCancel);
+  });
+}
+
+// ═══ ADMINISTRATIVE MANAGER (CRUD) ═══
+
+window.editAdminUnit = async function(level, id) {
+  try {
+    const res = await fetch(`${API_BASE}/${level}s/${id}`, { headers: getAuthHeader() });
+    const item = await res.json();
+
+    document.getElementById('admin-modal-title').textContent = `Chỉnh sửa ${item[`${level}_name`]}`;
+    document.getElementById('admin-form-id').value = id;
+    document.getElementById('admin-form-name').value = item[`${level}_name`];
+    document.getElementById('admin-form-no').value = item[`${level}_no`] || '';
+    document.getElementById('admin-form-type').value = item.type_name || '';
+    document.getElementById('admin-form-name-en').value = item[`${level}_name_en`] || '';
+    
+    renderExtraFields(item);
+    document.getElementById('modal-admin-unit').classList.add('active');
+  } catch (e) {
+    showToast('Lỗi khi tải thông tin chi tiết', 'danger');
+  }
+}
+
+window.deleteAdminUnit = async function(level, id, name) {
+  const ok = await showConfirm(`Bạn có chắc chắn muốn xóa "${name}"? Hành động này không thể hoàn tác.`);
+  if (!ok) return;
+
+  try {
+    const res = await fetch(`${API_BASE}/${level}s/${id}`, {
+      method: 'DELETE',
+      headers: getAuthHeader()
+    });
+
+    if (res.ok) {
+      showToast('Đã xóa thành công');
+      loadAdminData();
+    } else {
+      showToast('Lỗi khi xóa dữ liệu', 'danger');
+    }
+  } catch (e) {
+    showToast('Lỗi kết nối server', 'danger');
+  }
+}
+
+async function saveAdminUnit() {
+  const level = document.getElementById('admin-crud-level').value;
+  const id = document.getElementById('admin-form-id').value;
+  const name = document.getElementById('admin-form-name').value;
+  const no = document.getElementById('admin-form-no').value;
+  const type = document.getElementById('admin-form-type').value;
+  const nameEn = document.getElementById('admin-form-name-en').value;
+  const parentId = document.getElementById('admin-form-parent')?.value;
+
+  const payload = {
+    [`${level}_name`]: name,
+    [`${level}_no`]: no,
+    type_name: type,
+    [`${level}_name_en`]: nameEn
+  };
+
+  if (level === 'district' && parentId) payload.province_id = parseInt(parentId);
+  if (level === 'ward' && parentId) payload.district_id = parseInt(parentId);
+
+  const url = id ? `${API_BASE}/${level}s/${id}` : `${API_BASE}/${level}s`;
+  const method = id ? 'PATCH' : 'POST';
+
+  try {
+    const res = await fetch(url, {
+      method,
+      headers: { ...getAuthHeader(), 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    if (res.ok) {
+      showToast('Lưu dữ liệu thành công');
+      document.getElementById('modal-admin-unit').classList.remove('active');
+      loadAdminData();
+    } else {
+      const err = await res.json();
+      showToast(`Lỗi: ${err.detail || 'Không xác định'}`, 'danger');
+    }
+  } catch (e) {
+    showToast('Lỗi kết nối server', 'danger');
+  }
+}
+
+async function initAdminManager() {
+  const levelSelect = document.getElementById('admin-crud-level');
+  const provinceSelect = document.getElementById('admin-crud-province-select');
+  const districtSelect = document.getElementById('admin-crud-district-select');
+  const btnRefresh = document.getElementById('btn-admin-refresh');
+  const btnAddNew = document.getElementById('btn-admin-add-new');
+  const unitForm = document.getElementById('admin-unit-form');
+  const modal = document.getElementById('modal-admin-unit');
+
+  if (!levelSelect) return;
+
+  // Handle Level Change
+  levelSelect.addEventListener('change', async () => {
+    const level = levelSelect.value;
+    document.getElementById('admin-filter-parent-province').classList.toggle('hidden', level === 'province');
+    document.getElementById('admin-filter-parent-district').classList.toggle('hidden', level !== 'ward');
+    
+    if (level !== 'province') await loadAdminProvinces();
+    loadAdminData();
+  });
+
+  provinceSelect.addEventListener('change', async () => {
+    if (levelSelect.value === 'ward') await loadAdminDistricts(provinceSelect.value);
+    loadAdminData();
+  });
+
+  districtSelect.addEventListener('change', () => loadAdminData());
+  btnRefresh.addEventListener('click', () => loadAdminData());
+
+  // Modal actions
+  btnAddNew.addEventListener('click', () => {
+    const level = levelSelect.value;
+    document.getElementById('admin-modal-title').textContent = `Thêm ${level === 'province' ? 'Tỉnh/Thành' : level === 'district' ? 'Quận/Huyện' : 'Phường/Xã'} mới`;
+    document.getElementById('admin-form-id').value = '';
+    unitForm.reset();
+    renderExtraFields();
+    modal.classList.add('active');
+  });
+
+  unitForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    await saveAdminUnit();
+  });
+
+  // Initial load
+  loadAdminData();
+}
+
+async function loadAdminProvinces() {
+  const select = document.getElementById('admin-crud-province-select');
+  try {
+    const res = await fetch(`${API_BASE}/provinces?limit=100`, { headers: getAuthHeader() });
+    const data = await res.json();
+    select.innerHTML = '<option value="">-- Tất cả --</option>' + 
+      data.map(p => `<option value="${p.province_id}">${p.province_name}</option>`).join('');
+  } catch (e) { console.error(e); }
+}
+
+async function loadAdminDistricts(provinceId) {
+  const select = document.getElementById('admin-crud-district-select');
+  if (!provinceId) {
+    select.innerHTML = '<option value="">-- Chọn Tỉnh trước --</option>';
+    return;
+  }
+  try {
+    const res = await fetch(`${API_BASE}/districts?province_id=${provinceId}&limit=500`, { headers: getAuthHeader() });
+    const data = await res.json();
+    select.innerHTML = '<option value="">-- Tất cả --</option>' + 
+      data.map(d => `<option value="${d.district_id}">${d.district_name}</option>`).join('');
+  } catch (e) { console.error(e); }
+}
+
+async function loadAdminData() {
+  const level = document.getElementById('admin-crud-level').value;
+  const provinceId = document.getElementById('admin-crud-province-select').value;
+  const districtId = document.getElementById('admin-crud-district-select').value;
+  const tableHead = document.getElementById('admin-table-head');
+  const tableBody = document.getElementById('admin-table-body');
+  const title = document.getElementById('admin-table-title');
+
+  tableBody.innerHTML = '<tr><td colspan="6" class="text-center p-24"><i class="fa-solid fa-spinner fa-spin mr-8"></i> Đang tải dữ liệu...</td></tr>';
+
+  let url = `${API_BASE}/${level}s?limit=500`;
+  if (level === 'district' && provinceId) url += `&province_id=${provinceId}`;
+  if (level === 'ward' && districtId) url += `&district_id=${districtId}`;
+
+  try {
+    const res = await fetch(url, { headers: getAuthHeader() });
+    const data = await res.json();
+
+    // Render Headers
+    const headers = ['ID', 'Mã số', 'Tên đơn vị', 'Tên Tiếng Anh', 'Loại hình'];
+    tableHead.innerHTML = headers.map(h => `<th>${h}</th>`).join('') + '<th class="text-right">Thao tác</th>';
+
+    // Render Rows
+    if (data.length === 0) {
+      tableBody.innerHTML = '<tr><td colspan="6" class="text-center p-24 text-tertiary">Không tìm thấy dữ liệu</td></tr>';
+      return;
+    }
+
+    tableBody.innerHTML = data.map(item => `
+      <tr>
+        <td class="text-mono text-xs">${item[`${level}_id`]}</td>
+        <td class="text-mono font-bold">${item[`${level}_no`] || '-'}</td>
+        <td>${item[`${level}_name`]}</td>
+        <td class="text-tertiary text-xs">${item[`${level}_name_en`] || '-'}</td>
+        <td><span class="badge badge-outline">${item.type_name || '-'}</span></td>
+        <td class="text-right">
+          <button class="btn btn-icon btn-sm" onclick="editAdminUnit('${level}', ${item[`${level}_id`]})" title="Sửa"><i class="fa-solid fa-pen-to-square"></i></button>
+          <button class="btn btn-icon btn-sm text-danger" onclick="deleteAdminUnit('${level}', ${item[`${level}_id`]}, '${item[`${level}_name`]}')" title="Xóa"><i class="fa-solid fa-trash"></i></button>
+        </td>
+      </tr>
+    `).join('');
+
+    title.innerHTML = `<i class="fa-solid fa-list mr-8"></i> Danh sách ${level === 'province' ? 'Tỉnh/Thành' : level === 'district' ? 'Quận/Huyện' : 'Phường/Xã'} (${data.length})`;
+  } catch (e) {
+    tableBody.innerHTML = '<tr><td colspan="6" class="text-center p-24 text-danger">Lỗi khi tải dữ liệu</td></tr>';
+  }
+}
+
+// Initialize all modules
 initMappingV3();

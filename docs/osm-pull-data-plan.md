@@ -34,7 +34,7 @@ CREATE TABLE mat.province (
 	updated_date timestamp DEFAULT now() NOT NULL,
 	is_deleted bool DEFAULT false NOT NULL,
 	province_name_en varchar(200) NULL,
-	province_code varchar(5) NULL,
+	province_no varchar(5) NULL,
 	served_radius float8 NULL,
 	north_pole_lat float8 NULL,
 	north_pole_lng float8 NULL,

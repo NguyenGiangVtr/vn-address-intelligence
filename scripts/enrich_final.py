@@ -144,7 +144,7 @@ print("FIXING REMAINING NaN")
 print("=" * 60)
 
 with engine.connect() as conn:
-    for tbl, col in [('mat.province','province_code'), ('mat.province','served_radius'),
+    for tbl, col in [('mat.province','province_no'), ('mat.province','served_radius'),
                      ('mat.district','district_no'), ('mat.ward','ward_no')]:
         r = conn.execute(text(f"UPDATE {tbl} SET {col} = NULL WHERE {col} = 'nan' OR {col} = 'NaN'"))
         if r.rowcount > 0: print(f"  Fixed {r.rowcount} NaN in {tbl}.{col}")
@@ -161,7 +161,7 @@ with engine.connect() as conn:
     for name, q in {
         "Provinces total": "SELECT COUNT(*) FROM mat.province",
         "Provinces enriched (decision)": "SELECT COUNT(*) FROM mat.province WHERE decision_number IS NOT NULL",
-        "Provinces NaN code": "SELECT COUNT(*) FROM mat.province WHERE province_code = 'nan'",
+        "Provinces NaN code": "SELECT COUNT(*) FROM mat.province WHERE province_no = 'nan'",
         "Wards total": "SELECT COUNT(*) FROM mat.ward",
         "Wards enriched (decision)": "SELECT COUNT(*) FROM mat.ward WHERE decision_number IS NOT NULL",
         "Ward Mappings": "SELECT COUNT(*) FROM mat.ward_mapping",

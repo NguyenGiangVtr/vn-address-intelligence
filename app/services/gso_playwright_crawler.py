@@ -133,7 +133,7 @@ class GSOPlywrightCrawler:
         try:
             for item in self.batch_data:
                 code = item['code']
-                if len(code) <= 2: table, id_col = "mat.province", "province_code"
+                if len(code) <= 2: table, id_col = "mat.province", "province_no"
                 elif len(code) <= 3: table, id_col = "mat.district", "district_no"
                 else: table, id_col = "mat.ward", "ward_no"
                 

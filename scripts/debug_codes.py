@@ -21,10 +21,10 @@ if len(df_w.columns) > 6:
 
 # DB codes
 with engine.connect() as conn:
-    rows = conn.execute(text("SELECT province_id, province_no, province_code FROM mat.province WHERE admin_version=1 LIMIT 5")).fetchall()
+    rows = conn.execute(text("SELECT province_id, province_no, province_no FROM mat.province WHERE admin_version=1 LIMIT 5")).fetchall()
     print("\nDB Province v1 codes:", [(r[0], r[1], r[2]) for r in rows])
     
-    rows = conn.execute(text("SELECT province_id, province_no, province_code FROM mat.province WHERE admin_version=2 LIMIT 5")).fetchall()
+    rows = conn.execute(text("SELECT province_id, province_no, province_no FROM mat.province WHERE admin_version=2 LIMIT 5")).fetchall()
     print("DB Province v2 codes:", [(r[0], r[1], r[2]) for r in rows])
     
     rows = conn.execute(text("SELECT ward_id, ward_no FROM mat.ward WHERE admin_version=2 LIMIT 5")).fetchall()

@@ -85,7 +85,7 @@ class GSOCrawler:
             UPDATE mat.province 
             SET admin_version = :admin_version, population = :population, area_km2 = :area_km2,
                 decision_number = :decision_number, notes = :notes
-            WHERE province_code = :code OR province_id::text = :code
+            WHERE province_no = :code OR province_id::text = :code
         """), {**data, 'code': code})
 
     def _update_district(self, session, code, data):

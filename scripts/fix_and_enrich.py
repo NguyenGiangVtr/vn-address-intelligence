@@ -1,6 +1,6 @@
 """
 Script tong hop: Fix NaN + Enrich GSO Gov data
-1. Fix NaN trong province_code (34 provinces v2)
+1. Fix NaN trong province_no (34 provinces v2)
 2. Chay enrichment tu file GSO Gov cho province va ward
 3. Kiem tra ket qua
 """
@@ -21,9 +21,9 @@ print("STEP 1: Fixing NaN values in mat tables")
 print("=" * 60)
 
 with engine.connect() as conn:
-    # Fix province_code = 'nan' -> NULL
-    result = conn.execute(text("UPDATE mat.province SET province_code = NULL WHERE province_code = 'nan'"))
-    print(f"Fixed {result.rowcount} provinces with province_code='nan'")
+    # Fix province_no = 'nan' -> NULL
+    result = conn.execute(text("UPDATE mat.province SET province_no = NULL WHERE province_no = 'nan'"))
+    print(f"Fixed {result.rowcount} provinces with province_no='nan'")
     
     # Fix bat ky cot nao co gia tri 'nan' (string) trong province
     for col in ['served_radius', 'north_pole_lat', 'north_pole_lng', 'east_pole_lat', 'east_pole_lng', 
@@ -98,7 +98,7 @@ if os.path.exists(prov_file):
             
             r = conn.execute(text("""
                 UPDATE mat.province SET decision_number = :dn, decision_date = :dd, notes = :n
-                WHERE province_code = :c OR province_id::text = :c
+                WHERE province_no = :c OR province_id::text = :c
             """), {'dn': dec_num, 'dd': dec_date, 'n': notes, 'c': code})
             count += r.rowcount
         conn.commit()
@@ -133,7 +133,7 @@ if os.path.exists(ward_file):
                     FROM mat.district d, mat.province p
                     WHERE w.district_id = d.district_id AND d.province_id = p.province_id
                       AND (w.ward_no = :c OR w.ward_id::text = :c)
-                      AND (p.province_code = :pc OR p.province_id::text = :pc)
+                      AND (p.province_no = :pc OR p.province_id::text = :pc)
                 """), {'dn': dec_num, 'dd': dec_date, 'n': notes, 'c': code, 'pc': p_code})
             else:
                 r = conn.execute(text("""
@@ -163,7 +163,7 @@ with engine.connect() as conn:
         "Provinces v1": "SELECT COUNT(*) FROM mat.province WHERE admin_version=1 OR admin_version IS NULL",
         "Provinces v2": "SELECT COUNT(*) FROM mat.province WHERE admin_version=2",
         "Provinces enriched": "SELECT COUNT(*) FROM mat.province WHERE decision_number IS NOT NULL",
-        "Provinces NaN code": "SELECT COUNT(*) FROM mat.province WHERE province_code = 'nan'",
+        "Provinces NaN code": "SELECT COUNT(*) FROM mat.province WHERE province_no = 'nan'",
         "Districts total": "SELECT COUNT(*) FROM mat.district",
         "Districts v2": "SELECT COUNT(*) FROM mat.district WHERE admin_version=2",
         "Wards total": "SELECT COUNT(*) FROM mat.ward",

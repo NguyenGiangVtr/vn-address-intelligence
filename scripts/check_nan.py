@@ -4,7 +4,7 @@ from src.database import engine
 from sqlalchemy import text
 
 queries = {
-    "Province NaN province_code": "SELECT COUNT(*) FROM mat.province WHERE province_code = 'nan' OR province_code IS NULL",
+    "Province NaN province_no": "SELECT COUNT(*) FROM mat.province WHERE province_no = 'nan' OR province_no IS NULL",
     "Province NULL province_name": "SELECT COUNT(*) FROM mat.province WHERE province_name IS NULL",
     "Province NULL type_name": "SELECT COUNT(*) FROM mat.province WHERE type_name IS NULL",
     "District NaN district_no": "SELECT COUNT(*) FROM mat.district WHERE district_no = 'nan' OR district_no IS NULL",
@@ -20,6 +20,6 @@ with engine.connect() as conn:
         val = conn.execute(text(q)).scalar()
         print(f"{name:45}: {val}")
     
-    rows = conn.execute(text("SELECT province_id, province_name, province_code, admin_version FROM mat.province WHERE admin_version=2 LIMIT 3")).fetchall()
+    rows = conn.execute(text("SELECT province_id, province_name, province_no, admin_version FROM mat.province WHERE admin_version=2 LIMIT 3")).fetchall()
     print("\nSample v2 provinces:")
     for r in rows: print(f"  {r}")

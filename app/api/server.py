@@ -3,15 +3,18 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from sqlalchemy.orm import Session
-from sqlalchemy import String
+from sqlalchemy.orm import Session, aliased
+from sqlalchemy import String, and_, or_
 import os
 import time
 import jwt
 from datetime import datetime, timedelta
 from app.core.database import SessionLocal, Province, District, Ward, OSMStreet, OSMBuilding, OSMPoi, OSMRawEntity, TrainingDataset, AddressCleansingQueue, WardMapping
 from app.services.auth import verify_password, create_access_token, ALGORITHM, SECRET_KEY
-from app.services.nso_sync import sync_full_nso
+from app.services.nso_sync import sync_full_nso, sync_province_nso, sync_logs
+from app.services.nso_api import get_nso_provinces, get_nso_districts, get_nso_wards
+from app.api import schemas
+from typing import List, Optional
 
 app = FastAPI(
     title="VN Address Intelligence API",
@@ -139,108 +142,156 @@ def get_unit_details(level: str, unit_id: int, db: Session = Depends(get_db)):
         return db.query(Ward).filter(Ward.ward_id == unit_id).first()
     return {"error": "Invalid level"}
 
+from sqlalchemy import func
+
 @api_router.get("/lookup/mapping")
 def lookup_mapping(
     query: str = None, 
     province_id: int = None,
     district_id: int = None,
     ward_id: int = None,
+    version: int = None,
     db: Session = Depends(get_db)
 ):
     """
-    Tra cứu biến động ĐVHC. Ưu tiên tra cứu chính xác theo ID nếu có.
+    Tra cứu biến động ĐVHC bằng 1 single query (Join) chuẩn theo SQL mapping.
     """
+    ProvV1 = aliased(Province)
+    ProvV2 = aliased(Province)
+    WardV1 = aliased(Ward)
+    WardV2 = aliased(Ward)
+    DistV1 = aliased(District)
+    DistV2 = aliased(District)
+
+    base_query = db.query(
+        WardMapping.ward_mapping_id.label("id"),
+        WardMapping.ward_id_old,
+        WardMapping.ward_id_new,
+        WardMapping.province_id_old,
+        WardMapping.province_id_new,
+        WardMapping.updated_note,
+        WardMapping.effective_date_from,
+        WardMapping.effective_date_to,
+        WardMapping.relationship_type,
+        WardMapping.mapping_total,
+        
+        WardV1.ward_name.label("ward_name_old"),
+        WardV2.ward_name.label("ward_name_new"),
+        ProvV1.province_name.label("province_name_old"),
+        ProvV2.province_name.label("province_name_new"),
+        WardV1.district_id.label("district_id_old"),
+        DistV1.district_name.label("district_name_old"),
+        WardV2.district_id.label("district_id_new"),
+        DistV2.district_name.label("district_name_new")
+    ).outerjoin(
+        WardV1, and_(WardV1.ward_id == WardMapping.ward_id_old, WardV1.is_deleted == False, WardV1.admin_version == 1) 
+    ).outerjoin(
+        WardV2, and_(WardV2.ward_id == WardMapping.ward_id_new, WardV2.is_deleted == False, WardV2.admin_version == 2)
+    ).outerjoin(
+        DistV1, and_(DistV1.district_id == func.coalesce(WardV1.district_id, WardMapping.district_id_old), DistV1.is_deleted == False, DistV1.admin_version == 1)
+    ).outerjoin(
+        DistV2, and_(DistV2.district_id == WardV2.district_id, DistV2.is_deleted == False, DistV2.admin_version == 2)
+    ).outerjoin(
+        ProvV1, and_(ProvV1.province_id == func.coalesce(DistV1.province_id, WardMapping.province_id_old), ProvV1.is_deleted == False, ProvV1.admin_version == 1)
+    ).outerjoin(
+        ProvV2, and_(ProvV2.province_id == func.coalesce(DistV2.province_id, WardMapping.province_id_new), ProvV2.is_deleted == False, ProvV2.admin_version == 2)
+    )
+
     filters = []
+
+    if province_id:
+        if version == 1:
+            filters.append(or_(
+                WardMapping.province_id_old == province_id, 
+                DistV1.province_id == province_id,
+                ProvV1.province_id == province_id
+            ))
+        elif version == 2:
+            filters.append(or_(
+                WardMapping.province_id_new == province_id, 
+                DistV2.province_id == province_id,
+                ProvV2.province_id == province_id
+            ))
+        else:
+            filters.append(or_(
+                WardMapping.province_id_old == province_id,
+                WardMapping.province_id_new == province_id,
+                DistV1.province_id == province_id,
+                DistV2.province_id == province_id,
+                ProvV1.province_id == province_id,
+                ProvV2.province_id == province_id
+            ))
     
-    # 1. Nếu có ID cụ thể, ưu tiên tra cứu chính xác theo ID
+    if district_id:
+        if version == 1:
+            filters.append(or_(
+                WardMapping.district_id_old == district_id, 
+                WardV1.district_id == district_id,
+                DistV1.district_id == district_id
+            ))
+        elif version == 2:
+            filters.append(or_(
+                WardMapping.district_id_new == district_id, 
+                WardV2.district_id == district_id,
+                DistV2.district_id == district_id
+            ))
+        else:
+            filters.append(or_(
+                WardMapping.district_id_old == district_id,
+                WardMapping.district_id_new == district_id,
+                WardV1.district_id == district_id,
+                WardV2.district_id == district_id,
+                DistV1.district_id == district_id,
+                DistV2.district_id == district_id
+            ))
+            
     if ward_id:
-        filters.append((WardMapping.ward_id_old == ward_id) | (WardMapping.ward_id_new == ward_id))
-    elif district_id:
-        filters.append(WardMapping.district_id_old == district_id)
-        # Nếu chọn tới cấp Huyện mà không chọn Xã: lấy các bản ghi thay đổi của Huyện đó
-        filters.append(WardMapping.ward_id_old == -1)
-    elif province_id:
-        # Nếu chỉ chọn Tỉnh: lấy các bản ghi thay đổi cấp Tỉnh (ward_id_old = -1 và ward_id_new = -1)
-        filters.append((WardMapping.province_id_old == province_id) | (WardMapping.province_id_new == province_id))
-        filters.append(WardMapping.ward_id_old == -1)
-        filters.append(WardMapping.ward_id_new == -1)
+        if version == 1:
+            filters.append(WardMapping.ward_id_old == ward_id)
+        elif version == 2:
+            filters.append(WardMapping.ward_id_new == ward_id)
+        else:
+            filters.append((WardMapping.ward_id_old == ward_id) | (WardMapping.ward_id_new == ward_id))
     
-    # 2. Nếu có query text (từ ô search tự do), tìm trong note và cast ID
     if query:
         text_filter = (
-            (WardMapping.updated_note.ilike(f"%{query}%")) |
-            (WardMapping.ward_id_old.cast(String).ilike(f"%{query}%")) |
-            (WardMapping.ward_id_new.cast(String).ilike(f"%{query}%"))
+            WardMapping.updated_note.ilike(f"%{query}%") |
+            WardMapping.ward_id_old.cast(String).ilike(f"%{query}%") |
+            WardMapping.ward_id_new.cast(String).ilike(f"%{query}%")
         )
         filters.append(text_filter)
 
-    if not filters:
+    # Nếu có filter thì áp dụng, nếu không có thể trả về tất cả hoặc mảng rỗng tùy logic
+    if filters:
+        base_query = base_query.filter(and_(*filters))
+    else:
         return []
 
-    from sqlalchemy import and_
-    mappings = db.query(WardMapping).filter(and_(*filters)).order_by(WardMapping.effective_date_from.desc()).limit(100).all()
-    
-    # 3. Enrich dữ liệu với Tên
+    # Lấy dữ liệu và giới hạn kết quả
+    # 4. Sắp xếp kết quả theo Tên (Province -> District -> Ward)
+    results = base_query.order_by(
+        ProvV1.province_name.asc(),
+        DistV1.district_name.asc(),
+        WardV1.ward_name.asc()
+    ).limit(100).all()
+
+    # 4. Format lại output và xử lý các case đặc biệt (-1)
     enriched_results = []
-    for m in mappings:
-        res = {
-            "id": m.ward_mapping_id,
-            "ward_id_old": m.ward_id_old,
-            "ward_id_new": m.ward_id_new,
-            "district_id_old": m.district_id_old,
-            "province_id_old": m.province_id_old,
-            "province_id_new": m.province_id_new,
-            "updated_note": m.updated_note,
-            "effective_date_from": m.effective_date_from,
-            "effective_date_to": m.effective_date_to,
-            "relationship_type": m.relationship_type,
-            "mapping_total": m.mapping_total,
-            
-            "ward_name_old": "",
-            "district_name_old": "",
-            "province_name_old": "",
-            "ward_name_new": "",
-            "province_name_new": ""
-        }
+    for r in results:
+        # Rút trích dict từ result tuple
+        res = r._asdict()
         
-        # ── XỬ LÝ TÊN CŨ (V1) ──
-        if m.ward_id_old and m.ward_id_old != -1:
-            w_old = db.query(Ward).filter(Ward.ward_id == m.ward_id_old, Ward.admin_version == 1).first()
-            if w_old:
-                res["ward_name_old"] = w_old.ward_name
-                # Nếu record mapping thiếu district_id_old, lấy từ bản ghi Ward
-                if not m.district_id_old: m.district_id_old = w_old.district_id
-        
-        if m.district_id_old and m.district_id_old != -1:
-            d_old = db.query(District).filter(District.district_id == m.district_id_old, District.admin_version == 1).first()
-            if d_old:
-                res["district_name_old"] = d_old.district_name
-                if not m.province_id_old: m.province_id_old = d_old.province_id
-        
-        if m.province_id_old and m.province_id_old != -1:
-            p_old = db.query(Province).filter(Province.province_id == m.province_id_old, Province.admin_version == 1).first()
-            if p_old: res["province_name_old"] = p_old.province_name
-
-        # ── XỬ LÝ TÊN MỚI (V2) ──
-        if m.ward_id_new and m.ward_id_new != -1:
-            w_new = db.query(Ward).filter(Ward.ward_id == m.ward_id_new, Ward.admin_version == 2).first()
-            if w_new:
-                res["ward_name_new"] = w_new.ward_name
-                if not m.province_id_new: m.province_id_new = w_new.province_id
-        
-        if m.province_id_new and m.province_id_new != -1:
-            p_new = db.query(Province).filter(Province.province_id == m.province_id_new, Province.admin_version == 2).first()
-            if p_new: res["province_name_new"] = p_new.province_name
-
-        # ── XỬ LÝ TRƯỜNG HỢP ĐẶC BIỆT: SÁP NHẬP TỈNH (WARD_ID = -1) ──
-        if m.ward_id_old == -1 and m.ward_id_new == -1:
-            if not res["ward_name_old"]: res["ward_name_old"] = "(Tất cả Xã)"
-            if not res["district_name_old"]: res["district_name_old"] = "(Tất cả Huyện)"
-        elif m.ward_id_old == -1:
+        # Xử lý trường hợp đặc biệt (Sáp nhập cấp tỉnh: ward_id = -1)
+        if res["ward_id_old"] == -1 and res["ward_id_new"] == -1:
+            res["ward_name_old"] = res["ward_name_old"] or "(Tất cả Xã)"
+            res["district_name_old"] = res["district_name_old"] or "(Tất cả Huyện)"
+            res["ward_name_new"] = res["ward_name_new"] or "(Tất cả Xã)"
+            res["district_name_new"] = res["district_name_new"] or "(Tất cả Huyện)"
+        elif res["ward_id_old"] == -1:
             res["ward_name_old"] = "(Toàn bộ Huyện)"
-
+            
         enriched_results.append(res)
-        
+
     return enriched_results
 
 @api_router.post("/sync/nso")
@@ -249,6 +300,54 @@ def trigger_nso_sync(db: Session = Depends(get_db)):
     # This should ideally be a background task
     result = sync_full_nso(db)
     return result
+
+@api_router.post("/sync/nso/province")
+async def trigger_nso_province_sync(data: dict, db: Session = Depends(get_db)):
+    """Đồng bộ một tỉnh cụ thể từ NSO (Batch sync)"""
+    p_code = data.get("code")
+    p_name = data.get("name")
+    if not p_code or not p_name:
+        raise HTTPException(status_code=400, detail="Thiếu mã hoặc tên tỉnh")
+    
+    # Run sync (Ideally background, but for batch we try sync for now)
+    return sync_province_nso(db, p_code, p_name)
+
+@api_router.get("/sync/nso/logs")
+def get_sync_logs():
+    """Lấy danh sách log đồng bộ realtime"""
+    return sync_logs
+
+@api_router.delete("/sync/nso/logs")
+def clear_sync_logs():
+    """Xóa danh sách log"""
+    sync_logs.clear()
+    return {"status": "cleared"}
+
+# ── NSO LIVE DATA ENDPOINTS ──
+
+@api_router.get("/nso/provinces", tags=["NSO External"])
+def fetch_nso_provinces(date: str = None):
+    """Lấy danh sách Tỉnh từ NSO (DMDVHC.asmx)"""
+    try:
+        return get_nso_provinces(date)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=str(e))
+
+@api_router.get("/nso/districts", tags=["NSO External"])
+def fetch_nso_districts(province_no: str = "", province_name: str = "", date: str = None):
+    """Lấy danh sách Quận/Huyện từ NSO (DMDVHC.asmx)"""
+    try:
+        return get_nso_districts(province_no, province_name, date)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=str(e))
+
+@api_router.get("/nso/wards", tags=["NSO External"])
+def fetch_nso_wards(province_no: str = "", province_name: str = "", district_no: str = "", district_name: str = "", date: str = None):
+    """Lấy danh sách Phường/Xã từ NSO (DMDVHC.asmx)"""
+    try:
+        return get_nso_wards(province_no, province_name, district_no, district_name, date)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=str(e))
 
 @api_router.post("/login")
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
@@ -342,6 +441,141 @@ def enrichment_summary(db: Session = Depends(get_db)):
         "enriched_provinces": enriched_provinces,
         "enriched_wards": enriched_wards,
     }
+
+# ── PROVINCE CRUD ──
+@api_router.get("/provinces", response_model=List[schemas.ProvinceResponse], tags=["Administrative"])
+def get_provinces(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    return db.query(Province).offset(skip).limit(limit).all()
+
+@api_router.post("/provinces", response_model=schemas.ProvinceResponse, tags=["Administrative"])
+def create_province(province: schemas.ProvinceCreate, db: Session = Depends(get_db)):
+    db_province = Province(**province.dict())
+    db.add(db_province)
+    db.commit()
+    db.refresh(db_province)
+    return db_province
+
+@api_router.get("/provinces/{province_id}", response_model=schemas.ProvinceResponse, tags=["Administrative"])
+def get_province(province_id: int, db: Session = Depends(get_db)):
+    db_province = db.query(Province).filter(Province.province_id == province_id).first()
+    if not db_province:
+        raise HTTPException(status_code=404, detail="Province not found")
+    return db_province
+
+@api_router.patch("/provinces/{province_id}", response_model=schemas.ProvinceResponse, tags=["Administrative"])
+def update_province(province_id: int, province: schemas.ProvinceUpdate, db: Session = Depends(get_db)):
+    db_province = db.query(Province).filter(Province.province_id == province_id).first()
+    if not db_province:
+        raise HTTPException(status_code=404, detail="Province not found")
+    
+    update_data = province.dict(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(db_province, key, value)
+    
+    db.commit()
+    db.refresh(db_province)
+    return db_province
+
+@api_router.delete("/provinces/{province_id}", tags=["Administrative"])
+def delete_province(province_id: int, db: Session = Depends(get_db)):
+    db_province = db.query(Province).filter(Province.province_id == province_id).first()
+    if not db_province:
+        raise HTTPException(status_code=404, detail="Province not found")
+    db.delete(db_province)
+    db.commit()
+    return {"status": "success", "message": "Province deleted"}
+
+# ── DISTRICT CRUD ──
+@api_router.get("/districts", response_model=List[schemas.DistrictResponse], tags=["Administrative"])
+def get_districts(province_id: Optional[int] = None, skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    query = db.query(District)
+    if province_id:
+        query = query.filter(District.province_id == province_id)
+    return query.offset(skip).limit(limit).all()
+
+@api_router.post("/districts", response_model=schemas.DistrictResponse, tags=["Administrative"])
+def create_district(district: schemas.DistrictCreate, db: Session = Depends(get_db)):
+    db_district = District(**district.dict())
+    db.add(db_district)
+    db.commit()
+    db.refresh(db_district)
+    return db_district
+
+@api_router.get("/districts/{district_id}", response_model=schemas.DistrictResponse, tags=["Administrative"])
+def get_district(district_id: int, db: Session = Depends(get_db)):
+    db_district = db.query(District).filter(District.district_id == district_id).first()
+    if not db_district:
+        raise HTTPException(status_code=404, detail="District not found")
+    return db_district
+
+@api_router.patch("/districts/{district_id}", response_model=schemas.DistrictResponse, tags=["Administrative"])
+def update_district(district_id: int, district: schemas.DistrictUpdate, db: Session = Depends(get_db)):
+    db_district = db.query(District).filter(District.district_id == district_id).first()
+    if not db_district:
+        raise HTTPException(status_code=404, detail="District not found")
+    
+    update_data = district.dict(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(db_district, key, value)
+    
+    db.commit()
+    db.refresh(db_district)
+    return db_district
+
+@api_router.delete("/districts/{district_id}", tags=["Administrative"])
+def delete_district(district_id: int, db: Session = Depends(get_db)):
+    db_district = db.query(District).filter(District.district_id == district_id).first()
+    if not db_district:
+        raise HTTPException(status_code=404, detail="District not found")
+    db.delete(db_district)
+    db.commit()
+    return {"status": "success", "message": "District deleted"}
+
+# ── WARD CRUD ──
+@api_router.get("/wards", response_model=List[schemas.WardResponse], tags=["Administrative"])
+def get_wards(district_id: Optional[int] = None, skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    query = db.query(Ward)
+    if district_id:
+        query = query.filter(Ward.district_id == district_id)
+    return query.offset(skip).limit(limit).all()
+
+@api_router.post("/wards", response_model=schemas.WardResponse, tags=["Administrative"])
+def create_ward(ward: schemas.WardCreate, db: Session = Depends(get_db)):
+    db_ward = Ward(**ward.dict())
+    db.add(db_ward)
+    db.commit()
+    db.refresh(db_ward)
+    return db_ward
+
+@api_router.get("/wards/{ward_id}", response_model=schemas.WardResponse, tags=["Administrative"])
+def get_ward(ward_id: int, db: Session = Depends(get_db)):
+    db_ward = db.query(Ward).filter(Ward.ward_id == ward_id).first()
+    if not db_ward:
+        raise HTTPException(status_code=404, detail="Ward not found")
+    return db_ward
+
+@api_router.patch("/wards/{ward_id}", response_model=schemas.WardResponse, tags=["Administrative"])
+def update_ward(ward_id: int, ward: schemas.WardUpdate, db: Session = Depends(get_db)):
+    db_ward = db.query(Ward).filter(Ward.ward_id == ward_id).first()
+    if not db_ward:
+        raise HTTPException(status_code=404, detail="Ward not found")
+    
+    update_data = ward.dict(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(db_ward, key, value)
+    
+    db.commit()
+    db.refresh(db_ward)
+    return db_ward
+
+@api_router.delete("/wards/{ward_id}", tags=["Administrative"])
+def delete_ward(ward_id: int, db: Session = Depends(get_db)):
+    db_ward = db.query(Ward).filter(Ward.ward_id == ward_id).first()
+    if not db_ward:
+        raise HTTPException(status_code=404, detail="Ward not found")
+    db.delete(db_ward)
+    db.commit()
+    return {"status": "success", "message": "Ward deleted"}
 
 # Register API router
 app.include_router(api_router)

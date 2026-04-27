@@ -41,8 +41,14 @@ Hệ thống cung cấp Dashboard hiện đại (Dark Mode, Glassmorphism) để
 python start.py serve-ui
 # Hoặc trực tiếp:
 python -m app.api.server
-# Truy cập: http://localhost:8080
+# Truy cập: http://localhost:8081
 ```
+
+> **🛠️ Troubleshooting (Xử lý sự cố): Lỗi Port (Errno 10048)**
+> Nếu bạn gặp lỗi `[Errno 10048] error while attempting to bind on address ('0.0.0.0', 8081)` khi khởi động lại server, nguyên nhân là do tiến trình cũ vẫn chưa được tắt hoàn toàn và đang chiếm dụng cổng `8081`. Bạn khắc phục bằng lệnh PowerShell sau để "diệt" dứt điểm tiến trình cũ:
+> ```powershell
+> $pidToKill = (Get-NetTCPConnection -LocalPort 8081 | Where-Object { $_.OwningProcess -ne 0 }).OwningProcess | Select-Object -First 1; if ($pidToKill) { Stop-Process -Id $pidToKill -Force }
+> ```
 
 ---
 

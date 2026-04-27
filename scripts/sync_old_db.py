@@ -7,7 +7,9 @@ from sqlalchemy.dialects.postgresql import insert
 from app.core.config import Config
 from app.core.database import SessionLocal, Province, District, Ward, WardMapping
 
-def sync_data():
+import argparse
+
+def sync_data(target_tables=None):
     if not Config.OLD_DB_HOST:
         print("Missing OLD_DB_HOST config in .env. Please fill in OLD_DB_* variables.")
         return
@@ -34,6 +36,13 @@ def sync_data():
         "ward": Ward,
         "ward_mapping": WardMapping
     }
+    
+    # Filter tables based on target_tables if provided
+    if target_tables:
+        models_mapping = {k: v for k, v in models_mapping.items() if k in target_tables}
+        if not models_mapping:
+            print(f"None of the requested tables found: {target_tables}")
+            return
     
     with new_engine.connect() as new_conn:
         for expected_name, model_class in models_mapping.items():
@@ -63,38 +72,44 @@ def sync_data():
             data = [{k: v for k, v in dict(row).items() if k in valid_columns} for row in rows]
             
             # Upsert using PostgreSQL INSERT ... ON CONFLICT DO UPDATE
-            stmt = insert(model_class).values(data)
-            
-            # Get primary key columns for this table
-            pk_cols = [c.name for c in model_class.__table__.primary_key.columns]
-            
-            # Build SET clause: update all columns except primary keys and explicitly excluded columns
-            update_cols = {}
-            for c in stmt.excluded:
-                # Do not update primary keys
-                if c.name in pk_cols:
-                    continue
-                # Do not override excluded columns if they are not in the source DB
-                if c.name in excluded_columns:
-                    continue
-                update_cols[c.name] = c
+            # Batch size to avoid memory issues for large tables like 'ward'
+            batch_size = 5000
+            for i in range(0, len(data), batch_size):
+                batch = data[i:i + batch_size]
+                stmt = insert(model_class).values(batch)
+                
+                # Get primary key columns for this table
+                pk_cols = [c.name for c in model_class.__table__.primary_key.columns]
+                
+                # Build SET clause: update all columns except primary keys and explicitly excluded columns
+                update_cols = {}
+                for c in stmt.excluded:
+                    if c.name in pk_cols:
+                        continue
+                    if c.name in excluded_columns:
+                        continue
+                    update_cols[c.name] = c
 
-            if not update_cols:
-                # If there are no columns to update, just ignore on conflict
-                upsert_stmt = stmt.on_conflict_do_nothing(index_elements=pk_cols)
-            else:
-                upsert_stmt = stmt.on_conflict_do_update(
-                    index_elements=pk_cols,
-                    set_=update_cols
-                )
+                if not update_cols:
+                    upsert_stmt = stmt.on_conflict_do_nothing(index_elements=pk_cols)
+                else:
+                    upsert_stmt = stmt.on_conflict_do_update(
+                        index_elements=pk_cols,
+                        set_=update_cols
+                    )
+                
+                try:
+                    new_conn.execute(upsert_stmt)
+                    new_conn.commit()
+                except Exception as e:
+                    print(f"Error syncing batch for {expected_name}: {e}")
+                    new_conn.rollback()
             
-            try:
-                new_conn.execute(upsert_stmt)
-                new_conn.commit()
-                print(f"Successfully synced {len(data)} rows for {expected_name}")
-            except Exception as e:
-                print(f"Error syncing {expected_name}: {e}")
-                new_conn.rollback()
+            print(f"Successfully synced {len(data)} rows for {expected_name}")
 
 if __name__ == "__main__":
-    sync_data()
+    parser = argparse.ArgumentParser(description="Sync data from old database to new database.")
+    parser.add_argument("--tables", nargs="+", help="Specific tables to sync (province, district, ward, ward_mapping). Syncs all if omitted.")
+    
+    args = parser.parse_args()
+    sync_data(args.tables)
