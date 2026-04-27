@@ -1,3 +1,14 @@
+"""
+services/osm_fetcher.py
+=======================
+Crawl dữ liệu địa điểm, đường xá từ OpenStreetMap (OSM) qua Overpass API.
+
+Ví dụ thực thi mẫu:
+------------------
+from app.services.osm_fetcher import OSMFetcher
+fetcher = OSMFetcher()
+# fetcher.fetch_by_area("Quận 1", 1, "Thành phố Hồ Chí Minh")
+"""
 import requests
 import logging
 import json

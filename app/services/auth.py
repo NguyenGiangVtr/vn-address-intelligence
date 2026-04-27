@@ -1,3 +1,14 @@
+"""
+services/auth.py
+================
+Xác thực người dùng và quản lý JWT Token.
+
+Ví dụ thực thi mẫu:
+------------------
+from app.services.auth import get_password_hash, verify_password
+h = get_password_hash("123456")
+print(verify_password("123456", h))
+"""
 import os
 import jwt
 from datetime import datetime, timedelta

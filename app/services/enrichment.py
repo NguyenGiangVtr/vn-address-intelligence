@@ -1,3 +1,14 @@
+"""
+services/enrichment.py
+======================
+Bổ sung thông tin hành chính từ các file dữ liệu NSO/GSO.
+
+Ví dụ thực thi mẫu:
+------------------
+from app.services.enrichment import check_enrichment_stats
+stats = check_enrichment_stats()
+print(stats)
+"""
 import pandas as pd
 import numpy as np
 import logging

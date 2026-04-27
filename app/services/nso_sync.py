@@ -1,3 +1,15 @@
+"""
+services/nso_sync.py
+====================
+Đồng bộ dữ liệu hành chính từ NSO vào Database.
+
+Ví dụ thực thi mẫu:
+------------------
+from app.services.nso_sync import sync_province_nso
+from app.core.database import SessionLocal
+db = SessionLocal()
+# sync_province_nso(db, "01", "Thành phố Hà Nội")
+"""
 import requests
 import xml.etree.ElementTree as ET
 from sqlalchemy.orm import Session

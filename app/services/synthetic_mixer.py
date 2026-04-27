@@ -1,3 +1,14 @@
+"""
+services/synthetic_mixer.py
+==========================
+Engine sinh dữ liệu NER tổng hợp từ dữ liệu OSM.
+
+Ví dụ thực thi mẫu:
+------------------
+from app.services.synthetic_mixer import SyntheticMixerPro
+mixer = SyntheticMixerPro()
+mixer.generate_batch(10)
+"""
 import random
 import logging
 import re

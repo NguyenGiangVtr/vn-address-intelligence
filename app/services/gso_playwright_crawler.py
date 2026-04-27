@@ -1,3 +1,15 @@
+"""
+services/gso_playwright_crawler.py
+==================================
+Crawler dữ liệu GSO sử dụng Playwright (hỗ trợ AJAX/JS).
+
+Ví dụ thực thi mẫu:
+------------------
+import asyncio
+from app.services.gso_playwright_crawler import GSOPlywrightCrawler
+crawler = GSOPlywrightCrawler()
+asyncio.run(crawler.run(start_page=1, end_page=2))
+"""
 import asyncio
 from playwright.async_api import async_playwright
 import logging

@@ -1,3 +1,14 @@
+"""
+services/seeders.py
+===================
+Nạp dữ liệu mẫu (Seeding) cho Master Data và Queue.
+
+Ví dụ thực thi mẫu:
+------------------
+from app.services.seeders import check_database_stats
+stats, growth, _ = check_database_stats()
+print(stats)
+"""
 import pandas as pd
 import logging
 from sqlalchemy.orm import Session

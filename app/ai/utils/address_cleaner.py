@@ -2,6 +2,12 @@
 utils/address_cleaner.py
 ========================
 Module tiền xử lý địa chỉ, tích hợp thư viện vnaddress và quy tắc tùy chỉnh.
+
+Ví dụ thực thi mẫu:
+------------------
+from app.ai.utils.address_cleaner import AddressCleaner
+cleaner = AddressCleaner()
+print(cleaner.clean_noise("Số 102 Phan Văn Hớn, P. Tân Thới Nhất, Q. 12"))
 """
 
 import logging

@@ -1,3 +1,13 @@
+"""
+services/exporter.py
+====================
+Xuất dữ liệu huấn luyện NER sang định dạng JSONL.
+
+Ví dụ thực thi mẫu:
+------------------
+from app.services.exporter import export_training_data
+export_training_data("data/test_export.jsonl")
+"""
 import json
 import logging
 from app.core.database import SessionLocal, TrainingDataset

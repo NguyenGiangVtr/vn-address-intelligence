@@ -3,6 +3,10 @@ export_for_annotation.py
 ========================
 Trích xuất dữ liệu và TỰ ĐỘNG GỢI Ý NHÃN (Pre-labeling).
 Tích hợp bộ làm sạch địa chỉ.
+
+Câu lệnh thực thi mẫu (Bash):
+----------------------------
+python app/ai/export_for_annotation.py --limit 1000 --config app/ai/config.yaml
 """
 
 import json
@@ -36,15 +40,33 @@ class PreLabeler:
     # Danh sách các thành phố trực thuộc trung ương
     CENTRAL_CITIES = {"hồ chí minh", "hcm", "hà nội", "hn", "đà nẵng", "đn", "hải phòng", "hp", "cần thơ", "ct"}
 
-    # Quy tắc Regex cho các đơn vị vi mô
+    # ──────────────────────────────────────────────────────────────────────────
+    # Cấu hình tiền tố và từ khóa đơn vị hành chính để làm sạch nhãn
+    # ──────────────────────────────────────────────────────────────────────────
+    PREFIX_PATTERNS = {
+        "PCD": None,
+        "BLD": r'(?i)^(Tòa\s*nhà|Chung\s*cư|CC|Khu\s*tập\s*thể|KTT|Văn\s*phòng|Khu\s*đô\s*thị|KĐT|KCN|CCN|Tầng|Phòng|Lầu|Block)\s+',
+        "POI": r'(?i)^(Trường|Bệnh\s*viện|BV|Cửa\s*hàng|Tạp\s*hóa|ATM|UBND|Chợ|Siêu\s*thị|Công\s*viên|Công\s*ty|Cty|Nhà\s*thờ|Chùa|Khu công nghiệp|KCN)\s+',
+        "ALY": r'(?i)^(Hẻm|Ngõ|Kiệt|Ngách)\s+',
+        "NUM": r'(?i)^(Số nhà|Số|Lô|Km)\s+',
+        "STR": r'(?i)^(Đường|Phố|Đ\.|QL|Quốc\s*lộ|ĐT|TL|Tỉnh\s*lộ|Đại\s*lộ|Hương\s*lộ|HL)\s+',
+        "NHB": r'(?i)^(Khu\s*phố|KP|Tổ\s*dân\s*phố|Thôn|Ấp|Bản|Tổ|Sóc|Phum|Xóm|Làng|Khóm|Cụm|Buôn|Plei|KDC)\s+',
+        "WDS": r'(?i)^(Phường|Xã|Thị trấn|P\.|X\.)\s+',
+        "DST": r'(?i)^(Quận|Huyện|Thị xã|Q\.|H\.)\s+',
+        "PRO": r'(?i)^(Thành phố|Tỉnh|TP\.|TP)\s+',
+    }
+    
+    ADMIN_KEYWORDS = r'(?i)\s*,?\s*\b(Phường|Xã|Thị trấn|Quận|Huyện|Thị xã|Thành phố|Tỉnh|TP|P\.|Q\.|H\.|X\.)\b'
+
+    # Quy tắc Regex cho các đơn vị vi mô (Sắp xếp theo NER_LABELS)
     MICRO_RULES = [
         ("PCD", r'(?i)(?:\b|^)([23456789CFGHJMPQRVWX]{4,8}\+[23456789CFGHJMPQRVWX]{2,3})(?:\b|$)', 0.95),
-        ("NUM", r'(?i)(?:Số\s+)?\d+[A-Za-z]?(?:[/\-]\d+[A-Za-z]?)*|(?:\b|^)(?:Lô|Km)\s+[\w\-]+', 0.9),
-        ("STR", r'(?i)(?:Đường|Phố|Đ\.|QL|Quốc\s*lộ|ĐT|TL|Tỉnh\s*lộ|Đại\s*lộ|Hương\s*lộ|HL)\s+[^,.\n]+', 0.85),
-        ("ALY", r'(?i)(?:Hẻm|Ngõ|Kiệt|Ngách)\s+[^,.\n]+', 0.85),
         ("BLD", r'(?i)(?:Tòa\s*nhà|Chung\s*cư|CC|Khu\s*tập\s*thể|KTT|Văn\s*phòng|Khu\s*đô\s*thị|KĐT|KCN|CCN|Tầng|Phòng|Lầu|Block)\s+[^,.\n]+', 0.75),
+        ("POI", r'(?i)(?:Trường|Bệnh\s*viện|BV|Cửa\s*hàng|Tạp\s*hóa|ATM|UBND|Chợ|Siêu\s*thị|Công\s*viên|Công\s*ty|Cty|Nhà\s*thờ|Chùa|Khu công nghiệp|KCN)\s+[^,.\n]+', 0.7),
+        ("ALY", r'(?i)(?:Hẻm|Ngõ|Kiệt|Ngách)\s+[^,.\n]+', 0.85),
+        ("NUM", r'(?i)(?:Số nhà|Số\s+)?\d+[A-Za-z]?(?:[/\-]\d+[A-Za-z]?)*|(?:\b|^)(?:Lô|Km)\s+[\w\-]+', 0.9),
+        ("STR", r'(?i)(?:Đường|Phố|Đ\.|QL|Quốc\s*lộ|ĐT|TL|Tỉnh\s*lộ|Đại\s*lộ|Hương\s*lộ|HL)\s+[^,.\n]+', 0.85),
         ("NHB", r'(?i)(?:Khu\s*phố|KP|Tổ\s*dân\s*phố|Thôn|Ấp|Bản|Tổ|Sóc|Phum|Xóm|Làng|Khóm|Cụm|Buôn|Plei|KDC)\s+[^,.\n]+', 0.8),
-        ("POI", r'(?i)(?:Trường|Bệnh\s*viện|BV|Cửa\s*hàng|Tạp\s*hóa|ATM|UBND|Chợ|Siêu\s*thị|Công\s*viên|Công\s*ty|Cty|Nhà\s*thờ|Chùa)\s+[^,.\n]+', 0.7),
     ]
 
     @classmethod
@@ -52,7 +74,8 @@ class PreLabeler:
                 raw_address: str, 
                 ward_name: str = None, 
                 district_name: str = None, 
-                province_name: str = None) -> list:
+                province_name: str = None,
+                known_streets: set = None) -> list:
         
         if not raw_address:
             return []
@@ -61,9 +84,50 @@ class PreLabeler:
         labeled_spans = [] # Lưu trữ (start, end) để chống quét đè nhãn
 
         def add_result(start: int, end: int, text: str, label: str, score: float):
-            # Kiểm tra chồng lấn
+            # Lấy bản gốc để tính offset nếu bị cắt tiền tố
+            original_text = text
+            
+            # 1. Loại bỏ tiền tố (Đường, Phố, Số, ...) theo yêu cầu
+            prefix_pat = cls.PREFIX_PATTERNS.get(label)
+            if prefix_pat:
+                m_pref = re.search(prefix_pat, text)
+                if m_pref:
+                    pref_len = m_pref.end()
+                    remaining = text[pref_len:]
+                    stripped = remaining.lstrip()
+                    offset = pref_len + (len(remaining) - len(stripped))
+                    
+                    text = stripped
+                    start += offset
+
+            # 2. Sửa lỗi STR tham lam: Loại bỏ phần đơn vị hành chính hoặc đơn vị khác dính vào ở cuối
+            if label == "STR":
+                # Cắt ở cuối nếu dính đơn vị hành chính
+                m_admin = re.search(cls.ADMIN_KEYWORDS, text)
+                if m_admin:
+                    text = text[:m_admin.start()].strip(' ,')
+                
+                # Cắt ở cuối nếu dính tiền tố của BLD, POI, ALY (Ví dụ: "Nguyễn Sơn Chung Cư...")
+                for stop_label in ["BLD", "POI", "ALY"]:
+                    stop_pat = cls.PREFIX_PATTERNS.get(stop_label)
+                    if stop_pat:
+                        m_stop = re.search(stop_pat, text)
+                        if m_stop:
+                            # Nếu dính tiền tố đơn vị khác, cắt bỏ từ đó
+                            text = text[:m_stop.start()].strip(' ,')
+            elif label in ["ALY", "BLD", "NHB", "POI"]:
+                m_admin = re.search(cls.ADMIN_KEYWORDS, text)
+                if m_admin:
+                    text = text[:m_admin.start()].strip(' ,')
+
+            if not text:
+                return False
+            
+            end = start + len(text)
+
+            # Kiểm tra chồng lấn (sau khi đã tinh chỉnh span)
             for s, e in labeled_spans:
-                if (s <= start < e) or (s < end <= e):
+                if (s <= start < e) or (s < end <= e) or (start <= s and end >= e):
                     return False
             
             results.append({
@@ -95,6 +159,56 @@ class PreLabeler:
                 # Tìm tất cả các lần xuất hiện (xử lý over-information)
                 for match in re.finditer(re.escape(term), raw_address, re.I):
                     add_result(match.start(), match.end(), raw_address[match.start():match.end()], label, 1.0)
+
+        # Giai đoạn 1.2: Heuristic nhận diện STR nằm giữa NUM và WDS (WS)
+        # Theo yêu cầu: STR nằm giữa NUM và WDS và có thể nằm trong danh sách từ OSM
+        num_regex = r'(?i)(?:Số\s+)?\d+[A-Za-z]?(?:[/\-]\d+[A-Za-z]?)*|(?:\b|^)(?:Lô|Km)\s+[\w\-]+'
+        
+        # Lấy các mốc WDS đã tìm thấy ở Giai đoạn 1
+        wds_spans = [ (r['value']['start'], r['value']['end']) for r in results if 'WDS' in r['value']['labels'] ]
+        
+        if wds_spans:
+            # Tìm tất cả các số nhà tiềm năng
+            for n_match in re.finditer(num_regex, raw_address):
+                n_end = n_match.end()
+                # Tìm WDS gần nhất phía sau NUM này
+                after_wds = [s for s in wds_spans if s[0] >= n_end]
+                if after_wds:
+                    w_start, _ = min(after_wds, key=lambda x: x[0])
+                    # Đoạn văn bản ở giữa NUM và WDS
+                    gap_text = raw_address[n_end:w_start].strip(' ,')
+                    
+                    # Tiền xử lý gap_text: Nếu chứa tiền tố đường, chỉ lấy từ đó (Sửa lỗi dính "Số nhà" vào STR)
+                    str_pref_match = re.search(cls.PREFIX_PATTERNS["STR"], gap_text)
+                    if str_pref_match:
+                        gap_text = gap_text[str_pref_match.start():]
+                    
+                    # Nếu gap_text chứa tiền tố của các đơn vị khác (BLD, POI, ALY) -> Loại bỏ phần đó
+                    for stop_label in ["BLD", "POI", "ALY"]:
+                        stop_pat = cls.PREFIX_PATTERNS.get(stop_label)
+                        if stop_pat:
+                            m_stop = re.search(stop_pat, gap_text)
+                            if m_stop:
+                                gap_text = gap_text[:m_stop.start()].strip(' ,')
+
+                    if gap_text and len(gap_text.split()) <= 6: # Tên đường thường không quá dài
+                        is_match = False
+                        if known_streets and gap_text.lower() in known_streets:
+                            is_match = True
+                        
+                        # Heuristic bổ sung: Nếu bắt đầu bằng chữ hoa và không chứa dấu phẩy/chấm
+                        elif re.match(r'^[A-ZĐ][^,.\n]+$', gap_text):
+                            is_match = True
+                            
+                        if is_match:
+                            # Tìm vị trí chính xác trong raw_address để add_result
+                            m_gap = re.search(re.escape(gap_text), raw_address[n_end:w_start])
+                            if m_gap:
+                                g_start = n_end + m_gap.start()
+                                g_end = g_start + len(gap_text)
+                                # Ưu tiên điểm cao hơn nếu khớp trong list OSM
+                                score = 0.92 if (known_streets and gap_text.lower() in known_streets) else 0.8
+                                add_result(g_start, g_end, gap_text, 'STR', score)
 
         # Giai đoạn 1.5: Cố gắng trích xuất STR (Tên đường) khi PRO/DST/WDS đã biết
         # Chiến lược:
@@ -205,12 +319,40 @@ def export_label_config(output_file: str):
         f.write(xml_content)
     logger.info(f"📜 Đã xuất cấu hình Label Studio tại {output_file}")
 
+def load_osm_streets(db: DBConnector) -> set:
+    """Tải danh sách tên đường từ osm.buildings theo yêu cầu."""
+    streets = set()
+    query = """
+        SELECT REPLACE(name, 'Đường ', '') as street_name
+        FROM osm.buildings
+        WHERE type IN ('residential','house','public','garage','temple','industrial',
+                       'construction','service','church','museum','detached','warehouse')
+          AND name LIKE '%Đường%'
+        GROUP BY name
+    """
+    try:
+        with db.cursor() as cur:
+            cur.execute(query)
+            rows = cur.fetchall()
+            for r in rows:
+                # RealDictCursor kết quả trả về dict
+                s_name = r.get('street_name')
+                if s_name:
+                    streets.add(s_name.strip().lower())
+        logger.info(f"📚 Đã tải {len(streets)} tên đường từ OSM buildings làm dữ liệu gợi ý.")
+    except Exception as e:
+        logger.warning(f"⚠️ Không thể tải danh sách đường từ osm.buildings: {e}")
+    return streets
+
 def export_data(config_path: str, output_file: str, limit: int = 5000):
     cfg = load_config_with_env(config_path)
     db_cfg = cfg["database"]
     
     db = DBConnector(db_cfg)
     db.connect()
+    
+    # Tải danh sách tên đường từ OSM để hỗ trợ Pre-labeling
+    known_streets = load_osm_streets(db)
     
     # Query sử dụng Master Data Join để lấy thông tin chuẩn
     query = f"""
@@ -242,7 +384,8 @@ def export_data(config_path: str, output_file: str, limit: int = 5000):
             raw_address=raw_text,
             ward_name=r["ward_name"],
             district_name=r["district_name"],
-            province_name=r["province_name"]
+            province_name=r["province_name"],
+            known_streets=known_streets
         )
         
         annotation_data.append({

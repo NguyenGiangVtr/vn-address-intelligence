@@ -1,3 +1,14 @@
+"""
+services/gso_crawler.py
+=======================
+Crawler dữ liệu hành chính từ GSO Excel.
+
+Ví dụ thực thi mẫu:
+------------------
+from app.services.gso_crawler import GSOCrawler
+crawler = GSOCrawler()
+# crawler.import_from_excel("path/to/excel.xls", level="province")
+"""
 import pandas as pd
 import logging
 import requests

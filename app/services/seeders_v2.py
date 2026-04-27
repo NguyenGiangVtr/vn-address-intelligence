@@ -1,3 +1,13 @@
+"""
+services/seeders_v2.py
+======================
+Nạp dữ liệu hành chính phiên bản 2 (Hỗ trợ 2025+).
+
+Ví dụ thực thi mẫu:
+------------------
+from app.services.seeders_v2 import check_v2_stats
+print(check_v2_stats())
+"""
 import pandas as pd
 import numpy as np
 import logging

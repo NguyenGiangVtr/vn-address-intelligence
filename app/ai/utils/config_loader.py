@@ -1,3 +1,14 @@
+"""
+utils/config_loader.py
+======================
+Tải cấu hình từ YAML và thay thế các biến môi trường.
+
+Ví dụ thực thi mẫu:
+------------------
+from app.ai.utils.config_loader import load_config_with_env
+config = load_config_with_env("app/ai/config.yaml")
+print(config)
+"""
 import os
 import re
 import yaml

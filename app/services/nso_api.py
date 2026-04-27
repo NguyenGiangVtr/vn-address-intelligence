@@ -1,3 +1,14 @@
+"""
+services/nso_api.py
+===================
+Giao tiếp SOAP API với NSO (Tổng cục Thống kê) để lấy danh mục hành chính.
+
+Ví dụ thực thi mẫu:
+------------------
+from app.services.nso_api import get_nso_provinces
+provinces = get_nso_provinces()
+print(f"Tìm thấy {len(provinces)} tỉnh/thành.")
+"""
 import requests
 import xml.etree.ElementTree as ET
 from datetime import datetime
