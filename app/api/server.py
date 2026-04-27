@@ -70,6 +70,19 @@ benchmark_job_state = {
     "outputTail": None,
 }
 
+osm_job_lock = threading.Lock()
+osm_job_state = {
+    "jobId": None,
+    "status": "idle",  # idle | running | success | failed
+    "startedAt": None,
+    "finishedAt": None,
+    "limitProvinces": 63,
+    "targetTotal": 5000000,
+    "exitCode": None,
+    "error": None,
+    "outputTail": None,
+}
+
 
 def _update_benchmark_job_state(**kwargs):
     with benchmark_job_lock:
@@ -119,6 +132,76 @@ def _run_benchmark_job(job_id: str, config_path: str, skip_llm: bool):
             )
     except Exception as exc:
         _update_benchmark_job_state(
+            status="failed",
+            finishedAt=datetime.utcnow().isoformat() + "Z",
+            exitCode=-1,
+            error=f"{exc}\n{traceback.format_exc()}",
+            outputTail=None,
+        )
+
+
+def _update_osm_job_state(**kwargs):
+    with osm_job_lock:
+        osm_job_state.update(kwargs)
+
+
+def _run_osm_job(job_id: str, limit_provinces: int, target_total: int):
+    project_root = Path(__file__).resolve().parents[2]
+    cmd = [
+        sys.executable,
+        "-m",
+        "app.main",
+        "fetch-osm",
+        "--limit",
+        str(limit_provinces),
+        "--target",
+        str(target_total),
+    ]
+
+    try:
+        env = os.environ.copy()
+        env["PYTHONUNBUFFERED"] = "1"
+
+        proc = subprocess.Popen(
+            cmd,
+            cwd=str(project_root),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1,
+            env=env,
+        )
+
+        output_tail = ""
+        if proc.stdout is not None:
+            for raw_line in proc.stdout:
+                line = raw_line.rstrip("\n")
+                if not line:
+                    continue
+
+                output_tail = (output_tail + "\n" + line).strip()[-6000:]
+                _update_osm_job_state(outputTail=output_tail)
+
+        return_code = proc.wait()
+
+        if return_code == 0:
+            _update_osm_job_state(
+                status="success",
+                finishedAt=datetime.utcnow().isoformat() + "Z",
+                exitCode=return_code,
+                error=None,
+                outputTail=output_tail,
+            )
+        else:
+            _update_osm_job_state(
+                status="failed",
+                finishedAt=datetime.utcnow().isoformat() + "Z",
+                exitCode=return_code,
+                error=f"OSM process exited with code {return_code}",
+                outputTail=output_tail,
+            )
+    except Exception as exc:
+        _update_osm_job_state(
             status="failed",
             finishedAt=datetime.utcnow().isoformat() + "Z",
             exitCode=-1,
@@ -753,6 +836,61 @@ def osm_summary(db: Session = Depends(get_db)):
         "buildings": db.query(OSMBuilding).count(),
         "pois": db.query(OSMPoi).count()
     }
+
+
+@api_router.get("/osm/preview")
+def preview_osm_counts(db: Session = Depends(get_db)):
+    return {
+        "counts": osm_summary(db),
+        "previewAt": datetime.utcnow().isoformat() + "Z",
+    }
+
+
+@api_router.post("/osm/trigger")
+def trigger_osm_job(data: dict = None, current_user: str = Depends(get_current_user)):
+    payload = data or {}
+    limit_provinces = int(payload.get("limit_provinces", 63))
+    target_total = int(payload.get("target_total", 5000000))
+
+    with osm_job_lock:
+        if osm_job_state.get("status") == "running":
+            return {
+                "status": "running",
+                "message": "OSM job is already running",
+                "job": osm_job_state,
+            }
+
+        job_id = str(uuid4())
+        osm_job_state.update({
+            "jobId": job_id,
+            "status": "running",
+            "startedAt": datetime.utcnow().isoformat() + "Z",
+            "finishedAt": None,
+            "limitProvinces": limit_provinces,
+            "targetTotal": target_total,
+            "exitCode": None,
+            "error": None,
+            "outputTail": None,
+        })
+
+    worker = threading.Thread(
+        target=_run_osm_job,
+        args=(job_id, limit_provinces, target_total),
+        daemon=True,
+    )
+    worker.start()
+
+    return {
+        "status": "accepted",
+        "message": "OSM crawl job started",
+        "job": osm_job_state,
+    }
+
+
+@api_router.get("/osm/job")
+def get_osm_job_status(current_user: str = Depends(get_current_user)):
+    with osm_job_lock:
+        return {"job": dict(osm_job_state)}
 
 @api_router.get("/training/samples")
 def training_samples(db: Session = Depends(get_db)):

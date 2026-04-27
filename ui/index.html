@@ -66,6 +66,9 @@
                 <a href="#" class="nav-item" data-page="explorer">
                     <i class="fa-solid fa-database"></i> Data Explorer
                 </a>
+                <a href="#" class="nav-item" data-page="osm-enrichment">
+                    <i class="fa-solid fa-tractor"></i> OSM Enrichment
+                </a>
                 <a href="#" class="nav-item" data-page="lookup">
                     <i class="fa-solid fa-map-location-dot"></i> ĐVHC Mapping
                 </a>
@@ -612,6 +615,152 @@
                                     </tr>
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ══════ PAGE: OSM ENRICHMENT ══════ -->
+                <div class="page full-height-page" id="osm-enrichment">
+                    <div class="page-header flex-shrink-0">
+                        <h2>OSM Enrichment Center</h2>
+                        <p>Làm giàu dữ liệu OpenStreetMap cho `raw_entities`, `streets`, `buildings` và `pois`</p>
+                        <div class="flex items-center gap-12 mt-12">
+                            <button class="btn btn-sm btn-ghost" id="btn-osm-refresh" type="button">
+                                <i class="fa-solid fa-arrow-rotate-right"></i> Làm mới số liệu OSM
+                            </button>
+                            <span id="osm-last-refresh" class="text-tertiary" style="font-size:12px;">Chưa cập nhật</span>
+                        </div>
+                    </div>
+
+                    <div class="stats-grid flex-shrink-0">
+                        <div class="stat-card">
+                            <div class="stat-label">raw_entities</div>
+                            <div class="stat-value" id="osm-raw-count">0</div>
+                            <div class="stat-change positive"><i class="fa-solid fa-database"></i> OSM raw</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">streets</div>
+                            <div class="stat-value" id="osm-street-count">0</div>
+                            <div class="stat-change positive"><i class="fa-solid fa-road"></i> Road gazetteer</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">buildings</div>
+                            <div class="stat-value" id="osm-building-count">0</div>
+                            <div class="stat-change positive"><i class="fa-solid fa-building"></i> Building gazetteer</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">pois</div>
+                            <div class="stat-value" id="osm-poi-count">0</div>
+                            <div class="stat-change positive"><i class="fa-solid fa-location-dot"></i> POI gazetteer</div>
+                        </div>
+                    </div>
+
+                    <div class="content-grid sidebar-layout flex-1 overflow-hidden" style="grid-template-columns: 1.4fr 1fr; gap: 24px;">
+                        <div class="card flex flex-column overflow-hidden">
+                            <div class="card-header flex justify-between items-center">
+                                <span class="card-title">Chạy làm giàu OSM</span>
+                                <div class="flex gap-8">
+                                    <button class="btn btn-sm btn-outline" id="btn-osm-preview-counts" type="button">
+                                        <i class="fa-solid fa-eye"></i> Preview counts
+                                    </button>
+                                    <button class="btn btn-sm btn-accent" id="btn-osm-run" type="button">
+                                        <i class="fa-solid fa-play"></i> Run OSM Crawl
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-body flex flex-column gap-16">
+                                <div class="content-grid triple mb-0">
+                                    <div class="form-group">
+                                        <label class="form-label">Số khu vực crawl</label>
+                                        <input class="form-input" id="osm-limit-provinces" type="number" min="1" max="63" value="63">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Target entities</label>
+                                        <input class="form-input" id="osm-target-total" type="number" min="1000" step="1000" value="5000000">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Phạm vi</label>
+                                        <input class="form-input" value="raw_entities + streets + buildings + pois" disabled>
+                                    </div>
+                                </div>
+
+                                <div class="card" style="background: var(--bg-app); border: 1px solid var(--border-subtle);">
+                                    <div class="card-header">
+                                        <span class="card-title">Pipeline hiện tại</span>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="workflow-diagram horizontal" style="gap: 10px; align-items: stretch;">
+                                            <div class="workflow-step success">
+                                                <div class="step-icon"><i class="fa-solid fa-globe"></i></div>
+                                                <div class="step-content"><h4>OSM/Overpass</h4></div>
+                                            </div>
+                                            <div class="workflow-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+                                            <div class="workflow-step accent">
+                                                <div class="step-icon"><i class="fa-solid fa-database"></i></div>
+                                                <div class="step-content"><h4>raw_entities</h4></div>
+                                            </div>
+                                            <div class="workflow-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+                                            <div class="workflow-step">
+                                                <div class="step-icon"><i class="fa-solid fa-road"></i></div>
+                                                <div class="step-content"><h4>streets</h4></div>
+                                            </div>
+                                            <div class="workflow-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+                                            <div class="workflow-step">
+                                                <div class="step-icon"><i class="fa-solid fa-location-dot"></i></div>
+                                                <div class="step-content"><h4>pois / buildings</h4></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="card" style="background: var(--bg-app); border: 1px solid var(--border-subtle);">
+                                    <div class="card-header">
+                                        <span class="card-title">Nguồn dữ liệu mục tiêu</span>
+                                    </div>
+                                    <div class="card-body">
+                                        <ul class="activity-list">
+                                            <li class="activity-item"><div class="activity-dot"></div><div><div class="activity-text">`osm.raw_entities`: lưu tag nguyên bản từ Overpass</div></div></li>
+                                            <li class="activity-item"><div class="activity-dot" style="background: var(--success)"></div><div><div class="activity-text">`osm.streets`: đường và addr:street</div></div></li>
+                                            <li class="activity-item"><div class="activity-dot" style="background: var(--warning)"></div><div><div class="activity-text">`osm.buildings`: tòa nhà, block, khu dân cư</div></div></li>
+                                            <li class="activity-item"><div class="activity-dot" style="background: var(--info)"></div><div><div class="activity-text">`osm.pois`: amenity, shop, office, tourism</div></div></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card flex flex-column overflow-hidden">
+                            <div class="card-header flex justify-between items-center">
+                                <span class="card-title">OSM Job Status</span>
+                                <span id="osm-job-status-badge" class="badge info">IDLE</span>
+                            </div>
+                            <div class="card-body flex flex-column gap-12 overflow-hidden">
+                                <div class="content-grid double mb-0">
+                                    <div class="stat-card" style="padding: 14px; min-height: auto;">
+                                        <div class="stat-label">Started</div>
+                                        <div class="stat-value" id="osm-job-started">-</div>
+                                    </div>
+                                    <div class="stat-card" style="padding: 14px; min-height: auto;">
+                                        <div class="stat-label">Finished</div>
+                                        <div class="stat-value" id="osm-job-finished">-</div>
+                                    </div>
+                                </div>
+                                <div class="content-grid double mb-0">
+                                    <div class="stat-card" style="padding: 14px; min-height: auto;">
+                                        <div class="stat-label">Exit Code</div>
+                                        <div class="stat-value" id="osm-job-exit">-</div>
+                                    </div>
+                                    <div class="stat-card" style="padding: 14px; min-height: auto;">
+                                        <div class="stat-label">Job ID</div>
+                                        <div class="stat-value" id="osm-job-id" style="font-size: 12px; word-break: break-all;">-</div>
+                                    </div>
+                                </div>
+                                <div class="form-group flex-1 overflow-hidden">
+                                    <label class="form-label">Log output</label>
+                                    <div id="osm-job-log" class="batch-log" style="max-height: 420px; min-height: 240px;">Chưa có job nào được chạy.</div>
+                                </div>
+                                <div id="osm-job-error" class="text-danger" style="font-size:12px; min-height: 18px;"></div>
+                            </div>
                         </div>
                     </div>
                 </div>

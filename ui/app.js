@@ -100,6 +100,7 @@ document.addEventListener("DOMContentLoaded", () => {
   setupBatchTool();
   initDashboardRefreshControls();
   fetchStats();
+  initOSMEnrichmentUI();
   initNSOSyncTool();
   initAdminManager();
   initModelBenchmarkUI();
@@ -487,6 +488,286 @@ function populateTrainingHistory() {
       <td>${item.date}</td>
     </tr>
   `).join("");
+}
+
+let osmPollTimer = null;
+
+function clearOSMPollTimer() {
+  if (osmPollTimer) {
+    clearTimeout(osmPollTimer);
+    osmPollTimer = null;
+  }
+}
+
+function setOSMRunButtons(isRunning) {
+  const runButton = document.getElementById("btn-osm-run");
+  const previewButton = document.getElementById("btn-osm-preview-counts");
+
+  [runButton, previewButton].forEach((button) => {
+    if (!button) return;
+
+    if (isRunning) {
+      if (!button.dataset.defaultHtml) {
+        button.dataset.defaultHtml = button.innerHTML;
+      }
+      button.disabled = true;
+      if (button.id === "btn-osm-run") {
+        button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Running OSM Crawl...';
+      }
+    } else {
+      button.disabled = false;
+      if (button.dataset.defaultHtml && button.id === "btn-osm-run") {
+        button.innerHTML = button.dataset.defaultHtml;
+      }
+    }
+  });
+}
+
+async function fetchOSMSummary() {
+  const response = await fetch(`${API_BASE}/osm/summary`, {
+    headers: getAuthHeader(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`OSM summary API failed: ${response.status}`);
+  }
+
+  return response.json();
+}
+
+async function triggerOSMJob() {
+  const limitProvinces = Number.parseInt(document.getElementById("osm-limit-provinces")?.value || "63", 10);
+  const targetTotal = Number.parseInt(document.getElementById("osm-target-total")?.value || "5000000", 10);
+
+  const response = await fetch(`${API_BASE}/osm/trigger`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...getAuthHeader(),
+    },
+    body: JSON.stringify({
+      limit_provinces: limitProvinces,
+      target_total: targetTotal,
+    }),
+  });
+
+  if (response.status === 401) {
+    localStorage.removeItem('vnai_token');
+    window.location.href = 'login.html';
+    throw new Error("Unauthorized");
+  }
+
+  if (!response.ok) {
+    throw new Error(`OSM trigger API failed: ${response.status}`);
+  }
+
+  return response.json();
+}
+
+async function fetchOSMJobStatus() {
+  const response = await fetch(`${API_BASE}/osm/job`, {
+    headers: getAuthHeader(),
+  });
+
+  if (response.status === 401) {
+    localStorage.removeItem('vnai_token');
+    window.location.href = 'login.html';
+    throw new Error("Unauthorized");
+  }
+
+  if (!response.ok) {
+    throw new Error(`OSM job API failed: ${response.status}`);
+  }
+
+  return response.json();
+}
+
+function renderOSMSummary(summary) {
+  const raw = Number(summary?.raw || 0);
+  const streets = Number(summary?.streets || 0);
+  const buildings = Number(summary?.buildings || 0);
+  const pois = Number(summary?.pois || 0);
+  const total = raw + streets + buildings + pois;
+
+  const mapping = {
+    "osm-raw-count": raw,
+    "osm-street-count": streets,
+    "osm-building-count": buildings,
+    "osm-poi-count": pois,
+  };
+
+  Object.entries(mapping).forEach(([id, value]) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.textContent = value.toLocaleString();
+    }
+  });
+
+  const totalEl = document.getElementById("stat-osm");
+  if (totalEl) {
+    totalEl.textContent = total.toLocaleString();
+  }
+
+  const lastRefresh = document.getElementById("osm-last-refresh");
+  if (lastRefresh) {
+    lastRefresh.textContent = `Cập nhật lúc ${new Date().toLocaleTimeString('vi-VN')}`;
+  }
+}
+
+function renderOSMJob(job) {
+  const status = job?.status || "idle";
+  const badge = document.getElementById("osm-job-status-badge");
+  const started = document.getElementById("osm-job-started");
+  const finished = document.getElementById("osm-job-finished");
+  const exitCode = document.getElementById("osm-job-exit");
+  const jobId = document.getElementById("osm-job-id");
+  const errorEl = document.getElementById("osm-job-error");
+  const logEl = document.getElementById("osm-job-log");
+
+  if (badge) {
+    const badgeClass = status === "success" ? "success" : status === "failed" ? "danger" : status === "running" ? "warning" : "info";
+    badge.className = `badge ${badgeClass}`;
+    badge.textContent = status.toUpperCase();
+  }
+
+  if (started) started.textContent = job?.startedAt || "-";
+  if (finished) finished.textContent = job?.finishedAt || "-";
+  if (exitCode) exitCode.textContent = job?.exitCode ?? "-";
+  if (jobId) jobId.textContent = job?.jobId || "-";
+  if (errorEl) errorEl.textContent = job?.error || "";
+
+  if (logEl) {
+    logEl.textContent = job?.outputTail || (status === "running" ? "OSM crawl đang chạy..." : "Chưa có job nào được chạy.");
+  }
+}
+
+async function pollOSMUntilDone() {
+  try {
+    const payload = await fetchOSMJobStatus();
+    const job = payload?.job;
+    const status = job?.status || "idle";
+
+    renderOSMJob(job);
+
+    if (status === "running") {
+      setOSMRunButtons(true);
+      osmPollTimer = setTimeout(pollOSMUntilDone, 4000);
+      return;
+    }
+
+    setOSMRunButtons(false);
+
+    if (status === "success") {
+      await refreshOSMEnrichmentPanel({ silent: true });
+      if (showToast) {
+        showToast("OSM crawl hoàn tất và số liệu đã được cập nhật", "success");
+      }
+      return;
+    }
+
+    if (status === "failed") {
+      if (showToast) {
+        showToast(`OSM crawl thất bại${job?.error ? `: ${job.error}` : ""}`, "danger");
+      }
+      return;
+    }
+  } catch (error) {
+    setOSMRunButtons(false);
+    console.error("OSM poll error:", error);
+    if (showToast) {
+      showToast("Không thể theo dõi trạng thái OSM job", "danger");
+    }
+  }
+}
+
+async function refreshOSMEnrichmentPanel({ silent = false } = {}) {
+  try {
+    const summary = await fetchOSMSummary();
+    renderOSMSummary(summary);
+    if (!silent && showToast) {
+      showToast("Đã làm mới số liệu OSM enrichment", "success");
+    }
+  } catch (error) {
+    console.error("OSM summary error:", error);
+    if (!silent && showToast) {
+      showToast("Không thể tải số liệu OSM enrichment", "danger");
+    }
+  }
+}
+
+async function previewOSMCountsFromUI() {
+  await refreshOSMEnrichmentPanel({ silent: false });
+}
+
+async function runOSMJobFromUI() {
+  try {
+    const limitProvinces = Number.parseInt(document.getElementById("osm-limit-provinces")?.value || "63", 10);
+    const targetTotal = Number.parseInt(document.getElementById("osm-target-total")?.value || "5000000", 10);
+    const confirmMessage = `Chạy crawl OSM cho ${limitProvinces} tỉnh/thành với target ${targetTotal.toLocaleString()} entities?`;
+
+    if (showConfirm) {
+      const confirmed = await showConfirm(confirmMessage);
+      if (!confirmed) return;
+    }
+
+    setOSMRunButtons(true);
+    const trigger = await triggerOSMJob();
+
+    if (trigger?.job?.status === "running") {
+      if (showToast) {
+        showToast("OSM crawl job đã được khởi chạy", "info");
+      }
+      clearOSMPollTimer();
+      renderOSMJob(trigger.job);
+      await pollOSMUntilDone();
+      return;
+    }
+
+    setOSMRunButtons(false);
+  } catch (error) {
+    setOSMRunButtons(false);
+    console.error("OSM trigger error:", error);
+    if (showToast) {
+      showToast("Không thể trigger OSM crawl job", "danger");
+    }
+  }
+}
+
+function initOSMEnrichmentUI() {
+  const runButton = document.getElementById("btn-osm-run");
+  const previewButton = document.getElementById("btn-osm-preview-counts");
+  const page = document.getElementById("osm-enrichment");
+
+  if (!page) return;
+
+  if (runButton) {
+    runButton.addEventListener("click", () => {
+      runOSMJobFromUI();
+    });
+  }
+
+  if (previewButton) {
+    previewButton.addEventListener("click", () => {
+      previewOSMCountsFromUI();
+    });
+  }
+
+  window.__vnaiOSMRefresh = refreshOSMEnrichmentPanel;
+
+  fetchOSMJobStatus().then((payload) => {
+    if (payload?.job) {
+      renderOSMJob(payload.job);
+      if (payload.job.status === "running") {
+        setOSMRunButtons(true);
+        clearOSMPollTimer();
+        pollOSMUntilDone();
+      }
+    }
+  }).catch((error) => {
+    console.warn("Unable to pre-check OSM job status", error);
+  });
+
+  refreshOSMEnrichmentPanel({ silent: true });
 }
 
 // ═══════════════════════════════════════════════════════════

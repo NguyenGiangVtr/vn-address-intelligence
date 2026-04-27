@@ -45,10 +45,11 @@ class OSMFetcher:
                 .order_by(District.district_id).all()
             
             task_list = [(d.District.district_id, d.District.district_name, d.province_name, d.District.province_id) for d in districts]
+            task_list = task_list[:max(0, int(limit_provinces))]
         finally:
             session.close()
 
-        logger.info(f"Starting aggressive crawl for {len(task_list)} districts...")
+        logger.info(f"Starting aggressive crawl for {len(task_list)} district areas...")
         
         current_count = self.get_current_count()
         logger.info(f"Initial count: {current_count}")
