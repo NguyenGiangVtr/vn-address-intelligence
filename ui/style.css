@@ -409,6 +409,37 @@ input, textarea, select { font-family: inherit; }
 .stat-change.positive { color: var(--success); }
 .stat-change.negative { color: var(--danger); }
 
+.stat-change.kpi-pass { color: var(--success); }
+.stat-change.kpi-fail { color: var(--danger); }
+.stat-change.kpi-pending { color: var(--warning); }
+
+.ai-kpi-grid {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.ai-kpi-card .stat-value {
+  font-size: 22px;
+}
+
+.model-op-item {
+  padding: 14px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.12));
+}
+
+.model-op-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.model-op-desc {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
 /* ══════════════════════════════════════════
    CARDS & PANELS
    ══════════════════════════════════════════ */
@@ -446,8 +477,7 @@ input, textarea, select { font-family: inherit; }
   margin-bottom: 16px;
 }
 
-.content-grid > .card,
-.content-grid > div {
+.content-grid > .card {
   overflow-y: auto;
   max-height: 600px;
 }
@@ -771,8 +801,8 @@ select.form-input {
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   padding: 20px;
-  /* overflow-y: auto; */
-  max-height: 600px;
+  /* overflow-y: auto;
+  max-height: 600px; */
 }
 .tool-section-title {
   font-size: 12px;

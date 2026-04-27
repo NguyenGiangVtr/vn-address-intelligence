@@ -96,6 +96,85 @@ class PreLabeler:
                 for match in re.finditer(re.escape(term), raw_address, re.I):
                     add_result(match.start(), match.end(), raw_address[match.start():match.end()], label, 1.0)
 
+        # Giai đoạn 1.5: Cố gắng trích xuất STR (Tên đường) khi PRO/DST/WDS đã biết
+        # Chiến lược:
+        # - Tạo một bản sao sạch của địa chỉ, loại bỏ các chuỗi PRO/DST/WDS và hậu tố quốc gia
+        # - Tách theo dấu phẩy và tìm segment chứa số nhà + tên đường (hỗ trợ 74/26, 927/1, 11B, K814)
+        # - Nếu tìm được, thêm nhãn `STR` cho phần tên đường và `NUM` cho số nhà
+        clean_addr = raw_address
+        # Loại bỏ hậu tố quốc gia
+        clean_addr = re.sub(r',?\s*việt\s*nam.*$', '', clean_addr, flags=re.I)
+
+        def _remove_macro_variants(text: str, name: str) -> str:
+            if not name:
+                return text
+            # Các tiền tố thường gặp
+            prefixes = r'(?:Thành phố|Tỉnh|Quận|Huyện|Thị xã|Phường|Xã|Thị trấn|TP\.|TP|Q\.|Q|H\.|P\.|P)\s*'
+            # Loại bỏ cả biến thể có tiền tố và không có
+            pattern = rf'(?:{prefixes})?\s*{re.escape(name)}'
+            return re.sub(pattern, '', text, flags=re.I)
+
+        clean_addr = _remove_macro_variants(clean_addr, ward_name)
+        clean_addr = _remove_macro_variants(clean_addr, district_name)
+        clean_addr = _remove_macro_variants(clean_addr, province_name)
+
+        # Chuẩn hóa khoảng trắng, xóa dấu phẩy thừa
+        clean_addr = re.sub(r'\s*,\s*', ',', clean_addr)
+        clean_addr = re.sub(r'\s+', ' ', clean_addr).strip(' ,')
+
+        segments = [s.strip() for s in clean_addr.split(',') if s.strip()]
+
+        def _find_in_raw(sub: str):
+            if not sub: return None
+            m = re.search(re.escape(sub), raw_address, flags=re.I)
+            if m:
+                return m.start(), m.end(), raw_address[m.start():m.end()]
+            # Fallback: try case-insensitive search by lowering
+            lo = raw_address.lower().find(sub.lower())
+            if lo >= 0:
+                return lo, lo + len(sub), raw_address[lo:lo + len(sub)]
+            return None
+
+        # Pattern for house numbers (supports 74/26, 927/1, 11B, K814)
+        num_pattern = re.compile(r'(?i)^(?P<num>(?:K\d+|\d+[A-Za-z]?)(?:[\\/\-]\d+[A-Za-z]?)*)(?:\s+)(?P<rest>.+)$')
+
+        for i, seg in enumerate(segments[:3]):
+            # Try to match number + rest
+            m = num_pattern.match(seg)
+            if m:
+                num = m.group('num').strip()
+                rest = m.group('rest').strip()
+                # Attempt to isolate street name from rest by removing leading POI/building words
+                rest_clean = re.sub(r'^(?:Tòa nhà|Chung cư|Khu|Khu dân cư|Block|Tầng|Phòng|Lầu|Topaz Home|Chung Cư)\b[,\s]*', '', rest, flags=re.I)
+
+                # If rest contains additional separators (like '-') take full rest as street candidate
+                street_candidate = rest_clean
+
+                # Locate in original and add labels
+                found = _find_in_raw(street_candidate)
+                if found:
+                    s0, e0, txt = found
+                    add_result(s0, e0, txt, 'STR', 0.95)
+                # also add NUM if possible
+                found_num = _find_in_raw(num)
+                if found_num:
+                    s1, e1, txtn = found_num
+                    add_result(s1, e1, txtn, 'NUM', 0.98)
+                break
+
+            # If segment doesn't start with number, but contains street words, try micro rule on segment
+            for lab, pat, score in cls.MICRO_RULES:
+                if lab != 'STR':
+                    continue
+                mm = re.search(pat, seg)
+                if mm:
+                    candidate = mm.group(0).strip()
+                    found = _find_in_raw(candidate)
+                    if found:
+                        s0, e0, txt = found
+                        add_result(s0, e0, txt, 'STR', max(0.85, score))
+                        break
+
         # Giai đoạn 2: Regex Heuristics cho các cấp Vi mô
         for label, pattern, score in cls.MICRO_RULES:
             for match in re.finditer(pattern, raw_address):

@@ -36,10 +36,10 @@ applyTo: "**/*"
 - Ton trong pipeline SQL preprocessing -> NER -> Siamese retrieval/ranking -> LLM normalization.
 - Khong khoi tao lai model trong moi record neu co the tai 1 lan va tai su dung.
 - Khi thay doi pipeline, neu anh huong output schema thi cap nhat docs va validation scripts lien quan.
+- Tai lieu tong hop workflow trainning/experiment/inference la docs/ai-training-workflow-summary.md; khi thay doi logic app/ai bat buoc cap nhat tai lieu nay trong cung dot thay doi.
 
 ### 3.4 Context: Database, SQL, and Data Safety
 - Luon dung parameterized query cho filter input tu nguoi dung.
-- Tuyet doi khong doi ten cot raw_address thanh ten khac.
 - Neu doi schema trong app/core/database.py, bat buoc ra soat app/, scripts/, docs/ de sua query phu hop.
 - Khong xoa hoac truncate du lieu that neu khong co yeu cau ro rang tu user.
 
@@ -51,13 +51,14 @@ applyTo: "**/*"
 - Quy dinh chung bat buoc: tat ca dropdown list, notify, confirm phai dung chung mot format.
 - Nguon template control mac dinh la trang Tra cuu Bien dong DVHC (lookup). Khi them moi control, chi duoc tai su dung helper/template tu nhom control nay.
 - Khong tao kieu thong bao moi bang alert/confirm native neu da co bo showToast/showConfirm va control template trong ui/app.js.
-- **Quy tac scroll (toan bo page):** Uu tien scroll trong control (`.table-container`, `.batch-log`, `.ner-output`, `.tool-input-section`, `.content-grid` items) thay vi scroll full page. Chi dung full-page scroll khi noi dung toan man hinh bat buoc. Ap dung cho tat ca pages:
+
+<!-- - **Quy tac scroll (toan bo page):** Uu tien scroll trong control (`.table-container`, `.batch-log`, `.ner-output`, `.tool-input-section`, `.content-grid` items) thay vi scroll full page. Chi dung full-page scroll khi noi dung toan man hinh bat buoc. Ap dung cho tat ca pages:
   - **Address Parser:** NER Output + Entities table scroll noi dung, Input tinh gon (44px min-height)
   - **Batch Processor:** Batch log scroll noi dung (max-height 400px), khong lock full page
   - **Training Hub:** Label registry table, experiment results table scroll noi dung
   - **Data Explorer:** Datatable scroll noi dung (max-height 500px)
   - **Lookup/Admin:** Grid items scroll independently, khong nested scroll
-  - Primary scroll chi xay ra tren `#page-content`, control regions (grid, panel, table, log) tu handle overflow-y: auto
+  - Primary scroll chi xay ra tren `#page-content`, control regions (grid, panel, table, log) tu handle overflow-y: auto -->
 
 ### 3.6 Context: Experiments, Evaluation, and Reporting
 - Bao cao phai gan voi 4 KPI MIS: F1, throughput, chi phi, ti le khop voi ground truth.

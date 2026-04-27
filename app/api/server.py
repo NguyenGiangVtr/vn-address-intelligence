@@ -4,11 +4,18 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session, aliased
-from sqlalchemy import String, and_, or_
+from sqlalchemy import String, and_, or_, text
 import os
 import time
 import jwt
+import sys
+import subprocess
+import threading
+import traceback
+from uuid import uuid4
+from pathlib import Path
 from datetime import datetime, timedelta
+from difflib import SequenceMatcher
 from app.core.database import SessionLocal, Province, District, Ward, OSMStreet, OSMBuilding, OSMPoi, OSMRawEntity, TrainingDataset, AddressCleansingQueue, WardMapping
 from app.services.auth import verify_password, create_access_token, ALGORITHM, SECRET_KEY
 from app.services.nso_sync import sync_full_nso, sync_province_nso, sync_logs
@@ -48,6 +55,76 @@ class VisitorStats:
         return len(self.online_users)
 
 stats_tracker = VisitorStats()
+
+# ── Benchmark Job State ──
+benchmark_job_lock = threading.Lock()
+benchmark_job_state = {
+    "jobId": None,
+    "status": "idle",  # idle | running | success | failed
+    "startedAt": None,
+    "finishedAt": None,
+    "configPath": None,
+    "skipLLM": False,
+    "exitCode": None,
+    "error": None,
+    "outputTail": None,
+}
+
+
+def _update_benchmark_job_state(**kwargs):
+    with benchmark_job_lock:
+        benchmark_job_state.update(kwargs)
+
+
+def _run_benchmark_job(job_id: str, config_path: str, skip_llm: bool):
+    project_root = Path(__file__).resolve().parents[2]
+    cmd = [
+        sys.executable,
+        "-m",
+        "app.ai.experiment_runner",
+        "--config",
+        config_path,
+    ]
+    if skip_llm:
+        cmd.append("--no-llm")
+
+    try:
+        proc = subprocess.run(
+            cmd,
+            cwd=str(project_root),
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        output_tail = (proc.stdout or "")
+        if proc.stderr:
+            output_tail += "\n" + proc.stderr
+        output_tail = output_tail[-6000:] if output_tail else ""
+
+        if proc.returncode == 0:
+            _update_benchmark_job_state(
+                status="success",
+                finishedAt=datetime.utcnow().isoformat() + "Z",
+                exitCode=proc.returncode,
+                error=None,
+                outputTail=output_tail,
+            )
+        else:
+            _update_benchmark_job_state(
+                status="failed",
+                finishedAt=datetime.utcnow().isoformat() + "Z",
+                exitCode=proc.returncode,
+                error=f"Benchmark process exited with code {proc.returncode}",
+                outputTail=output_tail,
+            )
+    except Exception as exc:
+        _update_benchmark_job_state(
+            status="failed",
+            finishedAt=datetime.utcnow().isoformat() + "Z",
+            exitCode=-1,
+            error=f"{exc}\n{traceback.format_exc()}",
+            outputTail=None,
+        )
 
 # Enable CORS for frontend
 app.add_middleware(
@@ -406,6 +483,253 @@ def get_stats(db: Session = Depends(get_db)):
             "online": stats_tracker.get_online_count()
         }
     }
+
+
+def _normalize_text(value: Optional[str]) -> str:
+    if not value:
+        return ""
+    return " ".join(str(value).strip().lower().split())
+
+
+def _similarity_ratio(a: Optional[str], b: Optional[str]) -> float:
+    na = _normalize_text(a)
+    nb = _normalize_text(b)
+    if not na or not nb:
+        return 0.0
+    return SequenceMatcher(None, na, nb).ratio()
+
+
+@api_router.get("/benchmark/realtime")
+def get_benchmark_realtime(db: Session = Depends(get_db)):
+    """
+    Trả về benchmark real-time cho 3 mô hình từ dữ liệu DB hiện tại.
+    Ưu tiên đo theo dữ liệu đã chạy benchmark nếu có cột normalized_*.
+    """
+
+    target_schema = "prq"
+    target_table = "address_cleansing_queue"
+
+    # Baseline fallback để UI luôn render được nếu DB chưa đủ cột benchmark.
+    models = {
+        "phobert": {
+            "name": "PhoBERT",
+            "f1": 0.0,
+            "throughput": 0.0,
+            "costPerMillion": 0.0,
+            "googleMatch": 0.0,
+            "sampleSize": 0,
+        },
+        "siamese": {
+            "name": "Siamese (mGTE)",
+            "f1": 0.0,
+            "throughput": 0.0,
+            "costPerMillion": 0.0,
+            "googleMatch": 0.0,
+            "sampleSize": 0,
+        },
+        "llm": {
+            "name": "LLM (Qwen3)",
+            "f1": 0.0,
+            "throughput": 0.0,
+            "costPerMillion": 0.0,
+            "googleMatch": 0.0,
+            "sampleSize": 0,
+        },
+    }
+
+    with db.connection() as conn:
+        # 1) Detect available columns dynamically (because benchmark columns can be created later).
+        col_rows = conn.execute(
+            text(
+                """
+                SELECT column_name
+                FROM information_schema.columns
+                WHERE table_schema = :schema AND table_name = :table
+                """
+            ),
+            {"schema": target_schema, "table": target_table},
+        ).fetchall()
+
+        available_columns = {row[0] for row in col_rows}
+
+        normalized_cols = {
+            "phobert": "normalized_phobert",
+            "siamese": "normalized_mgte",
+            "llm": "normalized_llm",
+        }
+
+        # Ground-truth ưu tiên standard_address (benchmark), fallback address_standardized.
+        ground_truth_col = None
+        if "standard_address" in available_columns:
+            ground_truth_col = "standard_address"
+        elif "address_standardized" in available_columns:
+            ground_truth_col = "address_standardized"
+
+        # 2) Compute throughput from latest 1-hour processing by selected_ai_model.
+        #    Throughput = processed_rows / 3600s.
+        model_patterns = {
+            "phobert": ["%phobert%"],
+            "siamese": ["%mgte%", "%siamese%"],
+            "llm": ["%llm%", "%qwen%"],
+        }
+
+        hourly_cost = {
+            "phobert": 0.85,
+            "siamese": 0.65,
+            "llm": 5.50,
+        }
+
+        if "selected_ai_model" in available_columns and "updated_at" in available_columns:
+            for model_key, patterns in model_patterns.items():
+                conditions = " OR ".join(
+                    [f"LOWER(selected_ai_model) LIKE LOWER(:p{i})" for i, _ in enumerate(patterns)]
+                )
+                params = {f"p{i}": pattern for i, pattern in enumerate(patterns)}
+
+                count_row = conn.execute(
+                    text(
+                        f"""
+                        SELECT COUNT(*)
+                        FROM {target_schema}.{target_table}
+                        WHERE updated_at >= NOW() - INTERVAL '1 hour'
+                          AND selected_ai_model IS NOT NULL
+                          AND ({conditions})
+                        """
+                    ),
+                    params,
+                ).first()
+
+                processed_last_hour = int(count_row[0] or 0)
+                throughput = processed_last_hour / 3600.0
+                models[model_key]["throughput"] = round(throughput, 2)
+
+                if throughput > 0:
+                    # cost / 1M = (hourly_cost / throughput_per_sec) * 1_000_000 / 3600
+                    cost_per_million = (hourly_cost[model_key] / throughput) * (1_000_000 / 3600)
+                    models[model_key]["costPerMillion"] = round(cost_per_million, 2)
+
+        # 3) Compute quality metrics from benchmark result columns if available.
+        eval_ready = ground_truth_col is not None and all(
+            col in available_columns for col in normalized_cols.values()
+        )
+
+        if eval_ready:
+            rows = conn.execute(
+                text(
+                    f"""
+                    SELECT {normalized_cols['phobert']} AS phobert_out,
+                           {normalized_cols['siamese']} AS siamese_out,
+                           {normalized_cols['llm']} AS llm_out,
+                           {ground_truth_col} AS ground_truth
+                    FROM {target_schema}.{target_table}
+                    WHERE {ground_truth_col} IS NOT NULL
+                      AND (
+                        {normalized_cols['phobert']} IS NOT NULL OR
+                        {normalized_cols['siamese']} IS NOT NULL OR
+                        {normalized_cols['llm']} IS NOT NULL
+                      )
+                    ORDER BY updated_at DESC NULLS LAST
+                    LIMIT 5000
+                    """
+                )
+            ).mappings().all()
+
+            for model_key, model_col in (("phobert", "phobert_out"), ("siamese", "siamese_out"), ("llm", "llm_out")):
+                exact_hits = 0
+                fuzzy_hits = 0
+                total = 0
+
+                for row in rows:
+                    pred = row.get(model_col)
+                    gt = row.get("ground_truth")
+                    if not pred or not gt:
+                        continue
+
+                    total += 1
+                    sim = _similarity_ratio(pred, gt)
+                    if sim == 1.0:
+                        exact_hits += 1
+                    if sim >= 0.85:
+                        fuzzy_hits += 1
+
+                if total > 0:
+                    exact_rate = exact_hits / total
+                    fuzzy_rate = fuzzy_hits / total
+                    # Proxy F1 from exact/fuzzy to keep KPI shape stable for UI benchmark.
+                    if exact_rate + fuzzy_rate > 0:
+                        f1_proxy = (2 * exact_rate * fuzzy_rate) / (exact_rate + fuzzy_rate)
+                    else:
+                        f1_proxy = 0.0
+
+                    models[model_key]["f1"] = round(f1_proxy * 100, 2)
+                    models[model_key]["googleMatch"] = round(fuzzy_rate * 100, 2)
+                    models[model_key]["sampleSize"] = total
+
+        # 4) Fallback cost if throughput unavailable (cold-start/no recent jobs).
+        default_cost = {
+            "phobert": 42.0,
+            "siamese": 28.0,
+            "llm": 260.0,
+        }
+        for key in models:
+            if models[key]["costPerMillion"] <= 0:
+                models[key]["costPerMillion"] = default_cost[key]
+
+    return {
+        "models": models,
+        "meta": {
+            "schema": f"{target_schema}.{target_table}",
+            "generatedAt": datetime.utcnow().isoformat() + "Z",
+            "note": "Realtime benchmark from DB aggregates; F1 is proxy from exact/fuzzy agreement with ground-truth column.",
+        },
+    }
+
+
+@api_router.post("/benchmark/trigger")
+def trigger_benchmark_job(data: dict = None, current_user: str = Depends(get_current_user)):
+    payload = data or {}
+    config_path = payload.get("config_path", "app/ai/config.yaml")
+    skip_llm = bool(payload.get("skip_llm", False))
+
+    with benchmark_job_lock:
+        if benchmark_job_state.get("status") == "running":
+            return {
+                "status": "running",
+                "message": "Benchmark job is already running",
+                "job": benchmark_job_state,
+            }
+
+        job_id = str(uuid4())
+        benchmark_job_state.update({
+            "jobId": job_id,
+            "status": "running",
+            "startedAt": datetime.utcnow().isoformat() + "Z",
+            "finishedAt": None,
+            "configPath": config_path,
+            "skipLLM": skip_llm,
+            "exitCode": None,
+            "error": None,
+            "outputTail": None,
+        })
+
+    worker = threading.Thread(
+        target=_run_benchmark_job,
+        args=(job_id, config_path, skip_llm),
+        daemon=True,
+    )
+    worker.start()
+
+    return {
+        "status": "accepted",
+        "message": "Benchmark job started",
+        "job": benchmark_job_state,
+    }
+
+
+@api_router.get("/benchmark/job")
+def get_benchmark_job_status(current_user: str = Depends(get_current_user)):
+    with benchmark_job_lock:
+        return {"job": dict(benchmark_job_state)}
 
 @api_router.get("/visitors")
 def get_visitor_stats():

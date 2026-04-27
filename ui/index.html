@@ -55,6 +55,9 @@
                 <a href="#" class="nav-item" data-page="training">
                     <i class="fa-solid fa-brain"></i> Training Hub
                 </a>
+                <a href="#" class="nav-item" data-page="experiments">
+                    <i class="fa-solid fa-flask-vial"></i> Model Comparison
+                </a>
 
                 <div class="nav-divider"></div>
                 <div class="nav-section">
@@ -465,71 +468,80 @@
                 <div class="page" id="experiments">
                     <div class="page-header">
                         <h2>Model Comparison</h2>
-                        <p>So sánh hiệu năng PhoBERT Siamese vs mGTE Siamese vs LLM Qwen3</p>
+                        <p>So sánh 3 mô hình theo KPI thực chiến: F1, Throughput, Cost/1M và Google Match</p>
+                    </div>
+                    <div class="stats-grid ai-kpi-grid">
+                        <div class="stat-card ai-kpi-card">
+                            <div class="stat-label">F1-Score (Noise Data)</div>
+                            <div class="stat-value" id="kpi-f1-current">--</div>
+                            <div class="stat-change" id="kpi-f1-status">Target: ≥ 82%</div>
+                        </div>
+                        <div class="stat-card ai-kpi-card">
+                            <div class="stat-label">Throughput</div>
+                            <div class="stat-value" id="kpi-throughput-current">--</div>
+                            <div class="stat-change" id="kpi-throughput-status">Target: ≥ 20 addr/s</div>
+                        </div>
+                        <div class="stat-card ai-kpi-card">
+                            <div class="stat-label">Cost / 1M Addresses</div>
+                            <div class="stat-value" id="kpi-cost-current">--</div>
+                            <div class="stat-change" id="kpi-cost-status">Target: &lt; $100</div>
+                        </div>
+                        <div class="stat-card ai-kpi-card">
+                            <div class="stat-label">Google Match Rate</div>
+                            <div class="stat-value" id="kpi-google-current">--</div>
+                            <div class="stat-change" id="kpi-google-status">Target: ≥ 75%</div>
+                        </div>
                     </div>
                     <div class="card">
                         <div class="card-header">
-                            <span class="card-title">Run Experiment</span>
-                            <button class="btn btn-primary" id="btn-run-experiment"><i class="fa-solid fa-play"></i>
-                                Run</button>
+                            <span class="card-title">Run Experiment (Phase C: experiment_runner.py)</span>
+                            <button class="btn btn-primary" id="btn-run-experiment" data-action="run-experiment"><i class="fa-solid fa-play"></i>
+                                Run Benchmark</button>
                         </div>
                         <div class="card-body">
                             <p style="font-size:13px;color:var(--text-secondary)">Chạy <code
                                     class="text-mono">experiment_runner.py</code> để so sánh 3 mô hình trên tập dữ liệu
-                                thực. Kết quả bao gồm Exact Match, Fuzzy Match, Component Accuracy và Latency.</p>
+                                thực. Kết quả ưu tiên KPI MIS: F1, Throughput, Cost và Google Match.</p>
                             <div class="mt-16 table-container">
                                 <table id="experiment-results">
                                     <thead>
                                         <tr>
-                                            <th>Metric</th>
-                                            <th>PhoBERT</th>
-                                            <th>mGTE</th>
-                                            <th>LLM</th>
+                                            <th>Model</th>
+                                            <th>F1-Score</th>
+                                            <th>Throughput</th>
+                                            <th>Cost / 1M</th>
+                                            <th>Google Match</th>
                                             <th>Target</th>
+                                            <th>Status</th>
                                         </tr>
                                     </thead>
-                                    <tbody>
+                                    <tbody id="experiment-results-body">
                                         <tr>
-                                            <td>Exact Match</td>
+                                            <td>PhoBERT</td>
                                             <td>--</td>
                                             <td>--</td>
                                             <td>--</td>
-                                            <td>≥ 30%</td>
+                                            <td>--</td>
+                                            <td>F1≥82% | TPS≥20 | Cost&lt;$100 | Match≥75%</td>
+                                            <td><span class="badge warning">Pending</span></td>
                                         </tr>
                                         <tr>
-                                            <td>Fuzzy Match</td>
+                                            <td>Siamese (mGTE)</td>
                                             <td>--</td>
                                             <td>--</td>
                                             <td>--</td>
-                                            <td>≥ 60%</td>
+                                            <td>--</td>
+                                            <td>F1≥82% | TPS≥20 | Cost&lt;$100 | Match≥75%</td>
+                                            <td><span class="badge warning">Pending</span></td>
                                         </tr>
                                         <tr>
-                                            <td>Phường Acc</td>
+                                            <td>LLM (Qwen3)</td>
                                             <td>--</td>
                                             <td>--</td>
                                             <td>--</td>
-                                            <td>≥ 80%</td>
-                                        </tr>
-                                        <tr>
-                                            <td>Quận Acc</td>
                                             <td>--</td>
-                                            <td>--</td>
-                                            <td>--</td>
-                                            <td>≥ 85%</td>
-                                        </tr>
-                                        <tr>
-                                            <td>Tỉnh Acc</td>
-                                            <td>--</td>
-                                            <td>--</td>
-                                            <td>--</td>
-                                            <td>≥ 90%</td>
-                                        </tr>
-                                        <tr>
-                                            <td>Throughput</td>
-                                            <td>--</td>
-                                            <td>--</td>
-                                            <td>--</td>
-                                            <td>≥ 20 qps</td>
+                                            <td>F1≥82% | TPS≥20 | Cost&lt;$100 | Match≥75%</td>
+                                            <td><span class="badge warning">Pending</span></td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -648,7 +660,38 @@
                 <div class="page" id="training">
                     <div class="page-header">
                         <h2>AI Training Hub</h2>
-                        <p>Huấn luyện và nâng cao độ thông minh cho mô hình NER</p>
+                        <p>Trọng tâm: workflow trainning AI (Phase A-D), vận hành model, và so sánh hiệu quả thực chiến</p>
+                    </div>
+
+                    <div class="card mb-16">
+                        <div class="card-header">
+                            <span class="card-title">AI Workflow Operations (Code-Truth)</span>
+                            <button class="btn btn-sm btn-primary" data-action="run-experiment"><i class="fa-solid fa-vial"></i> Run KPI Benchmark</button>
+                        </div>
+                        <div class="card-body">
+                            <div class="content-grid triple mb-0">
+                                <div class="model-op-item">
+                                    <div class="tool-section-title">Phase A</div>
+                                    <div class="model-op-title">Pre-label Export</div>
+                                    <div class="model-op-desc">export_for_annotation.py → Label Studio JSON/XML</div>
+                                </div>
+                                <div class="model-op-item">
+                                    <div class="tool-section-title">Phase B</div>
+                                    <div class="model-op-title">NER Fine-tune</div>
+                                    <div class="model-op-desc">train_ner.py → models/phobert-ner-vn</div>
+                                </div>
+                                <div class="model-op-item">
+                                    <div class="tool-section-title">Phase C</div>
+                                    <div class="model-op-title">3-Model Benchmark</div>
+                                    <div class="model-op-desc">experiment_runner.py → HTML/CSV report</div>
+                                </div>
+                                <div class="model-op-item">
+                                    <div class="tool-section-title">Phase D</div>
+                                    <div class="model-op-title">Production Hybrid Pipeline</div>
+                                    <div class="model-op-desc">production_pipeline.py → standardize + writeback queue</div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="content-grid sidebar-layout">
@@ -953,7 +996,7 @@
                                     <input type="text" id="nso-province-filter" class="search-input"
                                         placeholder="Lọc theo tên tỉnh...">
                                 </div>
-                                <div class="table-container flex-1 overflow-y-auto">
+                                <div class="table-container flex-1">
                                     <table style="width: 100%;">
                                         <thead
                                             style="position: sticky; top: 0; background: var(--bg-secondary); z-index: 10;">
