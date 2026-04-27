@@ -576,7 +576,7 @@ async function initMappingV3() {
       const data = await res.json();
       const list = document.getElementById('list-wards');
       list.innerHTML = data.map(w => {
-        const key = `${w.ward_name} (${dInput.value})`;
+        const key = w.ward_name;
         mappingState.wards[key] = w.ward_id;
         return `<option value="${key}" data-id="${w.ward_id}">`;
       }).join('');

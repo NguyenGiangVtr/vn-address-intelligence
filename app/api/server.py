@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, Request, HTTPException, status
+from fastapi import FastAPI, Depends, Request, HTTPException, status, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -13,9 +13,18 @@ from app.core.database import SessionLocal, Province, District, Ward, OSMStreet,
 from app.services.auth import verify_password, create_access_token, ALGORITHM, SECRET_KEY
 from app.services.nso_sync import sync_full_nso
 
-app = FastAPI(title="VN Address Intelligence API")
+app = FastAPI(
+    title="VN Address Intelligence API",
+    root_path="/api",
+    docs_url="/docs",
+    openapi_url="/openapi.json",
+    redoc_url="/redoc"
+)
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/login")
+# Use APIRouter for cleaner route management
+api_router = APIRouter()
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/login")
 
 # ── Visitor Stats State ──
 class VisitorStats:
@@ -89,7 +98,7 @@ def get_db():
     finally:
         db.close()
 
-@app.get("/api/health")
+@api_router.get("/health")
 def health_check():
     return {"status": "ok", "time": time.time()}
 
@@ -108,19 +117,19 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
     except Exception:
         raise credentials_exception
 
-@app.get("/api/provinces")
+@api_router.get("/provinces")
 def get_provinces(version: int = 1, db: Session = Depends(get_db)):
     return db.query(Province).filter(Province.admin_version == version).order_by(Province.province_name).all()
 
-@app.get("/api/districts/{province_id}")
+@api_router.get("/districts/{province_id}")
 def get_districts(province_id: int, version: int = 1, db: Session = Depends(get_db)):
     return db.query(District).filter(District.province_id == province_id, District.admin_version == version).order_by(District.district_name).all()
 
-@app.get("/api/wards/{district_id}")
+@api_router.get("/wards/{district_id}")
 def get_wards(district_id: int, version: int = 1, db: Session = Depends(get_db)):
     return db.query(Ward).filter(Ward.district_id == district_id, Ward.admin_version == version).order_by(Ward.ward_name).all()
 
-@app.get("/api/unit-details/{level}/{unit_id}")
+@api_router.get("/unit-details/{level}/{unit_id}")
 def get_unit_details(level: str, unit_id: int, db: Session = Depends(get_db)):
     if level == "province":
         return db.query(Province).filter(Province.province_id == unit_id).first()
@@ -130,7 +139,7 @@ def get_unit_details(level: str, unit_id: int, db: Session = Depends(get_db)):
         return db.query(Ward).filter(Ward.ward_id == unit_id).first()
     return {"error": "Invalid level"}
 
-@app.get("/api/lookup/mapping")
+@api_router.get("/lookup/mapping")
 def lookup_mapping(
     query: str = None, 
     province_id: int = None,
@@ -155,7 +164,6 @@ def lookup_mapping(
         filters.append((WardMapping.province_id_old == province_id) | (WardMapping.province_id_new == province_id))
         filters.append(WardMapping.ward_id_old == -1)
         filters.append(WardMapping.ward_id_new == -1)
-        filters.append(WardMapping.district_id_old == -1)
     
     # 2. Nếu có query text (từ ô search tự do), tìm trong note và cast ID
     if query:
@@ -235,14 +243,14 @@ def lookup_mapping(
         
     return enriched_results
 
-@app.post("/api/sync/nso")
+@api_router.post("/sync/nso")
 def trigger_nso_sync(db: Session = Depends(get_db)):
     """Kích hoạt đồng bộ dữ liệu từ NSO (danhmuchanhchinh.nso.gov.vn)"""
     # This should ideally be a background task
     result = sync_full_nso(db)
     return result
 
-@app.post("/api/login")
+@api_router.post("/login")
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     # Simple hardcoded admin for now (should be in DB later)
     ADMIN_USER = os.getenv("ADMIN_USER", "admin")
@@ -262,7 +270,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     access_token = create_access_token(data={"sub": form_data.username})
     return {"access_token": access_token, "token_type": "bearer"}
 
-@app.get("/api/stats")
+@api_router.get("/stats")
 def get_stats(db: Session = Depends(get_db)):
     """Returns absolute counts and metadata for all tables. Robust version."""
     def safe_count(query):
@@ -296,7 +304,7 @@ def get_stats(db: Session = Depends(get_db)):
         }
     }
 
-@app.get("/api/visitors")
+@api_router.get("/visitors")
 def get_visitor_stats():
     return {
         "total": stats_tracker.total_visits,
@@ -304,13 +312,13 @@ def get_visitor_stats():
         "online": stats_tracker.get_online_count()
     }
 
-@app.get("/api/admin-v2/provinces")
+@api_router.get("/admin-v2/provinces")
 def list_provinces_v2(db: Session = Depends(get_db)):
     """List provinces with versioning info."""
     provinces = db.query(Province).filter(Province.admin_version == 2).all()
     return provinces
 
-@app.get("/api/osm/summary")
+@api_router.get("/osm/summary")
 def osm_summary(db: Session = Depends(get_db)):
     return {
         "raw": db.query(OSMRawEntity).count(),
@@ -319,13 +327,13 @@ def osm_summary(db: Session = Depends(get_db)):
         "pois": db.query(OSMPoi).count()
     }
 
-@app.get("/api/training/samples")
+@api_router.get("/training/samples")
 def training_samples(db: Session = Depends(get_db)):
     """Return top 20 training records."""
     samples = db.query(TrainingDataset).limit(20).all()
     return samples
 
-@app.get("/api/enrichment/summary")
+@api_router.get("/enrichment/summary")
 def enrichment_summary(db: Session = Depends(get_db)):
     """Stats on enriched data."""
     enriched_provinces = db.query(Province).filter(Province.decision_number != None).count()
@@ -335,6 +343,10 @@ def enrichment_summary(db: Session = Depends(get_db)):
         "enriched_wards": enriched_wards,
     }
 
+# Register API router
+app.include_router(api_router)
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8080)
+    # Changed port to 8081 to match VPS setup (avoiding 8080 which might be used by Docker)
+    uvicorn.run(app, host="0.0.0.0", port=8081)

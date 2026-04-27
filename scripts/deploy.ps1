@@ -23,31 +23,43 @@ Write-Host "  Deploying VN Address Intelligence (Windows)"
 Write-Host "  Target: ${REMOTE}:${APP_DIR}"
 Write-Host "══════════════════════════════════════════════" -ForegroundColor Cyan
 
-# ── 2. Check for rsync ──
-if (-not (Get-Command rsync -ErrorAction SilentlyContinue)) {
-    Write-Host "❌ Error: rsync not found! Please install Git for Windows or use MobaXterm's rsync." -ForegroundColor Red
-    exit 1
+# ── 2. Check for rsync and Sync ──
+if (Get-Command rsync -ErrorAction SilentlyContinue) {
+    Write-Host "[1/3] Syncing files to VPS using rsync..." -ForegroundColor Yellow
+    rsync -avz --progress `
+        --exclude='.git' `
+        --exclude='.venv' `
+        --exclude='__pycache__' `
+        --exclude='*.pyc' `
+        --exclude='.env' `
+        --exclude='logs/' `
+        --exclude='evidence/' `
+        --exclude='models/' `
+        --exclude='data/*.json' `
+        --exclude='data/seed/' `
+        --exclude='data/db_stats_history.json' `
+        --exclude='docs/private/' `
+        --exclude='scratch/' `
+        --exclude='ls_env/' `
+        --exclude='node_modules/' `
+        --exclude='publish/' `
+        ./ "${REMOTE}:${APP_DIR}/"
+} else {
+    Write-Host "[1/3] rsync not found. Using publish script + zip + scp fallback..." -ForegroundColor Yellow
+    
+    # Run publish script to prepare clean folder
+    & .\scripts\publish.ps1
+    
+    Write-Host "Zipping publish folder..." -ForegroundColor Yellow
+    if (Test-Path "publish.zip") { Remove-Item "publish.zip" -Force }
+    Compress-Archive -Path .\publish\* -DestinationPath .\publish.zip -Force
+    
+    Write-Host "Uploading publish.zip via scp (this might take a moment)..." -ForegroundColor Yellow
+    scp .\publish.zip "${REMOTE}:/tmp/vnai_publish.zip"
+    
+    Write-Host "Extracting files on remote server..." -ForegroundColor Yellow
+    ssh $REMOTE "unzip -o /tmp/vnai_publish.zip -d $APP_DIR && rm /tmp/vnai_publish.zip"
 }
-
-# ── 3. Sync files via rsync ──
-Write-Host "[1/3] Syncing files to VPS..." -ForegroundColor Yellow
-rsync -avz --progress `
-    --exclude='.git' `
-    --exclude='.venv' `
-    --exclude='__pycache__' `
-    --exclude='*.pyc' `
-    --exclude='.env' `
-    --exclude='logs/' `
-    --exclude='evidence/' `
-    --exclude='models/' `
-    --exclude='data/*.json' `
-    --exclude='data/seed/' `
-    --exclude='data/db_stats_history.json' `
-    --exclude='docs/private/' `
-    --exclude='scratch/' `
-    --exclude='ls_env/' `
-    --exclude='node_modules/' `
-    ./ "${REMOTE}:${APP_DIR}/"
 
 # ── 4. Remote: install deps + restart ──
 Write-Host "[2/3] Updating dependencies and restarting services..." -ForegroundColor Yellow

@@ -615,6 +615,32 @@ tbody tr:hover td { color: var(--text-primary); }
   line-height: 1.6;
 }
 
+.input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.btn-clear-input {
+  position: absolute;
+  right: 8px;
+  background: transparent;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: 4px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color var(--transition);
+}
+.btn-clear-input:hover {
+  color: var(--text-primary);
+}
+.form-input.has-clear {
+  padding-right: 32px;
+}
+
 /* ══════════════════════════════════════════
    NER ENTITY HIGHLIGHTING
    ══════════════════════════════════════════ */
