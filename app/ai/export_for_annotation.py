@@ -24,7 +24,7 @@ from utils.address_cleaner import AddressCleaner
 from utils.config_loader import load_config_with_env
 
 # ──────────────────────────────────────────────────────────────────────────────
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+logging.basicConfig(level=logging.INFO, format="%(asctime)s.%(msecs)03d [%(levelname)s] %(message)s", datefmt="%H:%M:%S")
 logger = logging.getLogger("ExportAnnotation")
 
 import datetime

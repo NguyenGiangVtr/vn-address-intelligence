@@ -17,7 +17,7 @@ from app.core.database import engine, SessionLocal, Province, District, Ward, Ad
 from pathlib import Path
 import json
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s.%(msecs)03d [%(levelname)s] %(message)s", datefmt="%H:%M:%S")
 logger = logging.getLogger("Seeders")
 
 def seed_master_data(data_dir: str):

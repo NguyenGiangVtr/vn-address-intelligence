@@ -85,6 +85,64 @@ const TRAINING_HISTORY = [
   { version: "v2.4", accuracy: 92.4, f1: 90.1, samples: 25130, date: "2026-04-24" },
 ];
 
+// ─── Formatting Helpers ───
+function setupNumberInputFormatting() {
+  const numberInputs = ['batch-size', 'osm-target-total', 'export-limit'];
+  numberInputs.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+
+    // Initial format
+    if (el.value) {
+      const numeric = el.value.replace(/\D/g, '');
+      if (numeric) el.value = parseInt(numeric).toLocaleString('vi-VN');
+    }
+
+    el.addEventListener('input', (e) => {
+      const input = e.target;
+      const originalValue = input.value;
+      const originalCursorPos = input.selectionStart;
+
+      // Count digits before cursor in the original value
+      const digitsBeforeCursor = (originalValue.substring(0, originalCursorPos).match(/\d/g) || []).length;
+
+      const digitsOnly = originalValue.replace(/\D/g, '');
+      if (digitsOnly === '') {
+        input.value = '';
+        return;
+      }
+
+      const formattedValue = parseInt(digitsOnly).toLocaleString('vi-VN');
+      input.value = formattedValue;
+
+      // Calculate new cursor position based on the same number of digits
+      let newCursorPos = 0;
+      let digitsSeen = 0;
+      for (let i = 0; i < formattedValue.length; i++) {
+        if (/\d/.test(formattedValue[i])) {
+          digitsSeen++;
+        }
+        newCursorPos = i + 1;
+        if (digitsSeen === digitsBeforeCursor) break;
+      }
+      input.setSelectionRange(newCursorPos, newCursorPos);
+    });
+  });
+}
+
+function getNumericInputValue(id) {
+  const el = document.getElementById(id);
+  if (!el) return 0;
+  return parseInt(el.value.replace(/\D/g, '') || '0', 10);
+}
+
+function formatLogTime() {
+  const d = new Date();
+  const time = d.toLocaleTimeString('vi-VN', { hour12: false });
+  const ms = String(d.getMilliseconds()).padStart(3, '0');
+  return `${time}.${ms}`;
+}
+
 // ─── INIT ───
 document.addEventListener("DOMContentLoaded", () => {
   if (!window.VNAIControls) {
@@ -95,7 +153,6 @@ document.addEventListener("DOMContentLoaded", () => {
   setupNavigation();
   applyUnifiedControlTemplate();
   populateLabelRegistry();
-  initOverviewChart();
   setupParserTool();
   setupBatchTool();
   initDashboardRefreshControls();
@@ -105,6 +162,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initAdminManager();
   initModelBenchmarkUI();
   populateTrainingHistory();
+  setupNumberInputFormatting();
 
   // Refresh stats every 30 seconds
   setInterval(fetchStats, 30000);
@@ -125,7 +183,7 @@ function setDashboardRefreshState(isLoading) {
 function updateDashboardRefreshTime() {
   const label = document.getElementById('dashboard-last-refresh');
   if (!label) return;
-  label.textContent = `Cập nhật lúc ${new Date().toLocaleTimeString('vi-VN')}`;
+  label.textContent = `Cập nhật lúc ${formatLogTime()}`;
 }
 
 function initDashboardRefreshControls() {
@@ -196,7 +254,7 @@ function isModelTargetPassed(metric) {
 function formatBenchmarkMetric(metric, key) {
   if (key === "f1" || key === "googleMatch") return `${metric[key].toFixed(1)}%`;
   if (key === "throughput") return `${metric[key].toFixed(1)} addr/s`;
-  if (key === "costPerMillion") return `$${metric[key].toFixed(0)}`;
+  if (key === "costPerMillion") return `$${metric[key].toLocaleString()}`;
   return String(metric[key]);
 }
 
@@ -232,7 +290,7 @@ function renderKpiCards(models) {
   const costEl = document.getElementById("kpi-cost-current");
   const costStatus = document.getElementById("kpi-cost-status");
   if (costEl && costStatus && bestCost) {
-    costEl.textContent = `$${bestCost.costPerMillion.toFixed(0)}`;
+    costEl.textContent = `$${bestCost.costPerMillion.toLocaleString()}`;
     costStatus.className = `stat-change ${bestCost.costPerMillion < KPI_TARGETS.costPerMillion ? "kpi-pass" : "kpi-fail"}`;
     costStatus.textContent = `${bestCost.name} | Target < $${KPI_TARGETS.costPerMillion}`;
   }
@@ -262,7 +320,7 @@ function renderExperimentTable(models) {
         <td>${formatBenchmarkMetric(metric, "throughput")}</td>
         <td>${formatBenchmarkMetric(metric, "costPerMillion")}</td>
         <td>${formatBenchmarkMetric(metric, "googleMatch")}</td>
-        <td>F1≥${KPI_TARGETS.f1}% | TPS≥${KPI_TARGETS.throughput} | Cost&lt;$${KPI_TARGETS.costPerMillion} | Match≥${KPI_TARGETS.googleMatch}%</td>
+        <td>F1≥${KPI_TARGETS.f1}% | TPS≥${KPI_TARGETS.throughput} | Cost&lt;$${KPI_TARGETS.costPerMillion.toLocaleString()} | Match≥${KPI_TARGETS.googleMatch}%</td>
         <td><span class="badge ${statusClass}">${statusText}</span></td>
       </tr>
     `;
@@ -610,7 +668,7 @@ function renderOSMSummary(summary) {
 
   const lastRefresh = document.getElementById("osm-last-refresh");
   if (lastRefresh) {
-    lastRefresh.textContent = `Cập nhật lúc ${new Date().toLocaleTimeString('vi-VN')}`;
+    lastRefresh.textContent = `Cập nhật lúc ${formatLogTime()}`;
   }
 }
 
@@ -702,7 +760,7 @@ async function previewOSMCountsFromUI() {
 async function runOSMJobFromUI() {
   try {
     const limitProvinces = Number.parseInt(document.getElementById("osm-limit-provinces")?.value || "63", 10);
-    const targetTotal = Number.parseInt(document.getElementById("osm-target-total")?.value || "5000000", 10);
+    const targetTotal = getNumericInputValue("osm-target-total") || 5000000;
     const confirmMessage = `Chạy crawl OSM cho ${limitProvinces} tỉnh/thành với target ${targetTotal.toLocaleString()} entities?`;
 
     if (showConfirm) {
@@ -828,17 +886,35 @@ function setupNavigation() {
 // ═══════════════════════════════════════════════════════════
 // OVERVIEW CHART
 // ═══════════════════════════════════════════════════════════
-function initOverviewChart() {
+let overviewChart = null;
+
+function renderOverviewChart(stats) {
   const ctx = document.getElementById("chart-overview");
   if (!ctx) return;
 
-  new Chart(ctx.getContext("2d"), {
+  const dataValues = [
+    stats?.master?.provinces || 0,
+    stats?.master?.districts || 0,
+    stats?.master?.wards || 0,
+    stats?.osm?.streets || 0,
+    stats?.osm?.buildings || 0,
+    stats?.ai?.training_samples || 0,
+    stats?.ai?.cleansing_queue || 0
+  ];
+
+  if (overviewChart) {
+    overviewChart.data.datasets[0].data = dataValues;
+    overviewChart.update();
+    return;
+  }
+
+  overviewChart = new Chart(ctx.getContext("2d"), {
     type: "bar",
     data: {
       labels: ["mat.province", "mat.district", "mat.ward", "osm.streets", "osm.buildings", "ath.training", "prq.queue"],
       datasets: [{
         label: "Records",
-        data: [97, 767, 15563, 281376, 29889, 25130, 505094],
+        data: dataValues,
         backgroundColor: [
           "rgba(129,140,248,0.7)", "rgba(129,140,248,0.5)", "rgba(129,140,248,0.3)",
           "rgba(52,211,153,0.7)", "rgba(52,211,153,0.5)",
@@ -1058,10 +1134,10 @@ function setupBatchTool() {
   const log = document.getElementById("batch-log");
 
   if (btnStart) btnStart.addEventListener("click", () => {
-    const size = document.getElementById("batch-size").value;
+    const size = getNumericInputValue("batch-size") || 1000;
     const method = document.getElementById("batch-method").value;
-    log.innerHTML = `[${new Date().toLocaleTimeString()}] Starting batch: ${size} records, method=${method}\n`;
-    log.innerHTML += `[${new Date().toLocaleTimeString()}] Connecting to prq.address_cleansing_queue...\n`;
+    log.innerHTML = `[${formatLogTime()}] Starting batch: ${size} records, method=${method}\n`;
+    log.innerHTML += `[${formatLogTime()}] Connecting to prq.address_cleansing_queue...\n`;
 
 
     // Simulate progress
@@ -1072,21 +1148,21 @@ function setupBatchTool() {
       const elapsed = (Date.now() - startTime) / 1000;
       const tps = elapsed > 0 ? Math.round(processed / elapsed) : 0;
 
-      if (processed >= parseInt(size)) {
-        processed = parseInt(size);
+      if (processed >= size) {
+        processed = size;
         clearInterval(interval);
-        log.innerHTML += `[${new Date().toLocaleTimeString()}] ✅ Batch complete: ${processed.toLocaleString()} records processed\n`;
+        log.innerHTML += `[${formatLogTime()}] ✅ Batch complete: ${processed.toLocaleString()} records processed\n`;
         document.getElementById("batch-done").textContent = processed.toLocaleString();
         document.getElementById("batch-throughput").textContent = `${tps.toLocaleString()} items/s`;
         return;
       }
 
       document.getElementById("batch-throughput").textContent = `${tps.toLocaleString()} items/s`;
-      log.innerHTML += `[${new Date().toLocaleTimeString()}] Processing... ${processed.toLocaleString()}/${parseInt(size).toLocaleString()}\n`;
+      log.innerHTML += `[${formatLogTime()}] Processing... ${processed.toLocaleString()}/${size.toLocaleString()}\n`;
       log.scrollTop = log.scrollHeight;
     }, 800);
 
-    btnStop.onclick = () => { clearInterval(interval); log.innerHTML += `\n[${new Date().toLocaleTimeString()}] ⛔ Batch stopped by user\n`; };
+    btnStop.onclick = () => { clearInterval(interval); log.innerHTML += `\n[${formatLogTime()}] ⛔ Batch stopped by user\n`; };
   });
 }
 
@@ -1126,6 +1202,9 @@ async function fetchStats(options = {}) {
       if (document.getElementById('district-count')) document.getElementById('district-count').textContent = data.master.districts.toLocaleString();
       if (document.getElementById('ward-count')) document.getElementById('ward-count').textContent = data.master.wards.toLocaleString();
     }
+
+    // Update Chart
+    renderOverviewChart(data);
 
     // Update Visitors
     if (data.visitors) {
@@ -1317,7 +1396,7 @@ async function showDetails(level, id) {
         <div class="flex justify-between"><span>Phiên bản:</span><span class="badge info">Admin v${u.admin_version}</span></div>
         <div class="flex justify-between"><span>Mã GSO:</span><span class="text-mono" id="current-unit-code">${u.province_no || u.province_no || u.district_no || u.ward_no || "N/A"}</span></div>
         <div class="flex justify-between"><span>Dân số:</span><span class="font-600">${(u.population || 0).toLocaleString()} người</span></div>
-        <div class="flex justify-between"><span>Diện tích:</span><span class="font-600">${u.area_km2 || 0} km²</span></div>
+        <div class="flex justify-between"><span>Diện tích:</span><span class="font-600">${(u.area_km2 || 0).toLocaleString()} km²</span></div>
         <div class="nav-divider"></div>
         <div>
           <div class="stat-label">Nghị quyết/Quyết định:</div>
@@ -1538,7 +1617,7 @@ async function syncAllProvinces() {
     return;
   }
 
-  const confirmMsg = `Hệ thống sẽ bắt đầu đồng bộ tuần tự ${nsoProvinces.length} tỉnh/thành. Quá trình này có thể kéo dài vài phút tùy thuộc vào tốc độ mạng. Bạn có chắc chắn muốn bắt đầu?`;
+  const confirmMsg = `Hệ thống sẽ bắt đầu đồng bộ tuần tự ${nsoProvinces.length.toLocaleString()} tỉnh/thành. Quá trình này có thể kéo dài vài phút tùy thuộc vào tốc độ mạng. Bạn có chắc chắn muốn bắt đầu?`;
   const isConfirmed = await showConfirm(confirmMsg);
   if (!isConfirmed) return;
 
@@ -1549,7 +1628,7 @@ async function syncAllProvinces() {
   try {
     for (let i = 0; i < nsoProvinces.length; i++) {
       const p = nsoProvinces[i];
-      updateSyncStatus(`SYNCING (${i + 1}/${nsoProvinces.length})`, 'var(--warning)');
+      updateSyncStatus(`SYNCING (${(i + 1).toLocaleString()}/${nsoProvinces.length.toLocaleString()})`, 'var(--warning)');
 
       // Update UI to highlight current province (optional but good)
       // For now we just call the sync
@@ -1593,6 +1672,46 @@ window.editAdminUnit = async function(level, id) {
     document.getElementById('modal-admin-unit').classList.add('active');
   } catch (e) {
     showToast('Lỗi khi tải thông tin chi tiết', 'danger');
+  }
+}
+
+async function renderExtraFields(item = null) {
+  const level = document.getElementById('admin-crud-level').value;
+  const container = document.getElementById('admin-form-extra');
+  container.innerHTML = '';
+
+  if (level === 'province') return;
+
+  const label = level === 'district' ? 'Tỉnh / Thành phố' : 'Quận / Huyện';
+  const parentId = item ? (level === 'district' ? item.province_id : item.district_id) : '';
+
+  container.innerHTML = `
+    <div class="form-group">
+      <label>${label}</label>
+      <select id="admin-form-parent" class="form-input" required>
+        <option value="">-- Đang tải... --</option>
+      </select>
+    </div>
+  `;
+
+  try {
+    const parentLevel = level === 'district' ? 'province' : 'district';
+    let url = `${API_BASE}/${parentLevel}s?limit=500`;
+    
+    // For ward, we might need to filter districts by current selected province if possible
+    // but the simple approach is to load all or use the filter's selected province
+    if (level === 'ward') {
+        const filterProvId = document.getElementById('admin-crud-province-select').value;
+        if (filterProvId) url += `&province_id=${filterProvId}`;
+    }
+
+    const res = await fetch(url, { headers: getAuthHeader() });
+    const data = await res.json();
+    
+    renderUnifiedSelectOptions('admin-form-parent', data, `${parentLevel}_id`, `${parentLevel}_name`, '-- Chọn đơn vị cha --');
+    if (parentId) document.getElementById('admin-form-parent').value = parentId;
+  } catch (e) {
+    console.error('Lỗi khi tải danh sách đơn vị cha', e);
   }
 }
 
@@ -1769,7 +1888,7 @@ async function loadAdminData() {
       </tr>
     `).join('');
 
-    title.innerHTML = `<i class="fa-solid fa-list mr-8"></i> Danh sách ${level === 'province' ? 'Tỉnh/Thành' : level === 'district' ? 'Quận/Huyện' : 'Phường/Xã'} (${data.length})`;
+    title.innerHTML = `<i class="fa-solid fa-list mr-8"></i> Danh sách ${level === 'province' ? 'Tỉnh/Thành' : level === 'district' ? 'Quận/Huyện' : 'Phường/Xã'} (${data.length.toLocaleString()})`;
   } catch (e) {
     tableBody.innerHTML = '<tr><td colspan="6" class="text-center p-24 text-danger">Lỗi khi tải dữ liệu</td></tr>';
   }

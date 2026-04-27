@@ -18,7 +18,7 @@ from app.core.database import SessionLocal, OSMStreet, OSMBuilding, OSMPoi, Prov
 from app.core.config import Config
 from sqlalchemy import text as sql_text
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+logging.basicConfig(level=logging.INFO, format="%(asctime)s.%(msecs)03d [%(levelname)s] %(message)s", datefmt="%H:%M:%S")
 logger = logging.getLogger("OSMFetcher")
 
 class OSMFetcher:

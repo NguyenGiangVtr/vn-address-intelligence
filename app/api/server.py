@@ -6,6 +6,7 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session, aliased
 from sqlalchemy import String, and_, or_, text
 import os
+import logging
 import time
 import jwt
 import sys
@@ -16,12 +17,17 @@ from uuid import uuid4
 from pathlib import Path
 from datetime import datetime, timedelta
 from difflib import SequenceMatcher
+from concurrent.futures import ThreadPoolExecutor
 from app.core.database import SessionLocal, Province, District, Ward, OSMStreet, OSMBuilding, OSMPoi, OSMRawEntity, TrainingDataset, AddressCleansingQueue, WardMapping
 from app.services.auth import verify_password, create_access_token, ALGORITHM, SECRET_KEY
 from app.services.nso_sync import sync_full_nso, sync_province_nso, sync_logs
 from app.services.nso_api import get_nso_provinces, get_nso_districts, get_nso_wards
 from app.api import schemas
 from typing import List, Optional
+
+# ── Logging Setup ──
+logging.basicConfig(level=logging.INFO, format="%(asctime)s.%(msecs)03d [%(levelname)s] %(name)s — %(message)s", datefmt="%H:%M:%S")
+logger = logging.getLogger("VNAI_Server")
 
 app = FastAPI(
     title="VN Address Intelligence API",
@@ -82,6 +88,9 @@ osm_job_state = {
     "error": None,
     "outputTail": None,
 }
+
+parser_runtime_lock = threading.Lock()
+parser_runtime_bundle = None
 
 
 def _update_benchmark_job_state(**kwargs):
@@ -208,6 +217,164 @@ def _run_osm_job(job_id: str, limit_provinces: int, target_total: int):
             error=f"{exc}\n{traceback.format_exc()}",
             outputTail=None,
         )
+
+
+def _serialize_parser_sample(sample: AddressCleansingQueue) -> dict:
+    return {
+        "id": sample.id,
+        "raw_address": sample.raw_address,
+        "street_address": sample.street_address,
+        "ward_name": sample.ward_name,
+        "district_name": sample.district_name,
+        "province_name": sample.province_name,
+        "address_standardized": sample.address_standardized,
+        "selected_ai_model": sample.selected_ai_model,
+        "processing_status": sample.processing_status,
+        "processing_method": sample.processing_method,
+        "updated_at": sample.updated_at.isoformat() + "Z" if sample.updated_at else None,
+    }
+
+
+def _load_parser_corpus(db: Session) -> list[str]:
+    corpus: list[str] = []
+
+    standardized_rows = (
+        db.query(AddressCleansingQueue.address_standardized)
+        .filter(AddressCleansingQueue.address_standardized.isnot(None))
+        .distinct()
+        .limit(5000)
+        .all()
+    )
+    corpus = [row[0] for row in standardized_rows if row and row[0]]
+
+    if corpus:
+        return corpus
+
+    hierarchy_rows = (
+        db.query(Ward.ward_name, District.district_name, Province.province_name)
+        .join(District, Ward.district_id == District.district_id)
+        .join(Province, District.province_id == Province.province_id)
+        .filter(Ward.is_deleted == False, District.is_deleted == False, Province.is_deleted == False)
+        .limit(5000)
+        .all()
+    )
+    return [f"{ward}, {district}, {province}" for ward, district, province in hierarchy_rows if ward and district and province]
+
+
+def _build_parser_runtime_bundle() -> dict:
+    from app.ai.models import LLMQwen3, PhoBERTSiamese, SiameseMGTE
+    from app.ai.export_for_annotation import PreLabeler
+
+    with SessionLocal() as db:
+        corpus = _load_parser_corpus(db)
+
+    phobert = PhoBERTSiamese(model_name="vinai/phobert-base", device="auto")
+    mgte = SiameseMGTE(model_name="Alibaba-NLP/gte-multilingual-base", device="auto")
+    llm = LLMQwen3(model_name="Qwen/Qwen3-4B", use_quantization=False, device="auto")
+
+    if corpus:
+        phobert.encode_corpus(corpus)
+        mgte.encode_corpus(corpus)
+
+    return {
+        "phobert": phobert,
+        "mgte": mgte,
+        "llm": llm,
+        "prelabeler": PreLabeler,
+        "corpus": corpus,
+    }
+
+
+def _get_parser_runtime_bundle() -> dict:
+    global parser_runtime_bundle
+    with parser_runtime_lock:
+        if parser_runtime_bundle is None:
+            parser_runtime_bundle = _build_parser_runtime_bundle()
+        return parser_runtime_bundle
+
+
+def _get_random_parser_sample(db: Session) -> AddressCleansingQueue:
+    return (
+        db.query(AddressCleansingQueue)
+        .filter(AddressCleansingQueue.raw_address.isnot(None))
+        .order_by(text("random()"))
+        .first()
+    )
+
+
+def _run_parser_research(sample: AddressCleansingQueue) -> dict:
+    bundle = _get_parser_runtime_bundle()
+    raw_address = sample.raw_address or ""
+    ward_name = sample.ward_name
+    district_name = sample.district_name
+    province_name = sample.province_name
+
+    def _build_llm_candidates() -> list[str]:
+        corpus = bundle.get("corpus") or []
+        mgte = bundle.get("mgte")
+        if not corpus or not getattr(mgte, "_corpus_emb", None):
+            return []
+
+        import numpy as np
+
+        q_emb = mgte.model.encode([raw_address], normalize_embeddings=True, convert_to_numpy=True)[0]
+        scores = mgte._corpus_emb @ q_emb
+        top_idx = np.argsort(scores)[::-1][:5]
+        return [corpus[int(i)] for i in top_idx]
+
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        futures = {
+            "prelabeler": executor.submit(
+                bundle["prelabeler"].predict,
+                raw_address,
+                ward_name,
+                district_name,
+                province_name,
+            ),
+            "phobert": executor.submit(bundle["phobert"].normalize, raw_address),
+            "mgte": executor.submit(bundle["mgte"].normalize, raw_address),
+            "llm": executor.submit(bundle["llm"].normalize, raw_address, _build_llm_candidates()),
+        }
+
+        prelabeler_result = futures["prelabeler"].result()
+        phobert_normalized, phobert_score, phobert_latency = futures["phobert"].result()
+        mgte_normalized, mgte_score, mgte_latency = futures["mgte"].result()
+        llm_normalized, llm_score, llm_latency = futures["llm"].result()
+
+    return {
+        "sample": _serialize_parser_sample(sample),
+        "analysis_input": raw_address,
+        "outputs": {
+            "prelabeler": {
+                "mode": "rule_based_hybrid",
+                "result": prelabeler_result,
+                "entityCount": len(prelabeler_result),
+            },
+            "phobert": {
+                "mode": "phoBERT_siamese",
+                "normalizedAddress": phobert_normalized,
+                "score": round(phobert_score, 4),
+                "latencyMs": round(phobert_latency, 2),
+            },
+            "mgte": {
+                "mode": "mGTE_siamese",
+                "normalizedAddress": mgte_normalized,
+                "score": round(mgte_score, 4),
+                "latencyMs": round(mgte_latency, 2),
+            },
+            "llm": {
+                "mode": "qwen3_llm",
+                "normalizedAddress": llm_normalized if isinstance(llm_normalized, str) else llm_normalized.get("full_address") if isinstance(llm_normalized, dict) else str(llm_normalized),
+                "score": round(llm_score, 4),
+                "latencyMs": round(llm_latency, 2),
+            },
+        },
+        "meta": {
+            "corpusSize": len(bundle.get("corpus") or []),
+            "evaluatedAt": datetime.utcnow().isoformat() + "Z",
+            "note": "Random sample from prq.address_cleansing_queue; models are executed on the same input for research comparison.",
+        },
+    }
 
 # Enable CORS for frontend
 app.add_middleware(
@@ -519,17 +686,17 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     ADMIN_USER = os.getenv("ADMIN_USER", "admin")
     ADMIN_PASS = os.getenv("ADMIN_PASS", "vnai@2026")
     
-    print(f"Login attempt for user: {form_data.username}")
+    logger.info(f"Login attempt for user: {form_data.username}")
     
     if form_data.username != ADMIN_USER or form_data.password != ADMIN_PASS:
-        print(f"Login failed for user: {form_data.username}")
+        logger.warning(f"Login failed for user: {form_data.username}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
     
-    print(f"Login successful for user: {form_data.username}")
+    logger.info(f"Login successful for user: {form_data.username}")
     access_token = create_access_token(data={"sub": form_data.username})
     return {"access_token": access_token, "token_type": "bearer"}
 
@@ -540,7 +707,7 @@ def get_stats(db: Session = Depends(get_db)):
         try:
             return query.count()
         except Exception as e:
-            print(f"Stats Error: {e}")
+            logger.error(f"Stats Error: {e}")
             return 0
 
     return {
@@ -1043,8 +1210,73 @@ def delete_ward(ward_id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"status": "success", "message": "Ward deleted"}
 
+# ── ADDRESS PARSER RESEARCH ENDPOINTS ──
+
+@api_router.get("/parser/sample")
+def get_parser_sample(db: Session = Depends(get_db)):
+    """Lấy một mẫu địa chỉ ngẫu nhiên từ queue để nghiên cứu."""
+    sample = _get_random_parser_sample(db)
+    if not sample:
+        raise HTTPException(status_code=404, detail="No samples found in queue")
+    return _serialize_parser_sample(sample)
+
+
+@api_router.post("/parser/analyze")
+def analyze_parser_address(data: dict, db: Session = Depends(get_db)):
+    """
+    Phân tích địa chỉ bằng nhiều mô hình (Research Comparison).
+    Hỗ trợ cả phân tích từ ID (trong DB) hoặc text thô.
+    """
+    sample_id = data.get("id")
+    raw_text = data.get("raw_address")
+    
+    if sample_id:
+        sample = db.query(AddressCleansingQueue).filter(AddressCleansingQueue.id == sample_id).first()
+    elif raw_text:
+        # Tạo sample giả lập nếu chỉ có text
+        sample = AddressCleansingQueue(
+            raw_address=raw_text,
+            ward_name=data.get("ward_name"),
+            district_name=data.get("district_name"),
+            province_name=data.get("province_name")
+        )
+    else:
+        raise HTTPException(status_code=400, detail="Missing id or raw_address")
+    
+    if not sample:
+        raise HTTPException(status_code=404, detail="Sample not found")
+        
+    try:
+        return _run_parser_research(sample)
+    except Exception as e:
+        logger.error(f"Parser Research Error: {e}\n{traceback.format_exc()}")
+        # Fallback: Nếu model thật chưa load được (do thiếu GPU/RAM), trả về kết quả PreLabeler tối thiểu
+        from app.ai.export_for_annotation import PreLabeler
+        prelabeler_result = PreLabeler.predict(
+            sample.raw_address,
+            sample.ward_name,
+            sample.district_name,
+            sample.province_name
+        )
+        return {
+            "sample": _serialize_parser_sample(sample) if sample_id else {"raw_address": raw_text},
+            "analysis_input": sample.raw_address,
+            "outputs": {
+                "prelabeler": {
+                    "mode": "rule_based_hybrid",
+                    "result": prelabeler_result,
+                    "entityCount": len(prelabeler_result),
+                }
+            },
+            "error": str(e),
+            "note": "Running in fallback mode (PreLabeler only) due to inference engine error."
+        }
+
 # Register API router
-app.include_router(api_router)
+api_router_v1 = APIRouter(prefix="/v1")
+api_router_v1.include_router(api_router)
+app.include_router(api_router) # Support legacy /api/*
+app.include_router(api_router_v1) # Support /api/v1/*
 
 if __name__ == "__main__":
     import uvicorn

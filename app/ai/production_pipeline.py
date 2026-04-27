@@ -21,7 +21,7 @@ from models import SiameseMGTE, LLMQwen3, AddressNER
 from utils.config_loader import load_config_with_env
 
 # ──────────────────────────────────────────────────────────────────────────────
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+logging.basicConfig(level=logging.INFO, format="%(asctime)s.%(msecs)03d [%(levelname)s] %(message)s", datefmt="%H:%M:%S")
 logger = logging.getLogger("ProductionPipeline")
 
 def run_pipeline(config_path: str, limit: int = None):

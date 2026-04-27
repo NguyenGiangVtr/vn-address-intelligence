@@ -16,7 +16,7 @@ from app.core.database import SessionLocal, Province, District, Ward
 from sqlalchemy import text as sql_text
 from datetime import datetime
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s.%(msecs)03d [%(levelname)s] %(message)s", datefmt="%H:%M:%S")
 logger = logging.getLogger("GSOCrawler")
 
 class GSOCrawler:

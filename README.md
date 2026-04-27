@@ -35,6 +35,7 @@ Hệ thống cung cấp Dashboard hiện đại (Dark Mode, Glassmorphism) để
 - **Admin Explorer**: Tra cứu các Nghị quyết sáp nhập và tình trạng làm giàu dữ liệu từng tỉnh.
 - **OSM Monitoring**: Giám sát tiến trình crawl dữ liệu bản đồ.
 - **AI Hub**: Xem trước các mẫu dữ liệu huấn luyện và trạng thái mô hình.
+- **Address Parser Flow**: Luồng xử lý, sample ngẫu nhiên và cơ chế parser hiện tại được ghi lại tại [docs/address-parser-flow.md](docs/address-parser-flow.md).
 
 **Khởi chạy UI:**
 ```bash

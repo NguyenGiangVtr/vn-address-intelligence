@@ -33,7 +33,7 @@ from seqeval.metrics import classification_report, f1_score, precision_score, re
 sys.path.insert(0, str(Path(__file__).parent))
 from constants import get_ner_label_list
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+logging.basicConfig(level=logging.INFO, format="%(asctime)s.%(msecs)03d [%(levelname)s] %(message)s", datefmt="%H:%M:%S")
 logger = logging.getLogger("TrainNER")
 
 # ──────────────────────────────────────────────────────────────────────────────

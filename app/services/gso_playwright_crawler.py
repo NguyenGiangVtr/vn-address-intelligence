@@ -16,7 +16,7 @@ import logging
 from app.core.database import SessionLocal
 from sqlalchemy import text as sql_text
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+logging.basicConfig(level=logging.INFO, format="%(asctime)s.%(msecs)03d [%(levelname)s] %(message)s", datefmt="%H:%M:%S")
 logger = logging.getLogger("GSOPlywright")
 
 class GSOPlywrightCrawler:

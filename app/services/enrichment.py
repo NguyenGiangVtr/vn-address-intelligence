@@ -16,7 +16,7 @@ import re
 from app.core.database import engine
 from sqlalchemy import text as sql_text
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s.%(msecs)03d [%(levelname)s] %(message)s", datefmt="%H:%M:%S")
 logger = logging.getLogger("EnrichmentV2")
 
 def safe_read_csv(file_path):
