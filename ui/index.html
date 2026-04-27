@@ -115,6 +115,12 @@
                     <div class="page-header">
                         <h2>Dashboard</h2>
                         <p>Hệ thống Làm giàu và Chuẩn hóa Dữ liệu Địa chỉ Việt Nam</p>
+                        <div class="flex items-center gap-12 mt-12">
+                            <button class="btn btn-sm btn-ghost" id="btn-dashboard-refresh" type="button">
+                                <i class="fa-solid fa-arrow-rotate-right"></i> Làm mới số liệu
+                            </button>
+                            <span id="dashboard-last-refresh" class="text-tertiary" style="font-size:12px;">Chưa cập nhật</span>
+                        </div>
                     </div>
 
                     <div class="stats-grid">
@@ -300,7 +306,7 @@
                         <h2>Address Parser</h2>
                         <p>Paste địa chỉ thô để NER bóc tách thành phần thực thể realtime</p>
                     </div>
-                    <div class="tool-panel">
+                    <div class="tool-panel parser-tool-panel">
                         <div class="tool-input-section">
                             <div class="tool-section-title">Input</div>
                             <div class="form-group">
@@ -1117,6 +1123,7 @@
     </div>
 
     <div id="toast-container" class="toast-container"></div>
+    <script src="controls-template.js"></script>
     <script src="app.js"></script>
 </body>
 

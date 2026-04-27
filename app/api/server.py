@@ -90,6 +90,10 @@ def get_css():
 def get_js():
     return FileResponse('ui/app.js')
 
+@app.get("/controls-template.js")
+def get_controls_template_js():
+    return FileResponse('ui/controls-template.js')
+
 @app.get("/favicon.ico")
 def get_favicon():
     return FileResponse('ui/login.html') # Just return something to avoid 404 for now

@@ -6,6 +6,14 @@ const API_BASE = window.location.hostname === "localhost" || window.location.pro
   ? "http://localhost:8081/api"
   : "/api";
 
+const {
+  applyUnifiedControlTemplate,
+  renderLookupTemplateDatalist,
+  renderUnifiedSelectOptions,
+  showToast,
+  showConfirm
+} = window.VNAIControls || {};
+
 // ── Auth Check ──
 if (!localStorage.getItem('vnai_token') && !window.location.pathname.includes('login.html')) {
   window.location.href = 'login.html';
@@ -41,11 +49,18 @@ const SAMPLE_ADDRESSES = [
 
 // ─── INIT ───
 document.addEventListener("DOMContentLoaded", () => {
+  if (!window.VNAIControls) {
+    console.error('Missing controls-template.js. Shared UI controls are not initialized.');
+    return;
+  }
+
   setupNavigation();
+  applyUnifiedControlTemplate();
   populateLabelRegistry();
   initOverviewChart();
   setupParserTool();
   setupBatchTool();
+  initDashboardRefreshControls();
   fetchStats();
   initNSOSyncTool();
   initAdminManager();
@@ -55,6 +70,31 @@ document.addEventListener("DOMContentLoaded", () => {
   // Initialize Training Chart if on training page
   initIntelligenceChart();
 });
+
+function setDashboardRefreshState(isLoading) {
+  const btn = document.getElementById('btn-dashboard-refresh');
+  if (!btn) return;
+
+  btn.disabled = isLoading;
+  btn.innerHTML = isLoading
+    ? '<i class="fa-solid fa-spinner fa-spin"></i> Đang làm mới...'
+    : '<i class="fa-solid fa-arrow-rotate-right"></i> Làm mới số liệu';
+}
+
+function updateDashboardRefreshTime() {
+  const label = document.getElementById('dashboard-last-refresh');
+  if (!label) return;
+  label.textContent = `Cập nhật lúc ${new Date().toLocaleTimeString('vi-VN')}`;
+}
+
+function initDashboardRefreshControls() {
+  const btn = document.getElementById('btn-dashboard-refresh');
+  if (!btn) return;
+
+  btn.addEventListener('click', async () => {
+    await fetchStats({ manual: true });
+  });
+}
 
 let intelligenceChart = null;
 function initIntelligenceChart() {
@@ -425,8 +465,11 @@ function setupBatchTool() {
   });
 }
 
-async function fetchStats() {
+async function fetchStats(options = {}) {
+  const { manual = false } = options;
   try {
+    if (manual) setDashboardRefreshState(true);
+
     const response = await fetch(`${API_BASE}/stats`, {
       headers: getAuthHeader()
     });
@@ -465,8 +508,19 @@ async function fetchStats() {
       if (document.getElementById('stat-unique-ips')) document.getElementById('stat-unique-ips').textContent = data.visitors.unique.toLocaleString();
       if (document.getElementById('stat-online-users')) document.getElementById('stat-online-users').textContent = data.visitors.online.toLocaleString();
     }
+
+    updateDashboardRefreshTime();
+
+    if (manual && showToast) {
+      showToast('Đã làm mới số liệu Dashboard', 'success');
+    }
   } catch (err) {
     console.error("Stats Fetch Error:", err);
+    if (manual && showToast) {
+      showToast('Không thể làm mới số liệu Dashboard', 'danger');
+    }
+  } finally {
+    if (manual) setDashboardRefreshState(false);
   }
 }
 
@@ -524,12 +578,7 @@ async function initMappingV3() {
     try {
       const res = await fetch(`${API_BASE}/provinces?version=${mappingState.version}`, { headers: getAuthHeader() });
       const data = await res.json();
-      const list = document.getElementById('list-provinces');
-      mappingState.provinces = {}; // Clear
-      list.innerHTML = data.map(p => {
-        mappingState.provinces[p.province_name] = p.province_id;
-        return `<option value="${p.province_name}" data-id="${p.province_id}">`;
-      }).join('');
+      renderLookupTemplateDatalist('list-provinces', data, 'province_name', 'province_id', mappingState.provinces);
     } catch (e) { console.error(e); }
   };
 
@@ -566,11 +615,7 @@ async function initMappingV3() {
     try {
       const res = await fetch(`${API_BASE}/districts/${id}?version=${mappingState.version}`, { headers: getAuthHeader() });
       const data = await res.json();
-      const list = document.getElementById('list-districts');
-      list.innerHTML = data.map(d => {
-        mappingState.districts[d.district_name] = d.district_id;
-        return `<option value="${d.district_name}" data-id="${d.district_id}">`;
-      }).join('');
+      renderLookupTemplateDatalist('list-districts', data, 'district_name', 'district_id', mappingState.districts);
     } catch (e) { console.error(e); }
   });
 
@@ -601,12 +646,7 @@ async function initMappingV3() {
     try {
       const res = await fetch(`${API_BASE}/wards/${id}?version=${mappingState.version}`, { headers: getAuthHeader() });
       const data = await res.json();
-      const list = document.getElementById('list-wards');
-      list.innerHTML = data.map(w => {
-        const key = w.ward_name;
-        mappingState.wards[key] = w.ward_id;
-        return `<option value="${key}" data-id="${w.ward_id}">`;
-      }).join('');
+      renderLookupTemplateDatalist('list-wards', data, 'ward_name', 'ward_id', mappingState.wards);
     } catch (e) { console.error(e); }
   });
 
@@ -898,73 +938,6 @@ async function syncAllProvinces() {
   }
 }
 
-function showToast(message, type = 'success') {
-  const container = document.getElementById('toast-container');
-  if (!container) return;
-
-  const toast = document.createElement('div');
-  toast.className = `toast ${type}`;
-
-  const icon = type === 'success' ? 'fa-circle-check' :
-    type === 'danger' ? 'fa-circle-xmark' :
-      type === 'warning' ? 'fa-triangle-exclamation' : 'fa-circle-info';
-
-  toast.innerHTML = `
-    <i class="fa-solid ${icon} toast-icon"></i>
-    <div class="toast-content">${message}</div>
-    <div class="toast-close"><i class="fa-solid fa-xmark"></i></div>
-  `;
-
-  container.appendChild(toast);
-
-  // Auto remove
-  const timer = setTimeout(() => {
-    removeToast(toast);
-  }, 4000);
-
-  toast.querySelector('.toast-close').addEventListener('click', () => {
-    clearTimeout(timer);
-    removeToast(toast);
-  });
-}
-
-function removeToast(toast) {
-  toast.classList.add('hiding');
-  setTimeout(() => {
-    toast.remove();
-  }, 3000);
-}
-
-function showConfirm(message) {
-  return new Promise((resolve) => {
-    const overlay = document.getElementById('modal-overlay');
-    const msgEl = document.getElementById('confirm-message');
-    const btnOk = document.getElementById('btn-confirm-ok');
-    const btnCancel = document.getElementById('btn-confirm-cancel');
-
-    if (!overlay || !msgEl) {
-      resolve(confirm(message)); // Fallback
-      return;
-    }
-
-    msgEl.textContent = message;
-    overlay.classList.add('active');
-
-    const cleanUp = (result) => {
-      overlay.classList.remove('active');
-      btnOk.removeEventListener('click', onOk);
-      btnCancel.removeEventListener('click', onCancel);
-      resolve(result);
-    };
-
-    const onOk = () => cleanUp(true);
-    const onCancel = () => cleanUp(false);
-
-    btnOk.addEventListener('click', onOk);
-    btnCancel.addEventListener('click', onCancel);
-  });
-}
-
 // ═══ ADMINISTRATIVE MANAGER (CRUD) ═══
 
 window.editAdminUnit = async function(level, id) {
@@ -1098,26 +1071,22 @@ async function initAdminManager() {
 }
 
 async function loadAdminProvinces() {
-  const select = document.getElementById('admin-crud-province-select');
   try {
     const res = await fetch(`${API_BASE}/provinces?limit=100`, { headers: getAuthHeader() });
     const data = await res.json();
-    select.innerHTML = '<option value="">-- Tất cả --</option>' + 
-      data.map(p => `<option value="${p.province_id}">${p.province_name}</option>`).join('');
+    renderUnifiedSelectOptions('admin-crud-province-select', data, 'province_id', 'province_name', '-- Tất cả --');
   } catch (e) { console.error(e); }
 }
 
 async function loadAdminDistricts(provinceId) {
-  const select = document.getElementById('admin-crud-district-select');
   if (!provinceId) {
-    select.innerHTML = '<option value="">-- Chọn Tỉnh trước --</option>';
+    renderUnifiedSelectOptions('admin-crud-district-select', [], 'district_id', 'district_name', '-- Chọn Tỉnh trước --');
     return;
   }
   try {
     const res = await fetch(`${API_BASE}/districts?province_id=${provinceId}&limit=500`, { headers: getAuthHeader() });
     const data = await res.json();
-    select.innerHTML = '<option value="">-- Tất cả --</option>' + 
-      data.map(d => `<option value="${d.district_id}">${d.district_name}</option>`).join('');
+    renderUnifiedSelectOptions('admin-crud-district-select', data, 'district_id', 'district_name', '-- Tất cả --');
   } catch (e) { console.error(e); }
 }
 

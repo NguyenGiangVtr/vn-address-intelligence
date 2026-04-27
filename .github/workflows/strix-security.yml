@@ -1,0 +1,52 @@
+name: Strix Security Scan
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  strix-security:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Validate required secrets
+        env:
+          STRIX_LLM: ${{ secrets.STRIX_LLM }}
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+        run: |
+          missing=0
+          if [ -z "$STRIX_LLM" ]; then
+            echo "::error::Missing required secret: STRIX_LLM"
+            missing=1
+          fi
+          if [ -z "$LLM_API_KEY" ]; then
+            echo "::error::Missing required secret: LLM_API_KEY"
+            missing=1
+          fi
+          if [ "$missing" -ne 0 ]; then
+            exit 1
+          fi
+
+      - name: Install Strix CLI
+        run: |
+          python -m pip install --upgrade pip
+          pip install usestrix
+
+      - name: Strix execution step (baseline)
+        continue-on-error: true
+        env:
+          STRIX_LLM: ${{ secrets.STRIX_LLM }}
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+        run: |
+          strix -n --target ./app --scan-mode deep --instructions "Command Injection in FFmpeg subprocesses; XSS in VTT/SRT parsers; Path Traversal"

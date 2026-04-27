@@ -22,7 +22,7 @@ Thực hiện các lệnh này trên **VPS** (thông qua MobaXterm):
 ### 2.1. Upload Setup Script
 Sử dụng lệnh sau tại terminal máy local (PowerShell hoặc Git Bash) để đẩy file setup lên VPS:
 ```powershell
-scp scripts/vnai-vps-setup.sh root@157.66.81.69:/tmp/
+scp scripts/deployment/vnai-vps-setup.sh root@157.66.81.69:/tmp/
 ```
 
 ### 2.2. Chạy Setup
@@ -62,7 +62,7 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process
 ### Lựa chọn B: Dùng Git Bash
 Mở Git Bash tại thư mục dự án:
 ```bash
-bash scripts/deploy.sh
+bash scripts/deployment/deploy.sh
 ```
 
 ### Lựa chọn C: Tạo folder Publish (Dành cho Upload thủ công)

@@ -61,7 +61,7 @@ Dự án cung cấp bộ công cụ CLI mạnh mẽ qua `main.py`:
 | `python start.py check-db` | Kiểm tra thống kê dữ liệu & tốc độ tăng trưởng |
 | `python start.py fetch-osm --target 5000000` | Khởi chạy tiến trình crawl OSM (Mục tiêu 5M) |
 | `python start.py enrich-v2` | Làm giàu dữ liệu GSO & Cập nhật Admin V2 |
-| `python scripts/export_evidence.py` | Trích xuất file minh chứng (CSV) gửi báo cáo |
+| `python scripts/reporting/export_evidence.py` | Trích xuất file minh chứng (CSV) gửi báo cáo |
 
 ---
 

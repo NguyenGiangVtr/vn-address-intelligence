@@ -434,11 +434,22 @@ input, textarea, select { font-family: inherit; }
   padding: 18px;
 }
 
+.card-body.with-scroll {
+  overflow-y: auto;
+  max-height: 500px;
+}
+
 .content-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 12px;
   margin-bottom: 16px;
+}
+
+.content-grid > .card,
+.content-grid > div {
+  overflow-y: auto;
+  max-height: 600px;
 }
 .content-grid.full { grid-template-columns: 1fr; }
 .content-grid.triple { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
@@ -475,6 +486,8 @@ input, textarea, select { font-family: inherit; }
    ══════════════════════════════════════════ */
 .table-container {
   overflow-x: auto;
+  overflow-y: auto;
+  max-height: 100%;
 }
 table {
   width: 100%;
@@ -612,6 +625,18 @@ select.form-input {
   background-size: 16px;
   padding-right: 36px;
 }
+
+.control-template-dropdown {
+  border-color: var(--border-default);
+  background-color: var(--bg-app);
+  color: var(--text-primary);
+}
+
+.control-template-dropdown:focus {
+  border-color: var(--border-focus);
+  background: var(--bg-surface);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
 .form-input:focus, .form-textarea:focus {
   border-color: var(--border-focus);
   background: var(--bg-surface);
@@ -661,6 +686,8 @@ select.form-input {
   font-size: 14px;
   line-height: 2;
   min-height: 60px;
+  max-height: 400px;
+  overflow-y: auto;
 }
 
 .batch-log {
@@ -672,7 +699,8 @@ select.form-input {
   font-size: 12px;
   line-height: 1.6;
   color: #a9b1d6;
-  height: 250px;
+  max-height: 400px;
+  height: auto;
   overflow-y: auto;
   white-space: pre-wrap;
   word-break: break-all;
@@ -723,11 +751,28 @@ select.form-input {
   grid-template-columns: 1fr 1fr;
   gap: 12px;
 }
+
+.parser-tool-panel {
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+.parser-tool-panel .tool-input-section,
+.parser-tool-panel .tool-output-section {
+  height: auto;
+}
+
+.parser-tool-panel #parser-input {
+  min-height: 44px;
+  max-height: 120px;
+}
 .tool-input-section, .tool-output-section {
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   padding: 20px;
+  /* overflow-y: auto; */
+  max-height: 600px;
 }
 .tool-section-title {
   font-size: 12px;
@@ -1141,8 +1186,10 @@ select.form-input {
 /* Full Height Page specialized layout */
 .full-height-page {
   display: none; /* Hide by default */
-  height: calc(100vh - 100px); /* Adjust for header/top-header */
+  height: auto;
+  min-height: calc(100vh - 140px);
   flex-direction: column;
+  overflow-y: auto; /* Allow scrolling within page */
 }
 
 .full-height-page.active {
@@ -1150,7 +1197,7 @@ select.form-input {
 }
 
 #page-content:has(.full-height-page.active) {
-  overflow: hidden; /* Lock parent scroll when this page is active */
+  overflow-y: auto; /* Enable page scrolling when full-height-page active */
 }
 
 .p-12 { padding: 12px !important; }
