@@ -1,47 +1,32 @@
-# Address Parser Flow
+# Address Parser Flow (Scientific Evaluation Edition)
 
 ## Mục đích
-Address Parser trên UI là công cụ phân tích nhanh một chuỗi địa chỉ thô để hiển thị các thực thể NER theo thời gian thực.
+Address Parser đã được nâng cấp từ một công cụ demo Regex đơn giản thành một **Hệ thống Kiểm định Thực địa (Field Validation System)**. Mục tiêu là so sánh hiệu năng của nhiều phương pháp tiếp cận trong nghiên cứu: Rule-based, Deep Learning (NER), Ranking, và LLM.
 
-## Luồng xử lý thực tế
-1. Người dùng nhập địa chỉ vào ô `parser-input` hoặc bấm `Mẫu ngẫu nhiên`.
-2. UI gọi `setupParserTool()` trong [ui/app.js](../ui/app.js).
-3. Khi bấm `Phân tích`, hàm `runParser()` lấy nội dung textarea và gọi `heuristicNER(text)`.
-4. `heuristicNER()` tách thực thể bằng regex phía client, không gọi API backend.
-5. Kết quả được render lại ở 2 nơi:
-   - `renderNEROutput()` để highlight trực tiếp trong text.
-   - `renderEntitiesTable()` để liệt kê bảng thực thể và confidence giả lập.
+## Luồng xử lý mới (Research-Oriented)
+1. **Lấy mẫu dữ liệu (Data Sampling):**
+   - Người dùng có thể chọn `Mẫu Local` (hardcoded) hoặc `Mẫu Database`.
+   - `Mẫu Database` gọi API `/api/v1/parser/sample` để lấy ngẫu nhiên 1 record thực tế từ `prq.address_cleansing_queue`.
+2. **Phân tích đa mô hình (Multi-model Inference):**
+   - Khi bấm `Phân tích`, UI gọi API POST `/api/v1/parser/analyze`.
+   - Backend thực hiện song song (Parallel Inference) 4 chiến lược:
+     - **Heuristic (PreLabeler):** Logic lai giữa Regex và Master Data Mapping.
+     - **PhoBERT NER:** Mô hình Deep Learning bóc tách thực thể.
+     - **mGTE Ranking:** Mô hình Embedding để chuẩn hóa địa chỉ theo Master Data.
+     - **LLM (Qwen3):** Mô hình ngôn ngữ lớn để suy luận ngữ cảnh và sửa lỗi sâu.
+3. **Hiển thị kết quả (Comparison Matrix):**
+   - Kết quả trả về bao gồm: Chuỗi chuẩn hóa, Score (độ tự tin), và Latency (độ trễ).
+   - UI render bảng so sánh (Comparison Matrix) để nhà nghiên cứu đánh giá trực quan điểm mạnh/yếu của từng mô hình trên cùng một mẫu dữ liệu.
+   - Highlight thực thể được thực hiện dựa trên kết quả của `PreLabeler` để hỗ trợ gán nhãn nhanh.
 
-## Mẫu ngẫu nhiên được lấy như thế nào
-Nút `Mẫu ngẫu nhiên` không lấy từ database. Nó chọn ngẫu nhiên một phần tử trong mảng `SAMPLE_ADDRESSES` ở [ui/app.js](../ui/app.js) bằng:
+## Ý nghĩa khoa học và Thực chiến
+- **Khoa học:** Cung cấp môi trường so sánh công bằng (Side-by-side Comparison) giữa các kiến trúc AI khác nhau trên tập dữ liệu nhiễu thực tế.
+- **Thực chiến:** Kết nối trực tiếp với DB sản xuất, cho phép kiểm thử nhanh khả năng xử lý của model trước khi triển khai hàng loạt (Batch Processing).
 
-```javascript
-const addr = SAMPLE_ADDRESSES[Math.floor(Math.random() * SAMPLE_ADDRESSES.length)];
-```
-
-Nói ngắn gọn: đây là bộ mẫu hardcoded ở frontend để demo nhanh.
-
-## Phân tích đang chạy bằng model nào
-Hiện tại Address Parser **không gọi model ML backend**.
-
-Nó dùng bộ luật regex/heuristic ở frontend, cụ thể là:
-- `PRO`: tỉnh/thành phố
-- `DST`: quận/huyện
-- `WDS`: phường/xã
-- `STR`: tên đường
-- `NUM`: số nhà
-- `ALY`: hẻm/ngõ/ngách
-- `BLD`: tòa nhà/chung cư
-- `NHB`: khu phố/thôn/ấp
-
-Các rule này nằm trong `heuristicNER(text)` của [ui/app.js](../ui/app.js).
-
-## Liên hệ với PreLabeler
-Phần export gán nhãn trong [app/ai/export_for_annotation.py](../app/ai/export_for_annotation.py) có `PreLabeler` với logic tương đồng nhưng giàu hơn, vì nó kết hợp:
-- String matching theo dữ liệu master data
-- Regex heuristics
-- Một số cải tiến để bóc STR khi biết trước `PRO` / `DST` / `WDS`
+## Các Endpoint API liên quan
+- `GET /api/v1/parser/sample`: Lấy mẫu từ queue.
+- `POST /api/v1/parser/analyze`: Thực hiện inference đa mô hình.
 
 ## Ghi chú vận hành
-- Đây là parser demo/UI, không phải inference model production.
-- Nếu muốn parser dùng model thật, cần nối UI sang backend inference service thay vì dùng regex client-side.
+- Nếu môi trường không có GPU hoặc thiếu RAM để load model lớn (PhoBERT/LLM), hệ thống sẽ tự động chuyển sang chế độ **Fallback** (chỉ chạy PreLabeler) để đảm bảo UI không bị treo.
+- Thông số `Corpus Size` hiển thị quy mô tập dữ liệu Master Data đang được dùng để Ranking/LLM tham chiếu.

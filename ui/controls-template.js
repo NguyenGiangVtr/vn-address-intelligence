@@ -32,7 +32,7 @@
       const label = item[labelKey];
       const id = item[idKey];
       if (label != null && id != null) stateMap[label] = id;
-      return `<option value="${escapeHtml(String(label || ''))}" data-id="${id}">`;
+      return `<option value="${escapeHtml(String(label || ''))}" data-id="${id}"></option>`;
     }).join('');
   }
 

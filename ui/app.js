@@ -54,36 +54,15 @@ const KPI_TARGETS = {
   googleMatch: 75,
 };
 
-const MODEL_BENCHMARK_BASELINE = {
-  phobert: {
-    name: "PhoBERT",
-    f1: 84.2,
-    throughput: 27.8,
-    costPerMillion: 42,
-    googleMatch: 76.1,
-  },
-  siamese: {
-    name: "Siamese (mGTE)",
-    f1: 81.3,
-    throughput: 31.6,
-    costPerMillion: 28,
-    googleMatch: 74.5,
-  },
-  llm: {
-    name: "LLM (Qwen3)",
-    f1: 86.8,
-    throughput: 9.4,
-    costPerMillion: 260,
-    googleMatch: 82.2,
-  },
-};
-
-const TRAINING_HISTORY = [
-  { version: "v2.1", accuracy: 82.5, f1: 79.1, samples: 12000, date: "2026-03-12" },
-  { version: "v2.2", accuracy: 84.2, f1: 81.5, samples: 15800, date: "2026-03-28" },
-  { version: "v2.3", accuracy: 88.7, f1: 85.3, samples: 20100, date: "2026-04-10" },
-  { version: "v2.4", accuracy: 92.4, f1: 90.1, samples: 25130, date: "2026-04-24" },
+const TRAINING_HISTORY_FALLBACK = [
+  { version: "v2.1", accuracy: 82.5, f1: 79.1, samples: 12000, date: "2026-03-12", loss: 0.412, notes: "Fallback snapshot" },
+  { version: "v2.2", accuracy: 84.2, f1: 81.5, samples: 15800, date: "2026-03-28", loss: 0.365, notes: "Fallback snapshot" },
+  { version: "v2.3", accuracy: 88.7, f1: 85.3, samples: 20100, date: "2026-04-10", loss: 0.298, notes: "Fallback snapshot" },
+  { version: "v2.4", accuracy: 92.4, f1: 90.1, samples: 25130, date: "2026-04-24", loss: 0.244, notes: "Fallback snapshot" },
 ];
+
+let benchmarkBaselineCache = null;
+let trainingHistoryRows = [];
 
 // ─── Formatting Helpers ───
 function setupNumberInputFormatting() {
@@ -136,6 +115,65 @@ function getNumericInputValue(id) {
   return parseInt(el.value.replace(/\D/g, '') || '0', 10);
 }
 
+async function fetchBenchmarkBaselines() {
+  const response = await fetch(`${API_BASE}/benchmark/baselines`, {
+    headers: getAuthHeader(),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Benchmark baseline API failed: ${response.status}`);
+  }
+
+  const payload = await response.json();
+  if (!payload || !payload.models) {
+    throw new Error("Invalid benchmark baseline payload");
+  }
+
+  return payload.models;
+}
+
+async function fetchTrainingHistory() {
+  const response = await fetch(`${API_BASE}/training/history`, {
+    headers: getAuthHeader(),
+  });
+
+  if (response.status === 404) {
+    return TRAINING_HISTORY_FALLBACK;
+  }
+
+  if (!response.ok) {
+    throw new Error(`Training history API failed: ${response.status}`);
+  }
+
+  const payload = await response.json();
+  if (!payload || !Array.isArray(payload.history)) {
+    throw new Error("Invalid training history payload");
+  }
+
+  return payload.history;
+}
+
+async function createTrainingHistoryEntry(entry) {
+  const response = await fetch(`${API_BASE}/training/history`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...getAuthHeader(),
+    },
+    body: JSON.stringify(entry),
+  });
+
+  if (response.status === 404) {
+    return { status: "fallback", history: entry };
+  }
+
+  if (!response.ok) {
+    throw new Error(`Training history create API failed: ${response.status}`);
+  }
+
+  return response.json();
+}
+
 function formatLogTime() {
   const d = new Date();
   const time = d.toLocaleTimeString('vi-VN', { hour12: false });
@@ -160,14 +198,15 @@ document.addEventListener("DOMContentLoaded", () => {
   initOSMEnrichmentUI();
   initNSOSyncTool();
   initAdminManager();
-  initModelBenchmarkUI();
-  populateTrainingHistory();
   setupNumberInputFormatting();
+  initDataExplorer();
 
   // Refresh stats every 30 seconds
   setInterval(fetchStats, 30000);
   // Initialize Training Chart if on training page
   initIntelligenceChart();
+  initModelBenchmarkUI();
+  loadTrainingHistoryFromDB({ silent: true });
 });
 
 function setDashboardRefreshState(isLoading) {
@@ -205,10 +244,10 @@ function initIntelligenceChart() {
   intelligenceChart = new Chart(ctx, {
     type: 'line',
     data: {
-      labels: ['v2.1', 'v2.2', 'v2.3', 'v2.4 (Current)'],
+      labels: [],
       datasets: [{
         label: 'Model Accuracy (%)',
-        data: [82.5, 84.2, 88.7, 92.4],
+        data: [],
         borderColor: '#818cf8',
         backgroundColor: 'rgba(129, 140, 248, 0.1)',
         fill: true,
@@ -217,7 +256,7 @@ function initIntelligenceChart() {
         pointBackgroundColor: '#818cf8'
       }, {
         label: 'F1-Score',
-        data: [79.1, 81.5, 85.3, 90.1],
+        data: [],
         borderColor: '#34d399',
         backgroundColor: 'transparent',
         borderDash: [5, 5],
@@ -327,12 +366,13 @@ function renderExperimentTable(models) {
   }).join("");
 }
 
-function buildLatestBenchmarkSnapshot() {
-  return {
-    phobert: { ...MODEL_BENCHMARK_BASELINE.phobert },
-    siamese: { ...MODEL_BENCHMARK_BASELINE.siamese },
-    llm: { ...MODEL_BENCHMARK_BASELINE.llm },
-  };
+async function buildLatestBenchmarkSnapshot() {
+  if (benchmarkBaselineCache) {
+    return benchmarkBaselineCache;
+  }
+
+  benchmarkBaselineCache = await fetchBenchmarkBaselines();
+  return benchmarkBaselineCache;
 }
 
 let benchmarkPollTimer = null;
@@ -504,11 +544,18 @@ function initModelBenchmarkUI() {
       }
     } catch (error) {
       console.error("Benchmark realtime error:", error);
-      const fallback = buildLatestBenchmarkSnapshot();
-      renderKpiCards(fallback);
-      renderExperimentTable(fallback);
-      if (!silent && showToast) {
-        showToast("Backend benchmark chưa sẵn sàng, đang dùng dữ liệu fallback", "warning");
+      try {
+        const fallback = await buildLatestBenchmarkSnapshot();
+        renderKpiCards(fallback);
+        renderExperimentTable(fallback);
+        if (!silent && showToast) {
+          showToast("Backend benchmark chưa sẵn sàng, đang dùng dữ liệu fallback", "warning");
+        }
+      } catch (fallbackError) {
+        console.error("Benchmark baseline error:", fallbackError);
+        if (!silent && showToast) {
+          showToast("Không thể tải benchmark baseline từ database", "danger");
+        }
       }
     }
   };
@@ -537,7 +584,7 @@ function populateTrainingHistory() {
   const tbody = document.getElementById("training-history-table");
   if (!tbody) return;
 
-  tbody.innerHTML = TRAINING_HISTORY.map((item) => `
+  tbody.innerHTML = trainingHistoryRows.map((item) => `
     <tr>
       <td><span class="badge info">${item.version}</span></td>
       <td>${item.accuracy.toFixed(1)}%</td>
@@ -546,6 +593,31 @@ function populateTrainingHistory() {
       <td>${item.date}</td>
     </tr>
   `).join("");
+}
+
+function refreshTrainingChart() {
+  if (!intelligenceChart) return;
+
+  intelligenceChart.data.labels = trainingHistoryRows.map((item) => item.version);
+  intelligenceChart.data.datasets[0].data = trainingHistoryRows.map((item) => item.accuracy);
+  intelligenceChart.data.datasets[1].data = trainingHistoryRows.map((item) => item.f1);
+  intelligenceChart.update();
+}
+
+async function loadTrainingHistoryFromDB({ silent = false } = {}) {
+  try {
+    trainingHistoryRows = await fetchTrainingHistory();
+    populateTrainingHistory();
+    refreshTrainingChart();
+    if (!silent && showToast) {
+      showToast("Đã đồng bộ training history từ database", "success");
+    }
+  } catch (error) {
+    console.error("Training history error:", error);
+    if (!silent && showToast) {
+      showToast("Không thể tải training history từ database", "danger");
+    }
+  }
 }
 
 let osmPollTimer = null;
@@ -594,8 +666,8 @@ async function fetchOSMSummary() {
 }
 
 async function triggerOSMJob() {
-  const limitProvinces = Number.parseInt(document.getElementById("osm-limit-provinces")?.value || "63", 10);
-  const targetTotal = Number.parseInt(document.getElementById("osm-target-total")?.value || "5000000", 10);
+  const limitProvinces = getNumericInputValue("osm-limit-provinces") || 63;
+  const targetTotal = getNumericInputValue("osm-target-total") || 5000000;
 
   const response = await fetch(`${API_BASE}/osm/trigger`, {
     method: "POST",
@@ -677,7 +749,6 @@ function renderOSMJob(job) {
   const badge = document.getElementById("osm-job-status-badge");
   const started = document.getElementById("osm-job-started");
   const finished = document.getElementById("osm-job-finished");
-  const exitCode = document.getElementById("osm-job-exit");
   const jobId = document.getElementById("osm-job-id");
   const errorEl = document.getElementById("osm-job-error");
   const logEl = document.getElementById("osm-job-log");
@@ -690,7 +761,6 @@ function renderOSMJob(job) {
 
   if (started) started.textContent = job?.startedAt || "-";
   if (finished) finished.textContent = job?.finishedAt || "-";
-  if (exitCode) exitCode.textContent = job?.exitCode ?? "-";
   if (jobId) jobId.textContent = job?.jobId || "-";
   if (errorEl) errorEl.textContent = job?.error || "";
 
@@ -978,25 +1048,255 @@ function populateLabelRegistry() {
 // ═══════════════════════════════════════════════════════════
 function setupParserTool() {
   const btnParse = document.getElementById("btn-parse");
-  const btnSample = document.getElementById("btn-parse-sample");
+  const btnSampleLocal = document.getElementById("btn-parse-sample-local");
+  const btnSampleDB = document.getElementById("btn-parse-sample-db");
   const inputEl = document.getElementById("parser-input");
 
   if (btnParse) btnParse.addEventListener("click", () => runParser());
-  if (btnSample) btnSample.addEventListener("click", () => {
+  
+  if (btnSampleLocal) btnSampleLocal.addEventListener("click", () => {
     const addr = SAMPLE_ADDRESSES[Math.floor(Math.random() * SAMPLE_ADDRESSES.length)];
     inputEl.value = addr;
+    inputEl.dataset.sampleId = ""; // Clear DB ID
     runParser();
   });
+
+  if (btnSampleDB) btnSampleDB.addEventListener("click", fetchParserSampleDB);
 }
 
-function runParser() {
-  const text = document.getElementById("parser-input").value.trim();
-  if (!text) return;
+async function fetchParserSampleDB() {
+  const btn = document.getElementById("btn-parse-sample-db");
+  const btnParse = document.getElementById("btn-parse");
+  const btnLocal = document.getElementById("btn-parse-sample-local");
+  const inputEl = document.getElementById("parser-input");
+  
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+  }
+  if (btnParse) btnParse.disabled = true;
+  if (btnLocal) btnLocal.disabled = true;
+  
+  try {
+    const res = await fetch(`${API_BASE}/parser/sample`, { headers: getAuthHeader() });
+    if (!res.ok) throw new Error("Failed to fetch sample");
+    
+    const sample = await res.json();
+    inputEl.value = sample.raw_address;
+    inputEl.dataset.sampleId = sample.id;
+    
+    if (showToast) showToast(`Đã lấy mẫu ID: ${sample.id} từ Database`, "info");
+    
+    // runParser will handle its own button disabling/enabling
+    await runParser();
+  } catch (err) {
+    console.error(err);
+    if (showToast) showToast("Không thể lấy mẫu từ Database", "danger");
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-database"></i> Mẫu Database';
+    }
+    if (btnParse) btnParse.disabled = false;
+    if (btnLocal) btnLocal.disabled = false;
+  }
+}
 
-  // Client-side heuristic NER (mirrors PreLabeler logic)
-  const entities = heuristicNER(text);
-  renderNEROutput(text, entities);
-  renderEntitiesTable(entities);
+async function runParser() {
+  const inputEl = document.getElementById("parser-input");
+  const text = inputEl?.value?.trim();
+  const sampleId = inputEl?.dataset?.sampleId;
+  const statusEl = document.getElementById("parser-status");
+  const container = document.getElementById("parser-comparison-matrix");
+  
+  // Buttons to disable
+  const btnParse = document.getElementById("btn-parse");
+  const btnLocal = document.getElementById("btn-parse-sample-local");
+  const btnDb = document.getElementById("btn-parse-sample-db");
+  const buttons = [btnParse, btnLocal, btnDb].filter(b => b !== null);
+
+  if (!text) {
+      if (typeof showToast === 'function') {
+          showToast("Vui lòng nhập địa chỉ cần phân tích", "warning");
+      }
+      return;
+  }
+
+  if (statusEl) {
+    statusEl.textContent = "Analyzing...";
+    statusEl.className = "badge warning";
+  }
+  
+  // Disable all controls
+  buttons.forEach(btn => { btn.disabled = true; });
+  if (btnParse) btnParse.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Phân tích';
+
+  // Show a hint if it's likely the first run
+  if (container && container.querySelector('.empty-state')) {
+      container.innerHTML = `
+        <div class="empty-state" style="padding: 40px; text-align: center; color: var(--text-tertiary);">
+            <i class="fa-solid fa-circle-notch fa-spin" style="font-size: 32px; margin-bottom: 12px; display: block;"></i>
+            Đang khởi tạo các mô hình AI (PhoBERT, mGTE, Qwen)...<br>
+            <span style="font-size: 11px; opacity: 0.7;">Lần chạy đầu tiên có thể mất 1-2 phút để tải trọng số mô hình.</span>
+        </div>
+      `;
+  }
+
+  try {
+    const payload = sampleId ? { id: parseInt(sampleId) } : { raw_address: text };
+    
+    const res = await fetch(`${API_BASE}/parser/analyze`, {
+      method: "POST",
+      headers: { ...getAuthHeader(), "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    
+    if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.detail || "Analysis failed");
+    }
+    const data = await res.json();
+    
+    if (!data) throw new Error("Server returned empty response");
+
+    renderParserComparisonMatrix(data);
+    
+    // Highlight visual output using the primary/first model (usually PreLabeler/Heuristic)
+    if (data?.outputs?.prelabeler?.result) {
+      renderNEROutput(text, data.outputs.prelabeler.result.map(r => ({
+        label: r.value.labels[0],
+        start: r.value.start,
+        end: r.value.end,
+        text: r.value.text
+      })));
+    }
+    
+    if (statusEl) {
+      statusEl.textContent = "Success";
+      statusEl.className = "badge success";
+    }
+    
+    // Render meta safely
+    try {
+        const metaEl = document.getElementById("parser-meta");
+        if (metaEl && data?.meta) {
+          const corpusSize = data.meta.corpusSize || 0;
+          const evaluatedAt = data.meta.evaluatedAt ? new Date(data.meta.evaluatedAt).toLocaleTimeString() : "-";
+          const note = data.meta.note || "";
+          
+          metaEl.innerHTML = `
+            <div class="flex justify-between">
+              <span>Corpus Size: <strong>${corpusSize.toLocaleString()}</strong></span>
+              <span>Evaluated: <strong>${evaluatedAt}</strong></span>
+            </div>
+            <div class="mt-4" style="opacity: 0.8">${note}</div>
+          `;
+        }
+    } catch (metaErr) {
+        console.warn("Meta rendering error:", metaErr);
+    }
+
+  } catch (err) {
+    console.error(err);
+    if (statusEl) {
+      statusEl.textContent = "Error";
+      statusEl.className = "badge danger";
+    }
+    if (showToast) showToast(`Lỗi: ${err.message}`, "danger");
+    
+    if (container) {
+        container.innerHTML = `
+            <div class="empty-state" style="padding: 40px; text-align: center; color: var(--danger);">
+                <i class="fa-solid fa-triangle-exclamation" style="font-size: 32px; margin-bottom: 12px; display: block;"></i>
+                Lỗi phân tích: ${err.message}
+            </div>
+        `;
+    }
+  } finally {
+    // Re-enable all controls
+    buttons.forEach(btn => { btn.disabled = false; });
+    if (btnParse) btnParse.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Phân tích';
+  }
+}
+
+function renderParserComparisonMatrix(data) {
+  const container = document.getElementById("parser-comparison-matrix");
+  if (!container) return;
+
+  const outputs = data?.outputs || {};
+  const models = [
+    { id: "prelabeler", name: "Heuristic (Rules)", icon: "fa-gears" },
+    { id: "phobert", name: "PhoBERT (NER)", icon: "fa-brain" },
+    { id: "mgte", name: "mGTE (Ranking)", icon: "fa-ranking-star" },
+    { id: "llm", name: "LLM (Reasoning)", icon: "fa-robot" }
+  ];
+
+  let html = `
+    <div class="table-container">
+      <table class="comparison-table">
+        <thead>
+          <tr>
+            <th>Model Approach</th>
+            <th>Standardized / Entity Result</th>
+            <th>Score</th>
+            <th>Latency</th>
+          </tr>
+        </thead>
+        <tbody>
+  `;
+
+  models.forEach(m => {
+    const out = outputs[m.id];
+    if (!out) return;
+
+    let resultHtml = "";
+    let scoreHtml = "-";
+    let latencyHtml = "-";
+
+    if (out.error) {
+        resultHtml = `<div class="text-danger" style="font-size: 11px;"><i class="fa-solid fa-circle-exclamation"></i> ${out.error}</div>`;
+        if (out.status === "Not loaded") {
+            resultHtml = `<div class="text-tertiary" style="font-size: 11px;"><i class="fa-solid fa-power-off"></i> Model not loaded (insufficient resources)</div>`;
+        }
+    } else if (m.id === "prelabeler") {
+      resultHtml = `<div class="flex flex-wrap gap-4">` + 
+        (out.result ? out.result.slice(0, 5).map(r => `<span class="badge badge-outline" style="font-size:10px">${r.value.labels[0]}: ${r.value.text}</span>`).join("") : "N/A") +
+        (out.result && out.result.length > 5 ? `<span class="text-tertiary">...</span>` : "") +
+        `</div>`;
+      scoreHtml = `<span class="badge success">100%</span>`;
+    } else {
+      resultHtml = `<div class="font-600 text-accent">${out.normalizedAddress || "N/A"}</div>`;
+      scoreHtml = `<span class="badge ${getScoreClass(out.score)}">${out.score !== undefined ? (out.score * 100).toFixed(1) + "%" : "-"}</span>`;
+      latencyHtml = out.latencyMs ? out.latencyMs + "ms" : "-";
+    }
+
+    html += `
+      <tr>
+        <td>
+          <div class="flex items-center gap-8">
+            <i class="fa-solid ${m.icon} text-tertiary"></i>
+            <div>
+              <div class="font-600">${m.name}</div>
+              <div class="text-xs text-tertiary">${out.mode || ""}</div>
+            </div>
+          </div>
+        </td>
+        <td>${resultHtml}</td>
+        <td>${scoreHtml}</td>
+        <td class="text-mono text-xs">${latencyHtml}</td>
+      </tr>
+    `;
+  });
+
+  html += `</tbody></table></div>`;
+  container.innerHTML = html;
+}
+
+function getScoreClass(score) {
+  if (score === undefined) return "badge-outline";
+  if (score >= 0.9) return "success";
+  if (score >= 0.7) return "warning";
+  return "danger";
 }
 
 function heuristicNER(text) {
@@ -1243,31 +1543,33 @@ document.getElementById('btn-import-ls')?.addEventListener('click', async () => 
   statusEl.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Đang tải lên và tái huấn luyện...';
 
   // Simulated delay for training
-  setTimeout(() => {
-    statusEl.innerHTML = '<span class="text-success">✅ Thành công! Mô hình đã được cập nhật bản v2.4.1</span>';
+  setTimeout(async () => {
+    try {
+      await createTrainingHistoryEntry({
+        version: "v2.4.1",
+        accuracy: 93.8,
+        f1: 91.5,
+        loss: 0.221,
+        samples: 26300,
+        notes: "Imported from dashboard training flow",
+      });
 
-    // Update chart with new point
-    if (intelligenceChart) {
-      intelligenceChart.data.labels.push('v2.4.1');
-      intelligenceChart.data.datasets[0].data.push(93.8);
-      intelligenceChart.data.datasets[1].data.push(91.5);
-      intelligenceChart.update();
-    }
+      statusEl.innerHTML = '<span class="text-success">✅ Thành công! Mô hình đã được cập nhật bản v2.4.1</span>';
 
-    // Update last retrained text
-    const timeEl = document.getElementById('last-retrained-text');
-    if (timeEl) timeEl.textContent = "Vừa xong";
+      // Update last retrained text
+      const timeEl = document.getElementById('last-retrained-text');
+      if (timeEl) timeEl.textContent = "Vừa xong";
 
-    TRAINING_HISTORY.push({
-      version: "v2.4.1",
-      accuracy: 93.8,
-      f1: 91.5,
-      samples: 26300,
-      date: new Date().toISOString().slice(0, 10),
-    });
-    populateTrainingHistory();
-    if (window.__vnaiBenchmarkRefresh) {
-      window.__vnaiBenchmarkRefresh({ silent: true });
+      await loadTrainingHistoryFromDB({ silent: true });
+      if (window.__vnaiBenchmarkRefresh) {
+        window.__vnaiBenchmarkRefresh({ silent: true });
+      }
+    } catch (error) {
+      console.error("Training history create error:", error);
+      statusEl.innerHTML = '<span class="text-danger">❌ Không thể ghi training history vào database</span>';
+      if (showToast) {
+        showToast("Không thể ghi training history vào database", "danger");
+      }
     }
   }, 3000);
 });
@@ -1469,6 +1771,26 @@ document.getElementById('mapping-search-input')?.addEventListener('keypress', (e
 // ═══════════════════════════════════════════════════════════
 let nsoProvinces = [];
 let logPollingInterval = null;
+let logPollingRetryTimer = null;
+let logPollingFailureCount = 0;
+
+function clearLogPollingRetryTimer() {
+  if (logPollingRetryTimer) {
+    clearTimeout(logPollingRetryTimer);
+    logPollingRetryTimer = null;
+  }
+}
+
+function scheduleLogPollingRetry() {
+  clearInterval(logPollingInterval);
+  logPollingInterval = null;
+
+  clearLogPollingRetryTimer();
+  logPollingRetryTimer = setTimeout(() => {
+    logPollingRetryTimer = null;
+    startLogPolling();
+  }, 15000);
+}
 
 function initNSOSyncTool() {
   const btnLoad = document.getElementById('btn-load-nso-provinces');
@@ -1483,8 +1805,15 @@ function initNSOSyncTool() {
   btnSyncAll?.addEventListener('click', syncAllProvinces);
   filterInput.addEventListener('input', renderNSOProvincesTable);
   clearLogsBtn.addEventListener('click', async () => {
-    await fetch(`${API_BASE}/sync/nso/logs`, { method: 'DELETE', headers: getAuthHeader() });
-    logsContainer.innerHTML = '<div style="color: #8b949e;">[System] Logs cleared.</div>';
+    try {
+      await fetch(`${API_BASE}/sync/nso/logs`, { method: 'DELETE', headers: getAuthHeader() });
+      logsContainer.innerHTML = '<div style="color: #8b949e;">[System] Logs cleared.</div>';
+    } catch (error) {
+      console.warn('Unable to clear NSO logs', error);
+      if (showToast) {
+        showToast('Không thể xóa log vì API chưa phản hồi', 'danger');
+      }
+    }
   });
 
   // Start log polling
@@ -1581,6 +1910,8 @@ function updateSyncStatus(text, color) {
 
 function startLogPolling() {
   if (logPollingInterval) clearInterval(logPollingInterval);
+  clearLogPollingRetryTimer();
+  logPollingFailureCount = 0;
 
   logPollingInterval = setInterval(async () => {
     const logsContainer = document.getElementById('nso-sync-logs');
@@ -1589,6 +1920,7 @@ function startLogPolling() {
     try {
       const res = await fetch(`${API_BASE}/sync/nso/logs`, { headers: getAuthHeader() });
       const logs = await res.json();
+      logPollingFailureCount = 0;
 
       const html = logs.map(l => {
         let color = '#8b949e';
@@ -1606,7 +1938,17 @@ function startLogPolling() {
         logsContainer.innerHTML = html;
         logsContainer.scrollTop = logsContainer.scrollHeight;
       }
-    } catch (e) { /* Ignore polling errors */ }
+    } catch (error) {
+      logPollingFailureCount += 1;
+
+      if (logsContainer && logPollingFailureCount === 1) {
+        logsContainer.innerHTML = '<div style="color: #8b949e;">[System] Log API unavailable. Retrying...</div>';
+      }
+
+      if (logPollingFailureCount >= 1) {
+        scheduleLogPollingRetry();
+      }
+    }
   }, 2000);
 }
 
@@ -1676,7 +2018,7 @@ window.editAdminUnit = async function(level, id) {
 }
 
 async function renderExtraFields(item = null) {
-  const level = document.getElementById('admin-crud-level').value;
+  const level = getAdminCurrentLevel();
   const container = document.getElementById('admin-form-extra');
   container.innerHTML = '';
 
@@ -1698,10 +2040,10 @@ async function renderExtraFields(item = null) {
     const parentLevel = level === 'district' ? 'province' : 'district';
     let url = `${API_BASE}/${parentLevel}s?limit=500`;
     
-    // For ward, we might need to filter districts by current selected province if possible
-    // but the simple approach is to load all or use the filter's selected province
+    // For ward, filter districts by current selected province if possible
     if (level === 'ward') {
-        const filterProvId = document.getElementById('admin-crud-province-select').value;
+        const pInput = document.getElementById('admin-province-input');
+        const filterProvId = pInput && pInput.value ? adminState.provinces[pInput.value] : null;
         if (filterProvId) url += `&province_id=${filterProvId}`;
     }
 
@@ -1737,7 +2079,7 @@ window.deleteAdminUnit = async function(level, id, name) {
 }
 
 async function saveAdminUnit() {
-  const level = document.getElementById('admin-crud-level').value;
+  const level = getAdminCurrentLevel();
   const id = document.getElementById('admin-form-id').value;
   const name = document.getElementById('admin-form-name').value;
   const no = document.getElementById('admin-form-no').value;
@@ -1778,38 +2120,81 @@ async function saveAdminUnit() {
   }
 }
 
+let adminState = {
+  provinces: {},
+  districts: {},
+  wards: {}
+};
+
 async function initAdminManager() {
-  const levelSelect = document.getElementById('admin-crud-level');
-  const provinceSelect = document.getElementById('admin-crud-province-select');
-  const districtSelect = document.getElementById('admin-crud-district-select');
+  const pInput = document.getElementById('admin-province-input');
+  const dInput = document.getElementById('admin-district-input');
+  const wInput = document.getElementById('admin-ward-input');
+  const searchInput = document.getElementById('admin-search-input');
   const btnRefresh = document.getElementById('btn-admin-refresh');
   const btnAddNew = document.getElementById('btn-admin-add-new');
   const unitForm = document.getElementById('admin-unit-form');
   const modal = document.getElementById('modal-admin-unit');
+  const vRadios = document.getElementsByName('admin-crud-version');
 
-  if (!levelSelect) return;
+  if (!pInput) return;
 
-  // Handle Level Change
-  levelSelect.addEventListener('change', async () => {
-    const level = levelSelect.value;
-    document.getElementById('admin-filter-parent-province').classList.toggle('hidden', level === 'province');
-    document.getElementById('admin-filter-parent-district').classList.toggle('hidden', level !== 'ward');
-    
-    if (level !== 'province') await loadAdminProvinces();
-    loadAdminData();
+  const loadProvinces = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/provinces?limit=100`, { headers: getAuthHeader() });
+      const data = await res.json();
+      renderLookupTemplateDatalist('admin-list-provinces', data, 'province_name', 'province_id', adminState.provinces);
+    } catch (e) { console.error(e); }
+  };
+
+  pInput.addEventListener('input', async () => {
+    if (pInput.value === '') {
+      dInput.value = ''; wInput.value = '';
+      adminState.districts = {}; adminState.wards = {};
+      const listD = document.getElementById('admin-list-districts');
+      if (listD) listD.innerHTML = '';
+      const listW = document.getElementById('admin-list-wards');
+      if (listW) listW.innerHTML = '';
+      return;
+    }
+    const id = adminState.provinces[pInput.value];
+    if (!id) return;
+
+    dInput.value = ''; wInput.value = '';
+    adminState.districts = {}; adminState.wards = {};
+    try {
+      const res = await fetch(`${API_BASE}/districts?province_id=${id}&limit=500`, { headers: getAuthHeader() });
+      const data = await res.json();
+      renderLookupTemplateDatalist('admin-list-districts', data, 'district_name', 'district_id', adminState.districts);
+    } catch (e) { console.error(e); }
   });
 
-  provinceSelect.addEventListener('change', async () => {
-    if (levelSelect.value === 'ward') await loadAdminDistricts(provinceSelect.value);
-    loadAdminData();
+  dInput.addEventListener('input', async () => {
+    if (dInput.value === '') {
+      wInput.value = '';
+      adminState.wards = {};
+      const listW = document.getElementById('admin-list-wards');
+      if (listW) listW.innerHTML = '';
+      return;
+    }
+    const id = adminState.districts[dInput.value];
+    if (!id) return;
+
+    wInput.value = '';
+    adminState.wards = {};
+    try {
+      const res = await fetch(`${API_BASE}/wards?district_id=${id}&limit=500`, { headers: getAuthHeader() });
+      const data = await res.json();
+      renderLookupTemplateDatalist('admin-list-wards', data, 'ward_name', 'ward_id', adminState.wards);
+    } catch (e) { console.error(e); }
   });
 
-  districtSelect.addEventListener('change', () => loadAdminData());
   btnRefresh.addEventListener('click', () => loadAdminData());
+  if (searchInput) searchInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') loadAdminData(); });
 
   // Modal actions
   btnAddNew.addEventListener('click', () => {
-    const level = levelSelect.value;
+    const level = getAdminCurrentLevel();
     document.getElementById('admin-modal-title').textContent = `Thêm ${level === 'province' ? 'Tỉnh/Thành' : level === 'district' ? 'Quận/Huyện' : 'Phường/Xã'} mới`;
     document.getElementById('admin-form-id').value = '';
     unitForm.reset();
@@ -1823,33 +2208,31 @@ async function initAdminManager() {
   });
 
   // Initial load
+  loadProvinces();
   loadAdminData();
 }
 
-async function loadAdminProvinces() {
-  try {
-    const res = await fetch(`${API_BASE}/provinces?limit=100`, { headers: getAuthHeader() });
-    const data = await res.json();
-    renderUnifiedSelectOptions('admin-crud-province-select', data, 'province_id', 'province_name', '-- Tất cả --');
-  } catch (e) { console.error(e); }
-}
-
-async function loadAdminDistricts(provinceId) {
-  if (!provinceId) {
-    renderUnifiedSelectOptions('admin-crud-district-select', [], 'district_id', 'district_name', '-- Chọn Tỉnh trước --');
-    return;
-  }
-  try {
-    const res = await fetch(`${API_BASE}/districts?province_id=${provinceId}&limit=500`, { headers: getAuthHeader() });
-    const data = await res.json();
-    renderUnifiedSelectOptions('admin-crud-district-select', data, 'district_id', 'district_name', '-- Tất cả --');
-  } catch (e) { console.error(e); }
+function getAdminCurrentLevel() {
+  const pInput = document.getElementById('admin-province-input');
+  const dInput = document.getElementById('admin-district-input');
+  
+  if (dInput && dInput.value && adminState.districts[dInput.value]) return 'ward';
+  if (pInput && pInput.value && adminState.provinces[pInput.value]) return 'district';
+  return 'province';
 }
 
 async function loadAdminData() {
-  const level = document.getElementById('admin-crud-level').value;
-  const provinceId = document.getElementById('admin-crud-province-select').value;
-  const districtId = document.getElementById('admin-crud-district-select').value;
+  const level = getAdminCurrentLevel();
+  
+  const pInput = document.getElementById('admin-province-input');
+  const dInput = document.getElementById('admin-district-input');
+  
+  const provinceId = pInput && pInput.value ? adminState.provinces[pInput.value] : null;
+  const districtId = dInput && dInput.value ? adminState.districts[dInput.value] : null;
+  
+  const searchInput = document.getElementById('admin-search-input');
+  const q = searchInput ? searchInput.value.toLowerCase() : '';
+
   const tableHead = document.getElementById('admin-table-head');
   const tableBody = document.getElementById('admin-table-body');
   const title = document.getElementById('admin-table-title');
@@ -1867,6 +2250,15 @@ async function loadAdminData() {
     // Render Headers
     const headers = ['ID', 'Mã số', 'Tên đơn vị', 'Tên Tiếng Anh', 'Loại hình'];
     tableHead.innerHTML = headers.map(h => `<th>${h}</th>`).join('') + '<th class="text-right">Thao tác</th>';
+
+    // Apply client-side search filter
+    if (q) {
+      data = data.filter(item => {
+        const no = (item[`${level}_no`] || '').toLowerCase();
+        const name = (item[`${level}_name`] || '').toLowerCase();
+        return no.includes(q) || name.includes(q);
+      });
+    }
 
     // Render Rows
     if (data.length === 0) {
@@ -1896,3 +2288,68 @@ async function loadAdminData() {
 
 // Initialize all modules
 initMappingV3();
+
+// ═══════════════════════════════════════════════════════════
+// DATA EXPLORER
+// ═══════════════════════════════════════════════════════════
+function initDataExplorer() {
+  const btnRefresh = document.getElementById("btn-explorer-refresh");
+  const searchInput = document.getElementById("explorer-search");
+  const tbody = document.getElementById("explorer-body");
+
+  if (!btnRefresh || !tbody) return;
+
+  const loadData = async () => {
+    btnRefresh.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+    btnRefresh.disabled = true;
+    try {
+      const q = searchInput ? searchInput.value.trim() : "";
+      const res = await fetch(`${API_BASE}/explorer/queue?limit=100&q=${encodeURIComponent(q)}`, {
+        headers: getAuthHeader()
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.detail || `HTTP ${res.status}`);
+      }
+      const data = await res.json();
+      
+      if (data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-tertiary);">Không có dữ liệu trong prq.address_cleansing_queue</td></tr>`;
+      } else {
+        tbody.innerHTML = data.map(item => {
+          let statusBadge = "info";
+          if (item.status === "DONE") statusBadge = "success";
+          else if (item.status === "ERROR") statusBadge = "danger";
+          else if (item.status === "PROCESSING") statusBadge = "warning";
+          
+          return `<tr>
+            <td class="text-mono" style="font-size: 11px;">#${item.id}</td>
+            <td>${item.raw_address}</td>
+            <td>${item.ward_name || "-"}</td>
+            <td>${item.district_name || "-"}</td>
+            <td>${item.province_name || "-"}</td>
+            <td><span class="badge ${statusBadge}">${item.status}</span></td>
+          </tr>`;
+        }).join("");
+      }
+    } catch (err) {
+      console.error(err);
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--danger);"><i class="fa-solid fa-triangle-exclamation mr-8"></i>Lỗi tải dữ liệu: ${err.message}</td></tr>`;
+      if (typeof showToast === 'function') showToast(`Data Explorer: ${err.message}`, "danger");
+    } finally {
+      btnRefresh.innerHTML = '<i class="fa-solid fa-arrow-rotate-right"></i>';
+      btnRefresh.disabled = false;
+    }
+  };
+
+  btnRefresh.addEventListener("click", loadData);
+  
+  if (searchInput) {
+    searchInput.addEventListener("keypress", (e) => {
+      if (e.key === "Enter") loadData();
+    });
+  }
+
+  // Initial load
+  loadData();
+}

@@ -8,6 +8,7 @@ from sqlalchemy import String, and_, or_, text
 import os
 import logging
 import time
+import re
 import jwt
 import sys
 import subprocess
@@ -18,7 +19,7 @@ from pathlib import Path
 from datetime import datetime, timedelta
 from difflib import SequenceMatcher
 from concurrent.futures import ThreadPoolExecutor
-from app.core.database import SessionLocal, Province, District, Ward, OSMStreet, OSMBuilding, OSMPoi, OSMRawEntity, TrainingDataset, AddressCleansingQueue, WardMapping
+from app.core.database import SessionLocal, Province, District, Ward, OSMStreet, OSMBuilding, OSMPoi, OSMRawEntity, TrainingDataset, TrainingHistory, BenchmarkModelBaseline, AddressCleansingQueue, WardMapping, seed_training_metadata
 from app.services.auth import verify_password, create_access_token, ALGORITHM, SECRET_KEY
 from app.services.nso_sync import sync_full_nso, sync_province_nso, sync_logs
 from app.services.nso_api import get_nso_provinces, get_nso_districts, get_nso_wards
@@ -31,7 +32,6 @@ logger = logging.getLogger("VNAI_Server")
 
 app = FastAPI(
     title="VN Address Intelligence API",
-    root_path="/api",
     docs_url="/docs",
     openapi_url="/openapi.json",
     redoc_url="/redoc"
@@ -84,6 +84,7 @@ osm_job_state = {
     "finishedAt": None,
     "limitProvinces": 63,
     "targetTotal": 5000000,
+    "normalizedTargetTotal": 5000000,
     "exitCode": None,
     "error": None,
     "outputTail": None,
@@ -91,6 +92,32 @@ osm_job_state = {
 
 parser_runtime_lock = threading.Lock()
 parser_runtime_bundle = None
+
+
+def _normalize_int_value(value: object, default: int) -> int:
+    """Normalize numeric payload values that may include formatting separators.
+
+    Args:
+        value: Incoming payload value.
+        default: Fallback used when the value is missing or invalid.
+
+    Returns:
+        A non-negative integer parsed from the provided value.
+    """
+    if value is None:
+        return default
+
+    if isinstance(value, int):
+        return max(0, value)
+
+    cleaned_value = re.sub(r"[^0-9]", "", str(value))
+    if not cleaned_value:
+        return default
+
+    try:
+        return max(0, int(cleaned_value))
+    except ValueError:
+        return default
 
 
 def _update_benchmark_job_state(**kwargs):
@@ -262,27 +289,55 @@ def _load_parser_corpus(db: Session) -> list[str]:
 
 
 def _build_parser_runtime_bundle() -> dict:
+    """Load AI models for parser research. Handles errors gracefully."""
     from app.ai.models import LLMQwen3, PhoBERTSiamese, SiameseMGTE
     from app.ai.export_for_annotation import PreLabeler
 
-    with SessionLocal() as db:
-        corpus = _load_parser_corpus(db)
-
-    phobert = PhoBERTSiamese(model_name="vinai/phobert-base", device="auto")
-    mgte = SiameseMGTE(model_name="Alibaba-NLP/gte-multilingual-base", device="auto")
-    llm = LLMQwen3(model_name="Qwen/Qwen3-4B", use_quantization=False, device="auto")
-
-    if corpus:
-        phobert.encode_corpus(corpus)
-        mgte.encode_corpus(corpus)
-
-    return {
-        "phobert": phobert,
-        "mgte": mgte,
-        "llm": llm,
+    bundle = {
+        "phobert": None,
+        "mgte": None,
+        "llm": None,
         "prelabeler": PreLabeler,
-        "corpus": corpus,
+        "corpus": [],
+        "errors": {}
     }
+
+    try:
+        with SessionLocal() as db:
+            bundle["corpus"] = _load_parser_corpus(db)
+    except Exception as e:
+        logger.error(f"❌ Failed to load parser corpus: {e}")
+        bundle["errors"]["corpus"] = str(e)
+
+    # Load PhoBERT
+    try:
+        phobert = PhoBERTSiamese(model_name="vinai/phobert-base", device="auto")
+        if bundle["corpus"]:
+            phobert.encode_corpus(bundle["corpus"])
+        bundle["phobert"] = phobert
+    except Exception as e:
+        logger.error(f"❌ Failed to load PhoBERT: {e}")
+        bundle["errors"]["phobert"] = str(e)
+
+    # Load mGTE
+    try:
+        mgte = SiameseMGTE(model_name="Alibaba-NLP/gte-multilingual-base", device="auto")
+        if bundle["corpus"]:
+            mgte.encode_corpus(bundle["corpus"])
+        bundle["mgte"] = mgte
+    except Exception as e:
+        logger.error(f"❌ Failed to load mGTE: {e}")
+        bundle["errors"]["mgte"] = str(e)
+
+    # Load LLM (Use a more realistic model name: Qwen2.5-1.5B-Instruct is small and fast)
+    try:
+        llm = LLMQwen3(model_name="Qwen/Qwen2.5-1.5B-Instruct", use_quantization=False, device="auto")
+        bundle["llm"] = llm
+    except Exception as e:
+        logger.error(f"❌ Failed to load LLM: {e}")
+        bundle["errors"]["llm"] = str(e)
+
+    return bundle
 
 
 def _get_parser_runtime_bundle() -> dict:
@@ -312,67 +367,85 @@ def _run_parser_research(sample: AddressCleansingQueue) -> dict:
     def _build_llm_candidates() -> list[str]:
         corpus = bundle.get("corpus") or []
         mgte = bundle.get("mgte")
-        if not corpus or not getattr(mgte, "_corpus_emb", None):
+        if not corpus or not mgte or not getattr(mgte, "_corpus_emb", None):
             return []
 
         import numpy as np
+        try:
+            q_emb = mgte.model.encode([raw_address], normalize_embeddings=True, convert_to_numpy=True)[0]
+            scores = mgte._corpus_emb @ q_emb
+            top_idx = np.argsort(scores)[::-1][:5]
+            return [corpus[int(i)] for i in top_idx]
+        except:
+            return []
 
-        q_emb = mgte.model.encode([raw_address], normalize_embeddings=True, convert_to_numpy=True)[0]
-        scores = mgte._corpus_emb @ q_emb
-        top_idx = np.argsort(scores)[::-1][:5]
-        return [corpus[int(i)] for i in top_idx]
+    outputs = {}
 
-    with ThreadPoolExecutor(max_workers=4) as executor:
-        futures = {
-            "prelabeler": executor.submit(
-                bundle["prelabeler"].predict,
-                raw_address,
-                ward_name,
-                district_name,
-                province_name,
-            ),
-            "phobert": executor.submit(bundle["phobert"].normalize, raw_address),
-            "mgte": executor.submit(bundle["mgte"].normalize, raw_address),
-            "llm": executor.submit(bundle["llm"].normalize, raw_address, _build_llm_candidates()),
+    # 1. PreLabeler (Always available)
+    try:
+        outputs["prelabeler"] = {
+            "mode": "rule_based_hybrid",
+            "result": bundle["prelabeler"].predict(raw_address, ward_name, district_name, province_name),
+            "entityCount": 0,
         }
+        outputs["prelabeler"]["entityCount"] = len(outputs["prelabeler"]["result"])
+    except Exception as e:
+        outputs["prelabeler"] = {"error": str(e)}
 
-        prelabeler_result = futures["prelabeler"].result()
-        phobert_normalized, phobert_score, phobert_latency = futures["phobert"].result()
-        mgte_normalized, mgte_score, mgte_latency = futures["mgte"].result()
-        llm_normalized, llm_score, llm_latency = futures["llm"].result()
+    # 2. PhoBERT
+    if bundle.get("phobert"):
+        try:
+            norm, score, lat = bundle["phobert"].normalize(raw_address)
+            outputs["phobert"] = {
+                "mode": "phoBERT_siamese",
+                "normalizedAddress": norm,
+                "score": round(score, 4),
+                "latencyMs": round(lat, 2),
+            }
+        except Exception as e:
+            outputs["phobert"] = {"error": str(e)}
+    else:
+        outputs["phobert"] = {"status": "Not loaded", "error": bundle["errors"].get("phobert")}
+
+    # 3. mGTE
+    if bundle.get("mgte"):
+        try:
+            norm, score, lat = bundle["mgte"].normalize(raw_address)
+            outputs["mgte"] = {
+                "mode": "mGTE_siamese",
+                "normalizedAddress": norm,
+                "score": round(score, 4),
+                "latencyMs": round(lat, 2),
+            }
+        except Exception as e:
+            outputs["mgte"] = {"error": str(e)}
+    else:
+        outputs["mgte"] = {"status": "Not loaded", "error": bundle["errors"].get("mgte")}
+
+    # 4. LLM
+    if bundle.get("llm"):
+        try:
+            candidates = _build_llm_candidates()
+            norm, score, lat = bundle["llm"].normalize(raw_address, candidates)
+            outputs["llm"] = {
+                "mode": "qwen2.5_llm",
+                "normalizedAddress": norm if isinstance(norm, str) else norm.get("full_address") if isinstance(norm, dict) else str(norm),
+                "score": round(score, 4),
+                "latencyMs": round(lat, 2),
+            }
+        except Exception as e:
+            outputs["llm"] = {"error": str(e)}
+    else:
+        outputs["llm"] = {"status": "Not loaded", "error": bundle["errors"].get("llm")}
 
     return {
         "sample": _serialize_parser_sample(sample),
         "analysis_input": raw_address,
-        "outputs": {
-            "prelabeler": {
-                "mode": "rule_based_hybrid",
-                "result": prelabeler_result,
-                "entityCount": len(prelabeler_result),
-            },
-            "phobert": {
-                "mode": "phoBERT_siamese",
-                "normalizedAddress": phobert_normalized,
-                "score": round(phobert_score, 4),
-                "latencyMs": round(phobert_latency, 2),
-            },
-            "mgte": {
-                "mode": "mGTE_siamese",
-                "normalizedAddress": mgte_normalized,
-                "score": round(mgte_score, 4),
-                "latencyMs": round(mgte_latency, 2),
-            },
-            "llm": {
-                "mode": "qwen3_llm",
-                "normalizedAddress": llm_normalized if isinstance(llm_normalized, str) else llm_normalized.get("full_address") if isinstance(llm_normalized, dict) else str(llm_normalized),
-                "score": round(llm_score, 4),
-                "latencyMs": round(llm_latency, 2),
-            },
-        },
+        "outputs": outputs,
         "meta": {
             "corpusSize": len(bundle.get("corpus") or []),
             "evaluatedAt": datetime.utcnow().isoformat() + "Z",
-            "note": "Random sample from prq.address_cleansing_queue; models are executed on the same input for research comparison.",
+            "note": "Research comparison matrix. First run loads AI models which may cause initial delay.",
         },
     }
 
@@ -402,6 +475,7 @@ async def track_visitors(request: Request, call_next):
 app.mount("/ui", StaticFiles(directory="ui"), name="ui")
 
 @app.get("/")
+@app.get("/index.html")
 def read_root():
     return FileResponse('ui/index.html')
 
@@ -935,6 +1009,31 @@ def get_benchmark_realtime(db: Session = Depends(get_db)):
     }
 
 
+@api_router.get("/benchmark/baselines")
+def get_benchmark_baselines(db: Session = Depends(get_db)):
+    """Return benchmark baselines stored in the database."""
+    seed_training_metadata()
+    rows = db.query(BenchmarkModelBaseline).order_by(BenchmarkModelBaseline.id.asc()).all()
+    models = {
+        row.model_key: {
+            "name": row.model_name,
+            "f1": float(row.f1 or 0.0),
+            "throughput": float(row.throughput or 0.0),
+            "costPerMillion": float(row.cost_per_million or 0.0),
+            "googleMatch": float(row.google_match or 0.0),
+            "sampleSize": int(row.sample_size or 0),
+        }
+        for row in rows
+    }
+    return {
+        "models": models,
+        "meta": {
+            "schema": "ath.benchmark_model_baselines",
+            "generatedAt": datetime.utcnow().isoformat() + "Z",
+        },
+    }
+
+
 @api_router.post("/benchmark/trigger")
 def trigger_benchmark_job(data: dict = None, current_user: str = Depends(get_current_user)):
     payload = data or {}
@@ -974,6 +1073,64 @@ def trigger_benchmark_job(data: dict = None, current_user: str = Depends(get_cur
         "message": "Benchmark job started",
         "job": benchmark_job_state,
     }
+
+
+@api_router.get("/training/history")
+def get_training_history(db: Session = Depends(get_db)):
+    """Return stored training history rows for the dashboard."""
+    try:
+        seed_training_metadata()
+        rows = db.query(TrainingHistory).order_by(TrainingHistory.created_at.asc(), TrainingHistory.id.asc()).all()
+        history = [
+            {
+                "version": row.version,
+                "accuracy": float(row.accuracy or 0.0),
+                "f1": float(row.f1_score or 0.0),
+                "samples": int(row.samples_count or 0),
+                "date": row.created_at.date().isoformat() if row.created_at else None,
+                "loss": float(row.loss or 0.0),
+                "notes": row.notes,
+            }
+            for row in rows
+        ]
+        return {"history": history, "meta": {"schema": "ath.training_history", "generatedAt": datetime.utcnow().isoformat() + "Z"}}
+    except Exception as e:
+        logger.warning(f"Training history fetch error (likely schema not yet created): {e}")
+        return {"history": [], "meta": {"schema": "ath.training_history", "generatedAt": datetime.utcnow().isoformat() + "Z", "error": str(e)}}
+
+
+@api_router.post("/training/history")
+def create_training_history(data: dict = None, current_user: str = Depends(get_current_user)):
+    """Persist a training history entry for the dashboard."""
+    payload = data or {}
+    row = TrainingHistory(
+        version=str(payload.get("version", "unknown")),
+        accuracy=float(payload.get("accuracy", 0.0)),
+        f1_score=float(payload.get("f1", payload.get("f1_score", 0.0))),
+        loss=float(payload.get("loss", 0.0)),
+        samples_count=int(payload.get("samples", payload.get("samples_count", 0))),
+        notes=payload.get("notes"),
+    )
+
+    db: Session = SessionLocal()
+    try:
+        db.add(row)
+        db.commit()
+        db.refresh(row)
+        return {
+            "status": "created",
+            "history": {
+                "version": row.version,
+                "accuracy": float(row.accuracy or 0.0),
+                "f1": float(row.f1_score or 0.0),
+                "samples": int(row.samples_count or 0),
+                "date": row.created_at.date().isoformat() if row.created_at else None,
+                "loss": float(row.loss or 0.0),
+                "notes": row.notes,
+            },
+        }
+    finally:
+        db.close()
 
 
 @api_router.get("/benchmark/job")
@@ -1016,8 +1173,8 @@ def preview_osm_counts(db: Session = Depends(get_db)):
 @api_router.post("/osm/trigger")
 def trigger_osm_job(data: dict = None, current_user: str = Depends(get_current_user)):
     payload = data or {}
-    limit_provinces = int(payload.get("limit_provinces", 63))
-    target_total = int(payload.get("target_total", 5000000))
+    limit_provinces = _normalize_int_value(payload.get("limit_provinces"), 63)
+    target_total = _normalize_int_value(payload.get("target_total"), 5000000)
 
     with osm_job_lock:
         if osm_job_state.get("status") == "running":
@@ -1035,9 +1192,10 @@ def trigger_osm_job(data: dict = None, current_user: str = Depends(get_current_u
             "finishedAt": None,
             "limitProvinces": limit_provinces,
             "targetTotal": target_total,
+            "normalizedTargetTotal": target_total,
             "exitCode": None,
             "error": None,
-            "outputTail": None,
+            "outputTail": f"Normalized targetTotal: {target_total:,}",
         })
 
     worker = threading.Thread(
@@ -1269,13 +1427,50 @@ def analyze_parser_address(data: dict, db: Session = Depends(get_db)):
                 }
             },
             "error": str(e),
-            "note": "Running in fallback mode (PreLabeler only) due to inference engine error."
+            "meta": {
+                "corpusSize": 0,
+                "evaluatedAt": datetime.utcnow().isoformat() + "Z",
+                "note": "Running in fallback mode (PreLabeler only) due to inference engine error."
+            }
         }
 
+def _read_explorer_queue(db: Session, limit: int, q: str):
+    try:
+        query = db.query(AddressCleansingQueue)
+        if q:
+            query = query.filter(AddressCleansingQueue.raw_address.ilike(f"%{q}%"))
+        
+        samples = query.order_by(AddressCleansingQueue.id.desc()).limit(limit).all()
+        
+        return [
+            {
+                "id": s.id,
+                "raw_address": s.raw_address,
+                "ward_name": s.ward_name,
+                "district_name": s.district_name,
+                "province_name": s.province_name,
+                "status": s.processing_status or "PENDING"
+            }
+            for s in samples
+        ]
+    except Exception as e:
+        logger.warning(f"Explorer queue fetch error: {e}")
+        raise HTTPException(status_code=500, detail=f"Lỗi truy vấn prq.address_cleansing_queue: {str(e)}")
+
+
+@api_router.get("/explorer/queue")
+def get_explorer_queue(db: Session = Depends(get_db), limit: int = 100, q: str = ""):
+    return _read_explorer_queue(db, limit, q)
+
+
+@app.get("/explorer/queue")
+def get_explorer_queue_root(db: Session = Depends(get_db), limit: int = 100, q: str = ""):
+    return _read_explorer_queue(db, limit, q)
+
 # Register API router
-api_router_v1 = APIRouter(prefix="/v1")
+api_router_v1 = APIRouter(prefix="/api/v1")
 api_router_v1.include_router(api_router)
-app.include_router(api_router) # Support legacy /api/*
+app.include_router(api_router, prefix="/api") # Match frontend API_BASE
 app.include_router(api_router_v1) # Support /api/v1/*
 
 if __name__ == "__main__":

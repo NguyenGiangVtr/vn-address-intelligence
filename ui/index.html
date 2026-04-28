@@ -125,7 +125,8 @@
                             <button class="btn btn-sm btn-ghost" id="btn-dashboard-refresh" type="button">
                                 <i class="fa-solid fa-arrow-rotate-right"></i> Làm mới số liệu
                             </button>
-                            <span id="dashboard-last-refresh" class="text-tertiary" style="font-size:12px;">Chưa cập nhật</span>
+                            <span id="dashboard-last-refresh" class="text-tertiary" style="font-size:12px;">Chưa cập
+                                nhật</span>
                         </div>
                     </div>
 
@@ -322,28 +323,51 @@
                             <div class="flex items-center justify-between">
                                 <button class="btn btn-primary" id="btn-parse"><i
                                         class="fa-solid fa-wand-magic-sparkles"></i> Phân tích</button>
-                                <button class="btn btn-ghost" id="btn-parse-sample"><i class="fa-solid fa-shuffle"></i>
-                                    Mẫu ngẫu nhiên</button>
+                                <div class="flex gap-8">
+                                    <button class="btn btn-ghost" id="btn-parse-sample-local"
+                                        title="Lấy từ mảng hardcoded"><i class="fa-solid fa-shuffle"></i>
+                                        Mẫu Local</button>
+                                    <button class="btn btn-ghost" id="btn-parse-sample-db"
+                                        title="Lấy từ prq.address_cleansing_queue"><i class="fa-solid fa-database"></i>
+                                        Mẫu Database</button>
+                                </div>
                             </div>
                         </div>
                         <div class="tool-output-section">
-                            <div class="tool-section-title">NER Output</div>
-                            <div class="ner-output" id="parser-output">
-                                <span style="color:var(--text-tertiary)">Kết quả sẽ hiển thị ở đây...</span>
+                            <div class="tool-section-title flex justify-between items-center mb-4">
+                                <span>Inference Comparison Matrix</span>
+                                <span class="badge info" id="parser-status">Ready</span>
                             </div>
-                            <div class="mt-16">
-                                <div class="tool-section-title">Extracted Entities</div>
-                                <div class="table-container">
-                                    <table id="parser-entities-table">
-                                        <thead>
-                                            <tr>
-                                                <th>Label</th>
-                                                <th>Value</th>
-                                                <th>Confidence</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="parser-entities-body"></tbody>
-                                    </table>
+                            <p class="text-secondary mb-12" style="font-size: 12px; line-height: 1.4;">
+                                <strong>Mục đích nghiên cứu:</strong> So sánh kết quả phân tách thực thể (NER) và điểm tin cậy (Confidence Score) từ các chiến lược mô hình khác nhau. Giúp đánh giá độ lệch (variance) giữa Heuristic, PhoBERT, mGTE, và LLM trong thực chiến.
+                            </p>
+
+                            <!-- Model Comparison Tabs/Matrix -->
+                            <div class="parser-comparison-matrix mt-12" id="parser-comparison-matrix">
+                                <div class="empty-state"
+                                    style="padding: 40px; text-align: center; color: var(--text-tertiary);">
+                                    <i class="fa-solid fa-microchip"
+                                        style="font-size: 32px; margin-bottom: 12px; display: block;"></i>
+                                    Chưa có dữ liệu phân tích. Hãy nhập địa chỉ hoặc lấy mẫu từ DB.
+                                </div>
+                            </div>
+
+                            <div class="mt-24">
+                                <div class="tool-section-title mb-4">Visual Highlight (Hybrid PreLabeler)</div>
+                                <p class="text-secondary mb-12" style="font-size: 12px; line-height: 1.4;">
+                                    <strong>Trực quan hóa:</strong> Hiển thị chuỗi địa chỉ gốc được gán nhãn thực thể (Entity Tags) bởi mô hình chính. Chế độ PreLabeler đề xuất nhãn thô tự động, giúp giảm thiểu thời gian gán nhãn thủ công cho đội ngũ Annotator (Label Studio).
+                                </p>
+                                <div class="ner-output" id="parser-output">
+                                    <span style="color:var(--text-tertiary)">Kết quả highlight thực thể sẽ hiển thị ở
+                                        đây...</span>
+                                </div>
+                            </div>
+
+                            <div class="mt-24">
+                                <div class="tool-section-title">Analysis Metadata</div>
+                                <div id="parser-meta" class="text-tertiary"
+                                    style="font-size: 12px; padding: 12px; background: var(--bg-app); border-radius: 8px;">
+                                    Bắt đầu phân tích để xem thông số độ trễ và độ tự tin của mô hình.
                                 </div>
                             </div>
                         </div>
@@ -387,8 +411,7 @@
                         <div class="card-body">
                             <div class="form-group">
                                 <label class="form-label">Batch Size</label>
-                                <input class="form-input" type="text" id="batch-size" value="1000"
-                                    style="width:200px">
+                                <input class="form-input" type="text" id="batch-size" value="1000" style="width:200px">
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Processing Method</label>
@@ -398,9 +421,8 @@
                                     <option value="siamese-only">Siamese Only (mGTE)</option>
                                 </select>
                             </div>
-                            <div id="batch-log" class="batch-log mt-16">
-                                Waiting for batch start...
-                            </div>
+                            <div id="batch-log" class="batch-log mt-16">Chưa có job nào được chạy.</div>
+
                         </div>
                     </div>
                 </div>
@@ -498,7 +520,8 @@
                     <div class="card">
                         <div class="card-header">
                             <span class="card-title">Run Experiment (Phase C: experiment_runner.py)</span>
-                            <button class="btn btn-primary" id="btn-run-experiment" data-action="run-experiment"><i class="fa-solid fa-play"></i>
+                            <button class="btn btn-primary" id="btn-run-experiment" data-action="run-experiment"><i
+                                    class="fa-solid fa-play"></i>
                                 Run Benchmark</button>
                         </div>
                         <div class="card-body">
@@ -586,80 +609,71 @@
                         <h2>Data Explorer</h2>
                         <p>Duyệt và tìm kiếm dữ liệu trong hàng đợi xử lý</p>
                     </div>
-                    <div class="card">
-                        <div class="card-header">
-                            <span class="card-title">prq.address_cleansing_queue</span>
-                            <div class="flex gap-12">
-                                <input class="form-input" id="explorer-search" placeholder="Filter by address..."
-                                    style="width:300px">
-                                <button class="btn btn-sm" id="btn-explorer-refresh"><i
-                                        class="fa-solid fa-arrow-rotate-right"></i></button>
+                    <div class="dm-page-shell">
+                        <div class="card dm-filter-sidebar dm-filter-toolbar">
+                            <div class="card-header">
+                                <span class="card-title"><i class="fa-solid fa-filter mr-8"></i> Bộ lọc ĐVHC</span>
+                            </div>
+                            <div class="card-body">
+                                <div class="control-note">Tìm nhanh theo địa chỉ trong queue <code class="text-mono">prq.address_cleansing_queue</code>.</div>
+                                <div class="search-box">
+                                    <i class="fa-solid fa-search search-icon"></i>
+                                    <input type="text" id="explorer-search" class="search-input" placeholder="Filter by address...">
+                                    <button class="btn btn-sm" id="btn-explorer-refresh"><i class="fa-solid fa-arrow-rotate-right"></i></button>
+                                </div>
                             </div>
                         </div>
-                        <div class="card-body table-container" style="max-height:500px;overflow-y:auto">
-                            <table id="explorer-table">
-                                <thead>
-                                    <tr>
-                                        <th>ID</th>
-                                        <th>Raw Address</th>
-                                        <th>Ward</th>
-                                        <th>District</th>
-                                        <th>Province</th>
-                                        <th>Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="explorer-body">
-                                    <tr>
-                                        <td colspan="6" style="color:var(--text-tertiary)">Click Refresh to load data...
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
+
+                        <div class="card flex flex-column overflow-hidden dm-page-main">
+                            <div class="card-header">
+                                <span class="card-title">prq.address_cleansing_queue</span>
+                            </div>
+                            <div class="card-body table-container" style="max-height:500px;overflow-y:auto">
+                                <table id="explorer-table">
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Raw Address</th>
+                                            <th>Ward</th>
+                                            <th>District</th>
+                                            <th>Province</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="explorer-body">
+                                        <tr>
+                                            <td colspan="6" style="color:var(--text-tertiary)">Click Refresh to load data...
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- ══════ PAGE: OSM ENRICHMENT ══════ -->
                 <div class="page full-height-page" id="osm-enrichment">
-                    <div class="page-header flex-shrink-0">
+                    <div class="page-header flex-shrink-0 osm-page-header">
                         <h2>OSM Enrichment Center</h2>
                         <p>Làm giàu dữ liệu OpenStreetMap cho `raw_entities`, `streets`, `buildings` và `pois`</p>
                         <div class="flex items-center gap-12 mt-12">
-                            <button class="btn btn-sm btn-ghost" id="btn-osm-refresh" type="button">
-                                <i class="fa-solid fa-arrow-rotate-right"></i> Làm mới số liệu OSM
-                            </button>
-                            <span id="osm-last-refresh" class="text-tertiary" style="font-size:12px;">Chưa cập nhật</span>
+                            <span id="osm-last-refresh" class="text-tertiary" style="font-size:12px;">Chưa cập
+                                nhật</span>
                         </div>
                     </div>
 
-                    <div class="stats-grid flex-shrink-0">
-                        <div class="stat-card">
-                            <div class="stat-label">raw_entities</div>
-                            <div class="stat-value" id="osm-raw-count">0</div>
-                            <div class="stat-change positive"><i class="fa-solid fa-database"></i> OSM raw</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-label">streets</div>
-                            <div class="stat-value" id="osm-street-count">0</div>
-                            <div class="stat-change positive"><i class="fa-solid fa-road"></i> Road gazetteer</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-label">buildings</div>
-                            <div class="stat-value" id="osm-building-count">0</div>
-                            <div class="stat-change positive"><i class="fa-solid fa-building"></i> Building gazetteer</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-label">pois</div>
-                            <div class="stat-value" id="osm-poi-count">0</div>
-                            <div class="stat-change positive"><i class="fa-solid fa-location-dot"></i> POI gazetteer</div>
-                        </div>
-                    </div>
-
-                    <div class="content-grid sidebar-layout flex-1 overflow-hidden" style="grid-template-columns: 1.4fr 1fr; gap: 24px;">
-                        <div class="card flex flex-column overflow-hidden">
-                            <div class="card-header flex justify-between items-center">
-                                <span class="card-title">Chạy làm giàu OSM</span>
-                                <div class="flex gap-8">
+                    <div class="content-grid sidebar-layout dm-page-shell osm-page-shell flex-1 overflow-hidden" style="grid-template-columns: minmax(280px, 300px) minmax(0, 1fr); gap: 16px; margin-bottom: 0;">
+                        <div class="card dm-filter-sidebar osm-compact-controls">
+                            <div class="card-header">
+                                <span class="card-title"><i class="fa-solid fa-filter mr-8"></i> OSM Controls</span>
+                            </div>
+                            <div class="card-body">
+                                <div class="control-note">Điều khiển crawl, giới hạn phạm vi và khởi chạy job từ một panel gọn.</div>
+                                <div class="control-actions">
+                                    <button class="btn btn-sm btn-ghost" id="btn-osm-refresh" type="button">
+                                        <i class="fa-solid fa-arrow-rotate-right"></i> Làm mới số liệu OSM
+                                    </button>
                                     <button class="btn btn-sm btn-outline" id="btn-osm-preview-counts" type="button">
                                         <i class="fa-solid fa-eye"></i> Preview counts
                                     </button>
@@ -667,9 +681,7 @@
                                         <i class="fa-solid fa-play"></i> Run OSM Crawl
                                     </button>
                                 </div>
-                            </div>
-                            <div class="card-body flex flex-column gap-16">
-                                <div class="content-grid triple mb-0">
+                                <div class="content-grid triple mb-0" style="grid-template-columns: 1fr; gap: 12px; margin-bottom: 0;">
                                     <div class="form-group">
                                         <label class="form-label">Số khu vực crawl</label>
                                         <input class="form-input" id="osm-limit-provinces" type="number" min="1" max="63" value="63">
@@ -683,83 +695,132 @@
                                         <input class="form-input" value="raw_entities + streets + buildings + pois" disabled>
                                     </div>
                                 </div>
+                            </div>
+                        </div>
 
-                                <div class="card" style="background: var(--bg-app); border: 1px solid var(--border-subtle);">
+                        <div class="dm-page-main osm-page-main flex flex-column gap-12 overflow-hidden">
+                            <div class="stats-grid flex-shrink-0 osm-compact-stats">
+                                <div class="stat-card">
+                                    <div class="stat-label">raw_entities</div>
+                                    <div class="stat-value" id="osm-raw-count">0</div>
+                                    <div class="stat-change positive"><i class="fa-solid fa-database"></i> OSM raw</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-label">streets</div>
+                                    <div class="stat-value" id="osm-street-count">0</div>
+                                    <div class="stat-change positive"><i class="fa-solid fa-road"></i> Road gazetteer</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-label">buildings</div>
+                                    <div class="stat-value" id="osm-building-count">0</div>
+                                    <div class="stat-change positive"><i class="fa-solid fa-building"></i> Building gazetteer</div>
+                                </div>
+                                <div class="stat-card">
+                                    <div class="stat-label">pois</div>
+                                    <div class="stat-value" id="osm-poi-count">0</div>
+                                    <div class="stat-change positive"><i class="fa-solid fa-location-dot"></i> POI gazetteer</div>
+                                </div>
+                            </div>
+
+                            <div class="content-grid sidebar-layout osm-compact-bottom flex-1 overflow-hidden" style="grid-template-columns: 1.1fr 0.9fr; gap: 16px; margin-bottom: 0;">
+                                <div class="card flex flex-column overflow-hidden osm-compact-panel">
                                     <div class="card-header">
                                         <span class="card-title">Pipeline hiện tại</span>
                                     </div>
-                                    <div class="card-body">
-                                        <div class="workflow-diagram horizontal" style="gap: 10px; align-items: stretch;">
+                                    <div class="card-body flex flex-column gap-12">
+                                        <div class="workflow-diagram horizontal osm-compact-diagram" style="gap: 8px; align-items: stretch;">
                                             <div class="workflow-step success">
                                                 <div class="step-icon"><i class="fa-solid fa-globe"></i></div>
-                                                <div class="step-content"><h4>OSM/Overpass</h4></div>
+                                                <div class="step-content">
+                                                    <h4>OSM/Overpass</h4>
+                                                </div>
                                             </div>
                                             <div class="workflow-arrow"><i class="fa-solid fa-arrow-right"></i></div>
                                             <div class="workflow-step accent">
                                                 <div class="step-icon"><i class="fa-solid fa-database"></i></div>
-                                                <div class="step-content"><h4>raw_entities</h4></div>
+                                                <div class="step-content">
+                                                    <h4>raw_entities</h4>
+                                                </div>
                                             </div>
                                             <div class="workflow-arrow"><i class="fa-solid fa-arrow-right"></i></div>
                                             <div class="workflow-step">
                                                 <div class="step-icon"><i class="fa-solid fa-road"></i></div>
-                                                <div class="step-content"><h4>streets</h4></div>
+                                                <div class="step-content">
+                                                    <h4>streets</h4>
+                                                </div>
                                             </div>
                                             <div class="workflow-arrow"><i class="fa-solid fa-arrow-right"></i></div>
                                             <div class="workflow-step">
                                                 <div class="step-icon"><i class="fa-solid fa-location-dot"></i></div>
-                                                <div class="step-content"><h4>pois / buildings</h4></div>
+                                                <div class="step-content">
+                                                    <h4>pois / buildings</h4>
+                                                </div>
                                             </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="card osm-source-card" style="background: var(--bg-app); border: 1px solid var(--border-subtle); margin: 0 14px 14px;">
+                                        <div class="card-header">
+                                            <span class="card-title">Nguồn dữ liệu mục tiêu</span>
+                                        </div>
+                                        <div class="card-body">
+                                            <ul class="activity-list">
+                                                <li class="activity-item">
+                                                    <div class="activity-dot"></div>
+                                                    <div>
+                                                        <div class="activity-text">`osm.raw_entities`: lưu tag nguyên bản từ Overpass</div>
+                                                    </div>
+                                                </li>
+                                                <li class="activity-item">
+                                                    <div class="activity-dot" style="background: var(--success)"></div>
+                                                    <div>
+                                                        <div class="activity-text">`osm.streets`: đường và addr:street</div>
+                                                    </div>
+                                                </li>
+                                                <li class="activity-item">
+                                                    <div class="activity-dot" style="background: var(--warning)"></div>
+                                                    <div>
+                                                        <div class="activity-text">`osm.buildings`: tòa nhà, block, khu dân cư</div>
+                                                    </div>
+                                                </li>
+                                                <li class="activity-item">
+                                                    <div class="activity-dot" style="background: var(--info)"></div>
+                                                    <div>
+                                                        <div class="activity-text">`osm.pois`: amenity, shop, office, tourism</div>
+                                                    </div>
+                                                </li>
+                                            </ul>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div class="card" style="background: var(--bg-app); border: 1px solid var(--border-subtle);">
-                                    <div class="card-header">
-                                        <span class="card-title">Nguồn dữ liệu mục tiêu</span>
+                                <div class="card flex flex-column overflow-hidden osm-compact-panel">
+                                    <div class="card-header flex justify-between items-center">
+                                        <span class="card-title">OSM Job Status</span>
+                                        <span id="osm-job-status-badge" class="badge info">IDLE</span>
                                     </div>
-                                    <div class="card-body">
-                                        <ul class="activity-list">
-                                            <li class="activity-item"><div class="activity-dot"></div><div><div class="activity-text">`osm.raw_entities`: lưu tag nguyên bản từ Overpass</div></div></li>
-                                            <li class="activity-item"><div class="activity-dot" style="background: var(--success)"></div><div><div class="activity-text">`osm.streets`: đường và addr:street</div></div></li>
-                                            <li class="activity-item"><div class="activity-dot" style="background: var(--warning)"></div><div><div class="activity-text">`osm.buildings`: tòa nhà, block, khu dân cư</div></div></li>
-                                            <li class="activity-item"><div class="activity-dot" style="background: var(--info)"></div><div><div class="activity-text">`osm.pois`: amenity, shop, office, tourism</div></div></li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="card flex flex-column overflow-hidden">
-                            <div class="card-header flex justify-between items-center">
-                                <span class="card-title">OSM Job Status</span>
-                                <span id="osm-job-status-badge" class="badge info">IDLE</span>
-                            </div>
-                            <div class="card-body flex flex-column gap-12 overflow-hidden">
-                                <div class="content-grid double mb-0">
-                                    <div class="stat-card" style="padding: 14px; min-height: auto;">
-                                        <div class="stat-label">Started</div>
-                                        <div class="stat-value" id="osm-job-started">-</div>
-                                    </div>
-                                    <div class="stat-card" style="padding: 14px; min-height: auto;">
-                                        <div class="stat-label">Finished</div>
-                                        <div class="stat-value" id="osm-job-finished">-</div>
+                                        <div class="card-body flex flex-column gap-8 overflow-hidden">
+                                            <div class="osm-job-strip">
+                                                <div class="osm-job-strip-item">
+                                                    <span class="osm-job-meta-label">Started</span>
+                                                    <span class="osm-job-meta-value" id="osm-job-started">-</span>
+                                                </div>
+                                                <div class="osm-job-strip-item">
+                                                    <span class="osm-job-meta-label">Finished</span>
+                                                    <span class="osm-job-meta-value" id="osm-job-finished">-</span>
+                                                </div>
+                                                <div class="osm-job-strip-item osm-job-strip-item--wide">
+                                                    <span class="osm-job-meta-label">Job ID</span>
+                                                    <span class="osm-job-meta-value osm-job-meta-value--mono osm-job-meta-value--wrap" id="osm-job-id">-</span>
+                                                </div>
+                                            </div>
+                                        <div class="form-group flex-1 overflow-hidden osm-job-log-section">
+                                            <label class="form-label">Log output</label>
+                                            <div id="osm-job-log" class="batch-log osm-job-log-compact">Chưa có job nào được chạy.</div>
+                                        </div>
+                                        <div id="osm-job-error" class="text-danger" style="font-size:12px; min-height: 18px;"></div>
                                     </div>
                                 </div>
-                                <div class="content-grid double mb-0">
-                                    <div class="stat-card" style="padding: 14px; min-height: auto;">
-                                        <div class="stat-label">Exit Code</div>
-                                        <div class="stat-value" id="osm-job-exit">-</div>
-                                    </div>
-                                    <div class="stat-card" style="padding: 14px; min-height: auto;">
-                                        <div class="stat-label">Job ID</div>
-                                        <div class="stat-value" id="osm-job-id" style="font-size: 12px; word-break: break-all;">-</div>
-                                    </div>
-                                </div>
-                                <div class="form-group flex-1 overflow-hidden">
-                                    <label class="form-label">Log output</label>
-                                    <div id="osm-job-log" class="batch-log" style="max-height: 420px; min-height: 240px;">Chưa có job nào được chạy.</div>
-                                </div>
-                                <div id="osm-job-error" class="text-danger" style="font-size:12px; min-height: 18px;"></div>
                             </div>
                         </div>
                     </div>
@@ -809,13 +870,15 @@
                 <div class="page" id="training">
                     <div class="page-header">
                         <h2>AI Training Hub</h2>
-                        <p>Trọng tâm: workflow trainning AI (Phase A-D), vận hành model, và so sánh hiệu quả thực chiến</p>
+                        <p>Trọng tâm: workflow trainning AI (Phase A-D), vận hành model, và so sánh hiệu quả thực chiến
+                        </p>
                     </div>
 
                     <div class="card mb-16">
                         <div class="card-header">
                             <span class="card-title">AI Workflow Operations (Code-Truth)</span>
-                            <button class="btn btn-sm btn-primary" data-action="run-experiment"><i class="fa-solid fa-vial"></i> Run KPI Benchmark</button>
+                            <button class="btn btn-sm btn-primary" data-action="run-experiment"><i
+                                    class="fa-solid fa-vial"></i> Run KPI Benchmark</button>
                         </div>
                         <div class="card-body">
                             <div class="content-grid triple mb-0">
@@ -837,14 +900,15 @@
                                 <div class="model-op-item">
                                     <div class="tool-section-title">Phase D</div>
                                     <div class="model-op-title">Production Hybrid Pipeline</div>
-                                    <div class="model-op-desc">production_pipeline.py → standardize + writeback queue</div>
+                                    <div class="model-op-desc">production_pipeline.py → standardize + writeback queue
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     <div class="content-grid sidebar-layout">
-                        <div class="flex-col gap-12">
+                        <div class="flex flex-col gap-12">
                             <div class="card">
                                 <div class="card-header">
                                     <span class="card-title">AI Intelligence Growth</span>
@@ -880,7 +944,7 @@
                             </div>
                         </div>
 
-                        <div class="flex-col gap-12">
+                        <div class="flex flex-col gap-12">
                             <div class="card">
                                 <div class="card-header">
                                     <span class="card-title">Import Label Studio</span>
@@ -987,128 +1051,97 @@
                         <p>Theo dõi lịch sử sáp nhập, đổi tên xã phường qua các thời kỳ</p>
                     </div>
 
-                    <div class="card mb-24">
-                        <div class="card-body">
-                            <div class="flex items-center gap-24 mb-20 p-12"
-                                style="background: var(--bg-elevated); border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
-                                <div class="form-group mb-0 flex items-center gap-16">
-                                    <label class="form-label" style="margin-bottom:0; color: var(--accent);">Phiên bản
-                                        Hành chính:</label>
-                                    <div class="flex gap-4 p-4"
-                                        style="background: var(--bg-app); border-radius: var(--radius-sm);">
-                                        <label class="version-tab">
+                    <div class="dm-page-shell">
+                        <div class="card dm-filter-sidebar dm-filter-toolbar">
+                            <div class="card-header">
+                                <span class="card-title"><i class="fa-solid fa-filter mr-8"></i> Bộ lọc ĐVHC</span>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-group">
+                                    <div class="version-tab-container">
+                                        <label class="version-tab flex-1" style="text-align: center;">
                                             <input type="radio" name="admin-version" value="1" checked hidden>
                                             <span>Version 1 (Cũ)</span>
                                         </label>
-                                        <label class="version-tab">
+                                        <label class="version-tab flex-1" style="text-align: center;">
                                             <input type="radio" name="admin-version" value="2" hidden>
                                             <span>Version 2 (Mới)</span>
                                         </label>
                                     </div>
                                 </div>
-                                <div style="font-size: 11px; color: var(--text-tertiary);">
-                                    <i class="fa-solid fa-circle-info mr-4"></i> Chọn version để tải danh sách ĐVHC
-                                    tương ứng
+                                <div class="control-note">
+                                    <i class="fa-solid fa-circle-info mr-4"></i> Chọn version để tải danh sách ĐVHC tương ứng.
                                 </div>
-
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Filters & Search (Full Width) -->
-                    <div class="card mb-24">
-                        <div class="card-body">
-                            <div class="content-grid triple mb-0">
                                 <div class="form-group mb-0">
                                     <label class="form-label">Tỉnh/Thành</label>
                                     <div class="input-wrapper">
-                                        <input list="list-provinces" id="mapping-province-input"
-                                            class="form-input has-clear" placeholder="Tìm Tỉnh...">
-                                        <button type="button" class="btn-clear-input"
-                                            onclick="document.getElementById('mapping-province-input').value=''; document.getElementById('mapping-province-input').dispatchEvent(new Event('input'))"
-                                            title="Xóa"><i class="fa-solid fa-xmark"></i></button>
+                                        <input list="list-provinces" id="mapping-province-input" class="form-input has-clear" placeholder="Tìm Tỉnh...">
+                                        <button type="button" class="btn-clear-input" onclick="document.getElementById('mapping-province-input').value=''; document.getElementById('mapping-province-input').dispatchEvent(new Event('input'))" title="Xóa"><i class="fa-solid fa-xmark"></i></button>
                                     </div>
                                     <datalist id="list-provinces"></datalist>
                                 </div>
                                 <div class="form-group mb-0">
                                     <label class="form-label">Quận/Huyện</label>
                                     <div class="input-wrapper">
-                                        <input list="list-districts" id="mapping-district-input"
-                                            class="form-input has-clear" placeholder="Tìm Huyện...">
-                                        <button type="button" class="btn-clear-input"
-                                            onclick="document.getElementById('mapping-district-input').value=''; document.getElementById('mapping-district-input').dispatchEvent(new Event('input'))"
-                                            title="Xóa"><i class="fa-solid fa-xmark"></i></button>
+                                        <input list="list-districts" id="mapping-district-input" class="form-input has-clear" placeholder="Tìm Huyện...">
+                                        <button type="button" class="btn-clear-input" onclick="document.getElementById('mapping-district-input').value=''; document.getElementById('mapping-district-input').dispatchEvent(new Event('input'))" title="Xóa"><i class="fa-solid fa-xmark"></i></button>
                                     </div>
                                     <datalist id="list-districts"></datalist>
                                 </div>
                                 <div class="form-group mb-0">
                                     <label class="form-label">Phường/Xã</label>
                                     <div class="input-wrapper">
-                                        <input list="list-wards" id="mapping-ward-input" class="form-input has-clear"
-                                            placeholder="Tìm Xã...">
-                                        <button type="button" class="btn-clear-input"
-                                            onclick="document.getElementById('mapping-ward-input').value=''; document.getElementById('mapping-ward-input').dispatchEvent(new Event('input'))"
-                                            title="Xóa"><i class="fa-solid fa-xmark"></i></button>
+                                        <input list="list-wards" id="mapping-ward-input" class="form-input has-clear" placeholder="Tìm Xã...">
+                                        <button type="button" class="btn-clear-input" onclick="document.getElementById('mapping-ward-input').value=''; document.getElementById('mapping-ward-input').dispatchEvent(new Event('input'))" title="Xóa"><i class="fa-solid fa-xmark"></i></button>
                                     </div>
                                     <datalist id="list-wards"></datalist>
                                 </div>
-                            </div>
-                            <div class="search-box mt-16">
-                                <i class="fa-solid fa-search search-icon"></i>
-                                <input type="text" id="mapping-search-input" class="search-input"
-                                    placeholder="Hoặc gõ mã/tên trực tiếp vào đây...">
-                                <button class="btn btn-primary" id="btn-mapping-search">Tra cứu</button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Main Content & Sidebar -->
-                    <div class="content-grid sidebar-layout" style="grid-template-columns: 3fr 1fr; gap: 24px;">
-                        <!-- Main: Mapping Results -->
-                        <div>
-                            <div class="card" style="height: 100%;">
-                                <div class="card-header"
-                                    style="background: var(--accent-glow); border-bottom: 2px solid var(--accent);">
-                                    <span class="card-title text-accent"><i
-                                            class="fa-solid fa-map-location-dot mr-4"></i> Kết quả ánh xạ (Cũ ↔
-                                        Mới)</span>
-                                </div>
-                                <div class="table-container">
-                                    <table>
-                                        <thead>
-                                            <tr>
-                                                <th>ĐVHC Cũ</th>
-                                                <th><i class="fa-solid fa-arrow-right-long"></i></th>
-                                                <th>ĐVHC Mới</th>
-                                                <th>Ghi chú biến động</th>
-                                                <th>Ngày hiệu lực</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="mapping-results-table">
-                                            <!-- Results via JS -->
-                                            <tr>
-                                                <td colspan="5" class="text-center text-tertiary" style="padding: 40px">
-                                                    Nhập từ khóa để bắt đầu tra cứu</td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
+                                <div class="search-box">
+                                    <i class="fa-solid fa-search search-icon"></i>
+                                    <input type="text" id="mapping-search-input" class="search-input" placeholder="Hoặc gõ mã/tên trực tiếp vào đây...">
+                                    <button class="btn btn-primary" id="btn-mapping-search">Tra cứu</button>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Sidebar: Detailed Info Panel -->
-                        <div style="position: sticky; top: 24px; align-self: start;">
-                            <div class="card shadow"
-                                style="background: var(--bg-secondary); border: 1px solid var(--accent); box-shadow: 0 4px 24px rgba(0, 255, 128, 0.15);">
-                                <div class="card-header" style="background: var(--bg-hover);">
-                                    <span class="card-title text-accent"><i class="fa-solid fa-circle-info mr-4"></i>
-                                        Thông tin Chi tiết</span>
+                        <div class="dm-page-main flex flex-column gap-24 overflow-hidden">
+                            <div class="content-grid sidebar-layout" style="grid-template-columns: 3fr 1fr; gap: 24px; margin-bottom: 0;">
+                                <div class="card" style="height: 100%;">
+                                    <div class="card-header" style="background: var(--accent-glow); border-bottom: 2px solid var(--accent);">
+                                        <span class="card-title text-accent"><i class="fa-solid fa-map-location-dot mr-4"></i> Kết quả ánh xạ (Cũ ↔ Mới)</span>
+                                    </div>
+                                    <div class="table-container">
+                                        <table>
+                                            <thead>
+                                                <tr>
+                                                    <th>ĐVHC Cũ</th>
+                                                    <th><i class="fa-solid fa-arrow-right-long"></i></th>
+                                                    <th>ĐVHC Mới</th>
+                                                    <th>Ghi chú biến động</th>
+                                                    <th>Ngày hiệu lực</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="mapping-results-table">
+                                                <!-- Results via JS -->
+                                                <tr>
+                                                    <td colspan="5" class="text-center text-tertiary" style="padding: 40px">Nhập từ khóa để bắt đầu tra cứu</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </div>
-                                <div class="card-body" id="unit-details-panel">
-                                    <div class="text-center text-tertiary" style="padding: 20px">
-                                        <i class="fa-solid fa-hand-pointer mb-12" style="font-size: 24px"></i>
-                                        <p>Chọn một đơn vị hành chính để xem thông tin dân số, diện tích và nghị quyết.
-                                        </p>
+
+                                <div style="position: sticky; top: 24px; align-self: start;">
+                                    <div class="card shadow" style="background: var(--bg-secondary); border: 1px solid var(--accent); box-shadow: 0 4px 24px rgba(0, 255, 128, 0.15);">
+                                        <div class="card-header" style="background: var(--bg-hover);">
+                                            <span class="card-title text-accent"><i class="fa-solid fa-circle-info mr-4"></i> Thông tin Chi tiết</span>
+                                        </div>
+                                        <div class="card-body" id="unit-details-panel">
+                                            <div class="text-center text-tertiary" style="padding: 20px">
+                                                <i class="fa-solid fa-hand-pointer mb-12" style="font-size: 24px"></i>
+                                                <p>Chọn một đơn vị hành chính để xem thông tin dân số, diện tích và nghị quyết.</p>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -1124,69 +1157,64 @@
                         <p>Đồng bộ dữ liệu hành chính trực tiếp từ Tổng cục Thống kê (NSO)</p>
                     </div>
 
-                    <div class="content-grid sidebar-layout flex-1 overflow-hidden"
-                        style="grid-template-columns: 2fr 1fr; gap: 24px;">
-                        <!-- Main: Province Sync List -->
-                        <div class="card flex-1 flex flex-column overflow-hidden">
-                            <div class="card-header flex justify-between items-center">
-                                <span class="card-title"><i class="fa-solid fa-list-check mr-8"></i> Danh sách
-                                    Tỉnh/Thành</span>
-                                <div class="flex gap-8">
-                                    <button class="btn btn-sm btn-outline" id="btn-load-nso-provinces"><i
-                                            class="fa-solid fa-rotate mr-4"></i> Tải danh sách NSO</button>
-                                    <button class="btn btn-sm btn-accent" id="btn-sync-all-provinces"><i
-                                            class="fa-solid fa-cloud-arrow-down mr-4"></i> Sync ALL
-                                        (Sequential)</button>
-                                </div>
+                    <div class="dm-page-shell flex-1 overflow-hidden">
+                        <div class="card dm-filter-sidebar dm-filter-toolbar">
+                            <div class="card-header">
+                                <span class="card-title"><i class="fa-solid fa-filter mr-8"></i> Bộ lọc ĐVHC</span>
                             </div>
-                            <div class="card-body flex flex-column overflow-hidden">
-                                <div class="search-box mb-16 flex-shrink-0">
+                            <div class="card-body">
+                                <div class="control-note">Lọc danh sách NSO theo tên tỉnh và khởi chạy đồng bộ từ cùng một panel điều khiển.</div>
+                                <div class="search-box">
                                     <i class="fa-solid fa-search search-icon"></i>
-                                    <input type="text" id="nso-province-filter" class="search-input"
-                                        placeholder="Lọc theo tên tỉnh...">
+                                    <input type="text" id="nso-province-filter" class="search-input" placeholder="Lọc theo tên tỉnh...">
                                 </div>
-                                <div class="table-container flex-1">
-                                    <table style="width: 100%;">
-                                        <thead
-                                            style="position: sticky; top: 0; background: var(--bg-secondary); z-index: 10;">
-                                            <tr>
-                                                <th>Mã</th>
-                                                <th>Tên Tỉnh</th>
-                                                <th>Loại hình</th>
-                                                <th class="text-right">Thao tác</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="nso-provinces-table">
-                                            <tr>
-                                                <td colspan="4" class="text-center text-tertiary" style="padding: 40px">
-                                                    Chưa có dữ liệu. Bấm "Tải danh sách NSO" để bắt đầu.</td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
+                                <div class="control-actions">
+                                    <button class="btn btn-sm btn-outline" id="btn-load-nso-provinces"><i class="fa-solid fa-rotate mr-4"></i> Tải danh sách NSO</button>
+                                    <button class="btn btn-sm btn-accent" id="btn-sync-all-provinces"><i class="fa-solid fa-cloud-arrow-down mr-4"></i> Sync ALL (Sequential)</button>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Sidebar: Sync Logs -->
-                        <div class="flex flex-column overflow-hidden" style="height: 100%;">
-                            <div class="card flex-1 flex flex-column overflow-hidden"
-                                style="background: #0d1117; border-color: #30363d;">
-                                <div class="card-header flex justify-between items-center"
-                                    style="border-bottom: 1px solid #30363d;">
-                                    <span class="card-title" style="color: #58a6ff;"><i
-                                            class="fa-solid fa-terminal mr-8"></i> Real-time Sync Logs</span>
-                                    <button class="btn btn-xs btn-ghost" id="btn-clear-nso-logs"
-                                        style="color: #8b949e;"><i class="fa-solid fa-trash-can"></i></button>
+                        <div class="content-grid sidebar-layout dm-page-main" style="grid-template-columns: 2fr 1fr; gap: 24px; margin-bottom: 0; min-width: 0;">
+                            <div class="card flex-1 flex flex-column overflow-hidden">
+                                <div class="card-header flex justify-between items-center">
+                                    <span class="card-title"><i class="fa-solid fa-list-check mr-8"></i> Danh sách Tỉnh/Thành</span>
                                 </div>
-                                <div class="card-body" id="nso-sync-logs"
-                                    style="flex: 1; overflow-y: auto; font-family: 'Cascadia Code', 'Fira Code', monospace; font-size: 11px; line-height: 1.6; padding: 12px; color: #d1d5db;">
-                                    <div style="color: #8b949e;">[System] Sẵn sàng đồng bộ...</div>
+                                <div class="card-body flex flex-column overflow-hidden">
+                                    <div class="table-container flex-1">
+                                        <table style="width: 100%;">
+                                            <thead style="position: sticky; top: 0; background: var(--bg-secondary); z-index: 10;">
+                                                <tr>
+                                                    <th>Mã</th>
+                                                    <th>Tên Tỉnh</th>
+                                                    <th>Loại hình</th>
+                                                    <th class="text-right">Thao tác</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="nso-provinces-table">
+                                                <tr>
+                                                    <td colspan="4" class="text-center text-tertiary" style="padding: 40px">Chưa có dữ liệu. Bấm "Tải danh sách NSO" để bắt đầu.</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </div>
-                                <div class="p-12" style="background: #161b22; border-top: 1px solid #30363d;">
-                                    <div class="flex justify-between items-center">
-                                        <span id="sync-status-text" style="font-size: 11px; color: #8b949e;">IDLE</span>
-                                        <div class="dot pulse" id="sync-status-dot"
-                                            style="background: #8b949e; width: 8px; height: 8px;"></div>
+                            </div>
+
+                            <div class="flex flex-column overflow-hidden" style="height: 100%;">
+                                <div class="card flex-1 flex flex-column overflow-hidden" style="background: #0d1117; border-color: #30363d;">
+                                    <div class="card-header flex justify-between items-center" style="border-bottom: 1px solid #30363d;">
+                                        <span class="card-title" style="color: #58a6ff;"><i class="fa-solid fa-terminal mr-8"></i> Real-time Sync Logs</span>
+                                        <button class="btn btn-xs btn-ghost" id="btn-clear-nso-logs" style="color: #8b949e;"><i class="fa-solid fa-trash-can"></i></button>
+                                    </div>
+                                    <div class="card-body" id="nso-sync-logs" style="flex: 1; overflow-y: auto; font-family: 'Cascadia Code', 'Fira Code', monospace; font-size: 11px; line-height: 1.6; padding: 12px; color: #d1d5db;">
+                                        <div style="color: #8b949e;">[System] Sẵn sàng đồng bộ...</div>
+                                    </div>
+                                    <div class="p-12" style="background: #161b22; border-top: 1px solid #30363d;">
+                                        <div class="flex justify-between items-center">
+                                            <span id="sync-status-text" style="font-size: 11px; color: #8b949e;">IDLE</span>
+                                            <div class="dot pulse" id="sync-status-dot" style="background: #8b949e; width: 8px; height: 8px;"></div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -1196,43 +1224,64 @@
 
                 <!-- ═══ ADMIN UNITS MANAGER ═══ -->
                 <div class="page full-height-page" id="admin-units">
-                    <div class="page-body flex-1 flex flex-row gap-16 overflow-hidden p-16">
+                    <div class="page-body dm-page-shell flex-1 overflow-hidden p-16">
                         <!-- Left Sidebar: Hierarchy Filter -->
-                        <div class="card flex flex-column" style="width: 300px; min-width: 300px;">
+                        <div class="card flex flex-column dm-filter-sidebar dm-filter-toolbar">
                             <div class="card-header">
                                 <span class="card-title"><i class="fa-solid fa-filter mr-8"></i> Bộ lọc ĐVHC</span>
                             </div>
                             <div class="card-body p-16">
+                                <div class="form-group">
+                                    <div class="version-tab-container">
+                                        <label class="version-tab flex-1" style="text-align: center;">
+                                            <input type="radio" name="admin-crud-version" value="1" checked hidden>
+                                            <span>Version 1</span>
+                                        </label>
+                                        <label class="version-tab flex-1" style="text-align: center;">
+                                            <input type="radio" name="admin-crud-version" value="2" hidden>
+                                            <span>Version 2</span>
+                                        </label>
+                                    </div>
+                                </div>
                                 <div class="form-group mb-16">
-                                    <label class="label-sm">Cấp độ</label>
-                                    <select id="admin-crud-level" class="form-input">
-                                        <option value="province">Tỉnh / Thành phố</option>
-                                        <option value="district">Quận / Huyện</option>
-                                        <option value="ward">Phường / Xã</option>
-                                    </select>
+                                    <label class="label-sm">Tỉnh/Thành</label>
+                                    <div class="input-wrapper">
+                                        <input list="admin-list-provinces" id="admin-province-input" class="form-input has-clear" placeholder="Tất cả Tỉnh/Thành...">
+                                        <button type="button" class="btn-clear-input" onclick="document.getElementById('admin-province-input').value=''; document.getElementById('admin-province-input').dispatchEvent(new Event('input'))" title="Xóa"><i class="fa-solid fa-xmark"></i></button>
+                                    </div>
+                                    <datalist id="admin-list-provinces"></datalist>
                                 </div>
-                                <div id="admin-filter-parent-province" class="form-group mb-16 hidden">
-                                    <label class="label-sm">Chọn Tỉnh/Thành</label>
-                                    <select id="admin-crud-province-select" class="form-input">
-                                        <option value="">-- Tất cả --</option>
-                                    </select>
+                                <div class="form-group mb-16">
+                                    <label class="label-sm">Quận/Huyện</label>
+                                    <div class="input-wrapper">
+                                        <input list="admin-list-districts" id="admin-district-input" class="form-input has-clear" placeholder="Tất cả Quận/Huyện...">
+                                        <button type="button" class="btn-clear-input" onclick="document.getElementById('admin-district-input').value=''; document.getElementById('admin-district-input').dispatchEvent(new Event('input'))" title="Xóa"><i class="fa-solid fa-xmark"></i></button>
+                                    </div>
+                                    <datalist id="admin-list-districts"></datalist>
                                 </div>
-                                <div id="admin-filter-parent-district" class="form-group mb-16 hidden">
-                                    <label class="label-sm">Chọn Quận/Huyện</label>
-                                    <select id="admin-crud-district-select" class="form-input">
-                                        <option value="">-- Tất cả --</option>
-                                    </select>
+                                <div class="form-group mb-16">
+                                    <label class="label-sm">Phường/Xã</label>
+                                    <div class="input-wrapper">
+                                        <input list="admin-list-wards" id="admin-ward-input" class="form-input has-clear" placeholder="Tất cả Phường/Xã...">
+                                        <button type="button" class="btn-clear-input" onclick="document.getElementById('admin-ward-input').value=''; document.getElementById('admin-ward-input').dispatchEvent(new Event('input'))" title="Xóa"><i class="fa-solid fa-xmark"></i></button>
+                                    </div>
+                                    <datalist id="admin-list-wards"></datalist>
                                 </div>
-                                <button id="btn-admin-refresh" class="btn btn-primary w-full mt-16">
-                                    <i class="fa-solid fa-arrows-rotate mr-8"></i> Làm mới danh sách
+                                <div class="search-box" style="height: 36px;">
+                                    <i class="fa-solid fa-search search-icon" style="padding-left: 10px;"></i>
+                                    <input type="text" id="admin-search-input" class="search-input" style="padding-left: 12px;" placeholder="Gõ mã/tên để tìm...">
+                                </div>
+                                <button id="btn-admin-refresh" class="btn btn-primary">
+                                    <i class="fa-solid fa-arrows-rotate mr-8"></i> Tra cứu danh sách
                                 </button>
                             </div>
                         </div>
 
                         <!-- Main Data Table -->
-                        <div class="card flex-1 flex flex-column overflow-hidden">
+                        <div class="card flex-1 flex flex-column overflow-hidden dm-page-main">
                             <div class="card-header flex justify-between align-center">
-                                <span class="card-title" id="admin-table-title"><i class="fa-solid fa-list mr-8"></i> Danh sách Tỉnh/Thành</span>
+                                <span class="card-title" id="admin-table-title"><i class="fa-solid fa-list mr-8"></i>
+                                    Danh sách Tỉnh/Thành</span>
                                 <button class="btn btn-sm btn-accent" id="btn-admin-add-new">
                                     <i class="fa-solid fa-plus mr-4"></i> Thêm mới
                                 </button>
@@ -1287,7 +1336,8 @@
                     <div class="form-grid">
                         <div class="form-group">
                             <label>Tên Đơn vị</label>
-                            <input type="text" id="admin-form-name" class="form-input" placeholder="Ví dụ: Ba Đình" required>
+                            <input type="text" id="admin-form-name" class="form-input" placeholder="Ví dụ: Ba Đình"
+                                required>
                         </div>
                         <div class="form-group">
                             <label>Mã (GSO Code)</label>
@@ -1295,7 +1345,8 @@
                         </div>
                         <div class="form-group">
                             <label>Loại hình</label>
-                            <input type="text" id="admin-form-type" class="form-input" placeholder="Quận / Huyện / Phường...">
+                            <input type="text" id="admin-form-type" class="form-input"
+                                placeholder="Quận / Huyện / Phường...">
                         </div>
                         <div class="form-group">
                             <label>Tên tiếng Anh</label>

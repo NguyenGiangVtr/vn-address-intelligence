@@ -1337,3 +1337,135 @@ select.form-input {
 
 .w-full { width: 100%; }
 .label-sm { font-size: 11px; color: var(--text-tertiary); margin-bottom: 4px; display: block; }
+
+/* ══════════════════════════════════════════
+   STREAMLINED FILTERS (Compact Layout)
+   ══════════════════════════════════════════ */
+
+/* Target the toolbar/sidebar hybrid used for top filters */
+.dm-filter-sidebar.dm-filter-toolbar {
+  border-radius: var(--radius-md);
+  margin-bottom: 12px;
+  border-color: var(--border-subtle);
+  background: var(--bg-surface);
+}
+
+.dm-filter-sidebar.dm-filter-toolbar .card-header {
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid var(--border-subtle);
+  display: none; /* Hide header to save space in toolbar mode */
+}
+
+.dm-filter-sidebar.dm-filter-toolbar .card-body {
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Hide labels in horizontal toolbar to save vertical space - rely on placeholders */
+.dm-filter-toolbar .form-group label:not(.version-tab),
+.dm-filter-toolbar .label-sm {
+  display: none !important;
+}
+
+.dm-filter-toolbar .form-group {
+  margin-bottom: 0 !important;
+  flex: 1;
+  min-width: 140px;
+}
+
+.dm-filter-toolbar .version-tab-container {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  background: var(--bg-app);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-default);
+  height: 34px; /* Match input height */
+  flex: 1;
+}
+
+.dm-filter-toolbar .version-tab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 10px;
+  font-size: 11px;
+  height: 100%;
+}
+
+.dm-filter-toolbar .control-note {
+  display: none; /* Hide notes in toolbar to save space */
+}
+
+.dm-filter-toolbar .search-box {
+  flex: 1.5;
+  height: 34px;
+  min-width: 200px;
+  margin-bottom: 0 !important;
+}
+
+.dm-filter-toolbar .form-input {
+  height: 34px;
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+.dm-filter-toolbar .btn {
+  height: 34px;
+  padding: 0 12px;
+  font-size: 12px;
+}
+
+/* Specific fix for lookup page search box positioning */
+#lookup .search-box {
+  flex: 2;
+}
+
+/* Ensure the main shell doesn't have too much gap */
+.dm-page-shell {
+  gap: 12px;
+}
+
+/* Optimize grid spacing */
+#page-content {
+  padding: 16px;
+}
+
+.page-header {
+  margin-bottom: 16px;
+}
+
+.dm-filter-toolbar .control-actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto; /* Push actions to the right if there's space */
+}
+
+/* NSO Sync specific tweaks */
+#nso-sync .dm-filter-toolbar .search-box {
+  flex: 1;
+  min-width: 250px;
+}
+
+/* Grid maximizing */
+.dm-page-main {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.content-grid.sidebar-layout {
+  flex: 1;
+  min-height: 0;
+}
+
+.table-container {
+  flex: 1;
+  min-height: 0;
+}

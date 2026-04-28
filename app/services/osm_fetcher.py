@@ -36,6 +36,7 @@ class OSMFetcher:
 
     def fetch_all_provinces(self, limit_provinces=63, target_total=5000000):
         """Crawl toan bo 63 tinh thanh cho den khi dat target."""
+        target_total = max(0, int(target_total))
         session = SessionLocal()
         try:
             from app.core.database import District
@@ -60,7 +61,7 @@ class OSMFetcher:
             futures = []
             for d_id, d_name, p_name, p_id in task_list:
                 if current_count >= target_total:
-                    logger.info("Target 5M reached. Stopping.")
+                    logger.info(f"Target {target_total:,} reached. Stopping.")
                     break
                 
                 futures.append(executor.submit(self.fetch_district, d_id, d_name, p_name, p_id))

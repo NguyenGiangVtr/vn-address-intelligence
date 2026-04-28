@@ -30,8 +30,14 @@ from transformers import (
 from seqeval.metrics import classification_report, f1_score, precision_score, recall_score
 
 # Đảm bảo import từ cùng package
-sys.path.insert(0, str(Path(__file__).parent))
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+if str(Path(__file__).parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).parent))
+
 from constants import get_ner_label_list
+from job_artifacts import record_training_history
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s.%(msecs)03d [%(levelname)s] %(message)s", datefmt="%H:%M:%S")
 logger = logging.getLogger("TrainNER")
@@ -228,6 +234,22 @@ def build_compute_metrics(id2label: dict):
     return compute_metrics
 
 
+def _compute_token_accuracy(predictions: np.ndarray, labels: np.ndarray) -> float:
+    """Return token-level accuracy while ignoring padded tokens."""
+    correct = 0
+    total = 0
+
+    for pred_seq, label_seq in zip(predictions, labels):
+        for pred_id, label_id in zip(pred_seq, label_seq):
+            if label_id == -100:
+                continue
+            total += 1
+            if pred_id == label_id:
+                correct += 1
+
+    return correct / total if total > 0 else 0.0
+
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Bước 3: Train Model
 # ──────────────────────────────────────────────────────────────────────────────
@@ -379,6 +401,7 @@ def train_model(
     logger.info("\n  Classification Report (seqeval):")
     predictions, labels, _ = trainer.predict(eval_dataset)
     predictions = np.argmax(predictions, axis=2)
+    token_accuracy = _compute_token_accuracy(predictions, labels)
 
     true_labels = []
     pred_labels = []
@@ -395,6 +418,22 @@ def train_model(
 
     report = classification_report(true_labels, pred_labels, digits=4)
     logger.info(f"\n{report}")
+
+    try:
+        record_training_history(
+            version=Path(output_dir).name or "phobert-ner-vn",
+            accuracy=round(token_accuracy * 100, 2),
+            f1_score=round(float(eval_results.get("eval_f1", 0.0)) * 100, 2),
+            loss=round(float(train_result.training_loss), 6),
+            samples_count=len(train_data),
+            notes=(
+                f"epochs={epochs}; batch_size={batch_size}; lr={learning_rate}; "
+                f"eval_split={eval_split}; eval_loss={float(eval_results.get('eval_loss', 0.0)):.6f}"
+            ),
+        )
+        logger.info("Đã ghi training_history vào DB.")
+    except Exception as exc:
+        logger.warning("Không thể ghi training_history vào DB: %s", exc)
 
     # 15. Lưu training log
     log_path = os.path.join(output_dir, "training_log.json")

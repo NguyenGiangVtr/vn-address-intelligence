@@ -18,10 +18,15 @@ import pandas as pd
 import yaml
 
 # Đảm bảo import từ cùng package
-sys.path.insert(0, str(Path(__file__).parent))
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+if str(Path(__file__).parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).parent))
 
 from db_connector import DBConnector
 from metrics import compute_metrics, print_metrics
+from job_artifacts import upsert_benchmark_baselines
 from models import LLMQwen3, PhoBERTSiamese, SiameseMGTE
 from report_generator import generate_html_report, save_csv
 from utils.config_loader import load_config_with_env
@@ -44,6 +49,52 @@ def _load_config(path: str) -> dict:
 
 def _has_ground_truth(df: pd.DataFrame) -> bool:
     return "standard_address" in df.columns and df["standard_address"].notna().any()
+
+
+def _build_benchmark_snapshot(all_metrics: dict) -> dict[str, dict]:
+    """Convert raw experiment metrics into dashboard baseline rows."""
+    hourly_cost = {
+        "phobert": 0.85,
+        "siamese": 0.65,
+        "llm": 5.50,
+    }
+    name_map = {
+        "phobert": "PhoBERT",
+        "siamese": "Siamese (mGTE)",
+        "llm": "LLM (Qwen3)",
+    }
+
+    snapshot: dict[str, dict] = {}
+    for model_key, metric_name in (("phobert", "PhoBERT"), ("siamese", "mGTE"), ("llm", "LLM")):
+        metric = all_metrics.get(metric_name)
+        if not metric:
+            continue
+
+        exact_match = float(metric.get("exact_match", 0.0))
+        fuzzy_match = float(metric.get("fuzzy_match", 0.0))
+        throughput = float(metric.get("throughput_qps", 0.0))
+        sample_size = int(metric.get("n_samples", 0) or 0)
+
+        if exact_match + fuzzy_match > 0:
+            f1_proxy = (2 * exact_match * fuzzy_match) / (exact_match + fuzzy_match)
+        else:
+            f1_proxy = 0.0
+
+        if throughput > 0:
+            cost_per_million = (hourly_cost[model_key] / throughput) * (1_000_000 / 3600)
+        else:
+            cost_per_million = {"phobert": 42.0, "siamese": 28.0, "llm": 260.0}[model_key]
+
+        snapshot[model_key] = {
+            "name": name_map[model_key],
+            "f1": round(f1_proxy * 100, 2),
+            "throughput": round(throughput, 2),
+            "costPerMillion": round(cost_per_million, 2),
+            "googleMatch": round(fuzzy_match * 100, 2),
+            "sampleSize": sample_size,
+        }
+
+    return snapshot
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -210,6 +261,20 @@ def main(config_path: str, skip_llm: bool = False):
             print_metrics("LLM", all_metrics["LLM"])
 
     db.disconnect()
+
+    benchmark_snapshot = _build_benchmark_snapshot(all_metrics)
+    if benchmark_snapshot:
+        try:
+            upsert_benchmark_baselines(
+                benchmark_snapshot,
+                notes=(
+                    f"skip_llm={skip_llm}; has_ground_truth={has_gt}; "
+                    f"corpus_size={len(corpus)}; query_count={len(queries)}"
+                ),
+            )
+            logger.info("Đã ghi benchmark baselines vào DB.")
+        except Exception as exc:
+            logger.warning("Không thể ghi benchmark baselines vào DB: %s", exc)
 
     # 6. Báo cáo ─────────────────────────────────────────────────────────────
     detail_df = pd.DataFrame(detail_data)

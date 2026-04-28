@@ -248,6 +248,23 @@ class TrainingHistory(Base):
     created_at = Column(DateTime, default=func.now())
     notes = Column(Text)
 
+
+class BenchmarkModelBaseline(Base):
+    __tablename__ = 'benchmark_model_baselines'
+    __table_args__ = {'schema': 'ath'}
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    model_key = Column(String(32), nullable=False, unique=True)
+    model_name = Column(String(120), nullable=False)
+    f1 = Column(Float, nullable=False, default=0.0)
+    throughput = Column(Float, nullable=False, default=0.0)
+    cost_per_million = Column(Float, nullable=False, default=0.0)
+    google_match = Column(Float, nullable=False, default=0.0)
+    sample_size = Column(Integer, nullable=False, default=0)
+    notes = Column(Text)
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+
 # --- DOMAIN 4: Processing Queue (prq) ---
 
 class RawAddress(Base):
@@ -264,3 +281,58 @@ class RawAddress(Base):
 def create_all_tables():
     init_db_schemas()
     Base.metadata.create_all(bind=engine)
+    seed_training_metadata()
+
+
+def seed_training_metadata():
+    """Seed dashboard training and benchmark metadata when tables are empty."""
+    training_seed_rows = [
+        TrainingHistory(version="v2.1", accuracy=82.5, f1_score=79.1, loss=0.412, samples_count=12000, notes="Seed snapshot"),
+        TrainingHistory(version="v2.2", accuracy=84.2, f1_score=81.5, loss=0.365, samples_count=15800, notes="Seed snapshot"),
+        TrainingHistory(version="v2.3", accuracy=88.7, f1_score=85.3, loss=0.298, samples_count=20100, notes="Seed snapshot"),
+        TrainingHistory(version="v2.4", accuracy=92.4, f1_score=90.1, loss=0.244, samples_count=25130, notes="Seed snapshot"),
+    ]
+    benchmark_seed_rows = [
+        BenchmarkModelBaseline(
+            model_key="phobert",
+            model_name="PhoBERT",
+            f1=84.2,
+            throughput=27.8,
+            cost_per_million=42.0,
+            google_match=76.1,
+            sample_size=5000,
+            notes="Seed snapshot",
+        ),
+        BenchmarkModelBaseline(
+            model_key="siamese",
+            model_name="Siamese (mGTE)",
+            f1=81.3,
+            throughput=31.6,
+            cost_per_million=28.0,
+            google_match=74.5,
+            sample_size=5000,
+            notes="Seed snapshot",
+        ),
+        BenchmarkModelBaseline(
+            model_key="llm",
+            model_name="LLM (Qwen3)",
+            f1=86.8,
+            throughput=9.4,
+            cost_per_million=260.0,
+            google_match=82.2,
+            sample_size=5000,
+            notes="Seed snapshot",
+        ),
+    ]
+
+    session = SessionLocal()
+    try:
+        if session.query(TrainingHistory).count() == 0:
+            session.add_all(training_seed_rows)
+            session.commit()
+
+        if session.query(BenchmarkModelBaseline).count() == 0:
+            session.add_all(benchmark_seed_rows)
+            session.commit()
+    finally:
+        session.close()
