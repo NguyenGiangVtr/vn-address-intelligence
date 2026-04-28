@@ -13,7 +13,7 @@ from transformers import AutoTokenizer, AutoModelForTokenClassification, pipelin
 
 logger = logging.getLogger(__name__)
 
-from constants import get_label_count
+from app.ai.constants import get_label_count
 
 class AddressNER:
     """

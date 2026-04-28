@@ -51,7 +51,8 @@ applyTo: "**/*"
 - Quy dinh chung bat buoc: tat ca dropdown list, notify, confirm phai dung chung mot format.
 - Nguon template control mac dinh la trang Tra cuu Bien dong DVHC (lookup). Khi them moi control, chi duoc tai su dung helper/template tu nhom control nay.
 - Khong tao kieu thong bao moi bang alert/confirm native neu da co bo showToast/showConfirm va control template trong ui/app.js.
-
+- Tuyet doi khong thay doi design khi khong co yeu cau.
+- Tuyet doi khong thay doi codebase của UI theme
 <!-- - **Quy tac scroll (toan bo page):** Uu tien scroll trong control (`.table-container`, `.batch-log`, `.ner-output`, `.tool-input-section`, `.content-grid` items) thay vi scroll full page. Chi dung full-page scroll khi noi dung toan man hinh bat buoc. Ap dung cho tat ca pages:
   - **Address Parser:** NER Output + Entities table scroll noi dung, Input tinh gon (44px min-height)
   - **Batch Processor:** Batch log scroll noi dung (max-height 400px), khong lock full page

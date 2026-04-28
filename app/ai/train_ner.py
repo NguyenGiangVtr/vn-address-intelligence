@@ -33,11 +33,9 @@ from seqeval.metrics import classification_report, f1_score, precision_score, re
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
-if str(Path(__file__).parent) not in sys.path:
-    sys.path.insert(0, str(Path(__file__).parent))
 
-from constants import get_ner_label_list
-from job_artifacts import record_training_history
+from app.ai.constants import get_ner_label_list
+from app.ai.job_artifacts import record_training_history
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s.%(msecs)03d [%(levelname)s] %(message)s", datefmt="%H:%M:%S")
 logger = logging.getLogger("TrainNER")

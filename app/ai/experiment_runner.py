@@ -21,15 +21,13 @@ import yaml
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
-if str(Path(__file__).parent) not in sys.path:
-    sys.path.insert(0, str(Path(__file__).parent))
 
-from db_connector import DBConnector
-from metrics import compute_metrics, print_metrics
-from job_artifacts import upsert_benchmark_baselines
-from models import LLMQwen3, PhoBERTSiamese, SiameseMGTE
-from report_generator import generate_html_report, save_csv
-from utils.config_loader import load_config_with_env
+from app.ai.db_connector import DBConnector
+from app.ai.metrics import compute_metrics, print_metrics
+from app.ai.job_artifacts import upsert_benchmark_baselines
+from app.ai.models import LLMQwen3, PhoBERTSiamese, SiameseMGTE
+from app.ai.report_generator import generate_html_report, save_csv
+from app.ai.utils.config_loader import load_config_with_env
 
 # ──────────────────────────────────────────────────────────────────────────────
 logging.basicConfig(

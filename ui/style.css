@@ -1469,3 +1469,141 @@ select.form-input {
   flex: 1;
   min-height: 0;
 }
+
+/* ══════════════════════════════════════════
+   OSM ENRICHMENT CENTER REDESIGN
+   ══════════════════════════════════════════ */
+
+/* Handle toolbar version of OSM controls */
+.osm-compact-controls.dm-filter-toolbar .card-body {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 8px 16px;
+}
+
+.osm-compact-controls.dm-filter-toolbar .control-actions {
+  display: flex;
+  gap: 8px;
+  border-left: 1px solid var(--border-subtle);
+  padding-left: 12px;
+  margin-left: auto;
+}
+
+/* Vertical layout for the page shell */
+.osm-page-shell {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Job Status Horizontal Strip */
+.osm-job-strip-horizontal {
+  display: flex;
+  gap: 20px;
+  font-size: 12px;
+}
+
+.osm-job-meta-label {
+  color: var(--text-tertiary);
+  font-weight: 500;
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 0.5px;
+}
+
+.osm-job-meta-value {
+  color: var(--text-secondary);
+}
+
+.osm-job-meta-value--mono {
+  font-family: 'SF Mono', 'Consolas', monospace;
+  font-size: 11px;
+}
+
+/* Expanded Log Output */
+.osm-job-log-expanded {
+  background: #000 !important;
+  color: #a9b1d6 !important;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  padding: 16px !important;
+  border: none !important;
+  border-radius: 0 !important;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 300px;
+}
+
+.osm-job-log-expanded::-webkit-scrollbar {
+  width: 8px;
+}
+
+.osm-job-log-expanded::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.osm-job-log-expanded::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.osm-compact-panel {
+  border-color: var(--border-subtle);
+}
+
+/* Ensure stats grid doesn't have too much bottom margin */
+.osm-compact-stats {
+  margin-bottom: 0 !important;
+}
+
+/* Label Studio Page */
+#label-studio .card {
+    background: #fff;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-default);
+}
+
+/* Administrative Unit Mapping Fixes */
+#lookup .sidebar-layout > .card {
+    overflow: hidden !important;
+    max-height: none !important;
+    display: flex;
+    flex-direction: column;
+}
+
+#lookup .lookup-results-table {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0; /* Important for flex child with overflow */
+}
+
+/* Standard Full Height Layouts */
+.full-height-page {
+    height: calc(100vh - 52px); /* 52px = top-header */
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+}
+.full-height-page.active {
+    display: flex !important;
+}
+.full-height-page .page-header {
+    flex-shrink: 0;
+}
+.full-height-page .dm-page-shell {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    gap: 16px;
+    padding-bottom: 16px;
+}
+.full-height-page .dm-page-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}

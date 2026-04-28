@@ -18,10 +18,13 @@ from pathlib import Path
 import yaml
 
 # Đảm bảo import từ cùng package
-sys.path.insert(0, str(Path(__file__).parent))
-from db_connector import DBConnector
-from utils.address_cleaner import AddressCleaner
-from utils.config_loader import load_config_with_env
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from app.ai.db_connector import DBConnector
+from app.ai.utils.address_cleaner import AddressCleaner
+from app.ai.utils.config_loader import load_config_with_env
 
 # ──────────────────────────────────────────────────────────────────────────────
 logging.basicConfig(level=logging.INFO, format="%(asctime)s.%(msecs)03d [%(levelname)s] %(message)s", datefmt="%H:%M:%S")
@@ -300,7 +303,7 @@ class PreLabeler:
 
         return results
 
-from constants import NER_LABELS
+from app.ai.constants import NER_LABELS
 
 def export_label_config(output_file: str):
     """Xuất file XML cấu hình giao diện cho Label Studio."""

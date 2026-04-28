@@ -1053,7 +1053,7 @@ function setupParserTool() {
   const inputEl = document.getElementById("parser-input");
 
   if (btnParse) btnParse.addEventListener("click", () => runParser());
-  
+
   if (btnSampleLocal) btnSampleLocal.addEventListener("click", () => {
     const addr = SAMPLE_ADDRESSES[Math.floor(Math.random() * SAMPLE_ADDRESSES.length)];
     inputEl.value = addr;
@@ -1069,24 +1069,24 @@ async function fetchParserSampleDB() {
   const btnParse = document.getElementById("btn-parse");
   const btnLocal = document.getElementById("btn-parse-sample-local");
   const inputEl = document.getElementById("parser-input");
-  
+
   if (btn) {
     btn.disabled = true;
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
   }
   if (btnParse) btnParse.disabled = true;
   if (btnLocal) btnLocal.disabled = true;
-  
+
   try {
     const res = await fetch(`${API_BASE}/parser/sample`, { headers: getAuthHeader() });
     if (!res.ok) throw new Error("Failed to fetch sample");
-    
+
     const sample = await res.json();
     inputEl.value = sample.raw_address;
     inputEl.dataset.sampleId = sample.id;
-    
+
     if (showToast) showToast(`Đã lấy mẫu ID: ${sample.id} từ Database`, "info");
-    
+
     // runParser will handle its own button disabling/enabling
     await runParser();
   } catch (err) {
@@ -1108,7 +1108,7 @@ async function runParser() {
   const sampleId = inputEl?.dataset?.sampleId;
   const statusEl = document.getElementById("parser-status");
   const container = document.getElementById("parser-comparison-matrix");
-  
+
   // Buttons to disable
   const btnParse = document.getElementById("btn-parse");
   const btnLocal = document.getElementById("btn-parse-sample-local");
@@ -1116,24 +1116,24 @@ async function runParser() {
   const buttons = [btnParse, btnLocal, btnDb].filter(b => b !== null);
 
   if (!text) {
-      if (typeof showToast === 'function') {
-          showToast("Vui lòng nhập địa chỉ cần phân tích", "warning");
-      }
-      return;
+    if (typeof showToast === 'function') {
+      showToast("Vui lòng nhập địa chỉ cần phân tích", "warning");
+    }
+    return;
   }
 
   if (statusEl) {
     statusEl.textContent = "Analyzing...";
     statusEl.className = "badge warning";
   }
-  
+
   // Disable all controls
   buttons.forEach(btn => { btn.disabled = true; });
   if (btnParse) btnParse.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Phân tích';
 
   // Show a hint if it's likely the first run
   if (container && container.querySelector('.empty-state')) {
-      container.innerHTML = `
+    container.innerHTML = `
         <div class="empty-state" style="padding: 40px; text-align: center; color: var(--text-tertiary);">
             <i class="fa-solid fa-circle-notch fa-spin" style="font-size: 32px; margin-bottom: 12px; display: block;"></i>
             Đang khởi tạo các mô hình AI (PhoBERT, mGTE, Qwen)...<br>
@@ -1144,23 +1144,23 @@ async function runParser() {
 
   try {
     const payload = sampleId ? { id: parseInt(sampleId) } : { raw_address: text };
-    
+
     const res = await fetch(`${API_BASE}/parser/analyze`, {
       method: "POST",
       headers: { ...getAuthHeader(), "Content-Type": "application/json" },
       body: JSON.stringify(payload)
     });
-    
+
     if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.detail || "Analysis failed");
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.detail || "Analysis failed");
     }
     const data = await res.json();
-    
+
     if (!data) throw new Error("Server returned empty response");
 
     renderParserComparisonMatrix(data);
-    
+
     // Highlight visual output using the primary/first model (usually PreLabeler/Heuristic)
     if (data?.outputs?.prelabeler?.result) {
       renderNEROutput(text, data.outputs.prelabeler.result.map(r => ({
@@ -1170,30 +1170,30 @@ async function runParser() {
         text: r.value.text
       })));
     }
-    
+
     if (statusEl) {
       statusEl.textContent = "Success";
       statusEl.className = "badge success";
     }
-    
+
     // Render meta safely
     try {
-        const metaEl = document.getElementById("parser-meta");
-        if (metaEl && data?.meta) {
-          const corpusSize = data.meta.corpusSize || 0;
-          const evaluatedAt = data.meta.evaluatedAt ? new Date(data.meta.evaluatedAt).toLocaleTimeString() : "-";
-          const note = data.meta.note || "";
-          
-          metaEl.innerHTML = `
+      const metaEl = document.getElementById("parser-meta");
+      if (metaEl && data?.meta) {
+        const corpusSize = data.meta.corpusSize || 0;
+        const evaluatedAt = data.meta.evaluatedAt ? new Date(data.meta.evaluatedAt).toLocaleTimeString() : "-";
+        const note = data.meta.note || "";
+
+        metaEl.innerHTML = `
             <div class="flex justify-between">
               <span>Corpus Size: <strong>${corpusSize.toLocaleString()}</strong></span>
               <span>Evaluated: <strong>${evaluatedAt}</strong></span>
             </div>
             <div class="mt-4" style="opacity: 0.8">${note}</div>
           `;
-        }
+      }
     } catch (metaErr) {
-        console.warn("Meta rendering error:", metaErr);
+      console.warn("Meta rendering error:", metaErr);
     }
 
   } catch (err) {
@@ -1203,9 +1203,9 @@ async function runParser() {
       statusEl.className = "badge danger";
     }
     if (showToast) showToast(`Lỗi: ${err.message}`, "danger");
-    
+
     if (container) {
-        container.innerHTML = `
+      container.innerHTML = `
             <div class="empty-state" style="padding: 40px; text-align: center; color: var(--danger);">
                 <i class="fa-solid fa-triangle-exclamation" style="font-size: 32px; margin-bottom: 12px; display: block;"></i>
                 Lỗi phân tích: ${err.message}
@@ -1254,12 +1254,12 @@ function renderParserComparisonMatrix(data) {
     let latencyHtml = "-";
 
     if (out.error) {
-        resultHtml = `<div class="text-danger" style="font-size: 11px;"><i class="fa-solid fa-circle-exclamation"></i> ${out.error}</div>`;
-        if (out.status === "Not loaded") {
-            resultHtml = `<div class="text-tertiary" style="font-size: 11px;"><i class="fa-solid fa-power-off"></i> Model not loaded (insufficient resources)</div>`;
-        }
+      resultHtml = `<div class="text-danger" style="font-size: 11px;"><i class="fa-solid fa-circle-exclamation"></i> ${out.error}</div>`;
+      if (out.status === "Not loaded") {
+        resultHtml = `<div class="text-tertiary" style="font-size: 11px;"><i class="fa-solid fa-power-off"></i> Model not loaded (insufficient resources)</div>`;
+      }
     } else if (m.id === "prelabeler") {
-      resultHtml = `<div class="flex flex-wrap gap-4">` + 
+      resultHtml = `<div class="flex flex-wrap gap-4">` +
         (out.result ? out.result.slice(0, 5).map(r => `<span class="badge badge-outline" style="font-size:10px">${r.value.labels[0]}: ${r.value.text}</span>`).join("") : "N/A") +
         (out.result && out.result.length > 5 ? `<span class="text-tertiary">...</span>` : "") +
         `</div>`;
@@ -1458,7 +1458,7 @@ function setupBatchTool() {
       }
 
       document.getElementById("batch-throughput").textContent = `${tps.toLocaleString()} items/s`;
-      log.innerHTML += `[${formatLogTime()}] Processing... ${processed.toLocaleString()}/${size.toLocaleString()}\n`;
+      log.innerHTML += `[${formatLogTime()}] Processing... ${processed.toLocaleString()}/${size.toLocaleString("N0")}\n`;
       log.scrollTop = log.scrollHeight;
     }, 800);
 
@@ -1693,16 +1693,37 @@ async function showDetails(level, id) {
     const res = await fetch(`${API_BASE}/unit-details/${level}/${id}`, { headers: getAuthHeader() });
     const u = await res.json();
     panel.innerHTML = `
-      <div class="flex flex-col gap-12">
-        <div class="text-accent font-700" style="font-size:18px">${u.province_name || u.district_name || u.ward_name}</div>
-        <div class="flex justify-between"><span>Phiên bản:</span><span class="badge info">Admin v${u.admin_version}</span></div>
-        <div class="flex justify-between"><span>Mã GSO:</span><span class="text-mono" id="current-unit-code">${u.province_no || u.province_no || u.district_no || u.ward_no || "N/A"}</span></div>
-        <div class="flex justify-between"><span>Dân số:</span><span class="font-600">${(u.population || 0).toLocaleString()} người</span></div>
-        <div class="flex justify-between"><span>Diện tích:</span><span class="font-600">${(u.area_km2 || 0).toLocaleString()} km²</span></div>
-        <div class="nav-divider"></div>
-        <div>
-          <div class="stat-label">Nghị quyết/Quyết định:</div>
-          <div style="font-size:12px; color:var(--text-secondary); line-height:1.4">${u.decision_number || "Chưa có dữ liệu"}</div>
+      <div class="flex flex-col gap-16">
+        <div class="flex items-center gap-12">
+          <div class="flex-1">
+             <div class="text-accent font-700" style="font-size:20px; line-height:1.2;">${u.ward_name || u.district_name || u.province_name}</div>
+             <div class="text-tertiary" style="font-size:12px; margin-top:4px;">${u.province_name ? 'Tỉnh/Thành phố' : (u.district_name ? 'Quận/Huyện' : 'Phường/Xã')}</div>
+          </div>
+          <div class="badge info" style="padding: 6px 10px;">v${u.admin_version}</div>
+        </div>
+        
+        <div class="nav-divider" style="margin: 4px 0;"></div>
+        
+        <div class="grid gap-12" style="grid-template-columns: 1fr; font-size: 13px;">
+          <div class="flex justify-between items-center">
+            <span class="text-secondary"><i class="fa-solid fa-fingerprint mr-8" style="width:16px"></i>Mã GSO:</span>
+            <span class="text-mono font-600">${u.province_no || u.district_no || u.ward_no || "N/A"}</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-secondary"><i class="fa-solid fa-users mr-8" style="width:16px"></i>Dân số:</span>
+            <span class="font-600">${(u.population || 0).toLocaleString()} <small class="text-tertiary">người</small></span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-secondary"><i class="fa-solid fa-ruler-combined mr-8" style="width:16px"></i>Diện tích:</span>
+            <span class="font-600">${(u.area_km2 || 0).toLocaleString()} <small class="text-tertiary">km²</small></span>
+          </div>
+        </div>
+
+        <div class="card p-12" style="background: var(--bg-hover); border-radius: 8px; border: 1px dashed var(--border-default);">
+          <div class="stat-label mb-4" style="font-size:11px; text-transform:uppercase; letter-spacing:0.05em;">Cơ sở pháp lý</div>
+          <div style="font-size:12px; color:var(--text-secondary); line-height:1.5; font-style: italic;">
+            "${u.decision_number || "Chưa có thông tin nghị quyết cụ thể trong hệ thống."}"
+          </div>
         </div>
       </div>
     `;
@@ -1716,46 +1737,50 @@ async function triggerMappingSearch() {
   const wId = mappingState.wards[document.getElementById('mapping-ward-input').value];
 
   const tbody = document.getElementById('mapping-results-table');
-
-  // Lấy giá trị version từ UI
   const version = document.querySelector('input[name="admin-version"]:checked')?.value;
 
-  // Xây dựng URL với các tham số ID chính xác
   let url = `${API_BASE}/lookup/mapping?`;
   if (wId) url += `ward_id=${wId}`;
   else if (dId) url += `district_id=${dId}`;
   else if (pId) url += `province_id=${pId}`;
 
   if (version) url += `${url.endsWith('?') ? '' : '&'}version=${version}`;
-
   if (qText) url += `${url.endsWith('?') ? '' : '&'}query=${encodeURIComponent(qText)}`;
+  if (url.endsWith('?')) return; 
 
-  if (url.endsWith('?')) return; // No filter
-
-  tbody.innerHTML = '<tr><td colspan="5" class="text-center" style="padding:40px"><i class="fa-solid fa-circle-notch fa-spin fa-2x text-accent"></i></td></tr>';
+  tbody.innerHTML = '<tr><td colspan="5" class="text-center" style="padding:60px"><i class="fa-solid fa-circle-notch fa-spin fa-2x text-accent"></i><div class="mt-12 text-tertiary">Đang truy vấn dữ liệu mapping...</div></td></tr>';
 
   try {
     const res = await fetch(url, { headers: getAuthHeader() });
     const data = await res.json();
     if (data.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="5" class="text-center text-tertiary" style="padding:40px">Không tìm thấy dữ liệu ánh xạ phù hợp</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="5" class="text-center text-tertiary" style="padding:60px">Không tìm thấy dữ liệu ánh xạ phù hợp cho khu vực này</td></tr>';
       return;
     }
     tbody.innerHTML = data.map(m => `
-      <tr>
-        <td>
-          <div class="font-600" style="font-size:14px; color:var(--text-accent)">${m.ward_name_old || (m.ward_id_old == -1 ? "(Tất cả Xã)" : "N/A")}</div>
-          <div class="text-tertiary" style="font-size:12px">
+      <tr style="cursor: pointer; transition: background 0.2s;" onclick="showDetails('ward', ${m.ward_id_new})">
+        <td style="padding: 16px 20px;">
+          <div class="font-700" style="font-size:15px; color:var(--text-primary)">${m.ward_name_old || (m.ward_id_old == -1 ? "(Tất cả Xã)" : "N/A")}</div>
+          <div class="text-tertiary" style="font-size:12px; margin-top: 2px;">
             ${[m.district_name_old, m.province_name_old].filter(x => x).join(" - ")}
           </div>
         </td>
-        <td class="text-tertiary" style="vertical-align:middle"><i class="fa-solid fa-arrow-right-long"></i></td>
-        <td>
-          <div class="font-600" style="font-size:14px; color:var(--success)">${m.ward_name_new || "N/A"}</div>
-          <div class="text-tertiary" style="font-size:12px">${m.province_name_new || ""}</div>
+        <td class="text-center" style="vertical-align:middle; width: 60px;">
+          <div style="background: var(--bg-hover); width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto;">
+            <i class="fa-solid fa-chevron-right text-accent" style="font-size: 12px;"></i>
+          </div>
         </td>
-        <td><div style="max-width:300px; font-size:12px; line-height:1.4">${m.updated_note || ""}</div></td>
-        <td class="text-tertiary" style="font-size:12px">${m.effective_date_from ? new Date(m.effective_date_from).toLocaleDateString('vi-VN') : "-"}</td>
+        <td style="padding: 16px 20px;">
+          <div class="font-700" style="font-size:15px; color:var(--success)">${m.ward_name_new || "N/A"}</div>
+          <div class="text-tertiary" style="font-size:12px; margin-top: 2px;">${m.district_name_new || ""} - ${m.province_name_new || ""}</div>
+        </td>
+        <td style="padding: 16px 20px;">
+          <div class="badge ${m.relationship_type === 'MERGE' ? 'warning' : 'info'}" style="font-size: 10px; margin-bottom: 6px;">${m.relationship_type || 'MAPPING'}</div>
+          <div style="max-width:320px; font-size:12px; line-height:1.5; color: var(--text-secondary)">${m.updated_note || "Cập nhật theo nghị quyết sáp nhập ĐVHC."}</div>
+        </td>
+        <td class="text-tertiary" style="padding: 16px 20px; font-size:13px; font-family: var(--font-mono)">
+          ${m.effective_date_from ? new Date(m.effective_date_from).toLocaleDateString('vi-VN') : "01/01/2021"}
+        </td>
       </tr>
     `).join("");
   } catch (err) { tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger" style="padding:40px">Lỗi kết nối API</td></tr>'; }
@@ -1998,7 +2023,7 @@ async function syncAllProvinces() {
 
 // ═══ ADMINISTRATIVE MANAGER (CRUD) ═══
 
-window.editAdminUnit = async function(level, id) {
+window.editAdminUnit = async function (level, id) {
   try {
     const res = await fetch(`${API_BASE}/${level}s/${id}`, { headers: getAuthHeader() });
     const item = await res.json();
@@ -2009,7 +2034,7 @@ window.editAdminUnit = async function(level, id) {
     document.getElementById('admin-form-no').value = item[`${level}_no`] || '';
     document.getElementById('admin-form-type').value = item.type_name || '';
     document.getElementById('admin-form-name-en').value = item[`${level}_name_en`] || '';
-    
+
     renderExtraFields(item);
     document.getElementById('modal-admin-unit').classList.add('active');
   } catch (e) {
@@ -2039,17 +2064,17 @@ async function renderExtraFields(item = null) {
   try {
     const parentLevel = level === 'district' ? 'province' : 'district';
     let url = `${API_BASE}/${parentLevel}s?limit=500`;
-    
+
     // For ward, filter districts by current selected province if possible
     if (level === 'ward') {
-        const pInput = document.getElementById('admin-province-input');
-        const filterProvId = pInput && pInput.value ? adminState.provinces[pInput.value] : null;
-        if (filterProvId) url += `&province_id=${filterProvId}`;
+      const pInput = document.getElementById('admin-province-input');
+      const filterProvId = pInput && pInput.value ? adminState.provinces[pInput.value] : null;
+      if (filterProvId) url += `&province_id=${filterProvId}`;
     }
 
     const res = await fetch(url, { headers: getAuthHeader() });
     const data = await res.json();
-    
+
     renderUnifiedSelectOptions('admin-form-parent', data, `${parentLevel}_id`, `${parentLevel}_name`, '-- Chọn đơn vị cha --');
     if (parentId) document.getElementById('admin-form-parent').value = parentId;
   } catch (e) {
@@ -2057,7 +2082,7 @@ async function renderExtraFields(item = null) {
   }
 }
 
-window.deleteAdminUnit = async function(level, id, name) {
+window.deleteAdminUnit = async function (level, id, name) {
   const ok = await showConfirm(`Bạn có chắc chắn muốn xóa "${name}"? Hành động này không thể hoàn tác.`);
   if (!ok) return;
 
@@ -2215,7 +2240,7 @@ async function initAdminManager() {
 function getAdminCurrentLevel() {
   const pInput = document.getElementById('admin-province-input');
   const dInput = document.getElementById('admin-district-input');
-  
+
   if (dInput && dInput.value && adminState.districts[dInput.value]) return 'ward';
   if (pInput && pInput.value && adminState.provinces[pInput.value]) return 'district';
   return 'province';
@@ -2223,13 +2248,13 @@ function getAdminCurrentLevel() {
 
 async function loadAdminData() {
   const level = getAdminCurrentLevel();
-  
+
   const pInput = document.getElementById('admin-province-input');
   const dInput = document.getElementById('admin-district-input');
-  
+
   const provinceId = pInput && pInput.value ? adminState.provinces[pInput.value] : null;
   const districtId = dInput && dInput.value ? adminState.districts[dInput.value] : null;
-  
+
   const searchInput = document.getElementById('admin-search-input');
   const q = searchInput ? searchInput.value.toLowerCase() : '';
 
@@ -2312,7 +2337,7 @@ function initDataExplorer() {
         throw new Error(errData.detail || `HTTP ${res.status}`);
       }
       const data = await res.json();
-      
+
       if (data.length === 0) {
         tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-tertiary);">Không có dữ liệu trong prq.address_cleansing_queue</td></tr>`;
       } else {
@@ -2321,7 +2346,7 @@ function initDataExplorer() {
           if (item.status === "DONE") statusBadge = "success";
           else if (item.status === "ERROR") statusBadge = "danger";
           else if (item.status === "PROCESSING") statusBadge = "warning";
-          
+
           return `<tr>
             <td class="text-mono" style="font-size: 11px;">#${item.id}</td>
             <td>${item.raw_address}</td>
@@ -2343,7 +2368,7 @@ function initDataExplorer() {
   };
 
   btnRefresh.addEventListener("click", loadData);
-  
+
   if (searchInput) {
     searchInput.addEventListener("keypress", (e) => {
       if (e.key === "Enter") loadData();
