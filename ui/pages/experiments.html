@@ -1,0 +1,53 @@
+<!-- ══════ PAGE: BENCHMARK EXPERIMENTS ══════ -->
+<div class="page" id="experiments">
+    <div class="page-header">
+        <h2>Benchmark Experiments</h2>
+        <p>Đánh giá hiệu năng mô hình trên tập dữ liệu thử nghiệm chuẩn</p>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-label">Tổng số Test Case</div>
+            <div class="stat-value">5,000</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Độ chính xác trung bình</div>
+            <div class="stat-value" style="color: var(--success)">94.2%</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Thời gian phản hồi TB</div>
+            <div class="stat-value">85ms</div>
+        </div>
+    </div>
+
+    <div class="card mt-24">
+        <div class="card-header">
+            <span class="card-title">Kết quả Benchmark chi tiết</span>
+            <div class="flex gap-12">
+                <button class="btn btn-sm btn-ghost" id="btn-benchmark-refresh"><i
+                        class="fa-solid fa-rotate"></i> Refresh</button>
+                <button class="btn btn-sm btn-primary" id="btn-run-benchmark"><i
+                        class="fa-solid fa-play"></i> Run Full Benchmark</button>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Model Approach</th>
+                            <th>Accuracy</th>
+                            <th>Precision</th>
+                            <th>Recall</th>
+                            <th>F1-Score</th>
+                            <th>Latency</th>
+                        </tr>
+                    </thead>
+                    <tbody id="benchmark-body">
+                        <!-- Filled by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

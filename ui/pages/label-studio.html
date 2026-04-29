@@ -1,0 +1,63 @@
+<!-- ══════ PAGE: LABEL STUDIO ══════ -->
+<div class="page" id="label-studio">
+    <div class="page-header">
+        <div class="flex justify-between items-center">
+            <div>
+                <h2>Label Studio Integration</h2>
+                <p>Gán nhãn thực thể địa chỉ trực tiếp qua API Label Studio</p>
+            </div>
+            <div class="flex gap-12">
+                <button class="btn btn-sm btn-ghost" id="btn-ls-refresh">
+                    <i class="fa-solid fa-sync"></i> Refresh Tasks
+                </button>
+                <a href="https://label.nod.io.vn/" target="_blank" class="btn btn-ghost btn-sm">
+                    <i class="fa-solid fa-external-link"></i> Open Label Studio
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-label">Total Tasks</div>
+            <div class="stat-value" id="ls-stat-total">0</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Completed</div>
+            <div class="stat-value" id="ls-stat-completed" style="color: var(--success)">0</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Project ID</div>
+            <div class="stat-value" id="ls-stat-project">1</div>
+        </div>
+    </div>
+
+    <div class="card mt-24">
+        <div class="card-header">
+            <span class="card-title"><i class="fa-solid fa-tags mr-8"></i> Labeling Tasks</span>
+            <div class="badge info">Active Project</div>
+        </div>
+        <div class="card-body with-scroll" style="padding:0">
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Task ID</th>
+                            <th>Data</th>
+                            <th>Created At</th>
+                            <th>Status</th>
+                            <th class="text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ls-tasks-body">
+                        <tr>
+                            <td colspan="5" class="text-center p-24 text-tertiary">
+                                <i class="fa-solid fa-spinner fa-spin mr-8"></i> Đang kết nối API Label Studio...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

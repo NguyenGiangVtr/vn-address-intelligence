@@ -1,0 +1,48 @@
+<!-- ══════ PAGE: DATA EXPLORER ══════ -->
+<div class="page" id="explorer">
+    <div class="page-header">
+        <h2>Data Explorer</h2>
+        <p>Khám phá và truy vấn dữ liệu từ prq.address_cleansing_queue</p>
+    </div>
+
+    <!-- Filter Toolbar -->
+    <div class="card mb-20 dm-filter-sidebar dm-filter-toolbar">
+        <div class="card-body">
+            <div class="search-box">
+                <div class="search-icon"><i class="fa-solid fa-magnifying-glass"></i></div>
+                <input type="text" id="explorer-search" class="search-input"
+                    placeholder="Tìm kiếm địa chỉ, tỉnh thành, trạng thái...">
+            </div>
+
+            <button class="btn btn-primary" id="btn-explorer-refresh">
+                <i class="fa-solid fa-arrow-rotate-right"></i> Làm mới
+            </button>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title"><i class="fa-solid fa-database mr-8"></i> Hàng đợi xử lý địa chỉ</span>
+            <span class="badge info">Top 100 records</span>
+        </div>
+        <div class="card-body with-scroll" style="padding:0">
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Raw Address</th>
+                            <th>Ward</th>
+                            <th>District</th>
+                            <th>Province</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="explorer-body">
+                        <!-- Filled by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

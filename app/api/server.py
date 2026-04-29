@@ -14,6 +14,7 @@ import sys
 import subprocess
 import threading
 import traceback
+import httpx
 from uuid import uuid4
 from pathlib import Path
 from datetime import datetime, timedelta
@@ -473,6 +474,7 @@ async def track_visitors(request: Request, call_next):
 
 # Serve UI static files
 app.mount("/ui", StaticFiles(directory="ui"), name="ui")
+app.mount("/pages", StaticFiles(directory="ui/pages"), name="pages")
 
 @app.get("/")
 @app.get("/index.html")
@@ -494,6 +496,18 @@ def get_js():
 @app.get("/controls-template.js")
 def get_controls_template_js():
     return FileResponse('ui/controls-template.js')
+
+@app.get("/{page_name}.html")
+def get_any_html(page_name: str):
+    # Try ui/ first
+    p1 = Path(f"ui/{page_name}.html")
+    if p1.exists():
+        return FileResponse(p1)
+    # Try ui/pages/ next
+    p2 = Path(f"ui/pages/{page_name}.html")
+    if p2.exists():
+        return FileResponse(p2)
+    raise HTTPException(status_code=404)
 
 @app.get("/favicon.ico")
 def get_favicon():
@@ -1466,6 +1480,49 @@ def get_explorer_queue(db: Session = Depends(get_db), limit: int = 100, q: str =
 @app.get("/explorer/queue")
 def get_explorer_queue_root(db: Session = Depends(get_db), limit: int = 100, q: str = ""):
     return _read_explorer_queue(db, limit, q)
+
+@api_router.get("/label-studio/tasks")
+async def get_ls_tasks(current_user: str = Depends(get_current_user)):
+    """Fetch tasks from Label Studio API."""
+    ls_token = os.getenv("LABEL_STUDIO_API_TOKEN")
+    ls_url = os.getenv("LABEL_STUDIO_URL", "https://label.nod.io.vn")
+    project_id = os.getenv("LABEL_STUDIO_PROJECT_ID", "1")
+    
+    if not ls_token:
+        logger.warning("LABEL_STUDIO_API_TOKEN not found in environment. Returning mock data.")
+        return [
+            {"id": 101, "data": {"address": "2695/7 Phạm Thế Hiển, P7, Q8, HCM"}, "created_at": "2026-04-28T10:00:00Z", "is_labeled": True, "project": project_id},
+            {"id": 102, "data": {"address": "123 Lê Lợi, Bến Thành, Q1, HCM"}, "created_at": "2026-04-28T11:00:00Z", "is_labeled": False, "project": project_id},
+            {"id": 103, "data": {"address": "456 Nguyễn Huệ, Q1, HCM"}, "created_at": "2026-04-29T00:15:00Z", "is_labeled": False, "project": project_id},
+        ]
+    
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            # Note: Label Studio API uses "Token <key>" or "Bearer <key>"
+            headers = {"Authorization": f"Token {ls_token}"}
+            # API endpoint: /api/projects/{id}/tasks
+            # See: https://labelstud.io/api#operation/api_projects_tasks_list
+            response = await client.get(
+                f"{ls_url.rstrip('/')}/api/projects/{project_id}/tasks",
+                headers=headers,
+                params={"page_size": 100}
+            )
+            
+            if response.status_code != 200:
+                logger.error(f"Label Studio returned {response.status_code}: {response.text}")
+                return []
+                
+            tasks = response.json()
+            # Normalize response if it's a paginated object
+            if isinstance(tasks, dict) and "tasks" in tasks:
+                tasks = tasks["tasks"]
+            elif isinstance(tasks, dict) and "results" in tasks:
+                tasks = tasks["results"]
+                
+            return tasks
+    except Exception as e:
+        logger.error(f"Error connecting to Label Studio: {e}")
+        return []
 
 # Register API router
 api_router_v1 = APIRouter(prefix="/api/v1")

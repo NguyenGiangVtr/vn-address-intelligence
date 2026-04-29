@@ -1,0 +1,57 @@
+<!-- ══════ PAGE: SETTINGS ══════ -->
+<div class="page" id="settings">
+    <div class="page-header">
+        <h2>Settings</h2>
+        <p>Cấu hình hệ thống và API Keys</p>
+    </div>
+
+    <div class="content-grid triple">
+        <div class="card">
+            <div class="card-header"><span class="card-title">API Configuration</span></div>
+            <div class="card-body">
+                <div class="form-group">
+                    <label>API Base URL</label>
+                    <input type="text" class="form-input" id="cfg-api-url" value="http://localhost:8000/api/v1">
+                </div>
+                <button class="btn btn-primary w-full mt-12">Lưu cấu hình</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header"><span class="card-title">Label Studio Integration</span></div>
+            <div class="card-body">
+                <div class="form-group">
+                    <label>Label Studio API Key</label>
+                    <input type="password" class="form-input" id="cfg-ls-api-key" placeholder="Nhập API Key...">
+                </div>
+                <div class="form-group">
+                    <label>Project ID</label>
+                    <input type="text" class="form-input" id="cfg-ls-project" value="1">
+                </div>
+                <button class="btn btn-primary w-full mt-12">Kiểm tra kết nối</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header"><span class="card-title">Appearance</span></div>
+            <div class="card-body">
+                <div class="form-group">
+                    <label>Theme</label>
+                    <select class="form-input">
+                        <option>Dark (Default)</option>
+                        <option>Light</option>
+                        <option>OLED Black</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Animations</label>
+                    <select class="form-input">
+                        <option>Smooth</option>
+                        <option>Fast</option>
+                        <option>Off</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

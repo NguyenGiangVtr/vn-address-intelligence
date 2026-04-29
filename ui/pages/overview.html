@@ -1,0 +1,188 @@
+<!-- ══════ PAGE: OVERVIEW ══════ -->
+<div class="page active" id="overview">
+    <div class="page-header">
+        <h2>Dashboard</h2>
+        <p>Hệ thống Làm giàu và Chuẩn hóa Dữ liệu Địa chỉ Việt Nam</p>
+        <div class="flex items-center gap-12 mt-12">
+            <button class="btn btn-sm btn-ghost" id="btn-dashboard-refresh" type="button">
+                <i class="fa-solid fa-arrow-rotate-right"></i> Làm mới số liệu
+            </button>
+            <span id="dashboard-last-refresh" class="text-tertiary" style="font-size:12px;">Chưa cập nhật</span>
+        </div>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-label">Total Visits</div>
+            <div class="stat-value" id="stat-total-visits">0</div>
+            <div class="stat-change positive"><i class="fa-solid fa-eye"></i> All time</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Unique Visitors</div>
+            <div class="stat-value" id="stat-unique-ips">0</div>
+            <div class="stat-change positive"><i class="fa-solid fa-user-check"></i> Unique IPs</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Online Users</div>
+            <div class="stat-value" id="stat-online-users" style="color:var(--success)">0</div>
+            <div class="stat-change positive"><i class="fa-solid fa-circle-dot pulse"></i> Real-time</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Queue</div>
+            <div class="stat-value" id="stat-queue">505,094</div>
+            <div class="stat-change warning"><i class="fa-solid fa-clock"></i> Pending</div>
+        </div>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-label">Master Data</div>
+            <div class="stat-value" id="stat-master">16,427</div>
+            <div class="stat-change positive"><i class="fa-solid fa-arrow-up"></i> P+D+W</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">OSM Entities</div>
+            <div class="stat-value" id="stat-osm">615,547</div>
+            <div class="stat-change positive"><i class="fa-solid fa-arrow-up"></i> OSM</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Training Data</div>
+            <div class="stat-value" id="stat-training">25,130</div>
+            <div class="stat-change positive"><i class="fa-solid fa-check"></i> Labeled</div>
+        </div>
+    </div>
+
+    <!-- ══════ AI WORKFLOW LIFECYCLE ══════ -->
+    <div class="card mt-24 mb-24">
+        <div class="card-header">
+            <span class="card-title">AI Intelligence Lifecycle</span>
+        </div>
+        <div class="card-body" style="padding: 30px">
+            <div class="workflow-diagram horizontal">
+                <div class="workflow-step clickable" data-goto="batch">
+                    <div class="step-icon"><i class="fa-solid fa-file-import"></i></div>
+                    <div class="step-content">
+                        <h4>1. Thu thập</h4>
+                    </div>
+                </div>
+                <div class="workflow-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+                <div class="workflow-step clickable" data-goto="parser">
+                    <div class="step-icon"><i class="fa-solid fa-microchip"></i></div>
+                    <div class="step-content">
+                        <h4>2. Xử lý NER</h4>
+                    </div>
+                </div>
+                <div class="workflow-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+                <div class="workflow-step accent clickable" data-goto="label-studio">
+                    <div class="step-icon"><i class="fa-solid fa-user-check"></i></div>
+                    <div class="step-content">
+                        <h4>3. Gán nhãn</h4>
+                    </div>
+                </div>
+                <div class="workflow-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+                <div class="workflow-step glow clickable" data-goto="training">
+                    <div class="step-icon"><i class="fa-solid fa-rotate"></i></div>
+                    <div class="step-content">
+                        <h4>4. Retrain</h4>
+                    </div>
+                </div>
+                <div class="workflow-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+                <div class="workflow-step success">
+                    <div class="step-icon"><i class="fa-solid fa-rocket"></i></div>
+                    <div class="step-content">
+                        <h4>5. Tăng trưởng</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="content-grid sidebar-layout">
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">Tiến độ xử lý theo Schema</span>
+                <button class="btn btn-sm btn-ghost"><i class="fa-solid fa-arrow-rotate-right"></i>
+                    Refresh</button>
+            </div>
+            <div class="card-body">
+                <div class="chart-container"><canvas id="chart-overview"></canvas></div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">Hoạt động gần đây</span>
+            </div>
+            <div class="card-body">
+                <ul class="activity-list" id="activity-feed">
+                    <li class="activity-item">
+                        <div class="activity-dot"></div>
+                        <div>
+                            <div class="activity-text">Export 1,000 NER samples prelabeled</div>
+                            <div class="activity-time">2 giờ trước</div>
+                        </div>
+                    </li>
+                    <li class="activity-item">
+                        <div class="activity-dot" style="background:var(--success)"></div>
+                        <div>
+                            <div class="activity-text">Hybrid PreLabeler v2 deployed</div>
+                            <div class="activity-time">5 giờ trước</div>
+                        </div>
+                    </li>
+                    <li class="activity-item">
+                        <div class="activity-dot" style="background:var(--warning)"></div>
+                        <div>
+                            <div class="activity-text">Ward Mapping: 10,635 rules synced</div>
+                            <div class="activity-time">1 ngày trước</div>
+                        </div>
+                    </li>
+                    <li class="activity-item">
+                        <div class="activity-dot" style="background:var(--info)"></div>
+                        <div>
+                            <div class="activity-text">OSM crawl completed: 63 provinces</div>
+                            <div class="activity-time">3 ngày trước</div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Model Status -->
+    <div class="page-header mt-24">
+        <h2>Model Status</h2>
+    </div>
+    <div class="stats-grid">
+        <div class="model-card">
+            <div class="model-icon ner"><i class="fa-solid fa-tags"></i></div>
+            <div class="model-info">
+                <div class="model-name">PhoBERT NER</div>
+                <div class="model-desc">Token classification · 10 entities</div>
+            </div>
+            <span class="badge warning">Training</span>
+        </div>
+        <div class="model-card">
+            <div class="model-icon phobert"><i class="fa-solid fa-code-branch"></i></div>
+            <div class="model-info">
+                <div class="model-name">PhoBERT Siamese</div>
+                <div class="model-desc">Bi-Encoder address matching</div>
+            </div>
+            <span class="badge success">Ready</span>
+        </div>
+        <div class="model-card">
+            <div class="model-icon mgte"><i class="fa-solid fa-globe"></i></div>
+            <div class="model-info">
+                <div class="model-name">mGTE Siamese</div>
+                <div class="model-desc">Multilingual baseline</div>
+            </div>
+            <span class="badge success">Ready</span>
+        </div>
+        <div class="model-card">
+            <div class="model-icon llm"><i class="fa-solid fa-robot"></i></div>
+            <div class="model-info">
+                <div class="model-name">LLM Qwen3-4B</div>
+                <div class="model-desc">Final normalization</div>
+            </div>
+            <span class="badge info">Standby</span>
+        </div>
+    </div>
+</div>

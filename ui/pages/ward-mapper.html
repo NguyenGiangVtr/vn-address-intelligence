@@ -1,0 +1,92 @@
+<!-- ══════ PAGE: WARD MAPPING LOOKUP ══════ -->
+<div class="page" id="ward-mapper">
+    <div class="page-header">
+        <h2>Ward Mapping Lookup</h2>
+        <p>Tra cứu và ánh xạ phường/xã giữa các hệ thống (DGH, VNPost, NSO)</p>
+    </div>
+
+    <!-- Filter Toolbar -->
+    <div class="card mb-20 dm-filter-sidebar dm-filter-toolbar">
+        <div class="card-body">
+            <div class="form-group">
+                <select id="mapping-province-input" class="form-input" list="list-provinces">
+                    <option value="">-- Chọn Tỉnh / Thành --</option>
+                </select>
+                <datalist id="list-provinces"></datalist>
+            </div>
+            <div class="form-group">
+                <select id="mapping-district-input" class="form-input" list="list-districts">
+                    <option value="">-- Chọn Quận / Huyện --</option>
+                </select>
+                <datalist id="list-districts"></datalist>
+            </div>
+            <div class="form-group">
+                <select id="mapping-ward-input" class="form-input" list="list-wards">
+                    <option value="">-- Chọn Phường / Xã --</option>
+                </select>
+                <datalist id="list-wards"></datalist>
+            </div>
+
+            <div class="version-tab-container">
+                <label class="version-tab"><input type="radio" name="admin-version" value="1" checked
+                        style="display:none"> V1</label>
+                <label class="version-tab"><input type="radio" name="admin-version" value="2"
+                        style="display:none"> V2</label>
+                <label class="version-tab"><input type="radio" name="admin-version" value="3"
+                        style="display:none"> V3</label>
+            </div>
+
+            <div class="search-box">
+                <div class="search-icon"><i class="fa-solid fa-magnifying-glass"></i></div>
+                <input type="text" id="mapping-search-input" class="search-input"
+                    placeholder="Tìm nhanh theo tên đơn vị...">
+            </div>
+
+            <button class="btn btn-primary" id="btn-mapping-search">
+                <i class="fa-solid fa-filter"></i> Lọc
+            </button>
+        </div>
+    </div>
+
+    <div class="content-grid sidebar-layout" style="gap: 16px;">
+        <!-- Left Column: Search Results -->
+        <div class="card" style="flex: 1.5; min-height: 0; display: flex; flex-direction: column;">
+            <div class="card-header">
+                <span class="card-title"><i class="fa-solid fa-list-check mr-8"></i> Kết quả ánh xạ</span>
+                <span id="mapping-results-count" class="badge-outline">0 records</span>
+            </div>
+            <div class="card-body with-scroll" style="padding: 0;">
+                <div class="table-container">
+                    <table class="w-full">
+                        <thead style="position: sticky; top: 0; z-index: 10; background: var(--bg-surface);">
+                            <tr>
+                                <th>Mã số</th>
+                                <th>Tên Phường/Xã</th>
+                                <th>Quận/Huyện</th>
+                                <th>Tỉnh/Thành</th>
+                                <th class="text-right">Hành động</th>
+                            </tr>
+                        </thead>
+                        <tbody id="mapping-results-body">
+                            <tr>
+                                <td colspan="5" class="text-center p-24 text-tertiary">
+                                    Vui lòng chọn Tỉnh/Thành để xem dữ liệu
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Details Panel -->
+        <div id="unit-details-panel" class="card"
+            style="flex: 1; background: var(--bg-app); border-style: dashed;">
+            <div class="text-center" style="padding:40px; color:var(--text-tertiary)">
+                <i class="fa-solid fa-circle-info"
+                    style="font-size: 32px; margin-bottom: 12px; display: block;"></i>
+                Chọn một đơn vị để xem chi tiết ánh xạ và lịch sử thay đổi.
+            </div>
+        </div>
+    </div>
+</div>

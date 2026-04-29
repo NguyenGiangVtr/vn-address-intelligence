@@ -6,6 +6,12 @@ const API_BASE = window.location.hostname === "localhost" || window.location.pro
   ? "http://localhost:8081/api"
   : "/api";
 
+const PAGES = [
+  "overview", "parser", "batch", "training", "label-studio", 
+  "experiments", "explorer", "osm-enrichment", "lookup", 
+  "admin-units", "nso-sync", "settings"
+];
+
 const {
   applyUnifiedControlTemplate,
   renderLookupTemplateDatalist,
@@ -182,11 +188,14 @@ function formatLogTime() {
 }
 
 // ─── INIT ───
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
   if (!window.VNAIControls) {
     console.error('Missing controls-template.js. Shared UI controls are not initialized.');
     return;
   }
+
+  // Load all pages first
+  await loadPages();
 
   setupNavigation();
   applyUnifiedControlTemplate();
@@ -200,6 +209,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initAdminManager();
   setupNumberInputFormatting();
   initDataExplorer();
+  initLabelStudioIntegration();
 
   // Refresh stats every 30 seconds
   setInterval(fetchStats, 30000);
@@ -364,6 +374,8 @@ function renderExperimentTable(models) {
       </tr>
     `;
   }).join("");
+  
+  adjustActivePageHeight();
 }
 
 async function buildLatestBenchmarkSnapshot() {
@@ -593,6 +605,8 @@ function populateTrainingHistory() {
       <td>${item.date}</td>
     </tr>
   `).join("");
+  
+  adjustActivePageHeight();
 }
 
 function refreshTrainingChart() {
@@ -742,6 +756,8 @@ function renderOSMSummary(summary) {
   if (lastRefresh) {
     lastRefresh.textContent = `Cập nhật lúc ${formatLogTime()}`;
   }
+  
+  adjustActivePageHeight();
 }
 
 function renderOSMJob(job) {
@@ -767,6 +783,8 @@ function renderOSMJob(job) {
   if (logEl) {
     logEl.textContent = job?.outputTail || (status === "running" ? "OSM crawl đang chạy..." : "Chưa có job nào được chạy.");
   }
+  
+  adjustActivePageHeight();
 }
 
 async function pollOSMUntilDone() {
@@ -940,8 +958,13 @@ function setupNavigation() {
       if (contentEl) contentEl.scrollTo({ top: 0, behavior: 'smooth' });
 
       closeMobileMenu(); // Close sidebar on mobile after selection
+      
+      // Calculate layout height after page transition
+      setTimeout(adjustActivePageHeight, 350); 
     });
   });
+
+  window.addEventListener('resize', adjustActivePageHeight);
 
   // Workflow steps click to navigate
   document.querySelectorAll(".workflow-step.clickable").forEach(step => {
@@ -1012,7 +1035,8 @@ function renderOverviewChart(stats) {
           grid: { display: false }
         },
         y: {
-          type: "logarithmic",
+          type: "linear", // Change to linear to avoid 0 issue with log scale if not configured
+          beginAtZero: true,
           ticks: {
             color: "#5c5c5f",
             font: { size: 10 },
@@ -1290,6 +1314,8 @@ function renderParserComparisonMatrix(data) {
 
   html += `</tbody></table></div>`;
   container.innerHTML = html;
+  
+  adjustActivePageHeight();
 }
 
 function getScoreClass(score) {
@@ -1392,6 +1418,8 @@ function renderNEROutput(text, entities) {
   if (lastEnd < text.length) html += escapeHtml(text.slice(lastEnd));
 
   output.innerHTML = html;
+  
+  adjustActivePageHeight();
 }
 
 function renderEntitiesTable(entities) {
@@ -2306,6 +2334,8 @@ async function loadAdminData() {
     `).join('');
 
     title.innerHTML = `<i class="fa-solid fa-list mr-8"></i> Danh sách ${level === 'province' ? 'Tỉnh/Thành' : level === 'district' ? 'Quận/Huyện' : 'Phường/Xã'} (${data.length.toLocaleString()})`;
+    
+    adjustActivePageHeight();
   } catch (e) {
     tableBody.innerHTML = '<tr><td colspan="6" class="text-center p-24 text-danger">Lỗi khi tải dữ liệu</td></tr>';
   }
@@ -2364,6 +2394,7 @@ function initDataExplorer() {
     } finally {
       btnRefresh.innerHTML = '<i class="fa-solid fa-arrow-rotate-right"></i>';
       btnRefresh.disabled = false;
+      adjustActivePageHeight();
     }
   };
 
@@ -2378,3 +2409,143 @@ function initDataExplorer() {
   // Initial load
   loadData();
 }
+
+/**
+ * Dynamically calculates and adjusts the height of scrollable elements 
+ * (gridview, job-log, etc.) to prevent #page-content from overflowing.
+ */
+function adjustActivePageHeight() {
+  const activePage = document.querySelector('.page.active');
+  if (!activePage) return;
+
+  const pageContent = document.getElementById('page-content');
+  if (!pageContent) return;
+
+  // Small delay to ensure DOM is rendered if called after data load
+  requestAnimationFrame(() => {
+    const scrollableSelectors = [
+      '.table-container', 
+      '.batch-log', 
+      '.parser-comparison-matrix', 
+      '.ner-output', 
+      '.card-body.with-scroll',
+      '#osm-job-log',
+      '#nso-sync-logs',
+      '.lookup-results-table'
+    ];
+
+    const scrollableElements = activePage.querySelectorAll(scrollableSelectors.join(', '));
+    const pageContentRect = pageContent.getBoundingClientRect();
+    const buffer = 24; // Bottom padding/margin buffer
+
+    scrollableElements.forEach(el => {
+      // Reset first to get natural position
+      el.style.maxHeight = ''; 
+      
+      const rect = el.getBoundingClientRect();
+      const availableHeight = pageContentRect.bottom - rect.top - buffer;
+      
+      if (availableHeight > 100) {
+        el.style.maxHeight = `${Math.floor(availableHeight)}px`;
+        el.style.overflowY = 'auto';
+      }
+    });
+  });
+}
+
+// Export to window for access from other parts of the app if needed
+window.adjustActivePageHeight = adjustActivePageHeight;
+
+/**
+ * Loads all page templates from the pages/ directory and injects them into #page-content.
+ */
+async function loadPages() {
+  const container = document.getElementById('page-content');
+  if (!container) return;
+
+  // Clear loading state
+  container.innerHTML = '';
+
+  const loadPromises = PAGES.map(async (pageId) => {
+    try {
+      const response = await fetch(`pages/${pageId}.html`);
+      if (!response.ok) throw new Error(`Failed to load ${pageId}`);
+      const html = await response.text();
+      
+      const div = document.createElement('div');
+      div.innerHTML = html;
+      
+      // The templates should contain the <div class="page" id="..."> wrapper
+      // If they don't, we should add it. My templates already have it.
+      const pageNode = div.firstElementChild;
+      if (pageNode) {
+        container.appendChild(pageNode);
+      }
+    } catch (err) {
+      console.error(`Error loading page ${pageId}:`, err);
+    }
+  });
+
+  await Promise.all(loadPromises);
+}
+
+// ═══════════════════════════════════════════════════════════
+// LABEL STUDIO INTEGRATION
+// ═══════════════════════════════════════════════════════════
+async function initLabelStudioIntegration() {
+  const btnRefresh = document.getElementById('btn-ls-refresh');
+  if (!btnRefresh) return;
+
+  btnRefresh.addEventListener('click', fetchLabelStudioTasks);
+
+  // Initial fetch if page is active
+  if (document.getElementById('label-studio').classList.contains('active')) {
+    fetchLabelStudioTasks();
+  }
+}
+
+async function fetchLabelStudioTasks() {
+  const tbody = document.getElementById('ls-tasks-body');
+  if (!tbody) return;
+
+  tbody.innerHTML = '<tr><td colspan="5" class="text-center p-24 text-tertiary"><i class="fa-solid fa-spinner fa-spin mr-8"></i> Đang tải dữ liệu...</td></tr>';
+
+  try {
+    const response = await fetch(`${API_BASE}/label-studio/tasks`, {
+      headers: getAuthHeader()
+    });
+    
+    if (!response.ok) throw new Error(`API error: ${response.status}`);
+    
+    const tasks = await response.json();
+    
+    if (tasks.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" class="text-center p-24 text-tertiary">Không có task nào trong dự án hiện tại</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = tasks.map(task => `
+      <tr>
+        <td class="text-mono">#${task.id}</td>
+        <td style="max-width: 400px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+          ${JSON.stringify(task.data)}
+        </td>
+        <td class="text-tertiary">${new Date(task.created_at).toLocaleString('vi-VN')}</td>
+        <td><span class="badge ${task.is_labeled ? 'success' : 'warning'}">${task.is_labeled ? 'Completed' : 'Pending'}</span></td>
+        <td class="text-right">
+          <a href="https://label.nod.io.vn/projects/${task.project}/data?task=${task.id}" target="_blank" class="btn btn-icon btn-sm" title="Gán nhãn"><i class="fa-solid fa-tag"></i></a>
+        </td>
+      </tr>
+    `).join('');
+
+    // Update stats
+    document.getElementById('ls-stat-total').textContent = tasks.length;
+    document.getElementById('ls-stat-completed').textContent = tasks.filter(t => t.is_labeled).length;
+    
+    adjustActivePageHeight();
+  } catch (err) {
+    console.error('Label Studio API error:', err);
+    tbody.innerHTML = `<tr><td colspan="5" class="text-center p-24 text-danger"><i class="fa-solid fa-circle-exclamation mr-8"></i> Lỗi: ${err.message}</td></tr>`;
+  }
+}
+

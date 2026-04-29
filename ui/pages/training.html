@@ -1,0 +1,66 @@
+<!-- ══════ PAGE: TRAINING HUB ══════ -->
+<div class="page" id="training">
+    <div class="page-header">
+        <h2>Training Hub</h2>
+        <p>Tái huấn luyện mô hình PhoBERT NER với dữ liệu từ Label Studio</p>
+    </div>
+
+    <div class="content-grid sidebar-layout">
+        <div class="card" style="flex: 1">
+            <div class="card-header">
+                <span class="card-title">Nhập dữ liệu nhãn</span>
+            </div>
+            <div class="card-body">
+                <div class="form-group">
+                    <label>Label Studio JSON Export</label>
+                    <input type="file" id="ls-import-file" class="form-input" accept=".json">
+                    <div class="text-tertiary mt-8" style="font-size: 11px;">
+                        Hỗ trợ định dạng JSON của Label Studio (Export > JSON)
+                    </div>
+                </div>
+                <button class="btn btn-primary w-full mt-16" id="btn-import-ls">
+                    <i class="fa-solid fa-upload"></i> Tải lên & Tái huấn luyện
+                </button>
+                <div id="import-status" class="mt-12 text-center" style="font-size: 13px;"></div>
+            </div>
+        </div>
+
+        <div class="card" style="flex: 2">
+            <div class="card-header">
+                <span class="card-title">Chỉ số mô hình qua các phiên bản</span>
+            </div>
+            <div class="card-body">
+                <div class="chart-container" style="height: 250px;">
+                    <canvas id="chart-training-progress"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mt-24">
+        <div class="card-header">
+            <span class="card-title">Lịch sử Tái huấn luyện</span>
+            <button class="btn btn-sm btn-ghost" onclick="loadTrainingHistoryFromDB()">
+                <i class="fa-solid fa-sync"></i> Refresh
+            </button>
+        </div>
+        <div class="card-body">
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Phiên bản</th>
+                            <th>Độ chính xác (Acc)</th>
+                            <th>F1-Score</th>
+                            <th>Số lượng mẫu</th>
+                            <th>Ngày huấn luyện</th>
+                        </tr>
+                    </thead>
+                    <tbody id="training-history-body">
+                        <!-- Filled by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

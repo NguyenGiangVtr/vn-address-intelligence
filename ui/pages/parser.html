@@ -1,0 +1,81 @@
+<!-- ══════ PAGE: ADDRESS PARSER ══════ -->
+<div class="page" id="parser">
+    <div class="page-header">
+        <h2>Address Parser</h2>
+        <p>Phân tích NER và Chuẩn hóa địa chỉ sử dụng mô hình Hybrid AI</p>
+    </div>
+
+    <div class="tool-panel parser-tool-panel">
+        <div class="tool-input-section">
+            <div class="tool-section-title">Address Input</div>
+            <div class="flex gap-12 items-center mb-16">
+                <input type="text" id="parser-input" class="form-input flex-1"
+                    placeholder="Ví dụ: 123 Đường Lê Lợi, Phường Bến Thành, Quận 1, TP. Hồ Chí Minh"
+                    value="123 Lê Lợi, Bến Thành, Quận 1, HCM">
+                <button class="btn btn-primary" id="btn-parse" type="button">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> Phân tích
+                </button>
+            </div>
+            <div class="flex gap-12">
+                <button class="btn btn-ghost btn-sm" id="btn-parse-sample-local" type="button">
+                    <i class="fa-solid fa-lightbulb"></i> Mẫu ngẫu nhiên
+                </button>
+                <button class="btn btn-ghost btn-sm" id="btn-parse-sample-db" type="button">
+                    <i class="fa-solid fa-database"></i> Mẫu Database
+                </button>
+                <div class="flex-1"></div>
+                <div id="parser-status" class="badge-outline" style="border:none">Ready</div>
+            </div>
+        </div>
+
+        <div class="tool-output-section">
+            <div class="tool-section-title">AI NER Output</div>
+            <div id="parser-output" class="ner-output mb-16">
+                Chưa có dữ liệu phân tích...
+            </div>
+
+            <div class="tool-section-title">Confidence & Performance</div>
+            <div id="parser-meta" class="text-tertiary" style="font-size:12px; line-height: 1.6;">
+                Vui lòng nhập địa chỉ để bắt đầu quá trình suy luận AI.
+            </div>
+        </div>
+    </div>
+
+    <div class="content-grid sidebar-layout mt-24">
+        <div class="card" style="flex: 2">
+            <div class="card-header">
+                <span class="card-title">Model Comparison Matrix</span>
+            </div>
+            <div class="card-body with-scroll" id="parser-comparison-matrix">
+                <div class="empty-state" style="padding: 40px; text-align: center; color: var(--text-tertiary);">
+                    <i class="fa-solid fa-table-list" style="font-size: 32px; margin-bottom: 12px; display: block;"></i>
+                    Bảng so sánh kết quả giữa các phương pháp tiếp cận (Heuristic vs LLM)
+                </div>
+            </div>
+        </div>
+        <div class="card" style="flex: 1">
+            <div class="card-header">
+                <span class="card-title">Entity Labels</span>
+            </div>
+            <div class="card-body">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Label</th>
+                                <th>Description</th>
+                                <th>Hotkey</th>
+                            </tr>
+                        </thead>
+                        <tbody id="label-registry-body-mini">
+                            <!-- Small version of registry -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="mt-16 text-center">
+                    <button class="btn btn-ghost btn-sm" data-goto="label-registry">Xem chi tiết Registry</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

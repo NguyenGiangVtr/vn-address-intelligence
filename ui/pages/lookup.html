@@ -1,0 +1,124 @@
+<!-- ══════ PAGE: LOOKUP MAPPING ══════ -->
+<div class="page full-height-page" id="lookup">
+    <div class="page-header">
+        <h2>Tra cứu Biến động ĐVHC</h2>
+        <p>Theo dõi lịch sử sáp nhập, đổi tên xã phường qua các thời kỳ</p>
+    </div>
+
+    <div class="dm-page-shell">
+        <div class="card dm-filter-sidebar dm-filter-toolbar">
+            <div class="card-header">
+                <span class="card-title"><i class="fa-solid fa-filter mr-8"></i> Bộ lọc ĐVHC</span>
+            </div>
+            <div class="card-body">
+                <div class="form-group">
+                    <div class="version-tab-container">
+                        <label class="version-tab flex-1" style="text-align: center;">
+                            <input type="radio" name="admin-version" value="1" checked hidden>
+                            <span>Version 1 (Cũ)</span>
+                        </label>
+                        <label class="version-tab flex-1" style="text-align: center;">
+                            <input type="radio" name="admin-version" value="2" hidden>
+                            <span>Version 2 (Mới)</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="control-note">
+                    <i class="fa-solid fa-circle-info mr-4"></i> Chọn version để tải danh sách ĐVHC
+                    tương ứng.
+                </div>
+                <div class="form-group mb-0">
+                    <label class="form-label">Tỉnh/Thành</label>
+                    <div class="input-wrapper">
+                        <input list="list-provinces" id="mapping-province-input"
+                            class="form-input has-clear" placeholder="Tìm Tỉnh...">
+                        <button type="button" class="btn-clear-input"
+                            onclick="document.getElementById('mapping-province-input').value=''; document.getElementById('mapping-province-input').dispatchEvent(new Event('input'))"
+                            title="Xóa"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    <datalist id="list-provinces"></datalist>
+                </div>
+                <div class="form-group mb-0">
+                    <label class="form-label">Quận/Huyện</label>
+                    <div class="input-wrapper">
+                        <input list="list-districts" id="mapping-district-input"
+                            class="form-input has-clear" placeholder="Tìm Huyện...">
+                        <button type="button" class="btn-clear-input"
+                            onclick="document.getElementById('mapping-district-input').value=''; document.getElementById('mapping-district-input').dispatchEvent(new Event('input'))"
+                            title="Xóa"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    <datalist id="list-districts"></datalist>
+                </div>
+                <div class="form-group mb-0">
+                    <label class="form-label">Phường/Xã</label>
+                    <div class="input-wrapper">
+                        <input list="list-wards" id="mapping-ward-input" class="form-input has-clear"
+                            placeholder="Tìm Xã...">
+                        <button type="button" class="btn-clear-input"
+                            onclick="document.getElementById('mapping-ward-input').value=''; document.getElementById('mapping-ward-input').dispatchEvent(new Event('input'))"
+                            title="Xóa"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    <datalist id="list-wards"></datalist>
+                </div>
+                <div class="search-box">
+                    <i class="fa-solid fa-search search-icon"></i>
+                    <input type="text" id="mapping-search-input" class="search-input"
+                        placeholder="Hoặc gõ mã/tên trực tiếp vào đây...">
+                    <button class="btn btn-primary" id="btn-mapping-search">Tra cứu</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="dm-page-main flex flex-column gap-24 overflow-hidden">
+            <div class="content-grid sidebar-layout flex-1 overflow-hidden"
+                style="grid-template-columns: 1fr 320px; gap: 20px; display: grid;">
+                <div class="card flex flex-column overflow-hidden" style="height: 100%;">
+                    <div class="card-header"
+                        style="background: var(--accent-glow); border-bottom: 2px solid var(--accent);">
+                        <span class="card-title text-accent"><i
+                                class="fa-solid fa-map-location-dot mr-4"></i> Kết quả ánh xạ (Cũ ↔
+                            Mới)</span>
+                    </div>
+                    <div class="table-container lookup-results-table">
+                        <table style="font-size: 14px;">
+                            <thead>
+                                <tr>
+                                    <th>ĐVHC Cũ</th>
+                                    <th><i class="fa-solid fa-arrow-right-long"></i></th>
+                                    <th>ĐVHC Mới</th>
+                                    <th>Ghi chú biến động</th>
+                                    <th>Ngày hiệu lực</th>
+                                </tr>
+                            </thead>
+                            <tbody id="mapping-results-table">
+                                <!-- Results via JS -->
+                                <tr>
+                                    <td colspan="5" class="text-center text-tertiary"
+                                        style="padding: 40px">Nhập từ khóa để bắt đầu tra cứu</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="flex flex-column" style="height: 100%;">
+                    <div class="card shadow-sm"
+                        style="background: var(--bg-primary); border: 1px solid var(--border-default); border-top: 3px solid var(--accent);">
+                        <div class="card-header"
+                            style="background: var(--bg-secondary); border-bottom: 1px solid var(--border-subtle); padding: 10px 16px;">
+                            <span class="card-title text-accent" style="font-size: 14px;"><i
+                                    class="fa-solid fa-circle-info mr-4"></i> Thông tin Chi tiết</span>
+                        </div>
+                        <div class="card-body" id="unit-details-panel">
+                            <div class="text-center text-tertiary" style="padding: 20px">
+                                <i class="fa-solid fa-hand-pointer mb-12" style="font-size: 24px"></i>
+                                <p>Chọn một đơn vị hành chính để xem thông tin dân số, diện tích và nghị
+                                    quyết.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -53,6 +53,7 @@ applyTo: "**/*"
 - Khong tao kieu thong bao moi bang alert/confirm native neu da co bo showToast/showConfirm va control template trong ui/app.js.
 - Tuyet doi khong thay doi design khi khong co yeu cau.
 - Tuyet doi khong thay doi codebase của UI theme
+- Trong tất cả các trang khi load data hãy tính toán canh chỉnh chiều cao các phần tử gridvew, job-log... để không bị tràn làm xuất hiện thanh ở page-content 
 <!-- - **Quy tac scroll (toan bo page):** Uu tien scroll trong control (`.table-container`, `.batch-log`, `.ner-output`, `.tool-input-section`, `.content-grid` items) thay vi scroll full page. Chi dung full-page scroll khi noi dung toan man hinh bat buoc. Ap dung cho tat ca pages:
   - **Address Parser:** NER Output + Entities table scroll noi dung, Input tinh gon (44px min-height)
   - **Batch Processor:** Batch log scroll noi dung (max-height 400px), khong lock full page
