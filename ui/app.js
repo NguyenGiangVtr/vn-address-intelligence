@@ -210,6 +210,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupNumberInputFormatting();
   initDataExplorer();
   initLabelStudioIntegration();
+  initMappingV3();
 
   // Refresh stats every 30 seconds
   setInterval(fetchStats, 30000);
@@ -1774,7 +1775,9 @@ async function triggerMappingSearch() {
 
   if (version) url += `${url.endsWith('?') ? '' : '&'}version=${version}`;
   if (qText) url += `${url.endsWith('?') ? '' : '&'}query=${encodeURIComponent(qText)}`;
-  if (url.endsWith('?')) return; 
+  
+  // Allow search if either an ID is selected OR a query text is provided
+  if (!pId && !dId && !wId && !qText) return; 
 
   tbody.innerHTML = '<tr><td colspan="5" class="text-center" style="padding:60px"><i class="fa-solid fa-circle-notch fa-spin fa-2x text-accent"></i><div class="mt-12 text-tertiary">Đang truy vấn dữ liệu mapping...</div></td></tr>';
 
@@ -2341,8 +2344,7 @@ async function loadAdminData() {
   }
 }
 
-// Initialize all modules
-initMappingV3();
+// Initialize all modules is now handled in DOMContentLoaded
 
 // ═══════════════════════════════════════════════════════════
 // DATA EXPLORER

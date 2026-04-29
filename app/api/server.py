@@ -540,15 +540,18 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         raise credentials_exception
 
 @api_router.get("/provinces")
-def get_provinces(version: int = 1, db: Session = Depends(get_db)):
+def get_provinces(version: Optional[int] = 1, db: Session = Depends(get_db)):
+    """Fetch all provinces, filtered by admin version."""
     return db.query(Province).filter(Province.admin_version == version).order_by(Province.province_name).all()
 
 @api_router.get("/districts/{province_id}")
-def get_districts(province_id: int, version: int = 1, db: Session = Depends(get_db)):
+def get_districts(province_id: int, version: Optional[int] = 1, db: Session = Depends(get_db)):
+    """Fetch districts by province ID and version."""
     return db.query(District).filter(District.province_id == province_id, District.admin_version == version).order_by(District.district_name).all()
 
 @api_router.get("/wards/{district_id}")
-def get_wards(district_id: int, version: int = 1, db: Session = Depends(get_db)):
+def get_wards(district_id: int, version: Optional[int] = 1, db: Session = Depends(get_db)):
+    """Fetch wards by district ID and version."""
     return db.query(Ward).filter(Ward.district_id == district_id, Ward.admin_version == version).order_by(Ward.ward_name).all()
 
 @api_router.get("/unit-details/{level}/{unit_id}")
@@ -680,10 +683,11 @@ def lookup_mapping(
         )
         filters.append(text_filter)
 
-    # Nếu có filter thì áp dụng, nếu không có thể trả về tất cả hoặc mảng rỗng tùy logic
+    # Nếu có filter hoặc query thì áp dụng
     if filters:
         base_query = base_query.filter(and_(*filters))
-    else:
+    elif not query:
+        # Nếu không có gì cả, không trả về gì để tránh query quá nặng
         return []
 
     # Lấy dữ liệu và giới hạn kết quả
@@ -1247,140 +1251,7 @@ def enrichment_summary(db: Session = Depends(get_db)):
         "enriched_wards": enriched_wards,
     }
 
-# ── PROVINCE CRUD ──
-@api_router.get("/provinces", response_model=List[schemas.ProvinceResponse], tags=["Administrative"])
-def get_provinces(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    return db.query(Province).offset(skip).limit(limit).all()
-
-@api_router.post("/provinces", response_model=schemas.ProvinceResponse, tags=["Administrative"])
-def create_province(province: schemas.ProvinceCreate, db: Session = Depends(get_db)):
-    db_province = Province(**province.dict())
-    db.add(db_province)
-    db.commit()
-    db.refresh(db_province)
-    return db_province
-
-@api_router.get("/provinces/{province_id}", response_model=schemas.ProvinceResponse, tags=["Administrative"])
-def get_province(province_id: int, db: Session = Depends(get_db)):
-    db_province = db.query(Province).filter(Province.province_id == province_id).first()
-    if not db_province:
-        raise HTTPException(status_code=404, detail="Province not found")
-    return db_province
-
-@api_router.patch("/provinces/{province_id}", response_model=schemas.ProvinceResponse, tags=["Administrative"])
-def update_province(province_id: int, province: schemas.ProvinceUpdate, db: Session = Depends(get_db)):
-    db_province = db.query(Province).filter(Province.province_id == province_id).first()
-    if not db_province:
-        raise HTTPException(status_code=404, detail="Province not found")
-    
-    update_data = province.dict(exclude_unset=True)
-    for key, value in update_data.items():
-        setattr(db_province, key, value)
-    
-    db.commit()
-    db.refresh(db_province)
-    return db_province
-
-@api_router.delete("/provinces/{province_id}", tags=["Administrative"])
-def delete_province(province_id: int, db: Session = Depends(get_db)):
-    db_province = db.query(Province).filter(Province.province_id == province_id).first()
-    if not db_province:
-        raise HTTPException(status_code=404, detail="Province not found")
-    db.delete(db_province)
-    db.commit()
-    return {"status": "success", "message": "Province deleted"}
-
-# ── DISTRICT CRUD ──
-@api_router.get("/districts", response_model=List[schemas.DistrictResponse], tags=["Administrative"])
-def get_districts(province_id: Optional[int] = None, skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    query = db.query(District)
-    if province_id:
-        query = query.filter(District.province_id == province_id)
-    return query.offset(skip).limit(limit).all()
-
-@api_router.post("/districts", response_model=schemas.DistrictResponse, tags=["Administrative"])
-def create_district(district: schemas.DistrictCreate, db: Session = Depends(get_db)):
-    db_district = District(**district.dict())
-    db.add(db_district)
-    db.commit()
-    db.refresh(db_district)
-    return db_district
-
-@api_router.get("/districts/{district_id}", response_model=schemas.DistrictResponse, tags=["Administrative"])
-def get_district(district_id: int, db: Session = Depends(get_db)):
-    db_district = db.query(District).filter(District.district_id == district_id).first()
-    if not db_district:
-        raise HTTPException(status_code=404, detail="District not found")
-    return db_district
-
-@api_router.patch("/districts/{district_id}", response_model=schemas.DistrictResponse, tags=["Administrative"])
-def update_district(district_id: int, district: schemas.DistrictUpdate, db: Session = Depends(get_db)):
-    db_district = db.query(District).filter(District.district_id == district_id).first()
-    if not db_district:
-        raise HTTPException(status_code=404, detail="District not found")
-    
-    update_data = district.dict(exclude_unset=True)
-    for key, value in update_data.items():
-        setattr(db_district, key, value)
-    
-    db.commit()
-    db.refresh(db_district)
-    return db_district
-
-@api_router.delete("/districts/{district_id}", tags=["Administrative"])
-def delete_district(district_id: int, db: Session = Depends(get_db)):
-    db_district = db.query(District).filter(District.district_id == district_id).first()
-    if not db_district:
-        raise HTTPException(status_code=404, detail="District not found")
-    db.delete(db_district)
-    db.commit()
-    return {"status": "success", "message": "District deleted"}
-
-# ── WARD CRUD ──
-@api_router.get("/wards", response_model=List[schemas.WardResponse], tags=["Administrative"])
-def get_wards(district_id: Optional[int] = None, skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    query = db.query(Ward)
-    if district_id:
-        query = query.filter(Ward.district_id == district_id)
-    return query.offset(skip).limit(limit).all()
-
-@api_router.post("/wards", response_model=schemas.WardResponse, tags=["Administrative"])
-def create_ward(ward: schemas.WardCreate, db: Session = Depends(get_db)):
-    db_ward = Ward(**ward.dict())
-    db.add(db_ward)
-    db.commit()
-    db.refresh(db_ward)
-    return db_ward
-
-@api_router.get("/wards/{ward_id}", response_model=schemas.WardResponse, tags=["Administrative"])
-def get_ward(ward_id: int, db: Session = Depends(get_db)):
-    db_ward = db.query(Ward).filter(Ward.ward_id == ward_id).first()
-    if not db_ward:
-        raise HTTPException(status_code=404, detail="Ward not found")
-    return db_ward
-
-@api_router.patch("/wards/{ward_id}", response_model=schemas.WardResponse, tags=["Administrative"])
-def update_ward(ward_id: int, ward: schemas.WardUpdate, db: Session = Depends(get_db)):
-    db_ward = db.query(Ward).filter(Ward.ward_id == ward_id).first()
-    if not db_ward:
-        raise HTTPException(status_code=404, detail="Ward not found")
-    
-    update_data = ward.dict(exclude_unset=True)
-    for key, value in update_data.items():
-        setattr(db_ward, key, value)
-    
-    db.commit()
-    db.refresh(db_ward)
-    return db_ward
-
-@api_router.delete("/wards/{ward_id}", tags=["Administrative"])
-def delete_ward(ward_id: int, db: Session = Depends(get_db)):
-    db_ward = db.query(Ward).filter(Ward.ward_id == ward_id).first()
-    if not db_ward:
-        raise HTTPException(status_code=404, detail="Ward not found")
-    db.delete(db_ward)
-    db.commit()
-    return {"status": "success", "message": "Ward deleted"}
+# Note: CRUD routes merged into core admin endpoints.
 
 # ── ADDRESS PARSER RESEARCH ENDPOINTS ──
 
