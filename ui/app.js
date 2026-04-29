@@ -7,8 +7,8 @@ const API_BASE = window.location.hostname === "localhost" || window.location.pro
   : "/api";
 
 const PAGES = [
-  "overview", "parser", "batch", "training", "label-studio", 
-  "experiments", "explorer", "osm-enrichment", "lookup", 
+  "overview", "parser", "batch", "training", "label-studio",
+  "experiments", "explorer", "osm-enrichment", "lookup",
   "admin-units", "nso-sync", "settings"
 ];
 
@@ -378,7 +378,7 @@ function renderExperimentTable(models) {
       </tr>
     `;
   }).join("");
-  
+
   adjustActivePageHeight();
 }
 
@@ -609,7 +609,7 @@ function populateTrainingHistory() {
       <td>${item.date}</td>
     </tr>
   `).join("");
-  
+
   adjustActivePageHeight();
 }
 
@@ -760,7 +760,7 @@ function renderOSMSummary(summary) {
   if (lastRefresh) {
     lastRefresh.textContent = `Cập nhật lúc ${formatLogTime()}`;
   }
-  
+
   adjustActivePageHeight();
 }
 
@@ -787,7 +787,7 @@ function renderOSMJob(job) {
   if (logEl) {
     logEl.textContent = job?.outputTail || (status === "running" ? "OSM crawl đang chạy..." : "Chưa có job nào được chạy.");
   }
-  
+
   adjustActivePageHeight();
 }
 
@@ -962,9 +962,9 @@ function setupNavigation() {
       if (contentEl) contentEl.scrollTo({ top: 0, behavior: 'smooth' });
 
       closeMobileMenu(); // Close sidebar on mobile after selection
-      
+
       // Calculate layout height after page transition
-      setTimeout(adjustActivePageHeight, 350); 
+      setTimeout(adjustActivePageHeight, 350);
     });
   });
 
@@ -1182,7 +1182,7 @@ async function runParser() {
         });
         if (!res.ok) continue;
         const data = await res.json();
-        
+
         // Merge results
         if (data.outputs) {
           allOutputs = { ...allOutputs, ...data.outputs };
@@ -1192,7 +1192,7 @@ async function runParser() {
 
         // Render intermediate results
         renderParserResults(allOutputs);
-        
+
         // If we have prelabeler result, show NER highlighting immediately
         if (model === "prelabeler" && data.outputs?.prelabeler) {
           renderNERHighlight(data.outputs.prelabeler.result);
@@ -1228,7 +1228,7 @@ function renderNERHighlight(entities) {
 
   // Simple highlight logic (greedy replace from longest to shortest to avoid partial matches)
   const sortedEntities = [...entities].sort((a, b) => b.text.length - a.text.length);
-  
+
   sortedEntities.forEach(ent => {
     const labelClass = `ner-tag-${ent.label.toLowerCase()}`;
     const escapedText = ent.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -1271,7 +1271,7 @@ function renderParserResults(data) {
   modelOrder.forEach(m => {
     const out = outputs[m.key];
     const isPending = !out;
-    
+
     html += `
       <div class="comparison-row ${isPending ? 'pending' : ''}">
           <div class="col-model"><i class="fa-solid ${m.icon} mr-8"></i>${m.name}</div>
@@ -1325,7 +1325,7 @@ function renderNEROutput(text, entities) {
   if (lastEnd < text.length) html += escapeHtml(text.slice(lastEnd));
 
   output.innerHTML = html;
-  
+
   adjustActivePageHeight();
 }
 
@@ -1622,12 +1622,14 @@ async function initMappingV3() {
 }
 
 async function showDetails(level, id) {
-  const panel = document.getElementById('unit-details-panel');
-  panel.innerHTML = '<div class="text-center" style="padding:40px"><i class="fa-solid fa-spinner fa-spin fa-2x text-accent"></i></div>';
+  const pl = document.getElementById('unit-details-panel');
+  if (!pl) return;
+  pl.innerHTML = '<div class="text-center" style="padding:40px"><i class="fa-solid fa-spinner fa-spin fa-2x text-accent"></i></div>';
   try {
     const res = await fetch(`${API_BASE}/unit-details/${level}/${id}`, { headers: getAuthHeader() });
+    if (!res.ok) throw new Error("Unit not found");
     const u = await res.json();
-    panel.innerHTML = `
+    pl.innerHTML = `
       <div class="flex items-center gap-24 w-full">
         <div style="flex: 0 0 240px;">
           <div class="flex items-center gap-12">
@@ -1635,8 +1637,8 @@ async function showDetails(level, id) {
             <span class="badge info" style="font-size:10px;">v${u.admin_version}</span>
           </div>
           <div class="text-tertiary" style="font-size:11px;">
-            ${u.province_name ? 'Tỉnh/Thành phố' : (u.district_name ? 'Quận/Huyện' : 'Phường/Xã')} • 
-            Mã GSO: <span class="text-mono">${u.province_no || u.district_no || u.ward_no || "N/A"}</span>
+            ${u.ward_name ? 'Phường/Xã' : (u.district_name ? 'Quận/Huyện' : 'Tỉnh/Thành phố')} • 
+            Mã GSO: <span class="text-mono">${u.ward_no || u.district_no || u.province_no || "N/A"}</span>
           </div>
         </div>
 
@@ -1678,9 +1680,9 @@ async function triggerMappingSearch() {
 
   if (version) url += `${url.endsWith('?') ? '' : '&'}version=${version}`;
   if (qText) url += `${url.endsWith('?') ? '' : '&'}query=${encodeURIComponent(qText)}`;
-  
+
   // Allow search if either an ID is selected OR a query text is provided
-  if (!pId && !dId && !wId && !qText) return; 
+  if (!pId && !dId && !wId && !qText) return;
 
   tbody.innerHTML = '<tr><td colspan="5" class="text-center" style="padding:60px"><i class="fa-solid fa-circle-notch fa-spin fa-2x text-accent"></i><div class="mt-12 text-tertiary">Đang truy vấn dữ liệu mapping...</div></td></tr>';
 
@@ -1712,7 +1714,7 @@ async function triggerMappingSearch() {
         </td>
         <td style="padding: 16px 20px;">
           <div class="badge ${m.relationship_type === 'MERGE' ? 'warning' : 'info'}" style="font-size: 10px; margin-bottom: 6px;">${m.relationship_type || 'MAPPING'}</div>
-          <div style="max-width:320px; font-size:12px; line-height:1.5; color: var(--text-secondary)">${m.updated_note || "Cập nhật theo nghị quyết sáp nhập ĐVHC."}</div>
+          <div style="font-size:12px; line-height:1.5; color: var(--text-secondary)">${m.updated_note || "Cập nhật theo nghị quyết sáp nhập ĐVHC."}</div>
         </td>
         <td class="text-tertiary" style="padding: 16px 20px; font-size:13px; font-family: var(--font-mono)">
           ${m.effective_date_from ? new Date(m.effective_date_from).toLocaleDateString('vi-VN') : "01/01/2021"}
@@ -2258,9 +2260,9 @@ async function loadAdminData() {
         <td class="text-mono font-bold">${item[`${level}_no`] || '-'}</td>
         <td>
           <div class="flex items-center gap-8">
-            ${level === 'province' ? '<i class="fa-solid fa-map text-tertiary" style="width:16px"></i>' : 
-              level === 'district' ? '<i class="fa-solid fa-folder-tree text-tertiary ml-12" style="width:16px"></i>' : 
-              '<i class="fa-solid fa-location-dot text-tertiary ml-24" style="width:16px"></i>'}
+            ${level === 'province' ? '<i class="fa-solid fa-map text-tertiary" style="width:16px"></i>' :
+        level === 'district' ? '<i class="fa-solid fa-folder-tree text-tertiary ml-12" style="width:16px"></i>' :
+          '<i class="fa-solid fa-location-dot text-tertiary ml-24" style="width:16px"></i>'}
             <span class="${level !== 'province' ? 'text-secondary' : 'font-600'}">${item[`${level}_name`]}</span>
           </div>
         </td>
@@ -2274,7 +2276,7 @@ async function loadAdminData() {
     `).join('');
 
     title.innerHTML = `<i class="fa-solid fa-list mr-8"></i> Danh sách ${level === 'province' ? 'Tỉnh/Thành' : level === 'district' ? 'Quận/Huyện' : 'Phường/Xã'} (${data.length.toLocaleString()})`;
-    
+
     adjustActivePageHeight();
   } catch (e) {
     tableBody.innerHTML = '<tr><td colspan="6" class="text-center p-24 text-danger">Lỗi khi tải dữ liệu</td></tr>';
@@ -2363,10 +2365,10 @@ function adjustActivePageHeight() {
   // Small delay to ensure DOM is rendered if called after data load
   requestAnimationFrame(() => {
     const scrollableSelectors = [
-      '.table-container', 
-      '.batch-log', 
-      '#parser-comparison-matrix', 
-      '.ner-output', 
+      '.table-container',
+      '.batch-log',
+      '#parser-comparison-matrix',
+      '.ner-output',
       '.card-body.with-scroll',
       '#osm-job-log',
       '#nso-sync-logs',
@@ -2380,11 +2382,11 @@ function adjustActivePageHeight() {
 
     scrollableElements.forEach(el => {
       // Reset first to get natural position
-      el.style.maxHeight = ''; 
-      
+      el.style.maxHeight = '';
+
       const rect = el.getBoundingClientRect();
       const availableHeight = pageContentRect.bottom - rect.top - buffer;
-      
+
       if (availableHeight > 100) {
         el.style.maxHeight = `${Math.floor(availableHeight)}px`;
         el.style.overflowY = 'auto';
@@ -2411,10 +2413,10 @@ async function loadPages() {
       const response = await fetch(`pages/${pageId}.html`);
       if (!response.ok) throw new Error(`Failed to load ${pageId}`);
       const html = await response.text();
-      
+
       const div = document.createElement('div');
       div.innerHTML = html;
-      
+
       // The templates should contain the <div class="page" id="..."> wrapper
       // If they don't, we should add it. My templates already have it.
       const pageNode = div.firstElementChild;
@@ -2454,11 +2456,11 @@ async function fetchLabelStudioTasks() {
     const response = await fetch(`${API_BASE}/label-studio/tasks`, {
       headers: getAuthHeader()
     });
-    
+
     if (!response.ok) throw new Error(`API error: ${response.status}`);
-    
+
     const tasks = await response.json();
-    
+
     if (tasks.length === 0) {
       tbody.innerHTML = '<tr><td colspan="5" class="text-center p-24 text-tertiary">Không có task nào trong dự án hiện tại</td></tr>';
       return;
@@ -2481,11 +2483,26 @@ async function fetchLabelStudioTasks() {
     // Update stats
     document.getElementById('ls-stat-total').textContent = tasks.length;
     document.getElementById('ls-stat-completed').textContent = tasks.filter(t => t.is_labeled).length;
-    
+
     adjustActivePageHeight();
   } catch (err) {
     console.error('Label Studio API error:', err);
     tbody.innerHTML = `<tr><td colspan="5" class="text-center p-24 text-danger"><i class="fa-solid fa-circle-exclamation mr-8"></i> Lỗi: ${err.message}</td></tr>`;
   }
 }
+// Admin Unit CRUD Stubs
+function editAdminUnit(level, id) {
+  showToast(`Chức năng chỉnh sửa ${level} (ID: ${id}) đang được phát triển.`, 'info');
+}
 
+async function deleteAdminUnit(level, id, name) {
+  const confirmed = await showConfirm(`Bạn có chắc chắn muốn xóa ${level}: ${name}?`);
+  if (confirmed) {
+    showToast(`Đã yêu cầu xóa ${name}. Đang xử lý...`, 'warning');
+  }
+}
+
+// Expose to window for inline onclick handlers
+window.showDetails = showDetails;
+window.editAdminUnit = editAdminUnit;
+window.deleteAdminUnit = deleteAdminUnit;

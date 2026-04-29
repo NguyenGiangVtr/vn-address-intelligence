@@ -32,3 +32,9 @@ class Config:
 
     # OSM Settings
     OVERPASS_URL = "https://overpass-api.de/api/interpreter"
+
+    # Kibana / Logstash
+    KIBANA_LOG_ENABLED = os.getenv("KIBANA_LOG_ENABLED", "false").lower() == "true"
+    KIBANA_LOG_HOST = os.getenv("KIBANA_LOG_HOST", "localhost")
+    KIBANA_LOG_PORT = int(os.getenv("KIBANA_LOG_PORT", "5044"))
+    KIBANA_LOG_APP_NAME = os.getenv("KIBANA_LOG_APP_NAME", "vn-address-intelligence")

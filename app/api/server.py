@@ -27,8 +27,10 @@ from app.services.nso_api import get_nso_provinces, get_nso_districts, get_nso_w
 from app.api import schemas
 from typing import List, Optional
 
+from app.core.logging_config import setup_logging
+
 # ── Logging Setup ──
-logging.basicConfig(level=logging.INFO, format="%(asctime)s.%(msecs)03d [%(levelname)s] %(name)s — %(message)s", datefmt="%H:%M:%S")
+logger = setup_logging()
 logger = logging.getLogger("VNAI_Server")
 
 app = FastAPI(

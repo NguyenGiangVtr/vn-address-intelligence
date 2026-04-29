@@ -17,10 +17,12 @@ from app.services.exporter import export_training_data
 from app.services.seeders_v2 import seed_admin_v2, seed_ward_mapping, check_v2_stats
 from app.services.enrichment import enrich_provinces, enrich_wards, check_enrichment_stats
 
+from app.core.logging_config import setup_logging
+
 @click.group()
 def cli():
     """Hệ thống Quản lý Dữ liệu Địa chỉ Thông minh (VN Address Intelligence)"""
-    pass
+    setup_logging()
 
 @cli.command()
 def init_db():
