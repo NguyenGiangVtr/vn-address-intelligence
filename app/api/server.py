@@ -358,7 +358,7 @@ def _get_random_parser_sample(db: Session) -> AddressCleansingQueue:
     )
 
 
-def _run_parser_research(sample: AddressCleansingQueue) -> dict:
+def _run_parser_research(sample: AddressCleansingQueue, target_model: Optional[str] = None) -> dict:
     bundle = _get_parser_runtime_bundle()
     raw_address = sample.raw_address or ""
     ward_name = sample.ward_name
@@ -383,61 +383,65 @@ def _run_parser_research(sample: AddressCleansingQueue) -> dict:
     outputs = {}
 
     # 1. PreLabeler (Always available)
-    try:
-        outputs["prelabeler"] = {
-            "mode": "rule_based_hybrid",
-            "result": bundle["prelabeler"].predict(raw_address, ward_name, district_name, province_name),
-            "entityCount": 0,
-        }
-        outputs["prelabeler"]["entityCount"] = len(outputs["prelabeler"]["result"])
-    except Exception as e:
-        outputs["prelabeler"] = {"error": str(e)}
+    if not target_model or target_model == "prelabeler":
+        try:
+            outputs["prelabeler"] = {
+                "mode": "rule_based_hybrid",
+                "result": bundle["prelabeler"].predict(raw_address, ward_name, district_name, province_name),
+                "entityCount": 0,
+            }
+            outputs["prelabeler"]["entityCount"] = len(outputs["prelabeler"]["result"])
+        except Exception as e:
+            outputs["prelabeler"] = {"error": str(e)}
 
     # 2. PhoBERT
-    if bundle.get("phobert"):
-        try:
-            norm, score, lat = bundle["phobert"].normalize(raw_address)
-            outputs["phobert"] = {
-                "mode": "phoBERT_siamese",
-                "normalizedAddress": norm,
-                "score": round(score, 4),
-                "latencyMs": round(lat, 2),
-            }
-        except Exception as e:
-            outputs["phobert"] = {"error": str(e)}
-    else:
-        outputs["phobert"] = {"status": "Not loaded", "error": bundle["errors"].get("phobert")}
+    if not target_model or target_model == "phobert":
+        if bundle.get("phobert"):
+            try:
+                norm, score, lat = bundle["phobert"].normalize(raw_address)
+                outputs["phobert"] = {
+                    "mode": "phoBERT_siamese",
+                    "normalizedAddress": norm,
+                    "score": round(score, 4),
+                    "latencyMs": round(lat, 2),
+                }
+            except Exception as e:
+                outputs["phobert"] = {"error": str(e)}
+        else:
+            outputs["phobert"] = {"status": "Not loaded", "error": bundle["errors"].get("phobert")}
 
     # 3. mGTE
-    if bundle.get("mgte"):
-        try:
-            norm, score, lat = bundle["mgte"].normalize(raw_address)
-            outputs["mgte"] = {
-                "mode": "mGTE_siamese",
-                "normalizedAddress": norm,
-                "score": round(score, 4),
-                "latencyMs": round(lat, 2),
-            }
-        except Exception as e:
-            outputs["mgte"] = {"error": str(e)}
-    else:
-        outputs["mgte"] = {"status": "Not loaded", "error": bundle["errors"].get("mgte")}
+    if not target_model or target_model == "mgte":
+        if bundle.get("mgte"):
+            try:
+                norm, score, lat = bundle["mgte"].normalize(raw_address)
+                outputs["mgte"] = {
+                    "mode": "mGTE_siamese",
+                    "normalizedAddress": norm,
+                    "score": round(score, 4),
+                    "latencyMs": round(lat, 2),
+                }
+            except Exception as e:
+                outputs["mgte"] = {"error": str(e)}
+        else:
+            outputs["mgte"] = {"status": "Not loaded", "error": bundle["errors"].get("mgte")}
 
     # 4. LLM
-    if bundle.get("llm"):
-        try:
-            candidates = _build_llm_candidates()
-            norm, score, lat = bundle["llm"].normalize(raw_address, candidates)
-            outputs["llm"] = {
-                "mode": "qwen2.5_llm",
-                "normalizedAddress": norm if isinstance(norm, str) else norm.get("full_address") if isinstance(norm, dict) else str(norm),
-                "score": round(score, 4),
-                "latencyMs": round(lat, 2),
-            }
-        except Exception as e:
-            outputs["llm"] = {"error": str(e)}
-    else:
-        outputs["llm"] = {"status": "Not loaded", "error": bundle["errors"].get("llm")}
+    if not target_model or target_model == "llm":
+        if bundle.get("llm"):
+            try:
+                candidates = _build_llm_candidates()
+                norm, score, lat = bundle["llm"].normalize(raw_address, candidates)
+                outputs["llm"] = {
+                    "mode": "qwen2.5_llm",
+                    "normalizedAddress": norm if isinstance(norm, str) else norm.get("full_address") if isinstance(norm, dict) else str(norm),
+                    "score": round(score, 4),
+                    "latencyMs": round(lat, 2),
+                }
+            except Exception as e:
+                outputs["llm"] = {"error": str(e)}
+        else:
+            outputs["llm"] = {"status": "Not loaded", "error": bundle["errors"].get("llm")}
 
     return {
         "sample": _serialize_parser_sample(sample),
@@ -543,6 +547,11 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
 def get_provinces(version: Optional[int] = 1, db: Session = Depends(get_db)):
     """Fetch all provinces, filtered by admin version."""
     return db.query(Province).filter(Province.admin_version == version).order_by(Province.province_name).all()
+
+@api_router.get("/provinces/{province_id}")
+def get_provinces_by_path(province_id: int, db: Session = Depends(get_db)):
+    """Fetch a single province by ID."""
+    return db.query(Province).filter(Province.province_id == province_id).first()
 
 @api_router.get("/districts")
 def get_districts(province_id: Optional[int] = None, version: Optional[int] = 1, db: Session = Depends(get_db)):
@@ -669,14 +678,12 @@ def lookup_mapping(
             ))
         elif version == 2:
             filters.append(or_(
-                WardMapping.district_id_new == district_id, 
-                WardV2.district_id == district_id,
+                WardV2.district_id == district_id, 
                 DistV2.district_id == district_id
             ))
         else:
             filters.append(or_(
                 WardMapping.district_id_old == district_id,
-                WardMapping.district_id_new == district_id,
                 WardV1.district_id == district_id,
                 WardV2.district_id == district_id,
                 DistV1.district_id == district_id,
@@ -1281,10 +1288,11 @@ def get_parser_sample(db: Session = Depends(get_db)):
 
 
 @api_router.post("/parser/analyze")
-def analyze_parser_address(data: dict, db: Session = Depends(get_db)):
+def analyze_parser_address(data: dict, model: Optional[str] = None, db: Session = Depends(get_db)):
     """
     Phân tích địa chỉ bằng nhiều mô hình (Research Comparison).
     Hỗ trợ cả phân tích từ ID (trong DB) hoặc text thô.
+    Tham số 'model' cho phép chỉ định chạy 1 mô hình cụ thể (incremental updates).
     """
     sample_id = data.get("id")
     raw_text = data.get("raw_address")
@@ -1306,7 +1314,7 @@ def analyze_parser_address(data: dict, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Sample not found")
         
     try:
-        return _run_parser_research(sample)
+        return _run_parser_research(sample, target_model=model)
     except Exception as e:
         logger.error(f"Parser Research Error: {e}\n{traceback.format_exc()}")
         # Fallback: Nếu model thật chưa load được (do thiếu GPU/RAM), trả về kết quả PreLabeler tối thiểu

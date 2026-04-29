@@ -8,19 +8,27 @@
     <!-- Filter Toolbar -->
     <div class="card mb-20 dm-filter-sidebar dm-filter-toolbar">
         <div class="card-body">
+            <div class="form-group mb-0" style="min-width: 120px;">
+                <select id="admin-version-select" class="form-input">
+                    <option value="1">Trước 01/7/2025</option>
+                    <option value="2">Sau 01/7/2025</option>
+                </select>
+            </div>
             <div class="form-group mb-0">
                 <div class="input-wrapper">
-                    <input type="text" id="admin-province-input" class="form-input has-clear" list="admin-list-provinces"
-                        placeholder="Tất cả Tỉnh / Thành">
-                    <button type="button" class="btn-clear-input" id="btn-clear-admin-province" title="Xóa"><i class="fa-solid fa-xmark"></i></button>
+                    <input type="text" id="admin-province-input" class="form-input has-clear"
+                        list="admin-list-provinces" placeholder="Tất cả Tỉnh / Thành">
+                    <button type="button" class="btn-clear-input" id="btn-clear-admin-province" title="Xóa"><i
+                            class="fa-solid fa-xmark"></i></button>
                 </div>
                 <datalist id="admin-list-provinces"></datalist>
             </div>
             <div class="form-group mb-0">
                 <div class="input-wrapper">
-                    <input type="text" id="admin-district-input" class="form-input has-clear" list="admin-list-districts"
-                        placeholder="Tất cả Quận / Huyện">
-                    <button type="button" class="btn-clear-input" id="btn-clear-admin-district" title="Xóa"><i class="fa-solid fa-xmark"></i></button>
+                    <input type="text" id="admin-district-input" class="form-input has-clear"
+                        list="admin-list-districts" placeholder="Tất cả Quận / Huyện">
+                    <button type="button" class="btn-clear-input" id="btn-clear-admin-district" title="Xóa"><i
+                            class="fa-solid fa-xmark"></i></button>
                 </div>
                 <datalist id="admin-list-districts"></datalist>
             </div>
@@ -28,15 +36,15 @@
                 <div class="input-wrapper">
                     <input type="text" id="admin-ward-input" class="form-input has-clear" list="admin-list-wards"
                         placeholder="Tất cả Phường / Xã">
-                    <button type="button" class="btn-clear-input" id="btn-clear-admin-ward" title="Xóa"><i class="fa-solid fa-xmark"></i></button>
+                    <button type="button" class="btn-clear-input" id="btn-clear-admin-ward" title="Xóa"><i
+                            class="fa-solid fa-xmark"></i></button>
                 </div>
                 <datalist id="admin-list-wards"></datalist>
             </div>
 
             <div class="search-box">
                 <i class="fa-solid fa-magnifying-glass search-icon"></i>
-                <input type="text" id="admin-search-input" class="search-input"
-                    placeholder="Tìm theo tên hoặc mã...">
+                <input type="text" id="admin-search-input" class="search-input" placeholder="Tìm theo tên hoặc mã...">
             </div>
 
             <button class="btn btn-ghost" id="btn-admin-refresh">

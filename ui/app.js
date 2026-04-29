@@ -110,7 +110,10 @@ function setupNumberInputFormatting() {
         newCursorPos = i + 1;
         if (digitsSeen === digitsBeforeCursor) break;
       }
-      input.setSelectionRange(newCursorPos, newCursorPos);
+      // Only call setSelectionRange if the element supports it
+      if (input.type === 'text' || input.type === 'search' || input.type === 'url' || input.type === 'tel' || input.type === 'password') {
+        input.setSelectionRange(newCursorPos, newCursorPos);
+      }
     });
   });
 }
@@ -1132,273 +1135,165 @@ async function runParser() {
   const text = inputEl?.value?.trim();
   const sampleId = inputEl?.dataset?.sampleId;
   const statusEl = document.getElementById("parser-status");
-  const container = document.getElementById("parser-comparison-matrix");
+  const matrixContainer = document.getElementById("parser-comparison-matrix");
+  const metaEl = document.getElementById("parser-meta");
+  const nerOutputEl = document.getElementById("parser-output");
 
-  // Buttons to disable
   const btnParse = document.getElementById("btn-parse");
   const btnLocal = document.getElementById("btn-parse-sample-local");
   const btnDb = document.getElementById("btn-parse-sample-db");
   const buttons = [btnParse, btnLocal, btnDb].filter(b => b !== null);
 
-  if (!text) {
-    if (typeof showToast === 'function') {
-      showToast("Vui lòng nhập địa chỉ cần phân tích", "warning");
-    }
-    return;
-  }
+  if (!text) return;
 
   if (statusEl) {
     statusEl.textContent = "Analyzing...";
     statusEl.className = "badge warning";
   }
 
-  // Disable all controls
   buttons.forEach(btn => { btn.disabled = true; });
   if (btnParse) btnParse.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Phân tích';
 
-  // Show loading indicator without clearing previous results (to prevent scroll jump)
-  if (container) {
-    if (container.querySelector('.empty-state')) {
-      container.innerHTML = `
-          <div class="empty-state" style="padding: 40px; text-align: center; color: var(--text-tertiary);">
-              <i class="fa-solid fa-circle-notch fa-spin" style="font-size: 32px; margin-bottom: 12px; display: block;"></i>
-              Đang khởi tạo các mô hình AI (PhoBERT, mGTE, Qwen)...<br>
-              <span style="font-size: 11px; opacity: 0.7;">Lần chạy đầu tiên có thể mất 1-2 phút để tải trọng số mô hình.</span>
-          </div>
-        `;
-    } else {
-      // Dim the container to show it's "stale" but keep dimensions to avoid scroll jumping
-      container.style.opacity = "0.5";
-      container.style.pointerEvents = "none";
-    }
+  // Initialize Matrix with placeholders
+  if (matrixContainer) {
+    matrixContainer.innerHTML = `
+      <div class="empty-state" style="padding: 20px; text-align: center; color: var(--text-tertiary);">
+          <i class="fa-solid fa-circle-notch fa-spin" style="font-size: 24px; margin-bottom: 8px; display: block;"></i>
+          Đang khởi tạo các mô hình AI (PhoBERT, mGTE, Qwen)...<br>
+          <span style="font-size: 11px; opacity: 0.7;">Lần chạy đầu tiên có thể mất 1-2 phút để tải trọng số mô hình.</span>
+      </div>
+      <div id="parser-matrix-results" style="display:none"></div>
+    `;
+    matrixContainer.style.opacity = "1";
+    matrixContainer.style.pointerEvents = "all";
   }
 
+  const models = ["prelabeler", "phobert", "mgte", "llm"];
+  const payload = sampleId ? { id: parseInt(sampleId) } : { raw_address: text };
+  let allOutputs = {};
+
   try {
-    const payload = sampleId ? { id: parseInt(sampleId) } : { raw_address: text };
+    for (const model of models) {
+      try {
+        const res = await fetch(`${API_BASE}/parser/analyze?model=${model}`, {
+          method: "POST",
+          headers: { ...getAuthHeader(), "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) continue;
+        const data = await res.json();
+        
+        // Merge results
+        if (data.outputs) {
+          allOutputs = { ...allOutputs, ...data.outputs };
+        }
+        if (data.sample && !allOutputs.sample) allOutputs.sample = data.sample;
+        if (data.meta && !allOutputs.meta) allOutputs.meta = data.meta;
 
-    const res = await fetch(`${API_BASE}/parser/analyze`, {
-      method: "POST",
-      headers: { ...getAuthHeader(), "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
-
-    if (!res.ok) {
-      const errData = await res.json().catch(() => ({}));
-      throw new Error(errData.detail || "Analysis failed");
-    }
-    const data = await res.json();
-
-    if (!data) throw new Error("Server returned empty response");
-
-    renderParserComparisonMatrix(data);
-
-    // Highlight visual output using the primary/first model (usually PreLabeler/Heuristic)
-    if (data?.outputs?.prelabeler?.result) {
-      renderNEROutput(text, data.outputs.prelabeler.result.map(r => ({
-        label: r.value.labels[0],
-        start: r.value.start,
-        end: r.value.end,
-        text: r.value.text
-      })));
+        // Render intermediate results
+        renderParserResults(allOutputs);
+        
+        // If we have prelabeler result, show NER highlighting immediately
+        if (model === "prelabeler" && data.outputs?.prelabeler) {
+          renderNERHighlight(data.outputs.prelabeler.result);
+        }
+      } catch (e) {
+        console.error(`Error analyzing ${model}:`, e);
+      }
     }
 
     if (statusEl) {
-      statusEl.textContent = "Success";
+      statusEl.textContent = "Analysis Complete";
       statusEl.className = "badge success";
     }
-
-    // Render meta safely
-    try {
-      const metaEl = document.getElementById("parser-meta");
-      if (metaEl && data?.meta) {
-        const corpusSize = data.meta.corpusSize || 0;
-        const evaluatedAt = data.meta.evaluatedAt ? new Date(data.meta.evaluatedAt).toLocaleTimeString() : "-";
-        const note = data.meta.note || "";
-
-        metaEl.innerHTML = `
-            <div class="flex justify-between">
-              <span>Corpus Size: <strong>${corpusSize.toLocaleString()}</strong></span>
-              <span>Evaluated: <strong>${evaluatedAt}</strong></span>
-            </div>
-            <div class="mt-4" style="opacity: 0.8">${note}</div>
-          `;
-      }
-    } catch (metaErr) {
-      console.warn("Meta rendering error:", metaErr);
-    }
-
   } catch (err) {
-    console.error(err);
+    console.error("Parser global error:", err);
     if (statusEl) {
       statusEl.textContent = "Error";
       statusEl.className = "badge danger";
     }
-    if (showToast) showToast(`Lỗi: ${err.message}`, "danger");
-
-    if (container) {
-      container.innerHTML = `
-            <div class="empty-state" style="padding: 40px; text-align: center; color: var(--danger);">
-                <i class="fa-solid fa-triangle-exclamation" style="font-size: 32px; margin-bottom: 12px; display: block;"></i>
-                Lỗi phân tích: ${err.message}
-            </div>
-        `;
-    }
   } finally {
-    // Re-enable all controls
     buttons.forEach(btn => { btn.disabled = false; });
     if (btnParse) btnParse.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Phân tích';
-    
-    if (container) {
-      container.style.opacity = "1";
-      container.style.pointerEvents = "auto";
-    }
   }
 }
 
-function renderParserComparisonMatrix(data) {
+function renderNERHighlight(entities) {
+  const nerOutputEl = document.getElementById("parser-output");
+  const inputEl = document.getElementById("parser-input");
+  if (!nerOutputEl || !inputEl) return;
+
+  const text = inputEl.value;
+  let html = text;
+
+  // Simple highlight logic (greedy replace from longest to shortest to avoid partial matches)
+  const sortedEntities = [...entities].sort((a, b) => b.text.length - a.text.length);
+  
+  sortedEntities.forEach(ent => {
+    const labelClass = `ner-tag-${ent.label.toLowerCase()}`;
+    const escapedText = ent.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(escapedText, 'g');
+    html = html.replace(regex, `<span class="ner-item ${labelClass}" title="${ent.label}">${ent.text}</span>`);
+  });
+
+  nerOutputEl.innerHTML = html;
+}
+
+function renderParserResults(data) {
   const container = document.getElementById("parser-comparison-matrix");
+  const resultsDiv = document.getElementById("parser-matrix-results") || container;
+  const metaEl = document.getElementById("parser-meta");
   if (!container) return;
 
-  const outputs = data?.outputs || {};
-  const models = [
-    { id: "prelabeler", name: "Heuristic (Rules)", icon: "fa-gears" },
-    { id: "phobert", name: "PhoBERT (NER)", icon: "fa-brain" },
-    { id: "mgte", name: "mGTE (Ranking)", icon: "fa-ranking-star" },
-    { id: "llm", name: "LLM (Reasoning)", icon: "fa-robot" }
-  ];
+  // Clear loading state on first result
+  const loading = container.querySelector('.empty-state');
+  if (loading) loading.style.display = 'none';
+  if (resultsDiv.style) resultsDiv.style.display = 'block';
 
   let html = `
-    <div class="table-container">
-      <table class="comparison-table">
-        <thead>
-          <tr>
-            <th>Model Approach</th>
-            <th>Standardized / Entity Result</th>
-            <th>Score</th>
-            <th>Latency</th>
-          </tr>
-        </thead>
-        <tbody>
+    <div class="comparison-grid">
+      <div class="comparison-row header">
+          <div class="col-model">Model Engine</div>
+          <div class="col-norm">Normalized Result</div>
+          <div class="col-conf">Conf</div>
+          <div class="col-lat">Latency</div>
+      </div>
   `;
 
-  models.forEach(m => {
-    const out = outputs[m.id];
-    if (!out) return;
+  const outputs = data.outputs || {};
+  const modelOrder = [
+    { key: 'prelabeler', name: 'PreLabeler (Hybrid)', icon: 'fa-bolt' },
+    { key: 'phobert', name: 'PhoBERT Siamese', icon: 'fa-brain' },
+    { key: 'mgte', name: 'mGTE Siamese', icon: 'fa-vector-square' },
+    { key: 'llm', name: 'Qwen 2.5 LLM', icon: 'fa-sparkles' }
+  ];
 
-    let resultHtml = "";
-    let scoreHtml = "-";
-    let latencyHtml = "-";
-
-    if (out.error) {
-      resultHtml = `<div class="text-danger" style="font-size: 11px;"><i class="fa-solid fa-circle-exclamation"></i> ${out.error}</div>`;
-      if (out.status === "Not loaded") {
-        resultHtml = `<div class="text-tertiary" style="font-size: 11px;"><i class="fa-solid fa-power-off"></i> Model not loaded (insufficient resources)</div>`;
-      }
-    } else if (m.id === "prelabeler") {
-      resultHtml = `<div class="flex flex-wrap gap-4">` +
-        (out.result ? out.result.slice(0, 5).map(r => `<span class="badge badge-outline" style="font-size:10px">${r.value.labels[0]}: ${r.value.text}</span>`).join("") : "N/A") +
-        (out.result && out.result.length > 5 ? `<span class="text-tertiary">...</span>` : "") +
-        `</div>`;
-      scoreHtml = `<span class="badge success">100%</span>`;
-    } else {
-      resultHtml = `<div class="font-600 text-accent">${out.normalizedAddress || "N/A"}</div>`;
-      scoreHtml = `<span class="badge ${getScoreClass(out.score)}">${out.score !== undefined ? (out.score * 100).toFixed(1) + "%" : "-"}</span>`;
-      latencyHtml = out.latencyMs ? out.latencyMs + "ms" : "-";
-    }
-
+  modelOrder.forEach(m => {
+    const out = outputs[m.key];
+    const isPending = !out;
+    
     html += `
-      <tr>
-        <td>
-          <div class="flex items-center gap-8">
-            <i class="fa-solid ${m.icon} text-tertiary"></i>
-            <div>
-              <div class="font-600">${m.name}</div>
-              <div class="text-xs text-tertiary">${out.mode || ""}</div>
-            </div>
-          </div>
-        </td>
-        <td>${resultHtml}</td>
-        <td>${scoreHtml}</td>
-        <td class="text-mono text-xs">${latencyHtml}</td>
-      </tr>
+      <div class="comparison-row ${isPending ? 'pending' : ''}">
+          <div class="col-model"><i class="fa-solid ${m.icon} mr-8"></i>${m.name}</div>
+          <div class="col-norm">${isPending ? '<span class="text-tertiary">Waiting...</span>' : (out.normalizedAddress || (out.result ? 'NER Extraction OK' : out.status || 'N/A'))}</div>
+          <div class="col-conf">${isPending ? '-' : (out.score || out.entityCount || '1.0')}</div>
+          <div class="col-lat">${isPending ? '-' : (out.latencyMs ? out.latencyMs + 'ms' : '< 1ms')}</div>
+      </div>
     `;
   });
 
-  html += `</tbody></table></div>`;
-  container.innerHTML = html;
-  
-  adjustActivePageHeight();
-}
+  html += '</div>';
+  resultsDiv.innerHTML = html;
 
-function getScoreClass(score) {
-  if (score === undefined) return "badge-outline";
-  if (score >= 0.9) return "success";
-  if (score >= 0.7) return "warning";
-  return "danger";
-}
-
-function heuristicNER(text) {
-  const entities = [];
-  let used = new Set();
-
-  // Province patterns
-  const proPatterns = [
-    /(?:Tỉnh|tỉnh|T\.)\s+([A-ZĐa-zÀ-ỹ\s\-]+?)(?:,|$)/g,
-    /(?:Thành phố|TP\.?\s*|tp\.?\s*)([A-ZĐa-zÀ-ỹ\s]+?)(?:,|$)/g,
-  ];
-  proPatterns.forEach(re => {
-    let m;
-    while ((m = re.exec(text)) !== null) {
-      entities.push({ label: "PRO", start: m.index, end: m.index + m[0].replace(/,$/, "").length, text: m[0].replace(/,$/, "").trim() });
-    }
-  });
-
-  // District
-  const dstRe = /(?:Quận|quận|Q\.?\s*|Huyện|huyện|H\.?\s*|Thị xã|thị xã|TX\.?\s*)([A-ZĐa-zÀ-ỹ0-9\s]+?)(?:,|$)/g;
-  let m;
-  while ((m = dstRe.exec(text)) !== null) {
-    entities.push({ label: "DST", start: m.index, end: m.index + m[0].replace(/,$/, "").length, text: m[0].replace(/,$/, "").trim() });
+  if (data.meta && metaEl) {
+    metaEl.innerHTML = `
+      <div class="flex flex-column gap-4">
+        <span><i class="fa-solid fa-database mr-4"></i> Corpus Size: <strong>${data.meta.corpusSize.toLocaleString()} records</strong></span>
+        <span><i class="fa-solid fa-clock mr-4"></i> Evaluated at: <strong>${new Date(data.meta.evaluatedAt).toLocaleString()}</strong></span>
+        ${data.meta.note ? `<span class="text-warning"><i class="fa-solid fa-triangle-exclamation mr-4"></i> ${data.meta.note}</span>` : ''}
+      </div>
+    `;
   }
-
-  // Ward
-  const wdsRe = /(?:Phường|phường|P\.?\s*|Xã|xã|X\.?\s*|Thị trấn|TT\.?\s*)([A-ZĐa-zÀ-ỹ0-9\s]+?)(?:,|$)/g;
-  while ((m = wdsRe.exec(text)) !== null) {
-    entities.push({ label: "WDS", start: m.index, end: m.index + m[0].replace(/,$/, "").length, text: m[0].replace(/,$/, "").trim() });
-  }
-
-  // Street
-  const strRe = /(?:Đường|đường|Đ\.?\s*|Phố|phố)[\s]*([A-ZĐa-zÀ-ỹ0-9\s]+?)(?:,|$)/g;
-  while ((m = strRe.exec(text)) !== null) {
-    entities.push({ label: "STR", start: m.index, end: m.index + m[0].replace(/,$/, "").length, text: m[0].replace(/,$/, "").trim() });
-  }
-
-  // House number
-  const numRe = /(?:Số\s+|số\s+)?(\d+[\w/.\-]*)/g;
-  while ((m = numRe.exec(text)) !== null) {
-    if (!entities.some(e => m.index >= e.start && m.index < e.end)) {
-      entities.push({ label: "NUM", start: m.index, end: m.index + m[0].length, text: m[0].trim() });
-    }
-  }
-
-  // Alley
-  const alyRe = /(?:Hẻm|hẻm|Ngõ|ngõ|Ngách|ngách|Kiệt|kiệt)\s*[\d/]+/g;
-  while ((m = alyRe.exec(text)) !== null) {
-    entities.push({ label: "ALY", start: m.index, end: m.index + m[0].length, text: m[0].trim() });
-  }
-
-  // Building
-  const bldRe = /(?:Chung [Cc]ư|CC\.?\s*|Tòa nhà|Khu đô thị|KĐT)\s*[A-ZĐa-zÀ-ỹ0-9\s]+?(?:,|$)/g;
-  while ((m = bldRe.exec(text)) !== null) {
-    entities.push({ label: "BLD", start: m.index, end: m.index + m[0].replace(/,$/, "").length, text: m[0].replace(/,$/, "").trim() });
-  }
-
-  // Neighborhood
-  const nhbRe = /(?:Khu [Pp]hố|KP\.?\s*|[Tt]hôn|[Ấấ]p|[Tt]ổ)\s*[\dA-Za-zÀ-ỹ\s]+?(?:,|$)/g;
-  while ((m = nhbRe.exec(text)) !== null) {
-    entities.push({ label: "NHB", start: m.index, end: m.index + m[0].replace(/,$/, "").length, text: m[0].replace(/,$/, "").trim() });
-  }
-
-  return entities.sort((a, b) => a.start - b.start);
 }
 
 function renderNEROutput(text, entities) {
@@ -1498,7 +1393,7 @@ function setupBatchTool() {
       }
 
       document.getElementById("batch-throughput").textContent = `${tps.toLocaleString()} items/s`;
-      log.innerHTML += `[${formatLogTime()}] Processing... ${processed.toLocaleString()}/${size.toLocaleString("N0")}\n`;
+      log.innerHTML += `[${formatLogTime()}] Processing... ${processed.toLocaleString()}/${size.toLocaleString()}\n`;
       log.scrollTop = log.scrollHeight;
     }, 800);
 
@@ -2470,12 +2365,13 @@ function adjustActivePageHeight() {
     const scrollableSelectors = [
       '.table-container', 
       '.batch-log', 
-      '.parser-comparison-matrix', 
+      '#parser-comparison-matrix', 
       '.ner-output', 
       '.card-body.with-scroll',
       '#osm-job-log',
       '#nso-sync-logs',
-      '.lookup-results-table'
+      '.lookup-results-table',
+      '.ner-output'
     ];
 
     const scrollableElements = activePage.querySelectorAll(scrollableSelectors.join(', '));
