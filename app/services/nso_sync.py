@@ -115,7 +115,8 @@ def sync_province_nso(db: Session, p_no_str: str, p_name: str):
                     w_db = Ward(
                         ward_no=w_code, 
                         ward_name=w_name, 
-                        district_id=d_db.district_id, 
+                        district_id=d_db.district_id,
+                        province_no=p_no,
                         admin_version=2, 
                         type_name=w_nso.get("LoaiHinh", "")
                     )
@@ -125,6 +126,7 @@ def sync_province_nso(db: Session, p_no_str: str, p_name: str):
                     w_db.ward_name = w_name
                     w_db.ward_no = w_code # Update MaPhuongXa/MaXa
                     w_db.district_id = d_db.district_id
+                    w_db.province_no = p_no
                     w_db.type_name = w_nso.get("LoaiHinh", "")
                     w_db.updated_date = now
                     stats["wards_updated"] += 1

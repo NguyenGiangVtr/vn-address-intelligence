@@ -70,6 +70,7 @@ class DistrictResponse(DistrictBase):
 class WardBase(BaseModel):
     district_id: int
     ward_no: Optional[str] = None
+    province_no: Optional[str] = None
     ward_name: str
     type_name: Optional[str] = None
     location: Optional[str] = None
@@ -84,6 +85,7 @@ class WardCreate(WardBase):
 class WardUpdate(BaseModel):
     district_id: Optional[int] = None
     ward_no: Optional[str] = None
+    province_no: Optional[str] = None
     ward_name: Optional[str] = None
     type_name: Optional[str] = None
     location: Optional[str] = None

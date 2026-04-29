@@ -320,6 +320,7 @@ def seed_wards_v1(df: pd.DataFrame):
             "ward_name":     r.ward_name_old,
             "type_name":     _extract_type(r.ward_name_old),
             "district_id":   int(r.dist_code_old) if r.dist_code_old and not pd.isna(r.dist_code_old) else 0,
+            "province_no":   str(int(r.prov_code_old)).zfill(2) if r.prov_code_old and not pd.isna(r.prov_code_old) else None,
             "admin_version": 1,
             "is_deleted":    False,
             "is_default":    True,
@@ -333,7 +334,7 @@ def seed_wards_v1(df: pd.DataFrame):
 
     _upsert_batch(
         records, "mat.ward", "ward_id, admin_version",
-        ["ward_no", "ward_name", "type_name", "district_id",
+        ["ward_no", "ward_name", "type_name", "district_id", "province_no",
          "is_deleted", "is_default", "updated_user",
          "created_date", "updated_date"],
     )
@@ -479,6 +480,7 @@ def seed_wards_v2(df: pd.DataFrame):
             "ward_name":     r.ward_name_new,
             "type_name":     _extract_type(r.ward_name_new),
             "district_id":   int(r.dist_code_old) if r.dist_code_old and not pd.isna(r.dist_code_old) else 0,
+            "province_no":   str(int(r.prov_code_new)).zfill(2) if r.prov_code_new and not pd.isna(r.prov_code_new) else None,
             "admin_version": 2,
             "is_deleted":    False,
             "is_default":    True,
@@ -492,7 +494,7 @@ def seed_wards_v2(df: pd.DataFrame):
 
     _upsert_batch(
         records, "mat.ward", "ward_id, admin_version",
-        ["ward_no", "ward_name", "type_name", "district_id",
+        ["ward_no", "ward_name", "type_name", "district_id", "province_no",
          "is_deleted", "is_default", "updated_user",
          "created_date", "updated_date"],
     )

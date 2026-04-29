@@ -141,6 +141,7 @@ class Ward(Base):
     row_id = Column(Integer, primary_key=True, autoincrement=True)
     ward_id = Column(Integer, nullable=False)
     district_id = Column(Integer, default=0)
+    province_no = Column(String(20))
     ward_no = Column(String(20))
     ward_name = Column(String(150), default='')
     type_name = Column(String(128))
