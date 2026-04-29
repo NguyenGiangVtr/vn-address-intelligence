@@ -151,4 +151,3 @@ def check_database_stats():
         json.dump({"stats": stats, "timestamp": current_time}, f)
 
     return stats, growth, time_diff
-e_diff

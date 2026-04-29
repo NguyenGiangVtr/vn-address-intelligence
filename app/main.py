@@ -15,6 +15,7 @@ from app.services.synthetic_mixer import SyntheticMixerPro
 from app.services.exporter import export_training_data
 # from app.services.gso_playwright_crawler import GSOPlywrightCrawler
 from app.services.seeders_v2 import seed_admin_v2, seed_ward_mapping, check_v2_stats
+from app.services.seeders_v3 import run_seed_v3, check_v3_stats
 from app.services.enrichment import enrich_provinces, enrich_wards, check_enrichment_stats
 
 from app.core.logging_config import setup_logging
@@ -131,6 +132,25 @@ def enrich_v2():
     stats = check_enrichment_stats()
     for name, count in stats.items():
         click.echo(f"{name:25} : {count:10} rows")
+
+@cli.command()
+@click.option('--file', default='data/seed/AdministrativeUnitConversion.csv', help='Path to AdministrativeUnitConversion.csv')
+def seed_v3(file):
+    """Import dữ liệu hành chính v3 từ AdministrativeUnitConversion.csv.
+    
+    Quy trình:
+      1. Mark is_deleted=True cho toàn bộ data cũ (4 bảng schema mat)
+      2. Insert Province/District/Ward mới (admin_version=2)
+      3. Insert WardMapping v1→v2
+    """
+    from tabulate import tabulate
+    click.echo(f"--- Starting SeederV3 from {file} ---")
+    run_seed_v3(file)
+    
+    click.echo("\n--- Final Stats ---")
+    stats = check_v3_stats()
+    table_data = [[k, f"{v:,}" if isinstance(v, int) else v] for k, v in stats.items()]
+    click.echo(tabulate(table_data, headers=["Table / Status", "Count"], tablefmt="grid"))
 
 if __name__ == "__main__":
     cli()

@@ -28,6 +28,7 @@ from app.api import schemas
 from typing import List, Optional
 
 from app.core.logging_config import setup_logging
+from app.core.config import Config  # noqa: F401 - import to trigger load_dotenv from .env
 
 # ── Logging Setup ──
 logger = setup_logging()
@@ -1395,9 +1396,9 @@ def get_explorer_queue_root(db: Session = Depends(get_db), limit: int = 100, q: 
 async def get_ls_tasks(current_user: str = Depends(get_current_user)):
     """Fetch tasks from Label Studio API."""
     ls_token = os.getenv("LABEL_STUDIO_API_TOKEN")
-    ls_url = os.getenv("LABEL_STUDIO_URL", "https://label.nod.io.vn")
+    ls_url = (os.getenv("LABEL_STUDIO_URL", "https://label.nod.io.vn") or "").strip()
     project_id = os.getenv("LABEL_STUDIO_PROJECT_ID", "1")
-    
+
     if not ls_token:
         logger.warning("LABEL_STUDIO_API_TOKEN not found in environment. Returning mock data.")
         return [
@@ -1405,49 +1406,49 @@ async def get_ls_tasks(current_user: str = Depends(get_current_user)):
             {"id": 102, "data": {"address": "123 Lê Lợi, Bến Thành, Q1, HCM"}, "created_at": "2026-04-28T11:00:00Z", "is_labeled": False, "project": project_id},
             {"id": 103, "data": {"address": "456 Nguyễn Huệ, Q1, HCM"}, "created_at": "2026-04-29T00:15:00Z", "is_labeled": False, "project": project_id},
         ]
-    
-    try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            # Determine auth prefix
-            is_jwt = ls_token.startswith("ey")
-            auth_prefix = "Bearer" if is_jwt else "Token"
-            headers = {"Authorization": f"{auth_prefix} {ls_token}"}
-            
-            ls_api_url = f"{ls_url.rstrip('/')}/api/projects/{project_id}/tasks"
-            
-            # Initial attempt
-            response = await client.get(ls_api_url, headers=headers, params={"page_size": 100})
-            
-            # If 401 and it's a JWT, try to refresh it
-            if response.status_code == 401 and is_jwt:
-                logger.info("Label Studio token returned 401. Attempting JWT refresh...")
-                refresh_url = f"{ls_url.rstrip('/')}/api/token/refresh/"
-                try:
-                    refresh_res = await client.post(refresh_url, json={"refresh": ls_token})
-                    if refresh_res.status_code == 200:
-                        new_access_token = refresh_res.json().get("access")
-                        headers["Authorization"] = f"Bearer {new_access_token}"
-                        # Retry the original request
-                        response = await client.get(ls_api_url, headers=headers, params={"page_size": 100})
-                    else:
-                        logger.error(f"Label Studio token refresh failed: {refresh_res.text}")
-                except Exception as refresh_err:
-                    logger.error(f"Error during Label Studio token refresh: {refresh_err}")
 
-            if response.status_code != 200:
-                logger.error(f"Label Studio returned {response.status_code}: {response.text}")
-                return []
-                
-            tasks = response.json()
-            # Normalize response if it's a paginated object
-            if isinstance(tasks, dict) and "tasks" in tasks:
-                tasks = tasks["tasks"]
-            elif isinstance(tasks, dict) and "results" in tasks:
-                tasks = tasks["results"]
-                
-            return tasks
+    ls_api_url = f"{ls_url.rstrip('/')}/api/projects/{project_id}/tasks"
+    # Label Studio auth:
+    # - PAT: Authorization: Bearer <token>
+    # - Legacy: Authorization: Token <token>
+    # Ref: https://labelstud.io/guide/api.html
+    auth_candidates = [
+        ("Bearer", {"Authorization": f"Bearer {ls_token}"}),
+        ("Token", {"Authorization": f"Token {ls_token}"}),
+    ]
+
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            last_response = None
+
+            for auth_name, headers in auth_candidates:
+                logger.info(f"Trying Label Studio auth mode={auth_name}, url={ls_api_url}")
+                response = await client.get(ls_api_url, headers=headers, params={"page_size": 100})
+                last_response = response
+
+                if response.status_code == 200:
+                    tasks = response.json()
+                    if isinstance(tasks, dict) and "tasks" in tasks:
+                        tasks = tasks["tasks"]
+                    elif isinstance(tasks, dict) and "results" in tasks:
+                        tasks = tasks["results"]
+
+                    logger.info(
+                        f"Label Studio fetch success: project_id={project_id}, tasks_count={len(tasks) if isinstance(tasks, list) else 0}"
+                    )
+                    return tasks if isinstance(tasks, list) else []
+
+                logger.warning(
+                    f"Label Studio auth mode={auth_name} failed, status={response.status_code}, body={response.text[:300]}"
+                )
+
+            if last_response is not None:
+                logger.error(
+                    f"Label Studio request failed for all auth modes. status={last_response.status_code}, body={last_response.text[:500]}"
+                )
+            return []
     except Exception as e:
-        logger.error(f"Error connecting to Label Studio: {e}")
+        logger.error(f"Error connecting to Label Studio ({ls_api_url}): {e}")
         return []
 
 # Register API router

@@ -20,9 +20,12 @@ def init_db_schemas():
 
 class Province(Base):
     __tablename__ = 'province'
-    __table_args__ = {'schema': 'mat'}
+    __table_args__ = (
+        {'schema': 'mat'},
+    )
     
-    province_id = Column(Integer, primary_key=True)
+    row_id = Column(Integer, primary_key=True, autoincrement=True)
+    province_id = Column(Integer, nullable=False)
     area_id = Column(Integer)
     bonus_area_id = Column(Integer)
     country_id = Column(Integer, default=0, nullable=False)
@@ -99,9 +102,12 @@ class AddressCleansingQueue(Base):
 
 class District(Base):
     __tablename__ = 'district'
-    __table_args__ = {'schema': 'mat'}
+    __table_args__ = (
+        {'schema': 'mat'},
+    )
     
-    district_id = Column(Integer, primary_key=True)
+    row_id = Column(Integer, primary_key=True, autoincrement=True)
+    district_id = Column(Integer, nullable=False)
     province_id = Column(Integer, default=0)
     district_no = Column(String(20))
     district_name = Column(String(150), default='')
@@ -128,9 +134,12 @@ class District(Base):
 
 class Ward(Base):
     __tablename__ = 'ward'
-    __table_args__ = {'schema': 'mat'}
+    __table_args__ = (
+        {'schema': 'mat'},
+    )
     
-    ward_id = Column(Integer, primary_key=True)
+    row_id = Column(Integer, primary_key=True, autoincrement=True)
+    ward_id = Column(Integer, nullable=False)
     district_id = Column(Integer, default=0)
     ward_no = Column(String(20))
     ward_name = Column(String(150), default='')

@@ -144,4 +144,3 @@ class SyntheticMixerPro:
 if __name__ == "__main__":
     mixer = SyntheticMixerPro()
     mixer.generate_batch(100)
-0)
