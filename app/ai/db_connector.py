@@ -66,13 +66,13 @@ class DBConnector:
             )
         self._conn.commit()
         logger.info(
-            "✅ Kết nối PostgreSQL: %s@%s/%s (schema=%s)",
+            " Kết nối PostgreSQL: %s@%s/%s (schema=%s)",
             self.user, self.host, self.dbname, self.schema,
         )
 
     def _reconnect(self):
         """Đóng connection cũ, mở lại mới — retry nếu thất bại."""
-        logger.warning("🔄 Đang reconnect PostgreSQL...")
+        logger.warning(" Đang reconnect PostgreSQL...")
         try:
             if self._conn and not self._conn.closed:
                 self._conn.close()
@@ -82,10 +82,10 @@ class DBConnector:
         for attempt in range(1, _MAX_RECONNECT + 1):
             try:
                 self.connect()
-                logger.info("✅ Reconnect thành công (lần %d).", attempt)
+                logger.info(" Reconnect thành công (lần %d).", attempt)
                 return
             except Exception as exc:
-                logger.error("❌ Reconnect lần %d thất bại: %s", attempt, exc)
+                logger.error(" Reconnect lần %d thất bại: %s", attempt, exc)
                 if attempt < _MAX_RECONNECT:
                     time.sleep(_RECONNECT_DELAY)
         raise RuntimeError("Không thể reconnect PostgreSQL sau nhiều lần thử.")
@@ -104,7 +104,7 @@ class DBConnector:
     def disconnect(self):
         if self._conn and not self._conn.closed:
             self._conn.close()
-            logger.info("🔌 Đã ngắt kết nối PostgreSQL.")
+            logger.info(" Đã ngắt kết nối PostgreSQL.")
 
     # ──────────────────────────────────────────────────────────────────────
     # Cursor context manager (có auto-reconnect)
@@ -205,7 +205,7 @@ class DBConnector:
             df.rename(columns={gt_col: "standard_address"}, inplace=True)
 
         logger.info(
-            "📥 Đã đọc %d dòng từ %s.%s (id_col=%s).",
+            " Đã đọc %d dòng từ %s.%s (id_col=%s).",
             len(df), self.schema, table, self._actual_id_col,
         )
         return df
@@ -231,7 +231,7 @@ class DBConnector:
             rows = cur.fetchall()
         addresses = [r[col] for r in rows if r[col]]
         logger.info(
-            "📚 Đã đọc %d địa chỉ corpus từ %s.%s.",
+            " Đã đọc %d địa chỉ corpus từ %s.%s.",
             len(addresses), schema or self.schema, table,
         )
         return addresses
@@ -262,7 +262,7 @@ class DBConnector:
             val = r['full_address'] if isinstance(r, dict) else r[0]
             addresses.append(val)
             
-        logger.info("📚 Đã tạo danh mục chuẩn với %d địa chỉ (Xã, Huyện, Tỉnh).", len(addresses))
+        logger.info(" Đã tạo danh mục chuẩn với %d địa chỉ (Xã, Huyện, Tỉnh).", len(addresses))
         return addresses
 
     # ──────────────────────────────────────────────────────────────────────
@@ -292,7 +292,7 @@ class DBConnector:
         )
         with self.cursor() as cur:
             cur.execute(stmt)
-        logger.info("🏗  Cột '%s' đã sẵn sàng trong %s.%s.", column, self.schema, table)
+        logger.info("  Cột '%s' đã sẵn sàng trong %s.%s.", column, self.schema, table)
 
     def save_batch(
         self,
@@ -341,7 +341,7 @@ class DBConnector:
         with self.cursor() as cur:
             psycopg2.extras.execute_batch(cur, query, pairs, page_size=200)
 
-        logger.info("💾 Batch commit: %d dòng → cột '%s'.", len(pairs), column)
+        logger.info(" Batch commit: %d dòng → cột '%s'.", len(pairs), column)
         return len(pairs)
 
     def save_results(
@@ -383,13 +383,13 @@ class DBConnector:
                     self.save_batch(table, column, batch_ids, batch_vals)
                     saved += len(batch_ids)
                     logger.info(
-                        "✅ Batch %d–%d/%d saved (attempt %d).",
+                        " Batch %d–%d/%d saved (attempt %d).",
                         start + 1, end, total, attempt,
                     )
                     break
                 except psycopg2.OperationalError as exc:
                     logger.warning(
-                        "⚠️  Batch %d–%d thất bại (attempt %d): %s — reconnecting...",
+                        "️  Batch %d–%d thất bại (attempt %d): %s — reconnecting...",
                         start + 1, end, attempt, exc,
                     )
                     if attempt < _MAX_RECONNECT:
@@ -397,13 +397,15 @@ class DBConnector:
                         self._reconnect()
                     else:
                         logger.error(
-                            "❌ Batch %d–%d bị bỏ qua sau %d lần thử.",
+                            " Batch %d–%d bị bỏ qua sau %d lần thử.",
                             start + 1, end, _MAX_RECONNECT,
                         )
                         failed += len(batch_ids)
 
         logger.info(
-            "📊 save_results hoàn tất: %d/%d dòng saved, %d failed.",
+            " save_results hoàn tất: %d/%d dòng saved, %d failed.",
             saved, total, failed,
         )
+        return saved
+       )
         return saved

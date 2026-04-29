@@ -1,63 +1,65 @@
 <!-- ══════ PAGE: OVERVIEW ══════ -->
 <div class="page active" id="overview">
-    <div class="page-header">
-        <h2>Dashboard</h2>
-        <p>Hệ thống Làm giàu và Chuẩn hóa Dữ liệu Địa chỉ Việt Nam</p>
-        <div class="flex items-center gap-12 mt-12">
-            <button class="btn btn-sm btn-ghost" id="btn-dashboard-refresh" type="button">
-                <i class="fa-solid fa-arrow-rotate-right"></i> Làm mới số liệu
-            </button>
+    <div class="page-header flex items-center" style="justify-content: space-between; margin-bottom: 16px;">
+        <div>
+            <h2 style="margin-bottom: 4px;">Dashboard</h2>
+            <p style="margin: 0; font-size: 13px;">Hệ thống Làm giàu và Chuẩn hóa Dữ liệu Địa chỉ Việt Nam</p>
+        </div>
+        <div class="flex items-center gap-12">
             <span id="dashboard-last-refresh" class="text-tertiary" style="font-size:12px;">Chưa cập nhật</span>
+            <button class="btn btn-sm btn-ghost" id="btn-dashboard-refresh" type="button">
+                <i class="fa-solid fa-arrow-rotate-right"></i> Làm mới
+            </button>
         </div>
     </div>
 
-    <div class="stats-grid">
-        <div class="stat-card">
-            <div class="stat-label">Total Visits</div>
-            <div class="stat-value" id="stat-total-visits">0</div>
-            <div class="stat-change positive"><i class="fa-solid fa-eye"></i> All time</div>
+    <div class="stats-grid"
+        style="grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 16px;">
+        <div class="stat-card" style="padding: 12px;">
+            <div class="stat-label" style="font-size: 11px;">Total Visits</div>
+            <div class="stat-value" id="stat-total-visits" style="font-size: 20px;">0</div>
+            <div class="stat-change positive" style="font-size: 10px;"><i class="fa-solid fa-eye"></i> All time</div>
         </div>
-        <div class="stat-card">
-            <div class="stat-label">Unique Visitors</div>
-            <div class="stat-value" id="stat-unique-ips">0</div>
-            <div class="stat-change positive"><i class="fa-solid fa-user-check"></i> Unique IPs</div>
+        <div class="stat-card" style="padding: 12px;">
+            <div class="stat-label" style="font-size: 11px;">Unique Visitors</div>
+            <div class="stat-value" id="stat-unique-ips" style="font-size: 20px;">0</div>
+            <div class="stat-change positive" style="font-size: 10px;"><i class="fa-solid fa-user-check"></i> Unique IPs
+            </div>
         </div>
-        <div class="stat-card">
-            <div class="stat-label">Online Users</div>
-            <div class="stat-value" id="stat-online-users" style="color:var(--success)">0</div>
-            <div class="stat-change positive"><i class="fa-solid fa-circle-dot pulse"></i> Real-time</div>
+        <div class="stat-card" style="padding: 12px;">
+            <div class="stat-label" style="font-size: 11px;">Online Users</div>
+            <div class="stat-value" id="stat-online-users" style="color:var(--success); font-size: 20px;">0</div>
+            <div class="stat-change positive" style="font-size: 10px;"><i class="fa-solid fa-circle-dot pulse"></i>
+                Real-time</div>
         </div>
-        <div class="stat-card">
-            <div class="stat-label">Queue</div>
-            <div class="stat-value" id="stat-queue">505,094</div>
-            <div class="stat-change warning"><i class="fa-solid fa-clock"></i> Pending</div>
+        <div class="stat-card" style="padding: 12px;">
+            <div class="stat-label" style="font-size: 11px;">Queue</div>
+            <div class="stat-value" id="stat-queue" style="font-size: 20px;">505,094</div>
+            <div class="stat-change warning" style="font-size: 10px;"><i class="fa-solid fa-clock"></i> Pending</div>
         </div>
-    </div>
-
-    <div class="stats-grid">
-        <div class="stat-card">
-            <div class="stat-label">Master Data</div>
-            <div class="stat-value" id="stat-master">16,427</div>
-            <div class="stat-change positive"><i class="fa-solid fa-arrow-up"></i> P+D+W</div>
+        <div class="stat-card" style="padding: 12px;">
+            <div class="stat-label" style="font-size: 11px;">Master Data</div>
+            <div class="stat-value" id="stat-master" style="font-size: 20px;">16,427</div>
+            <div class="stat-change positive" style="font-size: 10px;"><i class="fa-solid fa-arrow-up"></i> P+D+W</div>
         </div>
-        <div class="stat-card">
-            <div class="stat-label">OSM Entities</div>
-            <div class="stat-value" id="stat-osm">615,547</div>
-            <div class="stat-change positive"><i class="fa-solid fa-arrow-up"></i> OSM</div>
+        <div class="stat-card" style="padding: 12px;">
+            <div class="stat-label" style="font-size: 11px;">OSM Entities</div>
+            <div class="stat-value" id="stat-osm" style="font-size: 20px;">615,547</div>
+            <div class="stat-change positive" style="font-size: 10px;"><i class="fa-solid fa-arrow-up"></i> OSM</div>
         </div>
-        <div class="stat-card">
-            <div class="stat-label">Training Data</div>
-            <div class="stat-value" id="stat-training">25,130</div>
-            <div class="stat-change positive"><i class="fa-solid fa-check"></i> Labeled</div>
+        <div class="stat-card" style="padding: 12px;">
+            <div class="stat-label" style="font-size: 11px;">Training Data</div>
+            <div class="stat-value" id="stat-training" style="font-size: 20px;">25,130</div>
+            <div class="stat-change positive" style="font-size: 10px;"><i class="fa-solid fa-check"></i> Labeled</div>
         </div>
     </div>
 
     <!-- ══════ AI WORKFLOW LIFECYCLE ══════ -->
-    <div class="card mt-24 mb-24">
-        <div class="card-header">
+    <div class="card mb-12">
+        <div class="card-header" style="padding: 10px 18px;">
             <span class="card-title">AI Intelligence Lifecycle</span>
         </div>
-        <div class="card-body">
+        <div class="card-body" style="padding: 12px 18px;">
             <div class="workflow-diagram horizontal">
                 <div class="workflow-step clickable" data-goto="batch">
                     <div class="step-icon"><i class="fa-solid fa-file-import"></i></div>
@@ -97,22 +99,21 @@
         </div>
     </div>
 
-    <div class="content-grid sidebar-layout">
+    <div class="content-grid sidebar-layout" style="margin-bottom: 0;">
         <div class="card">
             <div class="card-header">
                 <span class="card-title">Tiến độ xử lý theo Schema</span>
-                <button class="btn btn-sm btn-ghost"><i class="fa-solid fa-arrow-rotate-right"></i>
-                    Refresh</button>
             </div>
-            <div class="card-body">
-                <div class="chart-container"><canvas id="chart-overview"></canvas></div>
+            <div class="card-body" style="display: flex; flex-direction: column; padding: 12px 18px;">
+                <div class="chart-container" style="flex: 1; min-height: 150px; height: auto;"><canvas
+                        id="chart-overview"></canvas></div>
             </div>
         </div>
         <div class="card">
             <div class="card-header">
                 <span class="card-title">Hoạt động gần đây</span>
             </div>
-            <div class="card-body">
+            <div class="card-body" style="padding-right: 8px; padding-top: 8px;">
                 <ul class="activity-list" id="activity-feed">
                     <li class="activity-item">
                         <div class="activity-dot"></div>
@@ -148,7 +149,7 @@
     </div>
 
     <!-- Model Status -->
-    <div class="page-header mt-24">
+    <div class="page-header mt-12">
         <h2>Model Status</h2>
     </div>
     <div class="stats-grid">

@@ -18,7 +18,7 @@ test_cases = [
 ]
 
 def run_test():
-    print(f"🔄 Loading model: {model_name}...")
+    print(f" Loading model: {model_name}...")
     try:
         tokenizer = AutoTokenizer.from_pretrained(model_name)
         model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
@@ -39,7 +39,8 @@ def run_test():
             print(f"{addr:<60} | {result:<60} ({latency:.2f}ms)")
             
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f" Error: {e}")
 
 if __name__ == "__main__":
     run_test()
+()

@@ -34,7 +34,7 @@ class SiameseMGTE:
         self.batch_size = batch_size
         self.device     = "cuda" if (device == "auto" and torch.cuda.is_available()) else ("cpu" if device == "auto" else device)
 
-        logger.info("🔄 Loading mGTE: %s (device=%s)", model_name, self.device)
+        logger.info(" Loading mGTE: %s (device=%s)", model_name, self.device)
         self.model = SentenceTransformer(
             model_name, 
             device=self.device,
@@ -45,13 +45,13 @@ class SiameseMGTE:
         self._corpus: List[str]             = []
         self._corpus_emb: Optional[np.ndarray] = None
 
-        logger.info("✅ mGTE Siamese loaded. Emb dim: %d",
+        logger.info(" mGTE Siamese loaded. Emb dim: %d",
                     self.model.get_sentence_embedding_dimension())
 
     # ------------------------------------------------------------------
     def encode_corpus(self, addresses: List[str]):
         """Pre-compute corpus embeddings (chạy 1 lần)."""
-        logger.info("📐 Encoding %d corpus addresses (mGTE)...", len(addresses))
+        logger.info(" Encoding %d corpus addresses (mGTE)...", len(addresses))
         self._corpus     = addresses
         self._corpus_emb = self.model.encode(
             addresses,
@@ -60,7 +60,7 @@ class SiameseMGTE:
             show_progress_bar=True,
             convert_to_numpy=True,
         )
-        logger.info("✅ mGTE corpus encoded. Shape: %s", self._corpus_emb.shape)
+        logger.info(" mGTE corpus encoded. Shape: %s", self._corpus_emb.shape)
 
     # ------------------------------------------------------------------
     def normalize(self, query: str, top_k: int = 1) -> Tuple[str, float, float]:
@@ -82,3 +82,4 @@ class SiameseMGTE:
     # ------------------------------------------------------------------
     def normalize_batch(self, queries: List[str]) -> List[Tuple[str, float, float]]:
         return [self.normalize(q) for q in queries]
+eries]

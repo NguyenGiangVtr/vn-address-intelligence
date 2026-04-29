@@ -24,7 +24,7 @@ def export_training_data(output_path="data/training_data.jsonl"):
     try:
         datasets = session.query(TrainingDataset).all()
         if not datasets:
-            logger.warning("⚠️ No data to export.")
+            logger.warning("️ No data to export.")
             return
 
         out_file = Path(output_path)

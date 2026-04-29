@@ -41,16 +41,16 @@ packages = [
 ]
 
 for package in packages:
-    print(f"\n📦 Cài đặt {package}...")
+    print(f"\n Cài đặt {package}...")
     subprocess.check_call([sys.executable, "-m", "pip", "install", "-q", package])
 
 # Cài đặt thư viện optional cho Qwen3
-print("\n📦 Cài đặt dependencies cho Qwen3...")
+print("\n Cài đặt dependencies cho Qwen3...")
 subprocess.check_call(
     [sys.executable, "-m", "pip", "install", "-q", "accelerate", "bitsandbytes"]
 )
 
-print("\n✅ Cài đặt hoàn tất!")
+print("\n Cài đặt hoàn tất!")
 
 
 # ============================================================================
@@ -82,14 +82,14 @@ print("=" * 80)
 
 # Xác định device (GPU/CPU)
 device = "cuda" if torch.cuda.is_available() else "cpu"
-print(f"✅ Device: {device}")
+print(f" Device: {device}")
 
 if torch.cuda.is_available():
-    print(f"✅ GPU Name: {torch.cuda.get_device_name(0)}")
-    print(f"✅ GPU Memory: {torch.cuda.get_device_properties(0).total_memory / 1e9:.2f} GB")
-    print(f"✅ CUDA Version: {torch.version.cuda}")
+    print(f" GPU Name: {torch.cuda.get_device_name(0)}")
+    print(f" GPU Memory: {torch.cuda.get_device_properties(0).total_memory / 1e9:.2f} GB")
+    print(f" CUDA Version: {torch.version.cuda}")
 else:
-    print("⚠️ GPU không khả dụng - sẽ sử dụng CPU (chậm hơn)")
+    print("️ GPU không khả dụng - sẽ sử dụng CPU (chậm hơn)")
 
 
 # ============================================================================
@@ -232,7 +232,7 @@ class Layer1_ColBERT:
             model_name: Tên model từ HuggingFace
             device: cuda hoặc cpu
         """
-        print(f"\n🔄 Loading ColBERT model: {model_name}...")
+        print(f"\n Loading ColBERT model: {model_name}...")
         self.device = device
         self.model_name = model_name
 
@@ -251,7 +251,7 @@ class Layer1_ColBERT:
         self.address_embeddings = None
         self.address_ids = None
 
-        print("✅ ColBERT model loaded successfully")
+        print(" ColBERT model loaded successfully")
 
     def encode_addresses(self, addresses: List[str]) -> Tuple[np.ndarray, List[str]]:
         """
@@ -269,7 +269,7 @@ class Layer1_ColBERT:
         Returns:
             Tuple (embeddings_matrix, address_ids)
         """
-        print(f"\n🔄 Pre-computing embeddings cho {len(addresses)} addresses...")
+        print(f"\n Pre-computing embeddings cho {len(addresses)} addresses...")
 
         embeddings_list = []
         batch_size = 32
@@ -300,7 +300,7 @@ class Layer1_ColBERT:
                         f"  ✓ Processed {min(i + batch_size, len(addresses))}/{len(addresses)} addresses"
                     )
 
-        print("✅ Pre-computation completed")
+        print(" Pre-computation completed")
 
         # Lưu embeddings (lưu ý: có thể lớn, nên thường lưu vào disk)
         self.address_embeddings = embeddings_list
@@ -327,7 +327,7 @@ class Layer1_ColBERT:
         Returns:
             List tuple (address, score)
         """
-        print(f"\n🔍 Layer 1: ColBERT Candidate Generation")
+        print(f"\n Layer 1: ColBERT Candidate Generation")
         print(f"  Query: {query[:60]}...")
         print(f"  Searching in {len(addresses)} addresses...")
 
@@ -374,7 +374,7 @@ class Layer1_ColBERT:
         scores.sort(key=lambda x: x[1], reverse=True)
         results = scores[:top_k]
 
-        print(f"  ✅ Found {len(results)} candidates")
+        print(f"   Found {len(results)} candidates")
         print(f"  Top candidate: {results[0][0]} (score: {results[0][1]:.4f})")
 
         return results
@@ -424,7 +424,7 @@ class Layer2_mGTE:
             model_name: Tên model từ HuggingFace (mGTE/E5/BGE-M3)
             device: cuda hoặc cpu
         """
-        print(f"\n🔄 Loading mGTE model: {model_name}...")
+        print(f"\n Loading mGTE model: {model_name}...")
         self.device = device
         self.model_name = model_name
 
@@ -434,7 +434,7 @@ class Layer2_mGTE:
         self.model.eval()
 
         print(
-            f"✅ mGTE model loaded successfully (embedding_dim: {self.model.get_sentence_embedding_dimension()})"
+            f" mGTE model loaded successfully (embedding_dim: {self.model.get_sentence_embedding_dimension()})"
         )
 
     def encode(self, texts: List[str]) -> np.ndarray:
@@ -486,7 +486,7 @@ class Layer2_mGTE:
         Returns:
             List tuple (candidate, score)
         """
-        print(f"\n🔄 Layer 2: mGTE Dense Retriever")
+        print(f"\n Layer 2: mGTE Dense Retriever")
         print(f"  Query: {query[:60]}...")
         print(f"  Re-ranking {len(candidates)} candidates...")
 
@@ -508,7 +508,7 @@ class Layer2_mGTE:
         # Return top-k
         results = results[:top_k]
 
-        print(f"  ✅ Re-ranked {len(results)} candidates")
+        print(f"   Re-ranked {len(results)} candidates")
         print(f"  Top candidate: {results[0][0]} (score: {results[0][1]:.4f})")
 
         return results
@@ -558,14 +558,14 @@ class Layer3_CrossEncoder:
             model_name: Tên model từ HuggingFace
             device: cuda hoặc cpu
         """
-        print(f"\n🔄 Loading Cross-Encoder model: {model_name}...")
+        print(f"\n Loading Cross-Encoder model: {model_name}...")
         self.device = device
         self.model_name = model_name
 
         # Load CrossEncoder từ sentence-transformers
         self.model = CrossEncoder(model_name, device=device)
 
-        print("✅ Cross-Encoder model loaded successfully")
+        print(" Cross-Encoder model loaded successfully")
 
     def score(
         self,
@@ -590,7 +590,7 @@ class Layer3_CrossEncoder:
         Returns:
             List tuple (candidate, score)
         """
-        print(f"\n🔍 Layer 3: Cross-Encoder Precision Scoring")
+        print(f"\n Layer 3: Cross-Encoder Precision Scoring")
         print(f"  Query: {query[:60]}...")
         print(f"  Scoring {len(candidates)} candidates...")
 
@@ -609,7 +609,7 @@ class Layer3_CrossEncoder:
         # Return top-k
         results = results[:top_k]
 
-        print(f"  ✅ Scored {len(results)} top candidates")
+        print(f"   Scored {len(results)} top candidates")
         print(f"  Top candidate: {results[0][0]} (score: {results[0][1]:.4f})")
 
         return results
@@ -665,7 +665,7 @@ class Layer4_Qwen3LLM:
             device: cuda hoặc cpu
             use_quantization: Có sử dụng 8-bit quantization không (tiết kiệm memory)
         """
-        print(f"\n🔄 Loading Qwen3 model: {model_name}...")
+        print(f"\n Loading Qwen3 model: {model_name}...")
         print(f"   Note: First time loading model sẽ tải ~7GB (mất 1-2 phút)")
 
         self.device = device
@@ -695,7 +695,7 @@ class Layer4_Qwen3LLM:
                     device_map="auto",
                     trust_remote_code=True,
                 )
-                print("  📦 Model loaded with 8-bit quantization (tiết kiệm 75% memory)")
+                print("   Model loaded with 8-bit quantization (tiết kiệm 75% memory)")
             else:
                 self.model = AutoModelForCausalLM.from_pretrained(
                     model_name,
@@ -705,10 +705,10 @@ class Layer4_Qwen3LLM:
                 )
 
             self.model.eval()
-            print("✅ Qwen3 model loaded successfully")
+            print(" Qwen3 model loaded successfully")
 
         except Exception as e:
-            print(f"⚠️ Lỗi load Qwen3: {e}")
+            print(f"️ Lỗi load Qwen3: {e}")
             print("  Fallback: Sử dụng simple rule-based fallback")
             self.model = None
             self.tokenizer = None
@@ -739,7 +739,7 @@ class Layer4_Qwen3LLM:
             # Fallback đơn giản nếu không có LLM
             return self._simple_fallback(query, candidates)
 
-        print(f"\n💡 Layer 4: Qwen3 Intelligent Fallback")
+        print(f"\n Layer 4: Qwen3 Intelligent Fallback")
         print(f"  Query: {query[:60]}...")
         print(f"  Trigger reason: Confidence < {confidence_threshold}")
 
@@ -800,14 +800,14 @@ Lý do: [giải thích ngắn gọn]
 
             reasoning = response[:200] + "..." if len(response) > 200 else response
 
-            print(f"  ✅ LLM reasoning completed")
+            print(f"   LLM reasoning completed")
             print(f"  Final address: {final_address}")
             print(f"  Confidence: {confidence:.2%}")
 
             return final_address, confidence, reasoning
 
         except Exception as e:
-            print(f"  ⚠️ LLM generation failed: {e}")
+            print(f"  ️ LLM generation failed: {e}")
             print(f"  Falling back to first candidate")
             return candidates[0], 0.5, f"LLM failed: {str(e)}"
 
@@ -822,7 +822,7 @@ Lý do: [giải thích ngắn gọn]
         2. Chọn candidate có similarity cao nhất
         3. Assign confidence dựa trên similarity
         """
-        print(f"\n💡 Layer 4: Simple Rule-Based Fallback (No LLM)")
+        print(f"\n Layer 4: Simple Rule-Based Fallback (No LLM)")
 
         from difflib import SequenceMatcher
 
@@ -838,7 +838,7 @@ Lý do: [giải thích ngắn gọn]
         final_address, confidence = similarities[0]
         reasoning = f"String similarity matching: {confidence:.2%}"
 
-        print(f"  ✅ Fallback completed")
+        print(f"   Fallback completed")
         print(f"  Final address: {final_address}")
         print(f"  Confidence: {confidence:.2%}")
 
@@ -890,7 +890,7 @@ class EnsembleAddressNormalization:
         try:
             self.layer1_colbert = Layer1_ColBERT(device=device)
         except Exception as e:
-            print(f"⚠️ ColBERT initialization failed: {e}")
+            print(f"️ ColBERT initialization failed: {e}")
             print("   Note: ColBERT requires special setup - sử dụng simplified version")
             self.layer1_colbert = None
 
@@ -911,12 +911,12 @@ class EnsembleAddressNormalization:
                 use_quantization=True,  # Quantization để tiết kiệm memory
             )
         except Exception as e:
-            print(f"⚠️ Qwen3 initialization warning: {e}")
+            print(f"️ Qwen3 initialization warning: {e}")
             print("   Sẽ sử dụng rule-based fallback thay vì LLM")
             self.layer4_llm = Layer4_Qwen3LLM()
             self.layer4_llm.model = None
 
-        print("\n✅ Pipeline initialization completed!")
+        print("\n Pipeline initialization completed!")
 
     def normalize(
         self,
@@ -967,11 +967,11 @@ class EnsembleAddressNormalization:
                 layer1_candidates = [addr for addr, score in layer1_results]
                 results["layer1_candidates"] = layer1_results[:10]  # Store top 10 for display
             except Exception as e:
-                print(f"⚠️ Layer 1 failed: {e} - using all addresses")
+                print(f"️ Layer 1 failed: {e} - using all addresses")
                 layer1_candidates = standard_addresses
         else:
             # Fallback: sử dụng tất cả addresses
-            print("⚠️ Layer 1 skipped (ColBERT not available)")
+            print("️ Layer 1 skipped (ColBERT not available)")
             layer1_candidates = standard_addresses
 
         layer1_time = (time.time() - t0) * 1000
@@ -1027,7 +1027,7 @@ class EnsembleAddressNormalization:
                 "reasoning": reasoning,
             }
         else:
-            print(f"\n✅ Layer 4: Skipped (top confidence {top_confidence:.4f} >= threshold {self.config.confidence_threshold})")
+            print(f"\n Layer 4: Skipped (top confidence {top_confidence:.4f} >= threshold {self.config.confidence_threshold})")
 
         layer4_time = (time.time() - t3) * 1000
         self.performance_tracker.record("layer4_llm", layer4_time)
@@ -1068,13 +1068,13 @@ class EnsembleAddressNormalization:
         print("RESULTS")
         print("=" * 80)
 
-        print(f"\n📍 Query: {results['query']}")
-        print(f"\n🎯 Final Result:")
+        print(f"\n Query: {results['query']}")
+        print(f"\n Final Result:")
         print(f"  Address: {results['final_result']['address']}")
         print(f"  Confidence: {results['final_result']['confidence']:.4f}")
         print(f"  Source: {results['final_result']['source']}")
 
-        print(f"\n📊 Top 3 Layer 3 Candidates:")
+        print(f"\n Top 3 Layer 3 Candidates:")
         for i, (addr, score) in enumerate(results["layer3_candidates"][:3], 1):
             print(f"  {i}. {addr} (score: {score:.4f})")
 
@@ -1117,8 +1117,8 @@ TEST_QUERIES = [
     "321 Tran Hung Dao, Ben Canh Phuong, Q1, TP HCM",  # No diacritics + typo
 ]
 
-print(f"\n✅ Loaded {len(STANDARD_ADDRESSES)} standard addresses")
-print(f"✅ Loaded {len(TEST_QUERIES)} test queries")
+print(f"\n Loaded {len(STANDARD_ADDRESSES)} standard addresses")
+print(f" Loaded {len(TEST_QUERIES)} test queries")
 
 print("\nStandard Addresses:")
 for i, addr in enumerate(STANDARD_ADDRESSES[:5], 1):
@@ -1137,7 +1137,7 @@ for i, query in enumerate(TEST_QUERIES, 1):
 print("\n" + "=" * 80)
 print("STEP 1: INITIALIZE PIPELINE")
 print("=" * 80)
-print("⏳ Initializing 4-layer ensemble... (mất 2-5 phút)")
+print(" Initializing 4-layer ensemble... (mất 2-5 phút)")
 
 config = PipelineConfig(
     colbert_top_k=500,
@@ -1151,7 +1151,7 @@ config = PipelineConfig(
 
 pipeline = EnsembleAddressNormalization(config=config)
 
-print("\n✅ Pipeline initialized successfully!")
+print("\n Pipeline initialized successfully!")
 
 
 # ============================================================================
@@ -1220,7 +1220,7 @@ df_results = pd.DataFrame(
 
 print(df_results.to_string(index=False))
 
-print(f"\n📊 Summary:")
+print(f"\n Summary:")
 print(f"  Total queries: {len(batch_results)}")
 print(f"  Avg latency: {df_results['total_time_ms'].mean():.2f}ms")
 print(f"  Min latency: {df_results['total_time_ms'].min():.2f}ms")
@@ -1253,9 +1253,9 @@ custom_queries = [
 ]
 
 for query in custom_queries:
-    print(f"\n🔍 Query: {query}")
+    print(f"\n Query: {query}")
     result = normalize_address(query)
-    print(f"✅ Result: {result['final_result']['address']}")
+    print(f" Result: {result['final_result']['address']}")
     print(f"   Confidence: {result['final_result']['confidence']:.4f}\n")
 
 
@@ -1290,21 +1290,23 @@ output_df = pd.DataFrame(
 output_csv = "/tmp/address_normalization_results.csv"
 output_df.to_csv(output_csv, index=False, encoding="utf-8-sig")
 
-print(f"\n✅ Results saved to: {output_csv}")
+print(f"\n Results saved to: {output_csv}")
 print(f"\nFirst few rows:")
 print(output_df.head(2).to_string())
 
-print("\n💡 Để download file CSV:")
+print("\n Để download file CSV:")
 print("  1. Click 'Files' trên sidebar trái")
 print("  2. Click file: address_normalization_results.csv")
 print("  3. Click download icon")
 
 
 print("\n" + "=" * 80)
-print("✅ DEMO COMPLETED SUCCESSFULLY!")
+print(" DEMO COMPLETED SUCCESSFULLY!")
 print("=" * 80)
 print(f"\nSummary:")
 print(f"  - Processed {len(batch_results)} queries")
 print(f"  - Avg latency: {df_results['total_time_ms'].mean():.2f}ms")
 print(f"  - Results saved to: {output_csv}")
+print(f"  - All 4 layers executed successfully!")
+aved to: {output_csv}")
 print(f"  - All 4 layers executed successfully!")

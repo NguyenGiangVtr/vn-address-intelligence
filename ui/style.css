@@ -518,7 +518,7 @@ input, textarea, select { font-family: inherit; }
 }
 .content-grid.full { grid-template-columns: 1fr; }
 .content-grid.triple { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
-.content-grid.sidebar-layout { grid-template-columns: 2fr 1fr; }
+.content-grid.sidebar-layout { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; flex: 1; min-height: 0; }
 
 .tool-panel {
   display: grid;
@@ -886,7 +886,7 @@ select.form-input {
    ══════════════════════════════════════════ */
 .chart-container {
   position: relative;
-  height: 200px;
+  height: 320px;
   margin-top: 8px;
 }
 .chart-container canvas {
@@ -1497,10 +1497,6 @@ select.form-input {
   flex-direction: column;
 }
 
-.content-grid.sidebar-layout {
-  flex: 1;
-  min-height: 0;
-}
 
 .table-container {
   flex: 1;
@@ -1644,3 +1640,70 @@ select.form-input {
     flex-direction: column;
     overflow: hidden;
 }
+
+/* Parser Meta Redesign */
+.parser-meta-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: auto; /* Push to bottom of output section */
+  padding-top: 16px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.meta-stats-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.meta-stat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  font-size: 11px;
+  color: var(--text-secondary);
+  transition: all var(--transition);
+}
+
+.meta-stat-chip:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-default);
+  color: var(--text-primary);
+}
+
+.meta-stat-chip i {
+  font-size: 10px;
+  color: var(--accent);
+  opacity: 0.8;
+}
+
+.meta-stat-chip strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.meta-note-box {
+  display: flex;
+  gap: 10px;
+  padding: 10px 14px;
+  background: rgba(251, 191, 36, 0.05);
+  border: 1px solid rgba(251, 191, 36, 0.1);
+  border-radius: var(--radius-md);
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--warning);
+}
+
+.meta-note-box i {
+  margin-top: 2px;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+/* Allow overview page to scroll */
+

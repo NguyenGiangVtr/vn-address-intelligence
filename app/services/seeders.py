@@ -26,7 +26,7 @@ def seed_master_data(data_dir: str):
     try:
         session.execute(text("TRUNCATE TABLE mat.ward, mat.district, mat.province CASCADE"))
         session.commit()
-        logger.info("🧹 Cleaned mat schema.")
+        logger.info(" Cleaned mat schema.")
 
         # Seed Province
         f = data_path / "province.csv"
@@ -93,11 +93,11 @@ def seed_cleansing_queue(csv_path: str):
                 session.execute(query, records)
                 session.commit()
                 total_seeded += len(records)
-                logger.info(f"📦 Seeded {total_seeded} rows...")
-        logger.info(f"✅ DONE: Total seeded {total_seeded} rows.")
+                logger.info(f" Seeded {total_seeded} rows...")
+        logger.info(f" DONE: Total seeded {total_seeded} rows.")
     except Exception as e:
         session.rollback()
-        logger.error(f"❌ ERROR: {e}")
+        logger.error(f" ERROR: {e}")
     finally:
         session.close()
 
@@ -151,3 +151,4 @@ def check_database_stats():
         json.dump({"stats": stats, "timestamp": current_time}, f)
 
     return stats, growth, time_diff
+e_diff

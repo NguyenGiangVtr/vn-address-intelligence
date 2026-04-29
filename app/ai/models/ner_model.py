@@ -26,7 +26,7 @@ class AddressNER:
         self.model_path = model_path
         
         try:
-            logger.info(f"🔄 Loading NER Model from {model_path}...")
+            logger.info(f" Loading NER Model from {model_path}...")
             self.tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
             self.model = AutoModelForTokenClassification.from_pretrained(model_path)
             
@@ -38,9 +38,9 @@ class AddressNER:
                 device=self.device,
                 aggregation_strategy="simple" # Gộp các sub-tokens thành word
             )
-            logger.info("✅ NER Model loaded.")
+            logger.info(" NER Model loaded.")
         except Exception as e:
-            logger.warning(f"⚠️ Chưa có model Fine-tuned tại {model_path}. Hệ thống sẽ dùng Regex-fallback. Lỗi: {e}")
+            logger.warning(f"️ Chưa có model Fine-tuned tại {model_path}. Hệ thống sẽ dùng Regex-fallback. Lỗi: {e}")
             self.ner_pipeline = None
 
     def extract(self, text: str) -> Dict[str, str]:
@@ -80,3 +80,4 @@ class AddressNER:
         else:
             result['STR'] = text
         return result
+lt

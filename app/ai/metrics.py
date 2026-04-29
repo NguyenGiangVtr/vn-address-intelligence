@@ -154,7 +154,7 @@ def compute_metrics(
 def print_metrics(model_name: str, metrics: Dict):
     pad = 35
     print(f"\n{'═'*60}")
-    print(f"  📊  {model_name}")
+    print(f"    {model_name}")
     print(f"{'═'*60}")
     print(f"  {'Samples':<{pad}}: {metrics['n_samples']}")
     print(f"  {'Exact Match':<{pad}}: {metrics['exact_match']*100:.2f}%")
@@ -169,3 +169,4 @@ def print_metrics(model_name: str, metrics: Dict):
         print(f"  {'Latency P99 (ms)':<{pad}}: {metrics['latency_p99_ms']:.2f}")
         print(f"  {'Throughput (qps)':<{pad}}: {metrics['throughput_qps']:.2f}")
     print(f"{'═'*60}")
+")

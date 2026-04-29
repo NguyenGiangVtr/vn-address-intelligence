@@ -118,7 +118,7 @@ class SyntheticMixerPro:
                 tags_list.append(f"{prefix}{label}")
 
     def generate_batch(self, count=5000):
-        logger.info(f"🧪 [PRO MIXER] Đang chuẩn bị sinh {count} mẫu siêu chất lượng...")
+        logger.info(f" [PRO MIXER] Đang chuẩn bị sinh {count} mẫu siêu chất lượng...")
         
         # Lấy thực thể từ DB
         streets = self._get_random_entities("osm.streets", 500)
@@ -139,8 +139,9 @@ class SyntheticMixerPro:
         
         self.session.bulk_save_objects(samples)
         self.session.commit()
-        logger.info(f"✅ Đã nạp {len(samples)} mẫu huấn luyện Pro vào DB.")
+        logger.info(f" Đã nạp {len(samples)} mẫu huấn luyện Pro vào DB.")
 
 if __name__ == "__main__":
     mixer = SyntheticMixerPro()
     mixer.generate_batch(100)
+0)

@@ -27,7 +27,7 @@ try:
     _HAS_PYVI = True
 except ImportError:
     _HAS_PYVI = False
-    logger.warning("⚠️  pyvi chưa cài — PhoBERT sẽ dùng raw text (giảm độ chính xác).")
+    logger.warning("️  pyvi chưa cài — PhoBERT sẽ dùng raw text (giảm độ chính xác).")
 
 
 def _segment(text: str) -> str:
@@ -61,7 +61,7 @@ class PhoBERTSiamese:
         self.batch_size     = batch_size
         self.device         = self._resolve_device(device)
 
-        logger.info("🔄 Loading PhoBERT: %s (device=%s)", model_name, self.device)
+        logger.info(" Loading PhoBERT: %s (device=%s)", model_name, self.device)
         transformer = models.Transformer(model_name, max_seq_length=max_seq_length)
         pooling     = models.Pooling(transformer.get_word_embedding_dimension())
         self.model  = SentenceTransformer(modules=[transformer, pooling], device=self.device)
@@ -71,7 +71,7 @@ class PhoBERTSiamese:
         self._corpus: List[str]    = []
         self._corpus_emb: Optional[np.ndarray] = None
 
-        logger.info("✅ PhoBERT Siamese loaded.")
+        logger.info(" PhoBERT Siamese loaded.")
 
     # ------------------------------------------------------------------
     def _resolve_device(self, device: str) -> str:
@@ -82,7 +82,7 @@ class PhoBERTSiamese:
     # ------------------------------------------------------------------
     def encode_corpus(self, addresses: List[str]):
         """Pre-compute embeddings cho toàn bộ corpus (chạy 1 lần)."""
-        logger.info("📐 Encoding %d corpus addresses (PhoBERT)...", len(addresses))
+        logger.info(" Encoding %d corpus addresses (PhoBERT)...", len(addresses))
         segmented = [_segment(a) for a in addresses]
         self._corpus = addresses  # giữ original để trả kết quả
         self._corpus_emb = self.model.encode(
@@ -92,7 +92,7 @@ class PhoBERTSiamese:
             show_progress_bar=True,
             convert_to_numpy=True,
         )
-        logger.info("✅ Corpus encoded. Shape: %s", self._corpus_emb.shape)
+        logger.info(" Corpus encoded. Shape: %s", self._corpus_emb.shape)
 
     # ------------------------------------------------------------------
     def normalize(self, query: str, top_k: int = 1) -> Tuple[str, float, float]:
@@ -121,3 +121,4 @@ class PhoBERTSiamese:
     def normalize_batch(self, queries: List[str]) -> List[Tuple[str, float, float]]:
         """Chuẩn hóa nhiều địa chỉ, trả về list (address, score, latency_ms)."""
         return [self.normalize(q) for q in queries]
+eries]

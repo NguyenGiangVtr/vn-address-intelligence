@@ -309,7 +309,7 @@ def _build_parser_runtime_bundle() -> dict:
         with SessionLocal() as db:
             bundle["corpus"] = _load_parser_corpus(db)
     except Exception as e:
-        logger.error(f"❌ Failed to load parser corpus: {e}")
+        logger.error(f"Failed to load parser corpus: {e}")
         bundle["errors"]["corpus"] = str(e)
 
     # Load PhoBERT
@@ -319,7 +319,7 @@ def _build_parser_runtime_bundle() -> dict:
             phobert.encode_corpus(bundle["corpus"])
         bundle["phobert"] = phobert
     except Exception as e:
-        logger.error(f"❌ Failed to load PhoBERT: {e}")
+        logger.error(f"Failed to load PhoBERT: {e}")
         bundle["errors"]["phobert"] = str(e)
 
     # Load mGTE
@@ -329,7 +329,7 @@ def _build_parser_runtime_bundle() -> dict:
             mgte.encode_corpus(bundle["corpus"])
         bundle["mgte"] = mgte
     except Exception as e:
-        logger.error(f"❌ Failed to load mGTE: {e}")
+        logger.error(f"Failed to load mGTE: {e}")
         bundle["errors"]["mgte"] = str(e)
 
     # Load LLM (Use a more realistic model name: Qwen2.5-1.5B-Instruct is small and fast)
@@ -337,7 +337,7 @@ def _build_parser_runtime_bundle() -> dict:
         llm = LLMQwen3(model_name="Qwen/Qwen2.5-1.5B-Instruct", use_quantization=False, device="auto")
         bundle["llm"] = llm
     except Exception as e:
-        logger.error(f"❌ Failed to load LLM: {e}")
+        logger.error(f"Failed to load LLM: {e}")
         bundle["errors"]["llm"] = str(e)
 
     return bundle
@@ -1318,32 +1318,45 @@ def analyze_parser_address(data: dict, model: Optional[str] = None, db: Session 
     try:
         return _run_parser_research(sample, target_model=model)
     except Exception as e:
-        logger.error(f"Parser Research Error: {e}\n{traceback.format_exc()}")
-        # Fallback: Nếu model thật chưa load được (do thiếu GPU/RAM), trả về kết quả PreLabeler tối thiểu
-        from app.ai.export_for_annotation import PreLabeler
-        prelabeler_result = PreLabeler.predict(
-            sample.raw_address,
-            sample.ward_name,
-            sample.district_name,
-            sample.province_name
-        )
-        return {
-            "sample": _serialize_parser_sample(sample) if sample_id else {"raw_address": raw_text},
-            "analysis_input": sample.raw_address,
-            "outputs": {
-                "prelabeler": {
-                    "mode": "rule_based_hybrid",
-                    "result": prelabeler_result,
-                    "entityCount": len(prelabeler_result),
+        logger.error(f"Parser Research Error: {str(e)}")
+        # Fallback: Trả về kết quả tối thiểu để tránh 500
+        try:
+            from app.ai.export_for_annotation import PreLabeler
+            prelabeler_result = PreLabeler.predict(
+                sample.raw_address or raw_text,
+                sample.ward_name,
+                sample.district_name,
+                sample.province_name
+            )
+            return {
+                "sample": _serialize_parser_sample(sample) if sample_id else {"raw_address": raw_text},
+                "analysis_input": sample.raw_address or raw_text,
+                "outputs": {
+                    "prelabeler": {
+                        "mode": "rule_based_hybrid_fallback",
+                        "result": prelabeler_result,
+                        "entityCount": len(prelabeler_result),
+                    }
+                },
+                "error": str(e),
+                "meta": {
+                    "corpusSize": 0,
+                    "evaluatedAt": datetime.utcnow().isoformat() + "Z",
+                    "note": "FALLBACK MODE: AI Models failed to load or crashed. Using Rule-based engine."
                 }
-            },
-            "error": str(e),
-            "meta": {
-                "corpusSize": 0,
-                "evaluatedAt": datetime.utcnow().isoformat() + "Z",
-                "note": "Running in fallback mode (PreLabeler only) due to inference engine error."
             }
-        }
+        except Exception as fallback_err:
+            logger.error(f"Critical Fallback Error: {str(fallback_err)}")
+            return {
+                "sample": {"raw_address": raw_text},
+                "outputs": {},
+                "error": f"Model error: {str(e)}. Fallback error: {str(fallback_err)}",
+                "meta": {
+                    "corpusSize": 0,
+                    "evaluatedAt": datetime.utcnow().isoformat() + "Z",
+                    "note": "Service partially unavailable"
+                }
+            }
 
 def _read_explorer_queue(db: Session, limit: int, q: str):
     try:
@@ -1395,19 +1408,32 @@ async def get_ls_tasks(current_user: str = Depends(get_current_user)):
     
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
-            # Note: Label Studio API usually uses "Token <key>"
-            # But if the token is a JWT (starts with ey), some setups might expect "Bearer <key>"
-            auth_prefix = "Bearer" if ls_token.startswith("ey") else "Token"
+            # Determine auth prefix
+            is_jwt = ls_token.startswith("ey")
+            auth_prefix = "Bearer" if is_jwt else "Token"
             headers = {"Authorization": f"{auth_prefix} {ls_token}"}
             
-            # API endpoint: /api/projects/{id}/tasks
-            # See: https://labelstud.io/api#operation/api_projects_tasks_list
-            response = await client.get(
-                f"{ls_url.rstrip('/')}/api/projects/{project_id}/tasks",
-                headers=headers,
-                params={"page_size": 100}
-            )
+            ls_api_url = f"{ls_url.rstrip('/')}/api/projects/{project_id}/tasks"
             
+            # Initial attempt
+            response = await client.get(ls_api_url, headers=headers, params={"page_size": 100})
+            
+            # If 401 and it's a JWT, try to refresh it
+            if response.status_code == 401 and is_jwt:
+                logger.info("Label Studio token returned 401. Attempting JWT refresh...")
+                refresh_url = f"{ls_url.rstrip('/')}/api/token/refresh/"
+                try:
+                    refresh_res = await client.post(refresh_url, json={"refresh": ls_token})
+                    if refresh_res.status_code == 200:
+                        new_access_token = refresh_res.json().get("access")
+                        headers["Authorization"] = f"Bearer {new_access_token}"
+                        # Retry the original request
+                        response = await client.get(ls_api_url, headers=headers, params={"page_size": 100})
+                    else:
+                        logger.error(f"Label Studio token refresh failed: {refresh_res.text}")
+                except Exception as refresh_err:
+                    logger.error(f"Error during Label Studio token refresh: {refresh_err}")
+
             if response.status_code != 200:
                 logger.error(f"Label Studio returned {response.status_code}: {response.text}")
                 return []

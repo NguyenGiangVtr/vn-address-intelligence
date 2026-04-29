@@ -40,8 +40,8 @@ def setup_logging():
             )
             logstash_handler.setFormatter(formatter)
             logging.getLogger().addHandler(logstash_handler)
-            logger.info(f"🚀 Kibana logging integrated via Logstash at {Config.KIBANA_LOG_HOST}:{Config.KIBANA_LOG_PORT}")
+            logger.info(f"Kibana logging integrated via Logstash at {Config.KIBANA_LOG_HOST}:{Config.KIBANA_LOG_PORT}")
         except Exception as e:
-            logger.error(f"❌ Failed to initialize Logstash handler: {e}")
+            logger.error(f"Failed to initialize Logstash handler: {e}")
             
     return logger

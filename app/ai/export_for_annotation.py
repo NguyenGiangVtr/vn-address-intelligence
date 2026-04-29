@@ -320,7 +320,7 @@ def export_label_config(output_file: str):
     
     with open(output_file, "w", encoding="utf-8") as f:
         f.write(xml_content)
-    logger.info(f"📜 Đã xuất cấu hình Label Studio tại {output_file}")
+    logger.info(f" Đã xuất cấu hình Label Studio tại {output_file}")
 
 def load_osm_streets(db: DBConnector) -> set:
     """Tải danh sách tên đường từ osm.buildings theo yêu cầu."""
@@ -342,9 +342,9 @@ def load_osm_streets(db: DBConnector) -> set:
                 s_name = r.get('street_name')
                 if s_name:
                     streets.add(s_name.strip().lower())
-        logger.info(f"📚 Đã tải {len(streets)} tên đường từ OSM buildings làm dữ liệu gợi ý.")
+        logger.info(f" Đã tải {len(streets)} tên đường từ OSM buildings làm dữ liệu gợi ý.")
     except Exception as e:
-        logger.warning(f"⚠️ Không thể tải danh sách đường từ osm.buildings: {e}")
+        logger.warning(f"️ Không thể tải danh sách đường từ osm.buildings: {e}")
     return streets
 
 def export_data(config_path: str, output_file: str, limit: int = 5000):
@@ -414,9 +414,9 @@ def export_data(config_path: str, output_file: str, limit: int = 5000):
     config_file = str(Path(output_file).with_suffix(".xml")).replace("_prelabeled", "_config")
     export_label_config(config_file)
     
-    logger.info(f"✅ Export thành công {len(annotation_data)} mẫu kèm nhãn dự đoán Hybrid.")
-    logger.info(f"📁 File dữ liệu: {output_file}")
-    logger.info(f"📁 File cấu hình: {config_file}")
+    logger.info(f" Export thành công {len(annotation_data)} mẫu kèm nhãn dự đoán Hybrid.")
+    logger.info(f" File dữ liệu: {output_file}")
+    logger.info(f" File cấu hình: {config_file}")
 
 
 if __name__ == "__main__":

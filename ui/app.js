@@ -1194,7 +1194,7 @@ async function runParser() {
         renderParserResults(allOutputs);
 
         // If we have prelabeler result, show NER highlighting immediately
-        if (model === "prelabeler" && data.outputs?.prelabeler) {
+        if (model === "prelabeler" && data.outputs?.prelabeler && data.outputs.prelabeler.result) {
           renderNERHighlight(data.outputs.prelabeler.result);
         }
       } catch (e) {
@@ -1224,10 +1224,38 @@ function renderNERHighlight(entities) {
   if (!nerOutputEl || !inputEl) return;
 
   const text = inputEl.value;
+  if (!entities || !Array.isArray(entities)) {
+    nerOutputEl.textContent = text;
+    return;
+  }
   let html = text;
 
+  // Normalize entities (handle both flat and Label Studio format)
+  const normalizedEntities = entities.map(ent => {
+    if (ent.value && ent.value.labels) {
+      // Label Studio format
+      return {
+        text: ent.value.text,
+        label: ent.value.labels[0],
+        start: ent.value.start,
+        end: ent.value.end
+      };
+    }
+    // Flat format
+    return {
+      text: ent.text || "",
+      label: ent.label || "N/A",
+      start: ent.start || 0,
+      end: ent.end || 0
+    };
+  });
+
   // Simple highlight logic (greedy replace from longest to shortest to avoid partial matches)
-  const sortedEntities = [...entities].sort((a, b) => b.text.length - a.text.length);
+  const sortedEntities = [...normalizedEntities].sort((a, b) => {
+    const lenA = a.text.length;
+    const lenB = b.text.length;
+    return lenB - lenA;
+  });
 
   sortedEntities.forEach(ent => {
     const labelClass = `ner-tag-${ent.label.toLowerCase()}`;
@@ -1287,11 +1315,22 @@ function renderParserResults(data) {
 
   if (data.meta && metaEl) {
     metaEl.innerHTML = `
-      <div class="flex flex-column gap-4">
-        <span><i class="fa-solid fa-database mr-4"></i> Corpus Size: <strong>${data.meta.corpusSize.toLocaleString()} records</strong></span>
-        <span><i class="fa-solid fa-clock mr-4"></i> Evaluated at: <strong>${new Date(data.meta.evaluatedAt).toLocaleString()}</strong></span>
-        ${data.meta.note ? `<span class="text-warning"><i class="fa-solid fa-triangle-exclamation mr-4"></i> ${data.meta.note}</span>` : ''}
+      <div class="meta-stats-row">
+        <div class="meta-stat-chip" title="Total unique addresses in corpus">
+          <i class="fa-solid fa-database"></i>
+          <span>Corpus: <strong>${(data.meta.corpusSize || 0).toLocaleString()}</strong></span>
+        </div>
+        <div class="meta-stat-chip" title="Evaluation timestamp">
+          <i class="fa-solid fa-clock"></i>
+          <span>Time: <strong>${data.meta.evaluatedAt ? new Date(data.meta.evaluatedAt).toLocaleTimeString() : 'N/A'}</strong></span>
+        </div>
       </div>
+      ${data.meta.note ? `
+        <div class="meta-note-box">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+          <span>${data.meta.note}</span>
+        </div>
+      ` : ''}
     `;
   }
 }
@@ -2370,6 +2409,7 @@ function adjustActivePageHeight() {
       '#parser-comparison-matrix',
       '.ner-output',
       '.card-body.with-scroll',
+      '#activity-feed',
       '#osm-job-log',
       '#nso-sync-logs',
       '.lookup-results-table',

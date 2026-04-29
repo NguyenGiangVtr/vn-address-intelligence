@@ -60,7 +60,7 @@ class LLMQwen3:
         self.temperature    = temperature
         self.device         = "cuda" if (device == "auto" and torch.cuda.is_available()) else ("cpu" if device == "auto" else device)
 
-        logger.info("🔄 Loading Qwen3 LLM: %s ...", model_name)
+        logger.info(" Loading Qwen3 LLM: %s ...", model_name)
         try:
             from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
@@ -81,7 +81,7 @@ class LLMQwen3:
                     device_map="auto",
                     trust_remote_code=True,
                 )
-                logger.info("   📦 8-bit quantization enabled.")
+                logger.info("    8-bit quantization enabled.")
             else:
                 self.model = AutoModelForCausalLM.from_pretrained(
                     model_name,
@@ -91,10 +91,10 @@ class LLMQwen3:
                 )
 
             self.model.eval()
-            logger.info("✅ Qwen3 loaded successfully.")
+            logger.info(" Qwen3 loaded successfully.")
 
         except Exception as exc:
-            logger.warning("⚠️ Không load được Qwen3: %s — sẽ dùng rule-based fallback.", exc)
+            logger.warning("️ Không load được Qwen3: %s — sẽ dùng rule-based fallback.", exc)
             self.model     = None
             self.tokenizer = None
 
@@ -167,7 +167,7 @@ class LLMQwen3:
             return self._rule_fallback(query, candidates)
 
         except Exception as exc:
-            logger.warning("⚠️ LLM inference lỗi: %s", exc)
+            logger.warning("️ LLM inference lỗi: %s", exc)
             return self._rule_fallback(query, candidates)
 
     # ------------------------------------------------------------------
@@ -197,3 +197,4 @@ class LLMQwen3:
             self.normalize(q, cands)
             for q, cands in zip(queries, candidates_list)
         ]
+     ]

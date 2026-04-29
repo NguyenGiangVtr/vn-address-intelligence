@@ -95,7 +95,7 @@ class GSOPlywrightCrawler:
                         pop_val = await pop_el.input_value() if await pop_el.count() > 0 else "0"
                         area_val = await area_el.input_value() if await area_el.count() > 0 else "0"
                         
-                        logger.info(f"✅ [{current_page}.{i+1}] {name} ({code}): {pop_val} người, {area_val} km2")
+                        logger.info(f" [{current_page}.{i+1}] {name} ({code}): {pop_val} người, {area_val} km2")
                         
                         self.batch_data.append({
                             'code': code, 'level': level,

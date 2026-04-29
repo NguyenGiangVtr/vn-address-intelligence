@@ -118,7 +118,7 @@ def _winner_box(all_metrics: Dict[str, Dict]) -> str:
     )
     return f"""
 <div class="winner">
-  <strong>🏆 Mô hình tốt nhất: {winner}</strong>
+  <strong> Mô hình tốt nhất: {winner}</strong>
   <p>Composite score (weighted accuracy): {scores[winner]:.4f}</p>
   <table style="width:auto;margin:0">
     <tr><th>Mô hình</th><th>Composite Score</th></tr>
@@ -163,7 +163,7 @@ def generate_html_report(
 
     body = f"""
 {_HTML_HEAD}
-<h1>📊 Báo Cáo Thực Nghiệm — Chuẩn Hóa Địa Chỉ Việt Nam</h1>
+<h1> Báo Cáo Thực Nghiệm — Chuẩn Hóa Địa Chỉ Việt Nam</h1>
 <p class="meta">Ngày chạy: {now} &nbsp;|&nbsp; Mô hình: {badges}</p>
 
 <div class="section">
@@ -180,10 +180,11 @@ def generate_html_report(
 """
     with open(output_path, "w", encoding="utf-8") as f:
         f.write(body)
-    print(f"\n📄 Báo cáo HTML đã lưu: {output_path}")
+    print(f"\n Báo cáo HTML đã lưu: {output_path}")
 
 
 def save_csv(detail_df: pd.DataFrame, csv_path: str):
     os.makedirs(os.path.dirname(csv_path) or ".", exist_ok=True)
     detail_df.to_csv(csv_path, index=False, encoding="utf-8-sig")
-    print(f"💾 CSV đã lưu: {csv_path}")
+    print(f" CSV đã lưu: {csv_path}")
+: {csv_path}")

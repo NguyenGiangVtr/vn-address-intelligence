@@ -58,7 +58,7 @@ class AddressCleaner:
             # Tôi sẽ bổ sung một parser nhỏ để xử lý kết quả này nếu cần.
             return res
         except Exception as e:
-            logger.warning(f"⚠️ vnaddress error: {e}")
+            logger.warning(f"️ vnaddress error: {e}")
             return None
 
     def pre_process_for_labeling(self, text: str) -> str:

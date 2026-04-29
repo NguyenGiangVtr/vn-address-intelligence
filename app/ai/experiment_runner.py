@@ -292,7 +292,7 @@ def main(config_path: str, skip_llm: bool = False):
             "Kết quả chuẩn hóa đã lưu vào DB và CSV."
         )
 
-    logger.info("✅ Thực nghiệm hoàn tất!")
+    logger.info(" Thực nghiệm hoàn tất!")
 
 
 # ──────────────────────────────────────────────────────────────────────────────

@@ -59,7 +59,7 @@ def run_pipeline(config_path: str, limit: int = None):
     
     if not rows: return
 
-    logger.info(f"🚀 Processing {len(rows)} rows with Hybrid Pipeline...")
+    logger.info(f" Processing {len(rows)} rows with Hybrid Pipeline...")
 
     batch_results = []
     for row in rows:
@@ -99,7 +99,7 @@ def run_pipeline(config_path: str, limit: int = None):
     db.save_results(db_cfg["table_name"], "address_standardized", ids, [r["address_standardized"] for r in batch_results])
 
     db.disconnect()
-    logger.info("✅ Pipeline hoàn tất.")
+    logger.info(" Pipeline hoàn tất.")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -107,3 +107,4 @@ if __name__ == "__main__":
     parser.add_argument("--limit", type=int)
     args = parser.parse_args()
     run_pipeline(args.config, args.limit)
+t)
