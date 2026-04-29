@@ -33,9 +33,9 @@ logger = logging.getLogger("VNAI_Server")
 
 app = FastAPI(
     title="VN Address Intelligence API",
-    docs_url="/docs",
-    openapi_url="/openapi.json",
-    redoc_url="/redoc"
+    docs_url="/api/docs",
+    openapi_url="/api/openapi.json",
+    redoc_url="/api/redoc"
 )
 
 # Use APIRouter for cleaner route management
@@ -544,15 +544,31 @@ def get_provinces(version: Optional[int] = 1, db: Session = Depends(get_db)):
     """Fetch all provinces, filtered by admin version."""
     return db.query(Province).filter(Province.admin_version == version).order_by(Province.province_name).all()
 
+@api_router.get("/districts")
+def get_districts(province_id: Optional[int] = None, version: Optional[int] = 1, db: Session = Depends(get_db)):
+    """Fetch districts, optionally filtered by province ID and version."""
+    query = db.query(District).filter(District.admin_version == version)
+    if province_id:
+        query = query.filter(District.province_id == province_id)
+    return query.order_by(District.district_name).all()
+
 @api_router.get("/districts/{province_id}")
-def get_districts(province_id: int, version: Optional[int] = 1, db: Session = Depends(get_db)):
-    """Fetch districts by province ID and version."""
-    return db.query(District).filter(District.province_id == province_id, District.admin_version == version).order_by(District.district_name).all()
+def get_districts_by_path(province_id: int, version: Optional[int] = 1, db: Session = Depends(get_db)):
+    """Legacy support for path-based district lookup."""
+    return get_districts(province_id=province_id, version=version, db=db)
+
+@api_router.get("/wards")
+def get_wards(district_id: Optional[int] = None, version: Optional[int] = 1, db: Session = Depends(get_db)):
+    """Fetch wards, optionally filtered by district ID and version."""
+    query = db.query(Ward).filter(Ward.admin_version == version)
+    if district_id:
+        query = query.filter(Ward.district_id == district_id)
+    return query.order_by(Ward.ward_name).all()
 
 @api_router.get("/wards/{district_id}")
-def get_wards(district_id: int, version: Optional[int] = 1, db: Session = Depends(get_db)):
-    """Fetch wards by district ID and version."""
-    return db.query(Ward).filter(Ward.district_id == district_id, Ward.admin_version == version).order_by(Ward.ward_name).all()
+def get_wards_by_path(district_id: int, version: Optional[int] = 1, db: Session = Depends(get_db)):
+    """Legacy support for path-based ward lookup."""
+    return get_wards(district_id=district_id, version=version, db=db)
 
 @api_router.get("/unit-details/{level}/{unit_id}")
 def get_unit_details(level: str, unit_id: int, db: Session = Depends(get_db)):
@@ -1369,8 +1385,11 @@ async def get_ls_tasks(current_user: str = Depends(get_current_user)):
     
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
-            # Note: Label Studio API uses "Token <key>" or "Bearer <key>"
-            headers = {"Authorization": f"Token {ls_token}"}
+            # Note: Label Studio API usually uses "Token <key>"
+            # But if the token is a JWT (starts with ey), some setups might expect "Bearer <key>"
+            auth_prefix = "Bearer" if ls_token.startswith("ey") else "Token"
+            headers = {"Authorization": f"{auth_prefix} {ls_token}"}
+            
             # API endpoint: /api/projects/{id}/tasks
             # See: https://labelstud.io/api#operation/api_projects_tasks_list
             response = await client.get(

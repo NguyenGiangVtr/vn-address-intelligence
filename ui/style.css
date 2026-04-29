@@ -64,6 +64,17 @@ a { color: inherit; text-decoration: none; }
 button { font-family: inherit; cursor: pointer; }
 input, textarea, select { font-family: inherit; }
 
+.truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.truncate-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.border-left { border-left: 1px solid var(--border-subtle); }
+.border-right { border-right: 1px solid var(--border-subtle); }
+
+/* ── Form Controls ── */
 /* ── Layout ── */
 .app-container {
   display: flex;

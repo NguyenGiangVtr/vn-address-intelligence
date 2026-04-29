@@ -19,7 +19,7 @@ from app.core.config import Config
 # Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-SECRET_KEY = os.getenv("JWT_SECRET_KEY", "vnai-super-secret-key-2026")
+SECRET_KEY = os.getenv("JWT_SECRET_KEY", "vnai-super-secret-key-2026-vn-address-intelligence-platform-ai")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 # 24 hours
 

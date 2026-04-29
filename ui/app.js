@@ -1156,15 +1156,21 @@ async function runParser() {
   buttons.forEach(btn => { btn.disabled = true; });
   if (btnParse) btnParse.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Phân tích';
 
-  // Show a hint if it's likely the first run
-  if (container && container.querySelector('.empty-state')) {
-    container.innerHTML = `
-        <div class="empty-state" style="padding: 40px; text-align: center; color: var(--text-tertiary);">
-            <i class="fa-solid fa-circle-notch fa-spin" style="font-size: 32px; margin-bottom: 12px; display: block;"></i>
-            Đang khởi tạo các mô hình AI (PhoBERT, mGTE, Qwen)...<br>
-            <span style="font-size: 11px; opacity: 0.7;">Lần chạy đầu tiên có thể mất 1-2 phút để tải trọng số mô hình.</span>
-        </div>
-      `;
+  // Show loading indicator without clearing previous results (to prevent scroll jump)
+  if (container) {
+    if (container.querySelector('.empty-state')) {
+      container.innerHTML = `
+          <div class="empty-state" style="padding: 40px; text-align: center; color: var(--text-tertiary);">
+              <i class="fa-solid fa-circle-notch fa-spin" style="font-size: 32px; margin-bottom: 12px; display: block;"></i>
+              Đang khởi tạo các mô hình AI (PhoBERT, mGTE, Qwen)...<br>
+              <span style="font-size: 11px; opacity: 0.7;">Lần chạy đầu tiên có thể mất 1-2 phút để tải trọng số mô hình.</span>
+          </div>
+        `;
+    } else {
+      // Dim the container to show it's "stale" but keep dimensions to avoid scroll jumping
+      container.style.opacity = "0.5";
+      container.style.pointerEvents = "none";
+    }
   }
 
   try {
@@ -1241,6 +1247,11 @@ async function runParser() {
     // Re-enable all controls
     buttons.forEach(btn => { btn.disabled = false; });
     if (btnParse) btnParse.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Phân tích';
+    
+    if (container) {
+      container.style.opacity = "1";
+      container.style.pointerEvents = "auto";
+    }
   }
 }
 
@@ -1617,7 +1628,7 @@ async function initMappingV3() {
   const pInput = document.getElementById('mapping-province-input');
   const dInput = document.getElementById('mapping-district-input');
   const wInput = document.getElementById('mapping-ward-input');
-  const vRadios = document.getElementsByName('admin-version');
+  const vSelect = document.getElementById('mapping-version-select');
 
   if (!pInput) return;
 
@@ -1629,12 +1640,12 @@ async function initMappingV3() {
     } catch (e) { console.error(e); }
   };
 
-  vRadios.forEach(r => r.addEventListener('change', () => {
-    mappingState.version = r.value;
+  vSelect?.addEventListener('change', () => {
+    mappingState.version = vSelect.value;
     pInput.value = ''; dInput.value = ''; wInput.value = '';
     mappingState.provinces = {}; mappingState.districts = {}; mappingState.wards = {};
     loadProvinces();
-  }));
+  });
 
   pInput.addEventListener('input', async () => {
     if (pInput.value === '') {
@@ -1722,36 +1733,33 @@ async function showDetails(level, id) {
     const res = await fetch(`${API_BASE}/unit-details/${level}/${id}`, { headers: getAuthHeader() });
     const u = await res.json();
     panel.innerHTML = `
-      <div class="flex flex-col gap-16">
-        <div class="flex items-center gap-12">
-          <div class="flex-1">
-             <div class="text-accent font-700" style="font-size:20px; line-height:1.2;">${u.ward_name || u.district_name || u.province_name}</div>
-             <div class="text-tertiary" style="font-size:12px; margin-top:4px;">${u.province_name ? 'Tỉnh/Thành phố' : (u.district_name ? 'Quận/Huyện' : 'Phường/Xã')}</div>
+      <div class="flex items-center gap-24 w-full">
+        <div style="flex: 0 0 240px;">
+          <div class="flex items-center gap-12">
+            <span class="text-accent font-700" style="font-size:18px;">${u.ward_name || u.district_name || u.province_name}</span>
+            <span class="badge info" style="font-size:10px;">v${u.admin_version}</span>
           </div>
-          <div class="badge info" style="padding: 6px 10px;">v${u.admin_version}</div>
-        </div>
-        
-        <div class="nav-divider" style="margin: 4px 0;"></div>
-        
-        <div class="grid gap-12" style="grid-template-columns: 1fr; font-size: 13px;">
-          <div class="flex justify-between items-center">
-            <span class="text-secondary"><i class="fa-solid fa-fingerprint mr-8" style="width:16px"></i>Mã GSO:</span>
-            <span class="text-mono font-600">${u.province_no || u.district_no || u.ward_no || "N/A"}</span>
-          </div>
-          <div class="flex justify-between items-center">
-            <span class="text-secondary"><i class="fa-solid fa-users mr-8" style="width:16px"></i>Dân số:</span>
-            <span class="font-600">${(u.population || 0).toLocaleString()} <small class="text-tertiary">người</small></span>
-          </div>
-          <div class="flex justify-between items-center">
-            <span class="text-secondary"><i class="fa-solid fa-ruler-combined mr-8" style="width:16px"></i>Diện tích:</span>
-            <span class="font-600">${(u.area_km2 || 0).toLocaleString()} <small class="text-tertiary">km²</small></span>
+          <div class="text-tertiary" style="font-size:11px;">
+            ${u.province_name ? 'Tỉnh/Thành phố' : (u.district_name ? 'Quận/Huyện' : 'Phường/Xã')} • 
+            Mã GSO: <span class="text-mono">${u.province_no || u.district_no || u.ward_no || "N/A"}</span>
           </div>
         </div>
 
-        <div class="card p-12" style="background: var(--bg-hover); border-radius: 8px; border: 1px dashed var(--border-default);">
-          <div class="stat-label mb-4" style="font-size:11px; text-transform:uppercase; letter-spacing:0.05em;">Cơ sở pháp lý</div>
-          <div style="font-size:12px; color:var(--text-secondary); line-height:1.5; font-style: italic;">
-            "${u.decision_number || "Chưa có thông tin nghị quyết cụ thể trong hệ thống."}"
+        <div class="flex gap-32 px-24" style="border-left: 1px solid var(--border-subtle); border-right: 1px solid var(--border-subtle);">
+          <div class="text-center">
+            <div class="text-tertiary mb-4" style="font-size:10px; text-transform:uppercase; letter-spacing:0.05em;">Dân số</div>
+            <div class="font-700" style="font-size:16px;">${(u.population || 0).toLocaleString()} <small class="font-400 text-tertiary" style="font-size:10px">người</small></div>
+          </div>
+          <div class="text-center">
+            <div class="text-tertiary mb-4" style="font-size:10px; text-transform:uppercase; letter-spacing:0.05em;">Diện tích</div>
+            <div class="font-700" style="font-size:16px;">${(u.area_km2 || 0).toLocaleString()} <small class="font-400 text-tertiary" style="font-size:10px">km²</small></div>
+          </div>
+        </div>
+
+        <div class="flex-1 pl-8">
+          <div class="text-tertiary mb-4" style="font-size:10px; text-transform:uppercase; letter-spacing:0.05em;">Cơ sở pháp lý / Nghị quyết</div>
+          <div class="text-secondary italic" style="font-size:12px; line-height:1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;" title="${u.decision_number || ""}">
+            ${u.decision_number || "Chưa có thông tin nghị quyết cụ thể trong hệ thống."}
           </div>
         </div>
       </div>
@@ -1766,7 +1774,7 @@ async function triggerMappingSearch() {
   const wId = mappingState.wards[document.getElementById('mapping-ward-input').value];
 
   const tbody = document.getElementById('mapping-results-table');
-  const version = document.querySelector('input[name="admin-version"]:checked')?.value;
+  const version = document.getElementById('mapping-version-select')?.value || mappingState.version;
 
   let url = `${API_BASE}/lookup/mapping?`;
   if (wId) url += `ward_id=${wId}`;
@@ -1785,9 +1793,11 @@ async function triggerMappingSearch() {
     const res = await fetch(url, { headers: getAuthHeader() });
     const data = await res.json();
     if (data.length === 0) {
+      document.getElementById('mapping-result-count').textContent = '0 records';
       tbody.innerHTML = '<tr><td colspan="5" class="text-center text-tertiary" style="padding:60px">Không tìm thấy dữ liệu ánh xạ phù hợp cho khu vực này</td></tr>';
       return;
     }
+    document.getElementById('mapping-result-count').textContent = `${data.length} records`;
     tbody.innerHTML = data.map(m => `
       <tr style="cursor: pointer; transition: background 0.2s;" onclick="showDetails('ward', ${m.ward_id_new})">
         <td style="padding: 16px 20px;">
@@ -2211,10 +2221,13 @@ async function initAdminManager() {
       if (listD) listD.innerHTML = '';
       const listW = document.getElementById('admin-list-wards');
       if (listW) listW.innerHTML = '';
+      loadAdminData();
       return;
     }
     const id = adminState.provinces[pInput.value];
     if (!id) return;
+
+    loadAdminData();
 
     dInput.value = ''; wInput.value = '';
     adminState.districts = {}; adminState.wards = {};
@@ -2231,10 +2244,13 @@ async function initAdminManager() {
       adminState.wards = {};
       const listW = document.getElementById('admin-list-wards');
       if (listW) listW.innerHTML = '';
+      loadAdminData();
       return;
     }
     const id = adminState.districts[dInput.value];
     if (!id) return;
+
+    loadAdminData();
 
     wInput.value = '';
     adminState.wards = {};
@@ -2246,7 +2262,22 @@ async function initAdminManager() {
   });
 
   btnRefresh.addEventListener('click', () => loadAdminData());
-  if (searchInput) searchInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') loadAdminData(); });
+  if (searchInput) {
+    searchInput.addEventListener('input', () => {
+      // Debounce search
+      clearTimeout(searchInput._timer);
+      searchInput._timer = setTimeout(() => loadAdminData(), 300);
+    });
+  }
+
+  document.getElementById('btn-clear-admin-province')?.addEventListener('click', () => {
+    pInput.value = '';
+    pInput.dispatchEvent(new Event('input'));
+  });
+  document.getElementById('btn-clear-admin-district')?.addEventListener('click', () => {
+    dInput.value = '';
+    dInput.dispatchEvent(new Event('input'));
+  });
 
   // Modal actions
   btnAddNew.addEventListener('click', () => {
@@ -2301,7 +2332,11 @@ async function loadAdminData() {
 
   try {
     const res = await fetch(url, { headers: getAuthHeader() });
-    const data = await res.json();
+    let data = await res.json();
+
+    // Sort by GSO code (_no) - Numeric sort
+    const noField = `${level}_no`;
+    data.sort((a, b) => (a[noField] || '').localeCompare(b[noField] || '', undefined, { numeric: true }));
 
     // Render Headers
     const headers = ['ID', 'Mã số', 'Tên đơn vị', 'Tên Tiếng Anh', 'Loại hình'];
@@ -2326,7 +2361,14 @@ async function loadAdminData() {
       <tr>
         <td class="text-mono text-xs">${item[`${level}_id`]}</td>
         <td class="text-mono font-bold">${item[`${level}_no`] || '-'}</td>
-        <td>${item[`${level}_name`]}</td>
+        <td>
+          <div class="flex items-center gap-8">
+            ${level === 'province' ? '<i class="fa-solid fa-map text-tertiary" style="width:16px"></i>' : 
+              level === 'district' ? '<i class="fa-solid fa-folder-tree text-tertiary ml-12" style="width:16px"></i>' : 
+              '<i class="fa-solid fa-location-dot text-tertiary ml-24" style="width:16px"></i>'}
+            <span class="${level !== 'province' ? 'text-secondary' : 'font-600'}">${item[`${level}_name`]}</span>
+          </div>
+        </td>
         <td class="text-tertiary text-xs">${item[`${level}_name_en`] || '-'}</td>
         <td><span class="badge badge-outline">${item.type_name || '-'}</span></td>
         <td class="text-right">
