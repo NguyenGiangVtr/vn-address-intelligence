@@ -10,7 +10,7 @@
 
 ### Phase 1: Infrastructure (Current)
 - [x] Create ui/style.css `.page-hero` utility class
-- [ ] Refactor ui/pages/experiments.html → 3-zone
+- [X] Refactor ui/pages/experiments.html → 3-zone
 - [ ] Refactor ui/pages/batch.html → 3-zone  
 - [ ] Refactor ui/pages/overview.html → 3-zone
 
