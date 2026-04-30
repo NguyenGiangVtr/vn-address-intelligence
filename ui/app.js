@@ -787,7 +787,7 @@ function renderOSMSummary(summary) {
 
 function renderOSMJob(job) {
   const status = job?.status || "idle";
-  const badge = document.getElementById("osm-job-status-badge");
+  const badge = document.getElementById("osm-job-status-badge") || document.getElementById("osm-job-status");
   const started = document.getElementById("osm-job-started");
   const finished = document.getElementById("osm-job-finished");
   const jobId = document.getElementById("osm-job-id");
