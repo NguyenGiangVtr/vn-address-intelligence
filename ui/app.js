@@ -1514,6 +1514,7 @@ function setupBatchTool() {
       }
 
       document.getElementById("batch-throughput").textContent = `${tps.toLocaleString()} items/s`;
+      document.getElementById("batch-done").textContent = processed.toLocaleString();
       log.innerHTML += `[${formatLogTime()}] Processing... ${processed.toLocaleString()}/${size.toLocaleString()}\n`;
       log.scrollTop = log.scrollHeight;
     }, 800);
