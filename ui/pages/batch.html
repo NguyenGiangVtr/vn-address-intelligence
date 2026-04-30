@@ -1,67 +1,76 @@
 <!-- ══════ PAGE: BATCH PROCESSOR ══════ -->
 <div class="page full-height-page" id="batch">
-    <div class="page-hero">
-        <div class="page-hero-inner">
-            <div class="page-hero-label">
-                <div class="page-hero-dot"></div>
-                Batch Processor
-            </div>
-            <div class="page-hero-actions">
+    <!-- BLOCK 1: Header + Input Controls -->
+    <div class="page-header">
+        <h2>Xử lý hàng loạt địa chỉ</h2>
+        <p>Phân tích và chuẩn hóa địa chỉ theo lô với hiệu suất cao</p>
+    </div>
+
+    <!-- BLOCK 2: Input Configuration -->
+    <div class="card mb-20">
+        <div class="card-body">
+            <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end;">
                 <div class="form-group" style="margin-bottom: 0; flex: 1; min-width: 200px;">
-                    <label class="form-label" style="margin-bottom: 4px; font-size: 11px;">Kích thước Batch</label>
-                    <input type="text" class="form-input" id="batch-size" value="1,000" style="font-size: 13px;">
+                    <label class="form-label" style="margin-bottom: 4px; font-size: 11px;">Số lượng địa chỉ mỗi lô</label>
+                    <input type="text" class="form-input" id="batch-size" value ="1,000" style="font-size: 13px;">
                 </div>
                 <div class="form-group" style="margin-bottom: 0; flex: 1; min-width: 220px;">
-                    <label class="form-label" style="margin-bottom: 4px; font-size: 11px;">Phương thức</label>
+                    <label class="form-label" style="margin-bottom: 4px; font-size: 11px;">Chế độ xử lý</label>
                     <select class="form-input" id="batch-method" style="font-size: 13px;">
-                        <option value="hybrid">Hybrid (Fastest)</option>
-                        <option value="ner-only">NER only</option>
-                        <option value="full-chain">Full Normalization Chain</option>
+                        <option value="hybrid">Hybrid (Nhanh nhất)</option>
+                        <option value="ner-only">Chỉ NER</option>
+                        <option value="full-chain">Chuẩn hóa đầy đủ</option>
                     </select>
                 </div>
-                <button class="page-hero-btn" id="btn-batch-start">
-                    <i class="fa-solid fa-play"></i> Bắt đầu
-                </button>
-                <button class="page-hero-btn" id="btn-batch-stop" style="background: var(--danger); border-color: var(--danger);">
-                    <i class="fa-solid fa-stop"></i> Dừng
-                </button>
+                <div class="button-group" style="display: flex; gap: 8px;">
+                    <button class="page-hero-btn" id="btn-batch-toggle">
+                        <i class="fa-solid fa-play"></i> Bắt đầu xử lý
+                    </button>
+                </div>
             </div>
         </div>
     </div>
 
-    <div class="stats-grid batch-stats-grid">
-        <div class="stat-card batch-stat-card">
-            <div class="stat-label">Processed</div>
-            <div class="stat-value batch-stat-value" id="batch-done">0</div>
+    <!-- BLOCK 3: Stats Metrics -->
+    <div class="card mb-20">
+        <div class="card-header">
+            <span class="card-title">Thống kê xử lý</span>
         </div>
-        <div class="stat-card batch-stat-card">
-            <div class="stat-label">Throughput</div>
-            <div class="stat-value batch-stat-value text-success" id="batch-throughput">0</div>
+        <div class="card-body">
+            <div class="stats-grid batch-stats-grid">
+                <div class="stat-card batch-stat-card">
+                    <div class="stat-label">Đã xử lý</div>
+                    <div class="stat-value batch-stat-value" id="batch-done">0</div>
+                </div>
+                <div class="stat-card batch-stat-card">
+                    <div class="stat-label">Tốc độ (địa chỉ/phút)</div>
+                    <div class="stat-value batch-stat-value text-success" id="batch-throughput">0</div>
+                </div>
+            </div>
         </div>
     </div>
 
-    <div class="card mt-12">
+    <!-- BLOCK 4: Progress + Console Output -->
+    <div class="card">
         <div class="card-header">
-            <span class="card-title">Realtime Batch Status</span>
+            <span class="card-title">Tiến trình xử lý thời gian thực</span>
         </div>
-        <div class="card-body" style="display:flex; flex-direction:column; min-height:0;">
+        <div class="card-body" style="display: flex; flex-direction: column; min-height: 0; gap: 20px;">
+            <!-- Progress Section -->
             <div class="batch-progress">
                 <div class="batch-progress-header">
-                    <span class="batch-progress-label">Progress</span>
-                    <span class="batch-progress-value">45%</span>
+                    <span class="batch-progress-label">Tiến độ</span>
+                    <span class="batch-progress-value" id="batch-progress-value">0%</span>
                 </div>
                 <div class="progress-track">
-                    <div class="progress-fill" style="width: 45%;"></div>
+                    <div class="progress-fill" style="width: 0%;"></div>
                 </div>
             </div>
-            <div class="batch-console-body" style="flex:1; min-height:0; margin-top:24px; display:flex; flex-direction:column;">
-                <div class="card-header" style="padding: 0; border: none; margin-bottom: 12px;">
-                    <span class="card-title">Console Output</span>
-                </div>
-                <div class="batch-log" id="batch-log" style="flex:1; min-height:0;">
-                    [SYSTEM] Ready to process batch...
-                    [SYSTEM] Awaiting user trigger.
-                </div>
+
+            <!-- Console Output Section -->
+            <div class="batch-console-body" style="flex: 1; min-height: 0; display: flex; flex-direction: column;">
+                <div style="font-size: 12px; font-weight: 500; margin-bottom: 8px; color: var(--text-secondary);">Nhật ký xử lý</div>
+                <div class="batch-log" id="batch-log" style="flex: 1; min-height: 200px; overflow-y: auto; background: var(--bg-secondary); border-radius: 4px; padding: 8px; font-size: 12px; font-family: monospace; color: var(--text-tertiary);">[HỆ THỐNG] Sẵn sàng xử lý lô địa chỉ...</div>
             </div>
         </div>
     </div>

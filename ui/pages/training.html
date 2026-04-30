@@ -1,51 +1,46 @@
 <!-- ══════ PAGE: TRAINING HUB ══════ -->
-<div class="page" id="training">
-    <div class="page-hero">
-        <div class="page-hero-inner">
-            <div class="page-hero-label">
-                <div class="page-hero-dot"></div>
-                Training Hub
-            </div>
-            <p class="text-tertiary" style="margin: 0; font-size: 13px;">
-                Tái huấn luyện mô hình PhoBERT NER với dữ liệu từ Label Studio
-            </p>
-        </div>
+<div class="page full-height-page" id="training">
+    <!-- BLOCK 1: Header -->
+    <div class="page-header">
+        <h2>Training Hub</h2>
+        <p>Tái huấn luyện mô hình PhoBERT NER với dữ liệu từ Label Studio</p>
     </div>
 
-    <div class="card mt-12">
-        <div class="card-header">
-            <span class="card-title">Nhập dữ liệu nhãn</span>
-        </div>
-        <div class="card-body" style="display:flex; gap:20px; flex-wrap:wrap; min-height:0;">
-            <div style="flex:1 1 320px; min-width:280px;">
-                <div class="form-group">
-                    <label>Label Studio JSON Export</label>
-                    <input type="file" id="ls-import-file" class="form-input" accept=".json">
+    <!-- BLOCK 2: Data Import Section -->
+    <div class="card mb-20">
+        <div class="card-body">
+            <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end;">
+                <div class="form-group" style="flex: 1; min-width: 280px; margin-bottom: 0;">
+                    <label class="form-label">Label Studio JSON Export</label>
+                    <div style="display: flex; gap: 0; align-items: stretch;">
+                        <input type="file" id="ls-import-file" class="form-input" accept=".json" style="border-top-right-radius: 0; border-bottom-right-radius: 0; border-right: none; flex: 1;">
+                        <button class="btn btn-primary" id="btn-import-ls" style="border-top-left-radius: 0; border-bottom-left-radius: 0; white-space: nowrap;">
+                            <i class="fa-solid fa-upload"></i> Tải lên & Tái huấn luyện
+                        </button>
+                    </div>
                     <div class="text-tertiary mt-8" style="font-size: 11px;">
                         Hỗ trợ định dạng JSON của Label Studio (Export > JSON)
                     </div>
                 </div>
-                <button class="btn btn-primary w-full mt-16" id="btn-import-ls">
-                    <i class="fa-solid fa-upload"></i> Tải lên & Tái huấn luyện
-                </button>
-                <div id="import-status" class="mt-12 text-center" style="font-size: 13px;"></div>
-            </div>
-            <div style="flex:1 1 320px; min-width:280px; display:flex; flex-direction:column; min-height:0;">
-                <div class="card" style="flex:1; min-height:0;">
-                    <div class="card-header">
-                        <span class="card-title">Chỉ số mô hình qua các phiên bản</span>
-                    </div>
-                    <div class="card-body" style="padding: 0; min-height:0; display:flex; align-items:center; justify-content:center;">
-                        <div class="chart-container" style="height: 250px; width:100%;">
-                            <canvas id="chart-training-progress"></canvas>
-                        </div>
-                    </div>
-                </div>
+                <div id="import-status" style="flex: 0 1 100%; font-size: 13px; text-align: center;"></div>
             </div>
         </div>
     </div>
 
-    <div class="card mt-12">
+    <!-- BLOCK 3: Model Metrics Chart -->
+    <div class="card mb-20">
+        <div class="card-header">
+            <span class="card-title">Chỉ số mô hình qua các phiên bản</span>
+        </div>
+        <div class="card-body" style="display: flex; align-items: center; justify-content: center; min-height: 300px;">
+            <div class="chart-container" style="height: 250px; width: 100%;">
+                <canvas id="chart-training-progress"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- BLOCK 4: Training History -->
+    <div class="card">
         <div class="card-header">
             <span class="card-title">Lịch sử Tái huấn luyện</span>
             <button class="btn btn-sm btn-ghost" onclick="loadTrainingHistoryFromDB()">

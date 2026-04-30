@@ -251,18 +251,21 @@ function initDashboardRefreshControls() {
 
 let intelligenceChart = null;
 function initIntelligenceChart() {
-  const ctx = document.getElementById('intelligenceChart');
+  const ctx = document.getElementById('chart-training-progress');
   if (!ctx) return;
 
   if (intelligenceChart) intelligenceChart.destroy();
 
+  // Load fallback data immediately for visual feedback
+  const fallbackData = TRAINING_HISTORY_FALLBACK;
+
   intelligenceChart = new Chart(ctx, {
     type: 'line',
     data: {
-      labels: [],
+      labels: fallbackData.map((item) => item.version),
       datasets: [{
         label: 'Model Accuracy (%)',
-        data: [],
+        data: fallbackData.map((item) => item.accuracy),
         borderColor: '#818cf8',
         backgroundColor: 'rgba(129, 140, 248, 0.1)',
         fill: true,
@@ -271,7 +274,7 @@ function initIntelligenceChart() {
         pointBackgroundColor: '#818cf8'
       }, {
         label: 'F1-Score',
-        data: [],
+        data: fallbackData.map((item) => item.f1),
         borderColor: '#34d399',
         backgroundColor: 'transparent',
         borderDash: [5, 5],
@@ -282,12 +285,22 @@ function initIntelligenceChart() {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        legend: { display: false }
+        legend: {
+          display: true,
+          position: 'top',
+          labels: {
+            usePointStyle: true,
+            padding: 20,
+            font: { size: 12 }
+          }
+        }
       },
       scales: {
         y: {
           grid: { color: 'rgba(255,255,255,0.05)' },
-          ticks: { color: '#5c5c5f', font: { size: 10 } }
+          ticks: { color: '#5c5c5f', font: { size: 10 } },
+          min: 70,
+          max: 95
         },
         x: {
           grid: { display: false },
@@ -1427,28 +1440,74 @@ function escapeHtml(str) {
 // BATCH PROCESSOR TOOL
 // ═══════════════════════════════════════════════════════════
 function setupBatchTool() {
-  const btnStart = document.getElementById("btn-batch-start");
-  const btnStop = document.getElementById("btn-batch-stop");
+  const btnToggle = document.getElementById("btn-batch-toggle");
   const log = document.getElementById("batch-log");
+  const progressValue = document.getElementById("batch-progress-value");
+  const progressFill = document.querySelector(".progress-fill");
 
-  if (btnStart) btnStart.addEventListener("click", () => {
+  let isBatchRunning = false;
+  let currentInterval = null;
+
+  function setButtonState(running) {
+    isBatchRunning = running;
+    if (running) {
+      btnToggle.innerHTML = '<i class="fa-solid fa-stop"></i> Dừng lại';
+      btnToggle.style.background = 'var(--danger)';
+      btnToggle.style.borderColor = 'var(--danger)';
+    } else {
+      btnToggle.innerHTML = '<i class="fa-solid fa-play"></i> Bắt đầu xử lý';
+      btnToggle.style.background = '';
+      btnToggle.style.borderColor = '';
+    }
+  }
+
+  if (btnToggle) btnToggle.addEventListener("click", () => {
+    if (isBatchRunning) {
+      // Stop batch
+      if (currentInterval) {
+        clearInterval(currentInterval);
+        currentInterval = null;
+      }
+      setButtonState(false);
+      log.innerHTML += `\n[${formatLogTime()}] ⛔ Batch stopped by user\n`;
+      return;
+    }
+
+    // Start batch
     const size = getNumericInputValue("batch-size") || 1000;
     const method = document.getElementById("batch-method").value;
+
+    // Reset progress and stats
+    progressValue.textContent = "0%";
+    progressFill.style.width = "0%";
+    document.getElementById("batch-done").textContent = "0";
+    document.getElementById("batch-throughput").textContent = "0";
+
+    setButtonState(true);
+
     log.innerHTML = `[${formatLogTime()}] Starting batch: ${size} records, method=${method}\n`;
     log.innerHTML += `[${formatLogTime()}] Connecting to prq.address_cleansing_queue...\n`;
-
 
     // Simulate progress
     let processed = 0;
     const startTime = Date.now();
-    const interval = setInterval(() => {
+    currentInterval = setInterval(() => {
       processed += Math.floor(Math.random() * 50) + 10;
       const elapsed = (Date.now() - startTime) / 1000;
       const tps = elapsed > 0 ? Math.round(processed / elapsed) : 0;
+      const progressPercent = Math.min(Math.round((processed / size) * 100), 100);
+
+      // Update progress bar
+      progressValue.textContent = `${progressPercent}%`;
+      progressFill.style.width = `${progressPercent}%`;
 
       if (processed >= size) {
         processed = size;
-        clearInterval(interval);
+        clearInterval(currentInterval);
+        currentInterval = null;
+        progressValue.textContent = "100%";
+        progressFill.style.width = "100%";
+        setButtonState(false);
         log.innerHTML += `[${formatLogTime()}] ✅ Batch complete: ${processed.toLocaleString()} records processed\n`;
         document.getElementById("batch-done").textContent = processed.toLocaleString();
         document.getElementById("batch-throughput").textContent = `${tps.toLocaleString()} items/s`;
@@ -1459,8 +1518,6 @@ function setupBatchTool() {
       log.innerHTML += `[${formatLogTime()}] Processing... ${processed.toLocaleString()}/${size.toLocaleString()}\n`;
       log.scrollTop = log.scrollHeight;
     }, 800);
-
-    btnStop.onclick = () => { clearInterval(interval); log.innerHTML += `\n[${formatLogTime()}] ⛔ Batch stopped by user\n`; };
   });
 }
 
