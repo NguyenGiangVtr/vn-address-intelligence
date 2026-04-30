@@ -87,3 +87,19 @@ applyTo: "**/*"
 - Neu user yeu cau review: uu tien liet ke findings theo muc do nghiem trong truoc, sau do moi tom tat.
 - Neu user yeu cau implement: tra loi theo cau truc ket qua -> file da doi -> verification -> rui ro ton dong.
 - Neu user yeu cau explain: su dung file references ro rang va mo ta data flow cu the.
+
+## 7. UI Layout Standard: 3-Zone Parser Template
+Tiến hành refactor lại theo todo.md
+Mục tiêu: lấy trang Address Parser làm chuẩn
+- block đầu tiên chứa 
+    + hero-label: chứa title, mô tả
+    + cụm textbox, button, action.. nằm gói gọn trong 1 input-wrap
+    + status-bar
+- block thứ 2 (có thể có hoặc không) chứa	
+    + các thông số thống kê, các Chỉ số
+- block chính: là nơi hiển thị gridvew, console log realtime: được thiết kế rộng rãi và page
+    + Với gridview luôn áp dụng paging
+    + với log console realtime: luôn áp dụng scroll khi realtime log
+- Tất cả đảm bảo responsive, tối ưu trải nghiệm trên mobile, trên mobile hãy bỏ luôn với gridvew - thay thế bằng 1 UI phù hợp trải nghiệm hơn
+- luôn áp dụng class mt-12 giữa các block
+- Loại bỏ hết kiểu thiết kê content-grid / 2 card như hiện tại

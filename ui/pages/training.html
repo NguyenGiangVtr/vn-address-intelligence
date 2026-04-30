@@ -1,16 +1,23 @@
 <!-- ══════ PAGE: TRAINING HUB ══════ -->
 <div class="page" id="training">
-    <div class="page-header">
-        <h2>Training Hub</h2>
-        <p>Tái huấn luyện mô hình PhoBERT NER với dữ liệu từ Label Studio</p>
+    <div class="page-hero">
+        <div class="page-hero-inner">
+            <div class="page-hero-label">
+                <div class="page-hero-dot"></div>
+                Training Hub
+            </div>
+            <p class="text-tertiary" style="margin: 0; font-size: 13px;">
+                Tái huấn luyện mô hình PhoBERT NER với dữ liệu từ Label Studio
+            </p>
+        </div>
     </div>
 
-    <div class="content-grid sidebar-layout">
-        <div class="card" style="flex: 1">
-            <div class="card-header">
-                <span class="card-title">Nhập dữ liệu nhãn</span>
-            </div>
-            <div class="card-body">
+    <div class="card mt-12">
+        <div class="card-header">
+            <span class="card-title">Nhập dữ liệu nhãn</span>
+        </div>
+        <div class="card-body" style="display:flex; gap:20px; flex-wrap:wrap; min-height:0;">
+            <div style="flex:1 1 320px; min-width:280px;">
                 <div class="form-group">
                     <label>Label Studio JSON Export</label>
                     <input type="file" id="ls-import-file" class="form-input" accept=".json">
@@ -23,21 +30,22 @@
                 </button>
                 <div id="import-status" class="mt-12 text-center" style="font-size: 13px;"></div>
             </div>
-        </div>
-
-        <div class="card" style="flex: 2">
-            <div class="card-header">
-                <span class="card-title">Chỉ số mô hình qua các phiên bản</span>
-            </div>
-            <div class="card-body">
-                <div class="chart-container" style="height: 250px;">
-                    <canvas id="chart-training-progress"></canvas>
+            <div style="flex:1 1 320px; min-width:280px; display:flex; flex-direction:column; min-height:0;">
+                <div class="card" style="flex:1; min-height:0;">
+                    <div class="card-header">
+                        <span class="card-title">Chỉ số mô hình qua các phiên bản</span>
+                    </div>
+                    <div class="card-body" style="padding: 0; min-height:0; display:flex; align-items:center; justify-content:center;">
+                        <div class="chart-container" style="height: 250px; width:100%;">
+                            <canvas id="chart-training-progress"></canvas>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="card mt-24">
+    <div class="card mt-12">
         <div class="card-header">
             <span class="card-title">Lịch sử Tái huấn luyện</span>
             <button class="btn btn-sm btn-ghost" onclick="loadTrainingHistoryFromDB()">

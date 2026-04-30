@@ -1,13 +1,12 @@
 <!-- ══════ PAGE: ADDRESS PARSER ══════ -->
 <div class="page" id="parser">
-
+    <div class="page-header">
+        <h2>NER · Vietnamese Address Intelligence</h2>
+        <p>Phân tích địa chỉ</p>
+    </div>
     <!-- ── Hero Input Zone ── -->
-    <div class="parser-hero">
+    <div class="parser-hero mb-20">
         <div class="parser-hero-inner">
-            <div class="parser-hero-label">
-                <span class="parser-hero-dot"></span>
-                NER · Vietnamese Address Intelligence
-            </div>
             <div class="parser-input-wrap">
                 <i class="fa-solid fa-location-dot parser-input-icon"></i>
                 <input type="text" id="parser-input" class="parser-input-field"
@@ -39,7 +38,7 @@
     </div>
 
     <!-- ── NER Highlight Output ── -->
-    <div class="parser-ner-zone" id="parser-ner-zone">
+    <div class="parser-ner-zone mt-12" id="parser-ner-zone">
         <div class="parser-ner-header">
             <span class="parser-section-label"><i class="fa-solid fa-tags"></i> NER Tokens</span>
             <div class="parser-ner-legend" id="parser-ner-legend"></div>
@@ -50,7 +49,7 @@
     </div>
 
     <!-- ── 4 Model Cards Grid ── -->
-    <div class="parser-models-grid" id="parser-models-grid">
+    <div class="parser-models-grid mt-12" id="parser-models-grid">
         <div class="pmodel-card" id="pcard-prelabeler" data-model="prelabeler">
             <div class="pmodel-header">
                 <div class="pmodel-icon" style="--mc:#fbbf24"><i class="fa-solid fa-bolt"></i></div>

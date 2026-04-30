@@ -19,44 +19,37 @@
         </div>
     </div>
 
-    <div class="content-grid sidebar-layout" style="gap: 16px;">
-        <!-- Left: Province List -->
-        <div class="card" style="flex: 1.2; display: flex; flex-direction: column; min-height: 0;">
-            <div class="card-header">
-                <span class="card-title">Danh sách Tỉnh/Thành từ NSO</span>
-                <span id="nso-count" class="badge-outline">0</span>
-            </div>
-            <div class="card-body with-scroll" style="padding: 0;">
-                <div class="table-container">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Mã</th>
-                                <th>Tên Tỉnh / Thành</th>
-                                <th class="text-right">Hành động</th>
-                            </tr>
-                        </thead>
-                        <tbody id="nso-province-body">
-                            <!-- Filled by JS -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+    <div class="card mb-12">
+        <div class="card-header">
+            <span class="card-title">Danh sách Tỉnh/Thành từ NSO</span>
+            <span id="nso-count" class="badge-outline">0</span>
         </div>
-
-        <!-- Right: Log & Progress -->
-        <div class="card" style="flex: 1; display: flex; flex-direction: column; min-height: 0;">
-            <div class="card-header">
-                <span class="card-title">Sync Details</span>
-                <div id="nso-sync-status" class="badge-outline">IDLE</div>
-            </div>
-            <div class="card-body"
-                style="padding: 16px; background: var(--bg-app); flex: 1; display: flex; flex-direction: column;">
-                <div id="nso-sync-logs" class="batch-log" style="flex: 1; font-size: 11px;">
-                    [SYSTEM] Awaiting sync task...
+        <div class="card-body">
+            <div class="card-body with-scroll" style="padding: 0px; overflow-y: auto; max-height: 400px;">
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Mã</th>
+                                    <th>Tên Tỉnh / Thành</th>
+                                    <th class="text-right">Hành động</th>
+                                </tr>
+                            </thead>
+                            <tbody id="nso-province-body">
+                                <!-- Filled by JS -->
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-            </div>
         </div>
-
+    </div>
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">Sync Details</span>
+            <div id="nso-sync-status" class="badge-outline">IDLE</div>
+        </div>
+        <div class="card-body">
+            <div class="batch-log" id="nso-sync-logs" style="overflow-y: auto; max-height: 398px;">[SYSTEM] Awaiting sync task...</div>
+        </div>
     </div>
 </div>

@@ -498,6 +498,26 @@ input, textarea, select { font-family: inherit; }
   flex: 1;
 }
 
+.page-split {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  min-height: 0;
+}
+
+.page-split > * {
+  flex: 1 1 280px;
+  min-width: 280px;
+  min-height: 0;
+}
+
+@media (max-width: 768px) {
+  .page-split {
+    flex-direction: column;
+  }
+}
+
 .content-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -1529,7 +1549,6 @@ select.form-input {
 /* Target the toolbar/sidebar hybrid used for top filters */
 .dm-filter-sidebar.dm-filter-toolbar {
   border-radius: var(--radius-md);
-  margin-bottom: 12px;
   border-color: var(--border-subtle);
   background: var(--bg-surface);
 }
@@ -1786,8 +1805,6 @@ select.form-input {
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    gap: 16px;
-    padding-bottom: 16px;
 }
 .full-height-page .dm-page-main {
     flex: 1;
@@ -1887,8 +1904,10 @@ select.form-input {
 
 .page-hero-inner {
   display: flex;
-  flex-direction: column;
-  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
 }
 
 .page-hero-label {
@@ -2169,7 +2188,6 @@ select.form-input {
 
 /* ── NER Zone ── */
 .parser-ner-zone {
-  margin: 12px 0 0;
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
@@ -2231,7 +2249,6 @@ select.form-input {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 10px;
-  padding: 12px 0;
   flex: 1;
   min-height: 0;
   overflow: hidden;

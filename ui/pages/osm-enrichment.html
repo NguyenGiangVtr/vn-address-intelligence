@@ -5,12 +5,12 @@
         <p>Crawl và đồng bộ dữ liệu địa lý từ OpenStreetMap (Buildings, Streets)</p>
     </div>
 
-    <div class="content-grid sidebar-layout">
-        <div class="card">
-            <div class="card-header">
-                <span class="card-title">Cấu hình Crawler</span>
-            </div>
-            <div class="card-body">
+    <div class="card mb-20">
+        <div class="card-header">
+            <span class="card-title">Crawler Configuration</span>
+        </div>
+        <div class="card-body" style="display:flex; gap:20px; flex-wrap:wrap; min-height:0;">
+            <div style="flex:1 1 320px; min-width:280px;">
                 <div class="form-group">
                     <label>Giới hạn số Tỉnh/Thành</label>
                     <input type="number" class="form-input" id="osm-limit-provinces" value="63">
@@ -28,29 +28,21 @@
                     </button>
                 </div>
             </div>
-        </div>
-
-        <div class="card">
-            <div class="card-header">
-                <span class="card-title">Thống kê OSM hiện tại</span>
-            </div>
-            <div class="card-body" id="osm-summary-panel">
-                <div class="stats-grid" style="grid-template-columns: 1fr 1fr;">
-                    <div class="stat-card" style="padding: 12px; background: var(--bg-app);">
-                        <div class="stat-label">Total Entities</div>
-                        <div class="stat-value" id="osm-total-count" style="font-size: 20px;">615,547</div>
-                    </div>
-                    <div class="stat-card" style="padding: 12px; background: var(--bg-app);">
-                        <div class="stat-label">Last Updated</div>
-                        <div class="stat-value" id="osm-last-update"
-                            style="font-size: 14px; color: var(--text-tertiary); margin-top: 4px;">-</div>
-                    </div>
+            <div style="flex:1 1 240px; min-width:240px; display:flex; flex-direction:column; gap:12px;">
+                <div class="stat-card" style="padding: 16px; background: var(--bg-app);">
+                    <div class="stat-label">Total Entities</div>
+                    <div class="stat-value" id="osm-total-count" style="font-size: 20px;">615,547</div>
+                </div>
+                <div class="stat-card" style="padding: 16px; background: var(--bg-app);">
+                    <div class="stat-label">Last Updated</div>
+                    <div class="stat-value" id="osm-last-update"
+                        style="font-size: 14px; color: var(--text-tertiary); margin-top: 4px;">-</div>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="card mt-24">
+    <div class="card">
         <div class="card-header">
             <span class="card-title">OSM Job Log</span>
             <div class="badge-outline" id="osm-job-status">IDLE</div>
