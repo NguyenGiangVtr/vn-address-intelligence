@@ -1866,6 +1866,129 @@ select.form-input {
    PARSER PAGE REDESIGN v2
    ══════════════════════════════════════════════════════════════ */
 
+/* ══════════════════════════════════════════
+   STANDARD PAGE HERO ZONE (Generalized from Parser)
+   ══════════════════════════════════════════ */
+
+/* ── Page Hero: Actions/Filters horizontal compact ── */
+.page-hero {
+  flex-shrink: 0;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-xl);
+  padding: 18px 20px 14px;
+  transition: border-color 200ms ease, box-shadow 200ms ease;
+  margin-bottom: 12px;
+}
+.page-hero.is-running {
+  border-color: rgba(129,140,248,0.4);
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.08), inset 0 0 40px rgba(99,102,241,0.03);
+}
+
+.page-hero-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.page-hero-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-tertiary);
+}
+
+.page-hero-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 8px rgba(129,140,248,0.6);
+  animation: heroDotPulse 2.5s infinite;
+}
+@keyframes heroDotPulse {
+  0%,100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.8); }
+}
+
+.page-hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.page-hero-search {
+  flex: 1;
+  min-width: 280px;
+}
+
+.page-hero-btn {
+  display: flex; align-items: center; gap: 7px;
+  padding: 7px 16px;
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-md);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 150ms ease;
+  white-space: nowrap;
+}
+.page-hero-btn:hover {
+  background: var(--accent-hover);
+  box-shadow: 0 0 16px rgba(99,102,241,0.35);
+  transform: translateY(-1px);
+}
+.page-hero-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.page-hero-btn-sample {
+  width: 32px; height: 32px;
+  display: flex; align-items: center; justify-content: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  color: var(--text-tertiary);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.page-hero-btn-sample:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-default);
+  color: var(--text-primary);
+}
+
+.page-hero-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+.hero-status-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: background 300ms ease;
+}
+.hero-status-dot.idle { background: var(--text-tertiary); }
+.hero-status-dot.running { 
+  background: var(--warning);
+  animation: pulse 1.2s infinite;
+}
+.hero-status-dot.done { background: var(--success); }
+
 /* ── Page override: flex column, no overflow ── */
 #parser.page {
   flex-direction: column;

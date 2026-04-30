@@ -1,8 +1,16 @@
 <!-- ══════ PAGE: BENCHMARK EXPERIMENTS ══════ -->
 <div class="page" id="experiments">
-    <div class="page-header">
-        <h2>Benchmark Experiments</h2>
-        <p>Đánh giá hiệu năng mô hình trên tập dữ liệu thử nghiệm chuẩn</p>
+    <div class="page-hero">
+        <div class="page-hero-inner">
+            <div class="page-hero-label">
+                <div class="page-hero-dot"></div>
+                Benchmark Experiments
+            </div>
+            <div class="page-hero-actions">
+                <button class="btn btn-sm btn-ghost" id="btn-benchmark-refresh"><i class="fa-solid fa-rotate"></i> Refresh</button>
+                <button class="btn btn-sm btn-primary" id="btn-run-benchmark" data-action="run-experiment"><i class="fa-solid fa-play"></i> Run Full Benchmark</button>
+            </div>
+        </div>
     </div>
 
     <div class="stats-grid">
@@ -20,15 +28,9 @@
         </div>
     </div>
 
-    <div class="card mt-24">
+    <div class="card">
         <div class="card-header">
             <span class="card-title">Kết quả Benchmark chi tiết</span>
-            <div class="flex gap-12">
-                <button class="btn btn-sm btn-ghost" id="btn-benchmark-refresh"><i
-                        class="fa-solid fa-rotate"></i> Refresh</button>
-                <button class="btn btn-sm btn-primary" id="btn-run-benchmark" data-action="run-experiment"><i
-                        class="fa-solid fa-play"></i> Run Full Benchmark</button>
-            </div>
         </div>
         <div class="card-body">
             <div class="table-container">
