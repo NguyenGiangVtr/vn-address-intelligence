@@ -514,9 +514,10 @@ def seed_wards_v2(df: pd.DataFrame):
     logger.info("Step 3: Seeding mat.ward (admin_version=2) ...")
 
     # Unique new wards — lấy theo ward_code_new
-    # district_id: lấy từ district của old ward (theo mapping đầu tiên)
+    # district_id cho Ward v2 phải là district_id của District v2 tương ứng,
+    # không phải district_id cũ của Ward v1.
     ward_district = (
-        df[["ward_int_new", "ward_name_new", "dist_code_old", "prov_code_new"]]
+        df[["ward_int_new", "ward_name_new", "prov_code_new"]]
         .dropna(subset=["ward_int_new"])
         .drop_duplicates("ward_int_new")
         .copy()
@@ -528,7 +529,7 @@ def seed_wards_v2(df: pd.DataFrame):
             "ward_no":       str(int(r.ward_int_new)).zfill(5),
             "ward_name":     r.ward_name_new,
             "type_name":     _extract_type(r.ward_name_new),
-            "district_id":   int(r.dist_code_old) if r.dist_code_old and not pd.isna(r.dist_code_old) else 0,
+            "district_id":   int(r.prov_code_new) if r.prov_code_new and not pd.isna(r.prov_code_new) else 0,
             "province_no":   str(int(r.prov_code_new)).zfill(2) if r.prov_code_new and not pd.isna(r.prov_code_new) else None,
             "admin_version": 2,
             "is_deleted":    False,

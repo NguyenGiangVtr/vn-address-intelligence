@@ -32,48 +32,23 @@
         }
     </style>
 
-    <div class="page-header">
-        <h2>NSO Sync</h2>
-        <p>Đồng bộ dữ liệu hành chính từ Tổng cục Thống kê (NSO - GSO)</p>
+    <div class="page-header flex justify-between items-center">
+        <div>
+            <h2>NSO Sync</h2>
+            <p>Đồng bộ dữ liệu hành chính từ Tổng cục Thống kê (NSO - GSO)</p>
+        </div>
+        <div class="flex gap-12">
+            <button class="btn btn-primary" id="btn-nso-sync-selected">
+                <i class="fa-solid fa-sync mr-4"></i> Sync Selected
+            </button>
+            <button class="btn btn-outline" id="btn-nso-sync-all">
+                <i class="fa-solid fa-cloud-arrow-down mr-4"></i> Sync All
+            </button>
+        </div>
     </div>
 
     <!-- Filter Toolbar -->
-    <div class="card mb-20 dm-filter-toolbar">
-        <div class="card-body flex flex-wrap gap-16 items-end">
-            <div class="form-group flex-1" style="min-width: 200px;">
-                <label class="form-label">Tỉnh / Thành phố</label>
-                <div class="input-wrapper">
-                    <input list="nso-list-provinces" id="nso-province-input" class="form-input"
-                        placeholder="Chọn Tỉnh...">
-                    <datalist id="nso-list-provinces"></datalist>
-                </div>
-            </div>
-            <div class="form-group flex-1" style="min-width: 200px;">
-                <label class="form-label">Quận / Huyện</label>
-                <div class="input-wrapper">
-                    <input list="nso-list-districts" id="nso-district-input" class="form-input"
-                        placeholder="Chọn Huyện...">
-                    <datalist id="nso-list-districts"></datalist>
-                </div>
-            </div>
-            <div class="form-group flex-1" style="min-width: 200px;">
-                <label class="form-label">Phường / Xã</label>
-                <div class="input-wrapper">
-                    <input list="nso-list-wards" id="nso-ward-input" class="form-input" placeholder="Chọn Xã...">
-                    <datalist id="nso-list-wards"></datalist>
-                </div>
-            </div>
-
-            <div class="flex gap-12">
-                <button class="btn btn-primary" id="btn-nso-sync-selected">
-                    <i class="fa-solid fa-sync mr-4"></i> Sync Selected
-                </button>
-                <button class="btn btn-outline" id="btn-nso-sync-all">
-                    <i class="fa-solid fa-cloud-arrow-down mr-4"></i> Sync All
-                </button>
-            </div>
-        </div>
-    </div>
+    <div id="nso-filter-container"></div>
 
     <!-- Results Section -->
     <div class="card mb-12">

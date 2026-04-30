@@ -104,6 +104,103 @@ select {
   border-right: 1px solid var(--border-subtle);
 }
 
+/* ══════════════════════════════════════════
+   SMART FILTER COMPONENT
+   ══════════════════════════════════════════ */
+.smart-filter-card {
+    margin-bottom: 16px;
+    box-shadow: var(--shadow-lg);
+}
+
+.smart-filter-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    width: 100%;
+}
+
+.smart-filter-item {
+    flex: 1;
+    min-width: 180px;
+}
+
+.search-box-unified {
+    display: flex;
+    align-items: stretch;
+    height: 52px;
+    border-radius: var(--radius-lg);
+    background: var(--bg-app);
+    border: 1.5px solid var(--border-default);
+    margin-top: 20px;
+    overflow: hidden;
+    transition: all var(--transition);
+}
+
+.search-box-unified:focus-within {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 4px var(--accent-glow);
+}
+
+.search-box-unified .search-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 16px;
+    color: var(--text-tertiary);
+}
+
+.search-box-unified .search-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    padding: 0;
+    color: var(--text-primary);
+    outline: none;
+}
+
+.search-box-unified .btn-search {
+    height: 100%;
+    border-radius: 0;
+    padding: 0 32px;
+    background: var(--accent);
+    border: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: white;
+    font-weight: 600;
+}
+
+.btn-clear-input {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: transparent;
+    border: none;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+}
+
+.btn-clear-input:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.input-wrapper {
+    position: relative;
+}
+
+.form-input.has-clear {
+    padding-right: 32px;
+}
+
 /* ── Form Controls ── */
 /* ── Layout ── */
 .app-container {

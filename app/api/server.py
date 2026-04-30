@@ -767,11 +767,10 @@ def lookup_mapping(
         if version == 1:
             filters.append(or_(WardMapping.district_id_old == district_id, WardV1.district_id == district_id, DistV1.district_id == district_id))
         elif version == 2:
-            filters.append(or_(WardMapping.district_id_new == district_id, WardV2.district_id == district_id, DistV2.district_id == district_id))
+            filters.append(or_(WardV2.district_id == district_id, DistV2.district_id == district_id))
         else:
             filters.append(or_(
                 WardMapping.district_id_old == district_id, 
-                WardMapping.district_id_new == district_id,
                 WardV1.district_id == district_id,
                 WardV2.district_id == district_id,
                 DistV1.district_id == district_id,

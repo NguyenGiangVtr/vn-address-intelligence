@@ -704,9 +704,10 @@ async function fetchOSMSummary() {
   return response.json();
 }
 
-async function triggerOSMJob() {
-  const limitProvinces = getNumericInputValue("osm-limit-provinces") || 63;
-  const targetTotal = getNumericInputValue("osm-target-total") || 5000000;
+async function triggerOSMJob(options = {}) {
+  const limitProvinces = options.limit_provinces || getNumericInputValue("osm-limit-provinces") || 63;
+  const targetTotal = options.target_total || getNumericInputValue("osm-target-total") || 5000000;
+  const provinceId = options.province_id || null;
 
   const response = await fetch(`${API_BASE}/osm/trigger`, {
     method: "POST",
@@ -717,6 +718,7 @@ async function triggerOSMJob() {
     body: JSON.stringify({
       limit_provinces: limitProvinces,
       target_total: targetTotal,
+      province_id: provinceId
     }),
   });
 
@@ -872,9 +874,21 @@ async function previewOSMCountsFromUI() {
 
 async function runOSMJobFromUI() {
   try {
-    const limitProvinces = Number.parseInt(document.getElementById("osm-limit-provinces")?.value || "63", 10);
+    const pInput = document.getElementById('osm-province-input');
+    const pId = osmState.provinces[pInput?.value];
+    
+    let limitProvinces = 63;
+    let provinceId = null;
+    
+    if (pId) {
+        limitProvinces = 1;
+        provinceId = pId;
+    }
+
     const targetTotal = getNumericInputValue("osm-target-total") || 5000000;
-    const confirmMessage = `Chạy crawl OSM cho ${limitProvinces} tỉnh/thành với target ${targetTotal.toLocaleString()} entities?`;
+    const confirmMessage = pId 
+        ? `Chạy crawl OSM cho tỉnh ${pInput.value} với target ${targetTotal.toLocaleString()} entities?`
+        : `Chạy crawl OSM cho tất cả 63 tỉnh/thành với target ${targetTotal.toLocaleString()} entities?`;
 
     if (showConfirm) {
       const confirmed = await showConfirm(confirmMessage);
@@ -882,7 +896,7 @@ async function runOSMJobFromUI() {
     }
 
     setOSMRunButtons(true);
-    const trigger = await triggerOSMJob();
+    const trigger = await triggerOSMJob({ limit_provinces: limitProvinces, province_id: provinceId, target_total: targetTotal });
 
     if (trigger?.job?.status === "running") {
       if (showToast) {
@@ -904,12 +918,26 @@ async function runOSMJobFromUI() {
   }
 }
 
-function initOSMEnrichmentUI() {
+let osmState = {};
+async function initOSMEnrichmentUI() {
   const runButton = document.getElementById("btn-osm-run");
   const previewButton = document.getElementById("btn-osm-preview-counts");
   const page = document.getElementById("osm-enrichment");
 
   if (!page) return;
+
+  VNAIControls.renderSmartFilter('osm-filter-container', {
+    prefix: 'osm',
+    title: 'Phạm vi Crawl (OpenStreetMap)',
+    showVersion: false,
+    showWard: false,
+    showDistrict: false,
+    searchPlaceholder: 'Tìm nhanh Tỉnh/Thành...'
+  });
+
+  osmState = await VNAIControls.initSmartFilter('osm', {
+    onSearch: () => refreshOSMEnrichmentPanel({ silent: false })
+  });
 
   if (runButton) {
     runButton.addEventListener("click", () => {
@@ -1694,120 +1722,22 @@ function initTrainingHub() {
 // ═══════════════════════════════════════════════════════════
 let mappingState = {
   version: 1,
-  provinces: {}, // name -> id
+  provinces: {},
   districts: {},
   wards: {}
 };
 
 async function initMappingV3() {
-  const pInput = document.getElementById('mapping-province-input');
-  const dInput = document.getElementById('mapping-district-input');
-  const wInput = document.getElementById('mapping-ward-input');
-  const vSelect = document.getElementById('mapping-version-select');
-
-  if (!pInput) return;
-  if (vSelect) mappingState.version = parseInt(vSelect.value);
-
-  const loadProvinces = async () => {
-    try {
-      const res = await fetch(`${API_BASE}/provinces?version=${mappingState.version}`, { headers: getAuthHeader() });
-      const data = await res.json();
-      renderLookupTemplateDatalist('list-provinces', data, 'province_name', 'province_id', mappingState.provinces);
-    } catch (e) { console.error(e); }
-  };
-
-  vSelect?.addEventListener('change', () => {
-    mappingState.version = parseInt(vSelect.value);
-    pInput.value = ''; dInput.value = ''; wInput.value = '';
-    mappingState.provinces = {}; mappingState.districts = {}; mappingState.wards = {};
-    const listP = document.getElementById('list-provinces'); if (listP) listP.innerHTML = '';
-    const listD = document.getElementById('list-districts'); if (listD) listD.innerHTML = '';
-    const listW = document.getElementById('list-wards'); if (listW) listW.innerHTML = '';
-    loadProvinces();
+  VNAIControls.renderSmartFilter('lookup-filter-container', {
+    prefix: 'mapping',
+    title: 'Bộ lọc Thông minh (Mapping History)',
+    searchPlaceholder: 'Tìm nhanh theo tên hoặc mã hành chính...'
   });
 
-  pInput.addEventListener('input', async () => {
-    if (pInput.value === '') {
-      dInput.value = ''; wInput.value = '';
-      mappingState.districts = {}; mappingState.wards = {};
-      const listD = document.getElementById('list-districts');
-      if (listD) listD.innerHTML = '';
-      const listW = document.getElementById('list-wards');
-      if (listW) listW.innerHTML = '';
-      document.getElementById('unit-details-panel').innerHTML = '<div class="text-center" style="padding:40px; color:var(--text-tertiary)">Chọn một đơn vị để xem chi tiết.</div>';
-      triggerMappingSearch();
-      return;
-    }
-
-    const id = mappingState.provinces[pInput.value];
-    if (!id) return;
-
-    // Clear children
-    dInput.value = ''; wInput.value = '';
-    mappingState.districts = {}; mappingState.wards = {};
-
-    showDetails('province', id);
-    triggerMappingSearch(); // Auto-trigger
-
-    try {
-      const res = await fetch(`${API_BASE}/districts/${id}?version=${mappingState.version}`, { headers: getAuthHeader() });
-      const data = await res.json();
-      renderLookupTemplateDatalist('list-districts', data, 'district_name', 'district_id', mappingState.districts);
-    } catch (e) { console.error(e); }
+  mappingState = await VNAIControls.initSmartFilter('mapping', {
+    onSearch: triggerMappingSearch,
+    onSelect: (level, id, version) => showDetails(level, id, version)
   });
-
-  dInput.addEventListener('input', async () => {
-    if (dInput.value === '') {
-      wInput.value = '';
-      mappingState.wards = {};
-      const listW = document.getElementById('list-wards');
-      if (listW) listW.innerHTML = '';
-
-      const provinceId = mappingState.provinces[pInput.value];
-      if (provinceId) showDetails('province', provinceId);
-
-      triggerMappingSearch();
-      return;
-    }
-
-    const provinceId = mappingState.provinces[pInput.value];
-    const id = mappingState.districts[dInput.value];
-    if (!id || !provinceId) return;
-
-    wInput.value = '';
-    mappingState.wards = {};
-
-    showDetails('district', id);
-    triggerMappingSearch(); // Auto-trigger
-
-    try {
-      const res = await fetch(`${API_BASE}/wards/${id}?version=${mappingState.version}`, { headers: getAuthHeader() });
-      const data = await res.json();
-      renderLookupTemplateDatalist('list-wards', data, 'ward_name', 'ward_id', mappingState.wards);
-    } catch (e) { console.error(e); }
-  });
-
-  wInput.addEventListener('input', () => {
-    if (wInput.value === '') {
-      const districtId = mappingState.districts[dInput.value];
-      if (districtId) showDetails('district', districtId);
-      triggerMappingSearch();
-      return;
-    }
-
-    const wardId = mappingState.wards[wInput.value];
-    if (wardId) {
-      showDetails('ward', wardId);
-      triggerMappingSearch(); // Auto-trigger
-    }
-  });
-
-  document.getElementById('btn-mapping-search')?.addEventListener('click', triggerMappingSearch);
-  document.getElementById('mapping-search-input')?.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') triggerMappingSearch();
-  });
-
-  loadProvinces();
 }
 
 async function showDetails(level, id, version = null) {
@@ -1857,14 +1787,22 @@ async function showDetails(level, id, version = null) {
   } catch (e) { panel.innerHTML = "Lỗi tải thông tin"; }
 }
 
-async function triggerMappingSearch() {
-  const qText = document.getElementById('mapping-search-input').value;
-  const pId = mappingState.provinces[document.getElementById('mapping-province-input').value];
-  const dId = mappingState.districts[document.getElementById('mapping-district-input').value];
-  const wId = mappingState.wards[document.getElementById('mapping-ward-input').value];
+async function triggerMappingSearch(state) {
+  const activeState = state || mappingState;
+  const qInput = document.getElementById('mapping-search-input');
+  const pInput = document.getElementById('mapping-province-input');
+  const dInput = document.getElementById('mapping-district-input');
+  const wInput = document.getElementById('mapping-ward-input');
+
+  if (!activeState.provinces || !qInput) return;
+
+  const qText = qInput.value;
+  const pId = activeState.provinces[pInput.value];
+  const dId = activeState.districts[dInput.value];
+  const wId = activeState.wards[wInput.value];
 
   const tbody = document.getElementById('mapping-results-table');
-  const version = document.getElementById('mapping-version-select')?.value || mappingState.version;
+  const version = document.getElementById('mapping-version-select')?.value || activeState.version;
 
   let url = `${API_BASE}/lookup/mapping?`;
   if (wId) url += `ward_id=${wId}`;
@@ -1931,80 +1869,45 @@ let nsoState = {
 
 let logPollingInterval = null;
 
-function initNSOSyncTool() {
-  const pInput = document.getElementById('nso-province-input');
-  const dInput = document.getElementById('nso-district-input');
-  const wInput = document.getElementById('nso-ward-input');
-  const btnSyncSelected = document.getElementById('btn-nso-sync-selected');
-  const btnSyncAll = document.getElementById('btn-nso-sync-all');
-  const btnClearLogs = document.getElementById('btn-clear-nso-logs');
-
-  if (!pInput) return;
-
-  // Initial Load
-  loadNSOProvinces();
-
-  // Listeners
-  pInput.addEventListener('input', async () => {
-    if (pInput.value === '') {
-      dInput.value = ''; wInput.value = '';
-      nsoState.districts = {}; nsoState.wards = {};
-      const listD = document.getElementById('nso-list-districts');
-      if (listD) listD.innerHTML = '';
-      const listW = document.getElementById('nso-list-wards');
-      if (listW) listW.innerHTML = '';
-      nsoState.currentLevel = 'province';
-      loadNSOProvinces();
-      return;
-    }
-    const province = nsoState.provinces[pInput.value];
-    if (!province) return;
-
-    nsoState.currentLevel = 'district';
-    loadNSODistricts(province.MaTinh, province.TenTinh);
-    dInput.value = ''; wInput.value = '';
+async function initNSOSyncTool() {
+  VNAIControls.renderSmartFilter('nso-filter-container', {
+    prefix: 'nso',
+    title: 'Tra cứu danh mục NSO / GSO',
+    showVersion: false,
+    searchPlaceholder: 'Tìm nhanh mã hoặc tên đơn vị NSO...',
+    buttonText: 'Lọc dữ liệu'
   });
 
-  dInput.addEventListener('input', async () => {
-    if (dInput.value === '') {
-      wInput.value = '';
-      nsoState.wards = {};
-      const listW = document.getElementById('nso-list-wards');
-      if (listW) listW.innerHTML = '';
-      const province = nsoState.provinces[pInput.value];
-      if (province) {
-        nsoState.currentLevel = 'district';
-        loadNSODistricts(province.MaTinh, province.TenTinh);
-      }
-      return;
+  nsoState = await VNAIControls.initSmartFilter('nso', {
+    provinceNameKey: 'TenTinh',
+    provinceIdKey: 'MaTinh',
+    districtNameKey: 'TenHuyen',
+    districtIdKey: 'MaHuyen',
+    wardNameKey: 'TenXa',
+    wardIdKey: 'MaXa',
+    fetchProvinces: async () => {
+      const res = await fetch(`${API_BASE}/nso/provinces`, { headers: getAuthHeader() });
+      return await res.json();
+    },
+    fetchDistricts: async (pCode, _, pItem) => {
+      const res = await fetch(`${API_BASE}/nso/districts?province_no=${pCode}&province_name=${encodeURIComponent(pItem.TenTinh)}`, { headers: getAuthHeader() });
+      return await res.json();
+    },
+    fetchWards: async (dCode, _, dItem) => {
+      const pInput = document.getElementById('nso-province-input');
+      const pItem = nsoState.provinces[pInput.value];
+      const res = await fetch(`${API_BASE}/nso/wards?province_no=${pItem.MaTinh}&province_name=${encodeURIComponent(pItem.TenTinh)}&district_no=${dCode}&district_name=${encodeURIComponent(dItem.TenHuyen)}`, { headers: getAuthHeader() });
+      return await res.json();
+    },
+    onSearch: (state) => {
+      nsoState.currentData = state.currentData;
+      renderNSOTable(state.currentData);
     }
-    const district = nsoState.districts[dInput.value];
-    if (!district) return;
-
-    nsoState.currentLevel = 'ward';
-    const province = nsoState.provinces[pInput.value];
-    loadNSOWards(province.MaTinh, province.TenTinh, district.MaHuyen, district.TenHuyen);
-    wInput.value = '';
   });
 
-  wInput.addEventListener('input', () => {
-    if (wInput.value === '') {
-      const district = nsoState.districts[dInput.value];
-      if (district) {
-        const province = nsoState.provinces[pInput.value];
-        loadNSOWards(province.MaTinh, province.TenTinh, district.MaHuyen, district.TenHuyen);
-      }
-      return;
-    }
-    renderNSOTable(nsoState.currentData);
-  });
-
-  btnSyncSelected?.addEventListener('click', syncSelectedUnit);
-  btnSyncAll?.addEventListener('click', syncAllNSO);
-  btnClearLogs?.addEventListener('click', clearSyncLogs);
-
-  // Start log polling
-  //startLogPolling();
+  document.getElementById('btn-nso-sync-selected')?.addEventListener('click', syncSelectedUnit);
+  document.getElementById('btn-nso-sync-all')?.addEventListener('click', syncAllNSO);
+  document.getElementById('btn-clear-nso-logs')?.addEventListener('click', clearSyncLogs);
 }
 
 async function loadNSOProvinces() {
@@ -2340,129 +2243,66 @@ let adminState = {
 };
 
 async function initAdminManager() {
-  const pInput = document.getElementById('admin-province-input');
-  const dInput = document.getElementById('admin-district-input');
-  const wInput = document.getElementById('admin-ward-input');
-  const searchInput = document.getElementById('admin-search-input');
-  const btnRefresh = document.getElementById('btn-admin-refresh');
-  const btnAddNew = document.getElementById('btn-admin-add-new');
-  const unitForm = document.getElementById('admin-unit-form');
-  const modal = document.getElementById('modal-admin-unit');
-  const vRadios = document.getElementsByName('admin-crud-version');
+  VNAIControls.renderSmartFilter('admin-filter-container', {
+    prefix: 'admin',
+    title: 'Lọc danh mục Master Database',
+    searchPlaceholder: 'Tìm nhanh mã hoặc tên đơn vị...'
+  });
 
-  if (!pInput) return;
-
-  const loadProvinces = async () => {
-    try {
+  adminState = await VNAIControls.initSmartFilter('admin', {
+    fetchProvinces: async () => {
       const res = await fetch(`${API_BASE}/provinces?limit=100`, { headers: getAuthHeader() });
-      const data = await res.json();
-      renderLookupTemplateDatalist('admin-list-provinces', data, 'province_name', 'province_id', adminState.provinces);
-    } catch (e) { console.error(e); }
-  };
-
-  pInput.addEventListener('input', async () => {
-    if (pInput.value === '') {
-      dInput.value = ''; wInput.value = '';
-      adminState.districts = {}; adminState.wards = {};
-      const listD = document.getElementById('admin-list-districts');
-      if (listD) listD.innerHTML = '';
-      const listW = document.getElementById('admin-list-wards');
-      if (listW) listW.innerHTML = '';
-      loadAdminData();
-      return;
-    }
-    const id = adminState.provinces[pInput.value];
-    if (!id) return;
-
-    loadAdminData();
-
-    dInput.value = ''; wInput.value = '';
-    adminState.districts = {}; adminState.wards = {};
-    try {
-      const res = await fetch(`${API_BASE}/districts?province_id=${id}&limit=500`, { headers: getAuthHeader() });
-      const data = await res.json();
-      renderLookupTemplateDatalist('admin-list-districts', data, 'district_name', 'district_id', adminState.districts);
-    } catch (e) { console.error(e); }
+      return await res.json();
+    },
+    fetchDistricts: async (pId) => {
+      const res = await fetch(`${API_BASE}/districts?province_id=${pId}&limit=500`, { headers: getAuthHeader() });
+      return await res.json();
+    },
+    fetchWards: async (dId) => {
+      const res = await fetch(`${API_BASE}/wards?district_id=${dId}&limit=500`, { headers: getAuthHeader() });
+      return await res.json();
+    },
+    onSearch: (state) => loadAdminData(state)
   });
 
-  dInput.addEventListener('input', async () => {
-    if (dInput.value === '') {
-      wInput.value = '';
-      adminState.wards = {};
-      const listW = document.getElementById('admin-list-wards');
-      if (listW) listW.innerHTML = '';
-      loadAdminData();
-      return;
-    }
-    const id = adminState.districts[dInput.value];
-    if (!id) return;
-
-    loadAdminData();
-
-    wInput.value = '';
-    adminState.wards = {};
-    try {
-      const res = await fetch(`${API_BASE}/wards?district_id=${id}&limit=500`, { headers: getAuthHeader() });
-      const data = await res.json();
-      renderLookupTemplateDatalist('admin-list-wards', data, 'ward_name', 'ward_id', adminState.wards);
-    } catch (e) { console.error(e); }
-  });
-
-  btnRefresh.addEventListener('click', () => loadAdminData());
-  if (searchInput) {
-    searchInput.addEventListener('input', () => {
-      // Debounce search
-      clearTimeout(searchInput._timer);
-      searchInput._timer = setTimeout(() => loadAdminData(), 300);
-    });
-  }
-
-  document.getElementById('btn-clear-admin-province')?.addEventListener('click', () => {
-    pInput.value = '';
-    pInput.dispatchEvent(new Event('input'));
-  });
-  document.getElementById('btn-clear-admin-district')?.addEventListener('click', () => {
-    dInput.value = '';
-    dInput.dispatchEvent(new Event('input'));
-  });
-
-  // Modal actions
-  btnAddNew.addEventListener('click', () => {
+  document.getElementById('btn-admin-add-new')?.addEventListener('click', () => {
     const level = getAdminCurrentLevel();
     document.getElementById('admin-modal-title').textContent = `Thêm ${level === 'province' ? 'Tỉnh/Thành' : level === 'district' ? 'Quận/Huyện' : 'Phường/Xã'} mới`;
     document.getElementById('admin-form-id').value = '';
-    unitForm.reset();
+    document.getElementById('admin-unit-form').reset();
     renderExtraFields();
-    modal.classList.add('active');
+    document.getElementById('modal-admin-unit').classList.add('active');
   });
 
-  unitForm.addEventListener('submit', async (e) => {
+  document.getElementById('admin-unit-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     await saveAdminUnit();
   });
 
-  // Initial load
-  loadProvinces();
   loadAdminData();
 }
 
-function getAdminCurrentLevel() {
+function getAdminCurrentLevel(state) {
+  const activeState = state || adminState;
   const pInput = document.getElementById('admin-province-input');
   const dInput = document.getElementById('admin-district-input');
 
-  if (dInput && dInput.value && adminState.districts[dInput.value]) return 'ward';
-  if (pInput && pInput.value && adminState.provinces[pInput.value]) return 'district';
+  if (dInput && dInput.value && activeState.districts[dInput.value]) return 'ward';
+  if (pInput && pInput.value && activeState.provinces[pInput.value]) return 'district';
   return 'province';
 }
 
-async function loadAdminData() {
-  const level = getAdminCurrentLevel();
+async function loadAdminData(state) {
+  const activeState = state || adminState;
+  if (!activeState.provinces) return;
+
+  const level = getAdminCurrentLevel(activeState);
 
   const pInput = document.getElementById('admin-province-input');
   const dInput = document.getElementById('admin-district-input');
 
-  const provinceId = pInput && pInput.value ? adminState.provinces[pInput.value] : null;
-  const districtId = dInput && dInput.value ? adminState.districts[dInput.value] : null;
+  const provinceId = pInput && pInput.value ? activeState.provinces[pInput.value] : null;
+  const districtId = dInput && dInput.value ? activeState.districts[dInput.value] : null;
 
   const searchInput = document.getElementById('admin-search-input');
   const q = searchInput ? searchInput.value.toLowerCase() : '';
@@ -2538,29 +2378,43 @@ async function loadAdminData() {
 // ═══════════════════════════════════════════════════════════
 // DATA EXPLORER
 // ═══════════════════════════════════════════════════════════
-function initDataExplorer() {
-  const btnRefresh = document.getElementById("btn-explorer-refresh");
-  const searchInput = document.getElementById("explorer-search");
-  const tbody = document.getElementById("explorer-body");
+let explorerState = {
+  provinces: {},
+  districts: {},
+  wards: {}
+};
+async function initDataExplorer() {
+  VNAIControls.renderSmartFilter('explorer-filter-container', {
+    prefix: 'explorer',
+    title: 'Truy vấn hàng đợi xử lý địa chỉ',
+    showVersion: false,
+    searchPlaceholder: 'Tìm kiếm địa chỉ, tỉnh thành, trạng thái...',
+    buttonText: 'Truy vấn'
+  });
 
-  if (!btnRefresh || !tbody) return;
+  const loadData = async (state) => {
+    const activeState = state || explorerState;
+    const tbody = document.getElementById("explorer-body");
+    const sBtn = document.getElementById("explorer-btn-search");
+    if (!tbody || !activeState.provinces) return;
 
-  const loadData = async () => {
-    btnRefresh.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
-    btnRefresh.disabled = true;
+    if (sBtn) sBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
     try {
-      const q = searchInput ? searchInput.value.trim() : "";
-      const res = await fetch(`${API_BASE}/explorer/queue?limit=100&q=${encodeURIComponent(q)}`, {
-        headers: getAuthHeader()
-      });
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.detail || `HTTP ${res.status}`);
-      }
+      const q = document.getElementById("explorer-search-input")?.value.trim() || "";
+      const pId = activeState.provinces[document.getElementById('explorer-province-input')?.value] || "";
+      const dId = activeState.districts[document.getElementById('explorer-district-input')?.value] || "";
+      const wId = activeState.wards[document.getElementById('explorer-ward-input')?.value] || "";
+
+      let url = `${API_BASE}/explorer/queue?limit=100&q=${encodeURIComponent(q)}`;
+      if (wId) url += `&ward_id=${wId}`;
+      else if (dId) url += `&district_id=${dId}`;
+      else if (pId) url += `&province_id=${pId}`;
+
+      const res = await fetch(url, { headers: getAuthHeader() });
       const data = await res.json();
 
       if (data.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-tertiary);">Không có dữ liệu trong prq.address_cleansing_queue</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-tertiary);">Không có dữ liệu phù hợp</td></tr>`;
       } else {
         tbody.innerHTML = data.map(item => {
           let statusBadge = "info";
@@ -2580,24 +2434,17 @@ function initDataExplorer() {
       }
     } catch (err) {
       console.error(err);
-      tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--danger);"><i class="fa-solid fa-triangle-exclamation mr-8"></i>Lỗi tải dữ liệu: ${err.message}</td></tr>`;
-      if (typeof showToast === 'function') showToast(`Data Explorer: ${err.message}`, "danger");
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--danger);">Lỗi tải dữ liệu</td></tr>`;
     } finally {
-      btnRefresh.innerHTML = '<i class="fa-solid fa-arrow-rotate-right"></i>';
-      btnRefresh.disabled = false;
+      if (sBtn) sBtn.innerHTML = 'Truy vấn';
       adjustActivePageHeight();
     }
   };
 
-  btnRefresh.addEventListener("click", loadData);
+  explorerState = await VNAIControls.initSmartFilter('explorer', {
+    onSearch: loadData
+  });
 
-  if (searchInput) {
-    searchInput.addEventListener("keypress", (e) => {
-      if (e.key === "Enter") loadData();
-    });
-  }
-
-  // Initial load
   loadData();
 }
 
