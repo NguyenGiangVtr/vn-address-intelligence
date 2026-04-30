@@ -1,81 +1,134 @@
 <!-- ══════ PAGE: ADDRESS PARSER ══════ -->
 <div class="page" id="parser">
-    <div class="page-header">
-        <h2>Address Parser</h2>
-        <p>Phân tích NER và Chuẩn hóa địa chỉ sử dụng mô hình Hybrid AI</p>
-    </div>
 
-    <div class="tool-panel parser-tool-panel">
-        <div class="tool-input-section">
-            <div class="tool-section-title">Address Input</div>
-            <div class="flex gap-12 items-center mb-16">
-                <input type="text" id="parser-input" class="form-input flex-1"
-                    placeholder="Ví dụ: 123 Đường Lê Lợi, Phường Bến Thành, Quận 1, TP. Hồ Chí Minh"
-                    value="123 Lê Lợi, Bến Thành, Quận 1, HCM">
-                <button class="btn btn-primary" id="btn-parse" type="button">
-                    <i class="fa-solid fa-wand-magic-sparkles"></i> Phân tích
-                </button>
+    <!-- ── Hero Input Zone ── -->
+    <div class="parser-hero">
+        <div class="parser-hero-inner">
+            <div class="parser-hero-label">
+                <span class="parser-hero-dot"></span>
+                NER · Vietnamese Address Intelligence
             </div>
-            <div class="flex gap-12">
-                <button class="btn btn-ghost btn-sm" id="btn-parse-sample-local" type="button">
-                    <i class="fa-solid fa-lightbulb"></i> Mẫu ngẫu nhiên
-                </button>
-                <button class="btn btn-ghost btn-sm" id="btn-parse-sample-db" type="button">
-                    <i class="fa-solid fa-database"></i> Mẫu Database
-                </button>
-                <div class="flex-1"></div>
-                <div id="parser-status" class="badge-outline" style="border:none">Ready</div>
-            </div>
-        </div>
-
-        <div class="tool-output-section flex flex-column">
-            <div class="tool-section-title">AI NER Output</div>
-            <div id="parser-output" class="ner-output mb-16 flex-1">
-                Chưa có dữ liệu phân tích...
-            </div>
-
-            <div class="tool-section-title">Confidence & Performance</div>
-            <div id="parser-meta" class="parser-meta-container">
-                <span class="text-tertiary" style="font-size: 12px;">Vui lòng nhập địa chỉ để bắt đầu quá trình suy luận AI.</span>
-            </div>
-        </div>
-    </div>
-
-    <div class="content-grid sidebar-layout mt-24">
-        <div class="card" style="flex: 2">
-            <div class="card-header">
-                <span class="card-title">Model Comparison Matrix</span>
-            </div>
-            <div class="card-body with-scroll" id="parser-comparison-matrix">
-                <div class="empty-state" style="padding: 40px; text-align: center; color: var(--text-tertiary);">
-                    <i class="fa-solid fa-table-list" style="font-size: 32px; margin-bottom: 12px; display: block;"></i>
-                    Bảng so sánh kết quả giữa các phương pháp tiếp cận (Heuristic vs LLM)
+            <div class="parser-input-wrap">
+                <i class="fa-solid fa-location-dot parser-input-icon"></i>
+                <input type="text" id="parser-input" class="parser-input-field"
+                    placeholder="Nhập địa chỉ Việt Nam cần phân tích..."
+                    value="123 Lê Lợi, Bến Thành, Quận 1, HCM"
+                    autocomplete="off" spellcheck="false">
+                <div class="parser-input-actions">
+                    <button class="parser-btn-sample" id="btn-parse-sample-local" type="button" title="Mẫu ngẫu nhiên">
+                        <i class="fa-solid fa-shuffle"></i>
+                    </button>
+                    <button class="parser-btn-sample" id="btn-parse-sample-db" type="button" title="Mẫu từ Database">
+                        <i class="fa-solid fa-database"></i>
+                    </button>
+                    <button class="parser-btn-run" id="btn-parse" type="button">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i>
+                        <span>Phân tích</span>
+                    </button>
                 </div>
             </div>
-        </div>
-        <div class="card" style="flex: 1">
-            <div class="card-header">
-                <span class="card-title">Entity Labels</span>
-            </div>
-            <div class="card-body">
-                <div class="table-container">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Label</th>
-                                <th>Description</th>
-                                <th>Hotkey</th>
-                            </tr>
-                        </thead>
-                        <tbody id="label-registry-body-mini">
-                            <!-- Small version of registry -->
-                        </tbody>
-                    </table>
-                </div>
-                <div class="mt-16 text-center">
-                    <button class="btn btn-ghost btn-sm" data-goto="label-registry">Xem chi tiết Registry</button>
+            <div class="parser-status-bar">
+                <div id="parser-status-dot" class="pstatus-dot idle"></div>
+                <span id="parser-status" class="pstatus-text">Sẵn sàng — nhấn Phân tích hoặc Enter</span>
+                <div class="parser-timing" id="parser-timing" style="display:none">
+                    <i class="fa-solid fa-stopwatch"></i>
+                    <span id="parser-timing-val">0ms</span>
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- ── NER Highlight Output ── -->
+    <div class="parser-ner-zone" id="parser-ner-zone">
+        <div class="parser-ner-header">
+            <span class="parser-section-label"><i class="fa-solid fa-tags"></i> NER Tokens</span>
+            <div class="parser-ner-legend" id="parser-ner-legend"></div>
+        </div>
+        <div id="parser-output" class="parser-ner-output">
+            <span class="parser-placeholder">Kết quả NER sẽ hiển thị ở đây sau khi phân tích...</span>
+        </div>
+    </div>
+
+    <!-- ── 4 Model Cards Grid ── -->
+    <div class="parser-models-grid" id="parser-models-grid">
+        <div class="pmodel-card" id="pcard-prelabeler" data-model="prelabeler">
+            <div class="pmodel-header">
+                <div class="pmodel-icon" style="--mc:#fbbf24"><i class="fa-solid fa-bolt"></i></div>
+                <div class="pmodel-title">
+                    <div class="pmodel-name">PreLabeler</div>
+                    <div class="pmodel-sub">Rule-Based Hybrid</div>
+                </div>
+                <div class="pmodel-badge" id="pbadge-prelabeler"><span class="pmodel-spinner"></span></div>
+            </div>
+            <div class="pmodel-body">
+                <div class="pmodel-result" id="presult-prelabeler">
+                    <div class="pmodel-shimmer"></div>
+                </div>
+                <div class="pmodel-stats" id="pstats-prelabeler"></div>
+            </div>
+        </div>
+
+        <div class="pmodel-card" id="pcard-phobert" data-model="phobert">
+            <div class="pmodel-header">
+                <div class="pmodel-icon" style="--mc:#818cf8"><i class="fa-solid fa-brain"></i></div>
+                <div class="pmodel-title">
+                    <div class="pmodel-name">PhoBERT Siamese</div>
+                    <div class="pmodel-sub">Transformer NER</div>
+                </div>
+                <div class="pmodel-badge" id="pbadge-phobert"><span class="pmodel-spinner"></span></div>
+            </div>
+            <div class="pmodel-body">
+                <div class="pmodel-result" id="presult-phobert">
+                    <div class="pmodel-shimmer"></div>
+                </div>
+                <div class="pmodel-stats" id="pstats-phobert"></div>
+            </div>
+        </div>
+
+        <div class="pmodel-card" id="pcard-mgte" data-model="mgte">
+            <div class="pmodel-header">
+                <div class="pmodel-icon" style="--mc:#34d399"><i class="fa-solid fa-vector-square"></i></div>
+                <div class="pmodel-title">
+                    <div class="pmodel-name">mGTE Siamese</div>
+                    <div class="pmodel-sub">Multilingual Embedding</div>
+                </div>
+                <div class="pmodel-badge" id="pbadge-mgte"><span class="pmodel-spinner"></span></div>
+            </div>
+            <div class="pmodel-body">
+                <div class="pmodel-result" id="presult-mgte">
+                    <div class="pmodel-shimmer"></div>
+                </div>
+                <div class="pmodel-stats" id="pstats-mgte"></div>
+            </div>
+        </div>
+
+        <div class="pmodel-card" id="pcard-llm" data-model="llm">
+            <div class="pmodel-header">
+                <div class="pmodel-icon" style="--mc:#f472b6"><i class="fa-solid fa-sparkles"></i></div>
+                <div class="pmodel-title">
+                    <div class="pmodel-name">Qwen 2.5 LLM</div>
+                    <div class="pmodel-sub">Large Language Model</div>
+                </div>
+                <div class="pmodel-badge" id="pbadge-llm"><span class="pmodel-spinner"></span></div>
+            </div>
+            <div class="pmodel-body">
+                <div class="pmodel-result" id="presult-llm">
+                    <div class="pmodel-shimmer"></div>
+                </div>
+                <div class="pmodel-stats" id="pstats-llm"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Meta + Legend Row ── -->
+    <div class="parser-footer-row">
+        <div class="parser-meta-card" id="parser-meta">
+            <i class="fa-solid fa-circle-info" style="color:var(--text-tertiary); font-size:12px"></i>
+            <span class="text-tertiary" style="font-size:12px">Vui lòng nhập địa chỉ để bắt đầu suy luận AI.</span>
+        </div>
+        <button class="btn btn-ghost btn-sm" data-goto="label-registry" style="flex-shrink:0">
+            <i class="fa-solid fa-tags"></i> Entity Registry
+        </button>
+    </div>
+
 </div>
