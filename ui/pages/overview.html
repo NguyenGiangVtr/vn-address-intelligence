@@ -1,5 +1,124 @@
 <!-- ══════ PAGE: OVERVIEW ══════ -->
 <div class="page active" id="overview">
+    <style>
+        /* Premium Responsive refinements for Dashboard */
+        #overview .stats-grid {
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+        }
+
+        #overview .workflow-diagram.horizontal {
+            display: flex;
+            flex-wrap: nowrap;
+            justify-content: space-between;
+            gap: 8px;
+            padding: 8px 0;
+            overflow: hidden; /* Ensure no overflow/scroll */
+        }
+
+        #overview .workflow-step {
+            flex: 1;
+            min-width: 0; /* Allow shrinking */
+            padding: 12px 8px;
+            flex-direction: column;
+            text-align: center;
+        }
+
+        #overview .workflow-step h4 {
+            font-size: 11px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        #overview .workflow-step .step-icon {
+            width: 32px;
+            height: 32px;
+            font-size: 14px;
+            margin: 0 auto 8px;
+        }
+
+        #overview .workflow-arrow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: var(--text-tertiary);
+            opacity: 0.5;
+        }
+
+        #overview .chart-container {
+            width: 100%;
+            aspect-ratio: 21 / 9;
+            min-height: 200px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        @media (max-width: 1400px) {
+            #overview .chart-container {
+                aspect-ratio: 16 / 9;
+            }
+        }
+
+        @media (max-width: 1200px) {
+            #overview .content-grid.sidebar-layout {
+                grid-template-columns: 1fr;
+            }
+            #overview .workflow-diagram.horizontal {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+            #overview .workflow-step {
+                flex: 0 0 calc(33.33% - 16px);
+                max-width: 180px;
+            }
+            #overview .workflow-arrow {
+                display: none; /* Hide arrows when wrapping */
+            }
+        }
+
+        @media (max-width: 768px) {
+            #overview .stats-grid {
+                grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            }
+
+            #overview .workflow-step {
+                flex: 0 0 calc(50% - 16px);
+            }
+
+            #overview .chart-container {
+                aspect-ratio: 4 / 3;
+            }
+        }
+
+        @media (max-width: 480px) {
+            #overview .stats-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 10px;
+            }
+            #overview .page-header {
+                flex-direction: column;
+                align-items: flex-start !important;
+                gap: 12px;
+            }
+            #overview .workflow-step {
+                flex: 1 1 100%;
+                max-width: 100%;
+                flex-direction: row;
+                text-align: left;
+                padding: 10px 16px;
+                gap: 12px;
+            }
+            #overview .workflow-step .step-icon {
+                margin: 0;
+            }
+            #overview .workflow-step h4 {
+                font-size: 13px;
+            }
+        }
+    </style>
+
     <div class="page-header flex items-center" style="justify-content: space-between; margin-bottom: 16px;">
         <div>
             <h2 style="margin-bottom: 4px;">Dashboard</h2>
@@ -13,8 +132,7 @@
         </div>
     </div>
 
-    <div class="stats-grid"
-        style="grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 16px;">
+    <div class="stats-grid" style="margin-bottom: 16px;">
         <div class="stat-card" style="padding: 12px;">
             <div class="stat-label" style="font-size: 11px;">Total Visits</div>
             <div class="stat-value" id="stat-total-visits" style="font-size: 20px;">0</div>
@@ -105,8 +223,9 @@
                 <span class="card-title">Tiến độ xử lý theo Schema</span>
             </div>
             <div class="card-body" style="display: flex; flex-direction: column; padding: 12px 18px;">
-                <div class="chart-container" style="flex: 1; min-height: 150px; height: auto;"><canvas
-                        id="chart-overview"></canvas></div>
+                <div class="chart-container">
+                    <canvas id="chart-overview"></canvas>
+                </div>
             </div>
         </div>
         <div class="card">
@@ -114,7 +233,7 @@
                 <span class="card-title">Hoạt động gần đây</span>
             </div>
             <div class="card-body" style="padding-right: 4px; padding-top: 4px;">
-                <ul class="activity-list" id="activity-feed" style="overflow-y: auto; max-height: 500px;">
+                <ul class="activity-list" id="activity-feed" style="overflow-y: hidden; max-height: 500px;">
                     <li class="activity-item">
                         <div class="activity-dot"></div>
                         <div>

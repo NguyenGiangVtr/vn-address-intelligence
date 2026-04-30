@@ -618,7 +618,7 @@ function initModelBenchmarkUI() {
 }
 
 function populateTrainingHistory() {
-  const tbody = document.getElementById("training-history-table");
+  const tbody = document.getElementById("training-history-body");
   if (!tbody) return;
 
   tbody.innerHTML = trainingHistoryRows.map((item) => `
@@ -1587,6 +1587,12 @@ async function fetchStats(options = {}) {
 // ═══════════════════════════════════════════════════════════
 function initTrainingHub() {
   const btnImport = document.getElementById('btn-import-ls');
+  const btnRefresh = document.getElementById('btn-training-refresh');
+
+  if (btnRefresh) {
+    btnRefresh.addEventListener('click', () => loadTrainingHistoryFromDB());
+  }
+
   if (!btnImport) return;
 
   btnImport.addEventListener('click', async () => {
@@ -2632,3 +2638,4 @@ async function deleteAdminUnit(level, id, name) {
 window.showDetails = showDetails;
 window.editAdminUnit = editAdminUnit;
 window.deleteAdminUnit = deleteAdminUnit;
+window.loadTrainingHistoryFromDB = loadTrainingHistoryFromDB;
