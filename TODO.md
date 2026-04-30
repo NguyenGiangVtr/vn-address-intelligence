@@ -1,8 +1,7 @@
-# TODO - Batch Processor UI Theme Refactor
+# TODO - Label Studio Theme Fix
 
-- [x] Analyze Batch Processor page structure and current theme usage
-- [x] Create implementation plan and get user approval
-- [x] Refactor `ui/pages/batch.html` to remove inline custom styling and use theme structure/classes
-- [x] Add/adjust reusable theme classes in `ui/style.css` for Batch layout, progress, and stat compact variants
-- [x] Add standardized `.btn-danger` theme variant using design tokens
-- [x] Review responsive behavior and consistency with existing design system
+- [x] Analyze Label Studio page and identify theme/color inconsistencies
+- [x] Propose fix plan and get user approval
+- [x] Refactor `ui/pages/label-studio.html` to remove inline styles and use theme classes
+- [x] Update `ui/style.css` to remove wrong Label Studio overrides and add theme-safe utility/classes
+- [x] Validate final consistency for Label Studio dark theme styling

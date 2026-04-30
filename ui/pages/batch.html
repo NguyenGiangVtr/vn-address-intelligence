@@ -1,75 +1,77 @@
 <!-- ══════ PAGE: BATCH PROCESSOR ══════ -->
-<div class="page" id="batch">
+<div class="page full-height-page" id="batch">
     <div class="page-header">
         <h2>Batch Processor</h2>
         <p>Xử lý chuẩn hóa địa chỉ hàng loạt từ Queue (prq.address_cleansing_queue)</p>
     </div>
 
-    <div class="content-grid batch-layout">
-        <div class="card">
-            <div class="card-header">
-                <span class="card-title">Cấu hình Batch</span>
+    <div class="dm-page-shell batch-page-shell">
+        <div class="content-grid batch-layout batch-layout-top">
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">Cấu hình Batch</span>
+                </div>
+                <div class="card-body">
+                    <div class="form-group">
+                        <label class="form-label">Kích thước Batch</label>
+                        <input type="text" class="form-input" id="batch-size" value="1,000">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Phương thức xử lý</label>
+                        <select class="form-input" id="batch-method">
+                            <option value="hybrid">Hybrid (Fastest)</option>
+                            <option value="ner-only">NER only</option>
+                            <option value="full-chain">Full Normalization Chain</option>
+                        </select>
+                    </div>
+                    <div class="batch-actions">
+                        <button class="btn btn-primary flex-1" id="btn-batch-start">
+                            <i class="fa-solid fa-play"></i> Bắt đầu
+                        </button>
+                        <button class="btn btn-danger" id="btn-batch-stop">
+                            <i class="fa-solid fa-stop"></i> Dừng
+                        </button>
+                    </div>
+                </div>
             </div>
-            <div class="card-body">
-                <div class="form-group">
-                    <label class="form-label">Kích thước Batch</label>
-                    <input type="text" class="form-input" id="batch-size" value="1,000">
+
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">Trạng thái thời gian thực</span>
                 </div>
-                <div class="form-group">
-                    <label class="form-label">Phương thức xử lý</label>
-                    <select class="form-input" id="batch-method">
-                        <option value="hybrid">Hybrid (Fastest)</option>
-                        <option value="ner-only">NER only</option>
-                        <option value="full-chain">Full Normalization Chain</option>
-                    </select>
-                </div>
-                <div class="batch-actions">
-                    <button class="btn btn-primary flex-1" id="btn-batch-start">
-                        <i class="fa-solid fa-play"></i> Bắt đầu
-                    </button>
-                    <button class="btn btn-danger" id="btn-batch-stop">
-                        <i class="fa-solid fa-stop"></i> Dừng
-                    </button>
+                <div class="card-body">
+                    <div class="stats-grid batch-stats-grid">
+                        <div class="stat-card batch-stat-card">
+                            <div class="stat-label">Processed</div>
+                            <div class="stat-value batch-stat-value" id="batch-done">0</div>
+                        </div>
+                        <div class="stat-card batch-stat-card">
+                            <div class="stat-label">Throughput</div>
+                            <div class="stat-value batch-stat-value text-success" id="batch-throughput">0</div>
+                        </div>
+                    </div>
+                    <div class="batch-progress">
+                        <div class="batch-progress-header">
+                            <span class="batch-progress-label">Progress</span>
+                            <span class="batch-progress-value">45%</span>
+                        </div>
+                        <div class="progress-track">
+                            <div class="progress-fill" style="width: 45%;"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="card">
+        <div class="card batch-console-card">
             <div class="card-header">
-                <span class="card-title">Trạng thái thời gian thực</span>
+                <span class="card-title">Console Output</span>
             </div>
-            <div class="card-body">
-                <div class="stats-grid batch-stats-grid">
-                    <div class="stat-card batch-stat-card">
-                        <div class="stat-label">Processed</div>
-                        <div class="stat-value batch-stat-value" id="batch-done">0</div>
-                    </div>
-                    <div class="stat-card batch-stat-card">
-                        <div class="stat-label">Throughput</div>
-                        <div class="stat-value batch-stat-value text-success" id="batch-throughput">0</div>
-                    </div>
+            <div class="card-body batch-console-body">
+                <div class="batch-log" id="batch-log">
+                    [SYSTEM] Ready to process batch...
+                    [SYSTEM] Awaiting user trigger.
                 </div>
-                <div class="batch-progress">
-                    <div class="batch-progress-header">
-                        <span class="batch-progress-label">Progress</span>
-                        <span class="batch-progress-value">45%</span>
-                    </div>
-                    <div class="progress-track">
-                        <div class="progress-fill" style="width: 45%;"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="card mt-24">
-        <div class="card-header">
-            <span class="card-title">Console Output</span>
-        </div>
-        <div class="card-body">
-            <div class="batch-log" id="batch-log">
-                [SYSTEM] Ready to process batch...
-                [SYSTEM] Awaiting user trigger.
             </div>
         </div>
     </div>
