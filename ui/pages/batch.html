@@ -5,25 +5,25 @@
         <p>Xử lý chuẩn hóa địa chỉ hàng loạt từ Queue (prq.address_cleansing_queue)</p>
     </div>
 
-    <div class="content-grid sidebar-layout">
+    <div class="content-grid batch-layout">
         <div class="card">
             <div class="card-header">
                 <span class="card-title">Cấu hình Batch</span>
             </div>
             <div class="card-body">
                 <div class="form-group">
-                    <label>Kích thước Batch</label>
+                    <label class="form-label">Kích thước Batch</label>
                     <input type="text" class="form-input" id="batch-size" value="1,000">
                 </div>
                 <div class="form-group">
-                    <label>Phương thức xử lý</label>
+                    <label class="form-label">Phương thức xử lý</label>
                     <select class="form-input" id="batch-method">
                         <option value="hybrid">Hybrid (Fastest)</option>
                         <option value="ner-only">NER only</option>
                         <option value="full-chain">Full Normalization Chain</option>
                     </select>
                 </div>
-                <div class="flex gap-12 mt-24">
+                <div class="batch-actions">
                     <button class="btn btn-primary flex-1" id="btn-batch-start">
                         <i class="fa-solid fa-play"></i> Bắt đầu
                     </button>
@@ -39,24 +39,23 @@
                 <span class="card-title">Trạng thái thời gian thực</span>
             </div>
             <div class="card-body">
-                <div class="stats-grid" style="grid-template-columns: 1fr 1fr;">
-                    <div class="stat-card" style="padding: 12px; background: var(--bg-app);">
+                <div class="stats-grid batch-stats-grid">
+                    <div class="stat-card batch-stat-card">
                         <div class="stat-label">Processed</div>
-                        <div class="stat-value" id="batch-done" style="font-size: 20px;">0</div>
+                        <div class="stat-value batch-stat-value" id="batch-done">0</div>
                     </div>
-                    <div class="stat-card" style="padding: 12px; background: var(--bg-app);">
+                    <div class="stat-card batch-stat-card">
                         <div class="stat-label">Throughput</div>
-                        <div class="stat-value" id="batch-throughput" style="font-size: 20px; color: var(--success);">0</div>
+                        <div class="stat-value batch-stat-value text-success" id="batch-throughput">0</div>
                     </div>
                 </div>
-                <div class="mt-16">
-                    <div class="flex justify-between mb-4">
-                        <span class="text-xs text-tertiary">Progress</span>
-                        <span class="text-xs font-bold">45%</span>
+                <div class="batch-progress">
+                    <div class="batch-progress-header">
+                        <span class="batch-progress-label">Progress</span>
+                        <span class="batch-progress-value">45%</span>
                     </div>
-                    <div
-                        style="height: 6px; background: var(--bg-elevated); border-radius: 3px; overflow: hidden;">
-                        <div style="height: 100%; width: 45%; background: var(--accent);"></div>
+                    <div class="progress-track">
+                        <div class="progress-fill" style="width: 45%;"></div>
                     </div>
                 </div>
             </div>

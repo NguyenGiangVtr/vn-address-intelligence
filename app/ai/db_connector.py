@@ -407,5 +407,3 @@ class DBConnector:
             saved, total, failed,
         )
         return saved
-       )
-        return saved

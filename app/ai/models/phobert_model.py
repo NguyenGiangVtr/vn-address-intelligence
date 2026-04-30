@@ -121,4 +121,3 @@ class PhoBERTSiamese:
     def normalize_batch(self, queries: List[str]) -> List[Tuple[str, float, float]]:
         """Chuẩn hóa nhiều địa chỉ, trả về list (address, score, latency_ms)."""
         return [self.normalize(q) for q in queries]
-eries]

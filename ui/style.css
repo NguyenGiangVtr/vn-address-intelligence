@@ -642,6 +642,17 @@ tbody tr:hover td { color: var(--text-primary); }
   box-shadow: var(--shadow-glow);
 }
 
+.btn-danger {
+  background: rgba(248,113,113,0.12);
+  border-color: rgba(248,113,113,0.4);
+  color: var(--danger);
+}
+.btn-danger:hover {
+  background: rgba(248,113,113,0.2);
+  border-color: var(--danger);
+  color: #fff;
+}
+
 .btn-sm {
   padding: 4px 10px;
   font-size: 12px;
@@ -773,6 +784,74 @@ select.form-input {
   white-space: pre-wrap;
   word-break: break-all;
   min-height: 100px;
+}
+
+/* Batch Processor Theme Layout */
+.batch-layout {
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  align-items: stretch;
+}
+
+.batch-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.batch-stats-grid {
+  grid-template-columns: 1fr 1fr;
+  margin-bottom: 0;
+}
+
+.batch-stat-card {
+  background: var(--bg-app);
+  padding: 12px;
+}
+
+.batch-stat-value {
+  font-size: 20px;
+}
+
+.text-success {
+  color: var(--success);
+}
+
+.batch-progress {
+  margin-top: 16px;
+}
+
+.batch-progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.batch-progress-label {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.batch-progress-value {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.progress-track {
+  height: 6px;
+  background: var(--bg-elevated);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width var(--transition);
 }
 
 .batch-log::-webkit-scrollbar {
@@ -976,7 +1055,7 @@ select.form-input {
 }
 
 @media (max-width: 1024px) {
-  .content-grid, .content-grid.sidebar-layout, .content-grid.triple { 
+  .content-grid, .content-grid.sidebar-layout, .content-grid.triple, .batch-layout { 
     grid-template-columns: 1fr; 
   }
   .tool-panel { grid-template-columns: 1fr; }

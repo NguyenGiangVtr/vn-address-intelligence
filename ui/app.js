@@ -199,27 +199,28 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // Load all pages first
   await loadPages();
+  console.log("[VNAI] Pages loaded.");
 
-  setupNavigation();
-  applyUnifiedControlTemplate();
-  populateLabelRegistry();
-  setupParserTool();
-  setupBatchTool();
-  initDashboardRefreshControls();
+  const safeInit = (name, fn) => { try { fn(); } catch(e) { console.error(`[VNAI] Init error in ${name}:`, e); } };
+
+  safeInit("setupNavigation", setupNavigation);
+  safeInit("applyUnifiedControlTemplate", applyUnifiedControlTemplate);
+  safeInit("populateLabelRegistry", populateLabelRegistry);
+  safeInit("setupParserTool", setupParserTool);
+  safeInit("setupBatchTool", setupBatchTool);
+  safeInit("initDashboardRefreshControls", initDashboardRefreshControls);
+  safeInit("initOSMEnrichmentUI", initOSMEnrichmentUI);
+  safeInit("initNSOSyncTool", initNSOSyncTool);
+  safeInit("initAdminManager", initAdminManager);
+  safeInit("setupNumberInputFormatting", setupNumberInputFormatting);
+  safeInit("initDataExplorer", initDataExplorer);
+  safeInit("initLabelStudioIntegration", initLabelStudioIntegration);
+  safeInit("initMappingV3", initMappingV3);
+  safeInit("initIntelligenceChart", initIntelligenceChart);
+  safeInit("initModelBenchmarkUI", initModelBenchmarkUI);
+
   fetchStats();
-  initOSMEnrichmentUI();
-  initNSOSyncTool();
-  initAdminManager();
-  setupNumberInputFormatting();
-  initDataExplorer();
-  initLabelStudioIntegration();
-  initMappingV3();
-
-  // Refresh stats every 30 seconds
   setInterval(fetchStats, 30000);
-  // Initialize Training Chart if on training page
-  initIntelligenceChart();
-  initModelBenchmarkUI();
   loadTrainingHistoryFromDB({ silent: true });
 });
 
@@ -1087,16 +1088,20 @@ function setupParserTool() {
   const btnSampleDB = document.getElementById("btn-parse-sample-db");
   const inputEl = document.getElementById("parser-input");
 
-  if (btnParse) btnParse.addEventListener("click", () => runParser());
+  if (!btnParse) {
+    console.warn("[Parser] btn-parse not found in DOM — parser page may not have loaded.");
+    return;
+  }
+
+  btnParse.addEventListener("click", () => runParser());
 
   if (inputEl) inputEl.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") runParser();
+    if (e.key === "Enter") { e.preventDefault(); runParser(); }
   });
 
   if (btnSampleLocal) btnSampleLocal.addEventListener("click", () => {
     const addr = SAMPLE_ADDRESSES[Math.floor(Math.random() * SAMPLE_ADDRESSES.length)];
-    inputEl.value = addr;
-    inputEl.dataset.sampleId = "";
+    if (inputEl) { inputEl.value = addr; inputEl.dataset.sampleId = ""; }
     runParser();
   });
 
@@ -1104,6 +1109,7 @@ function setupParserTool() {
 
   // Build NER legend once
   _buildParserNERLegend();
+  console.log("[Parser] setupParserTool OK — btn-parse attached.");
 }
 
 function _buildParserNERLegend() {
