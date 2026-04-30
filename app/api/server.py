@@ -4,7 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session, aliased
-from sqlalchemy import String, and_, or_, text
+from sqlalchemy import String, and_, or_, text, func
 import os
 import logging
 import time
@@ -89,6 +89,20 @@ osm_job_state = {
     "limitProvinces": 63,
     "targetTotal": 5000000,
     "normalizedTargetTotal": 5000000,
+    "exitCode": None,
+    "error": None,
+    "outputTail": None,
+}
+
+batch_job_lock = threading.Lock()
+batch_job_state = {
+    "jobId": None,
+    "status": "idle",
+    "startedAt": None,
+    "finishedAt": None,
+    "processedCount": 0,
+    "totalCount": 0,
+    "throughput": 0,
     "exitCode": None,
     "error": None,
     "outputTail": None,
@@ -183,6 +197,77 @@ def _run_benchmark_job(job_id: str, config_path: str, skip_llm: bool):
 def _update_osm_job_state(**kwargs):
     with osm_job_lock:
         osm_job_state.update(kwargs)
+
+
+def _update_batch_job_state(**kwargs):
+    with batch_job_lock:
+        batch_job_state.update(kwargs)
+
+
+def _run_batch_job(job_id: str, limit: int, method: str):
+    project_root = Path(__file__).resolve().parents[2]
+    # We can call the production_pipeline.py as a separate process to avoid GIL issues
+    # and keep the server responsive.
+    cmd = [
+        sys.executable,
+        "-m",
+        "app.ai.production_pipeline",
+        "--limit",
+        str(limit),
+    ]
+
+    try:
+        env = os.environ.copy()
+        env["PYTHONUNBUFFERED"] = "1"
+
+        proc = subprocess.Popen(
+            cmd,
+            cwd=str(project_root),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1,
+            env=env,
+        )
+
+        output_tail = ""
+        if proc.stdout is not None:
+            for raw_line in proc.stdout:
+                line = raw_line.rstrip("\n")
+                if not line:
+                    continue
+
+                output_tail = (output_tail + "\n" + line).strip()[-6000:]
+                
+                # Update the log tail for realtime feedback in UI
+                _update_batch_job_state(outputTail=output_tail)
+
+        return_code = proc.wait()
+
+        if return_code == 0:
+            _update_batch_job_state(
+                status="success",
+                finishedAt=datetime.utcnow().isoformat() + "Z",
+                exitCode=return_code,
+                error=None,
+                outputTail=output_tail,
+            )
+        else:
+            _update_batch_job_state(
+                status="failed",
+                finishedAt=datetime.utcnow().isoformat() + "Z",
+                exitCode=return_code,
+                error=f"Batch process exited with code {return_code}",
+                outputTail=output_tail,
+            )
+    except Exception as exc:
+        _update_batch_job_state(
+            status="failed",
+            finishedAt=datetime.utcnow().isoformat() + "Z",
+            exitCode=-1,
+            error=f"{exc}\n{traceback.format_exc()}",
+            outputTail=None,
+        )
 
 
 def _run_osm_job(job_id: str, limit_provinces: int, target_total: int):
@@ -283,8 +368,8 @@ def _load_parser_corpus(db: Session) -> list[str]:
 
     hierarchy_rows = (
         db.query(Ward.ward_name, District.district_name, Province.province_name)
-        .join(District, Ward.district_id == District.district_id)
-        .join(Province, District.province_id == Province.province_id)
+        .join(District, and_(Ward.district_id == District.district_id, Ward.admin_version == District.admin_version))
+        .join(Province, and_(District.province_id == Province.province_id, District.admin_version == Province.admin_version))
         .filter(Ward.is_deleted == False, District.is_deleted == False, Province.is_deleted == False)
         .limit(5000)
         .all()
@@ -549,17 +634,22 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
 @api_router.get("/provinces")
 def get_provinces(version: Optional[int] = 1, db: Session = Depends(get_db)):
     """Fetch all provinces, filtered by admin version."""
-    return db.query(Province).filter(Province.admin_version == version).order_by(Province.province_name).all()
+    query = db.query(Province).filter(Province.admin_version == version)
+    if version == 2:
+        query = query.filter(Province.is_deleted == False)
+    return query.order_by(Province.province_name).all()
 
 @api_router.get("/provinces/{province_id}")
-def get_provinces_by_path(province_id: int, db: Session = Depends(get_db)):
-    """Fetch a single province by ID."""
-    return db.query(Province).filter(Province.province_id == province_id).first()
+def get_provinces_by_path(province_id: int, version: Optional[int] = 1, db: Session = Depends(get_db)):
+    """Fetch a single province by ID and version."""
+    return db.query(Province).filter(Province.province_id == province_id, Province.admin_version == version).first()
 
 @api_router.get("/districts")
 def get_districts(province_id: Optional[int] = None, version: Optional[int] = 1, db: Session = Depends(get_db)):
     """Fetch districts, optionally filtered by province ID and version."""
     query = db.query(District).filter(District.admin_version == version)
+    if version == 2:
+        query = query.filter(District.is_deleted == False)
     if province_id:
         query = query.filter(District.province_id == province_id)
     return query.order_by(District.district_name).all()
@@ -573,6 +663,9 @@ def get_districts_by_path(province_id: int, version: Optional[int] = 1, db: Sess
 def get_wards(district_id: Optional[int] = None, version: Optional[int] = 1, db: Session = Depends(get_db)):
     """Fetch wards, optionally filtered by district ID and version."""
     query = db.query(Ward).filter(Ward.admin_version == version)
+    if version == 2:
+        query = query.filter(Ward.is_deleted == False)
+    
     if district_id:
         query = query.filter(Ward.district_id == district_id)
     return query.order_by(Ward.ward_name).all()
@@ -583,16 +676,14 @@ def get_wards_by_path(district_id: int, version: Optional[int] = 1, db: Session 
     return get_wards(district_id=district_id, version=version, db=db)
 
 @api_router.get("/unit-details/{level}/{unit_id}")
-def get_unit_details(level: str, unit_id: int, db: Session = Depends(get_db)):
+def get_unit_details(level: str, unit_id: int, version: Optional[int] = 1, db: Session = Depends(get_db)):
     if level == "province":
-        return db.query(Province).filter(Province.province_id == unit_id).first()
+        return db.query(Province).filter(Province.province_id == unit_id, Province.admin_version == version).first()
     if level == "district":
-        return db.query(District).filter(District.district_id == unit_id).first()
+        return db.query(District).filter(District.district_id == unit_id, District.admin_version == version).first()
     if level == "ward":
-        return db.query(Ward).filter(Ward.ward_id == unit_id).first()
+        return db.query(Ward).filter(Ward.ward_id == unit_id, Ward.admin_version == version).first()
     return {"error": "Invalid level"}
-
-from sqlalchemy import func
 
 @api_router.get("/lookup/mapping")
 def lookup_mapping(
@@ -634,15 +725,15 @@ def lookup_mapping(
         WardV2.district_id.label("district_id_new"),
         DistV2.district_name.label("district_name_new")
     ).outerjoin(
-        WardV1, and_(WardV1.ward_id == WardMapping.ward_id_old, WardV1.is_deleted == False, WardV1.admin_version == 1) 
+        WardV1, and_(WardV1.ward_id == WardMapping.ward_id_old, WardV1.admin_version == 1) 
     ).outerjoin(
         WardV2, and_(WardV2.ward_id == WardMapping.ward_id_new, WardV2.is_deleted == False, WardV2.admin_version == 2)
     ).outerjoin(
-        DistV1, and_(DistV1.district_id == func.coalesce(WardV1.district_id, WardMapping.district_id_old), DistV1.is_deleted == False, DistV1.admin_version == 1)
+        DistV1, and_(DistV1.district_id == func.coalesce(WardV1.district_id, WardMapping.district_id_old), DistV1.admin_version == 1)
     ).outerjoin(
         DistV2, and_(DistV2.district_id == WardV2.district_id, DistV2.is_deleted == False, DistV2.admin_version == 2)
     ).outerjoin(
-        ProvV1, and_(ProvV1.province_id == func.coalesce(DistV1.province_id, WardMapping.province_id_old), ProvV1.is_deleted == False, ProvV1.admin_version == 1)
+        ProvV1, and_(ProvV1.province_id == func.coalesce(DistV1.province_id, WardMapping.province_id_old), ProvV1.admin_version == 1)
     ).outerjoin(
         ProvV2, and_(ProvV2.province_id == func.coalesce(DistV2.province_id, WardMapping.province_id_new), ProvV2.is_deleted == False, ProvV2.admin_version == 2)
     )
@@ -664,81 +755,62 @@ def lookup_mapping(
             ))
         else:
             filters.append(or_(
-                WardMapping.province_id_old == province_id,
+                WardMapping.province_id_old == province_id, 
                 WardMapping.province_id_new == province_id,
                 DistV1.province_id == province_id,
                 DistV2.province_id == province_id,
                 ProvV1.province_id == province_id,
                 ProvV2.province_id == province_id
             ))
-    
+
     if district_id:
         if version == 1:
-            filters.append(or_(
-                WardMapping.district_id_old == district_id, 
-                WardV1.district_id == district_id,
-                DistV1.district_id == district_id
-            ))
+            filters.append(or_(WardMapping.district_id_old == district_id, WardV1.district_id == district_id, DistV1.district_id == district_id))
         elif version == 2:
-            filters.append(or_(
-                WardV2.district_id == district_id, 
-                DistV2.district_id == district_id
-            ))
+            filters.append(or_(WardMapping.district_id_new == district_id, WardV2.district_id == district_id, DistV2.district_id == district_id))
         else:
             filters.append(or_(
-                WardMapping.district_id_old == district_id,
+                WardMapping.district_id_old == district_id, 
+                WardMapping.district_id_new == district_id,
                 WardV1.district_id == district_id,
                 WardV2.district_id == district_id,
                 DistV1.district_id == district_id,
                 DistV2.district_id == district_id
             ))
-            
+
     if ward_id:
         if version == 1:
             filters.append(WardMapping.ward_id_old == ward_id)
         elif version == 2:
             filters.append(WardMapping.ward_id_new == ward_id)
         else:
-            filters.append((WardMapping.ward_id_old == ward_id) | (WardMapping.ward_id_new == ward_id))
-    
-    if query:
-        text_filter = (
-            WardMapping.updated_note.ilike(f"%{query}%") |
-            WardMapping.ward_id_old.cast(String).ilike(f"%{query}%") |
-            WardMapping.ward_id_new.cast(String).ilike(f"%{query}%")
-        )
-        filters.append(text_filter)
+            filters.append(or_(WardMapping.ward_id_old == ward_id, WardMapping.ward_id_new == ward_id))
 
-    # Nếu có filter hoặc query thì áp dụng
+    if query:
+        q_clean = query.strip()
+        filters.append(or_(
+            WardV1.ward_name.ilike(f"%{q_clean}%"),
+            WardV2.ward_name.ilike(f"%{q_clean}%"),
+            DistV1.district_name.ilike(f"%{q_clean}%"),
+            DistV2.district_name.ilike(f"%{q_clean}%"),
+            ProvV1.province_name.ilike(f"%{q_clean}%"),
+            ProvV2.province_name.ilike(f"%{q_clean}%"),
+            WardMapping.updated_note.ilike(f"%{q_clean}%")
+        ))
+
     if filters:
         base_query = base_query.filter(and_(*filters))
-    elif not query:
-        # Nếu không có gì cả, không trả về gì để tránh query quá nặng
-        return []
-
-    # Lấy dữ liệu và giới hạn kết quả
-    # 4. Sắp xếp kết quả theo Tên (Province -> District -> Ward)
-    results = base_query.order_by(
-        ProvV1.province_name.asc(),
-        DistV1.district_name.asc(),
-        WardV1.ward_name.asc()
-    ).limit(100).all()
+    
+    results = base_query.order_by(WardMapping.effective_date_from.desc().nulls_last()).limit(500).all()
 
     # 4. Format lại output và xử lý các case đặc biệt (-1)
     enriched_results = []
     for r in results:
-        # Rút trích dict từ result tuple
         res = r._asdict()
-        
-        # Xử lý trường hợp đặc biệt (Sáp nhập cấp tỉnh: ward_id = -1)
-        if res["ward_id_old"] == -1 and res["ward_id_new"] == -1:
-            res["ward_name_old"] = res["ward_name_old"] or "(Tất cả Xã)"
-            res["district_name_old"] = res["district_name_old"] or "(Tất cả Huyện)"
-            res["ward_name_new"] = res["ward_name_new"] or "(Tất cả Xã)"
-            res["district_name_new"] = res["district_name_new"] or "(Tất cả Huyện)"
-        elif res["ward_id_old"] == -1:
-            res["ward_name_old"] = "(Toàn bộ Huyện)"
-            
+        if res["ward_id_old"] == -1:
+            res["ward_name_old"] = "(Tất cả Xã)"
+        if res["ward_name_old"] is None:
+            res["ward_name_old"] = "N/A"
         enriched_results.append(res)
 
     return enriched_results
@@ -1260,6 +1332,54 @@ def trigger_osm_job(data: dict = None, current_user: str = Depends(get_current_u
 def get_osm_job_status(current_user: str = Depends(get_current_user)):
     with osm_job_lock:
         return {"job": dict(osm_job_state)}
+
+
+@api_router.post("/batch/trigger")
+def trigger_batch_job(data: dict = None, current_user: str = Depends(get_current_user)):
+    payload = data or {}
+    limit = _normalize_int_value(payload.get("batch_size"), 1000)
+    method = payload.get("method", "hybrid")
+
+    with batch_job_lock:
+        if batch_job_state.get("status") == "running":
+            return {
+                "status": "running",
+                "message": "Batch job is already running",
+                "job": batch_job_state,
+            }
+
+        job_id = str(uuid4())
+        batch_job_state.update({
+            "jobId": job_id,
+            "status": "running",
+            "startedAt": datetime.utcnow().isoformat() + "Z",
+            "finishedAt": None,
+            "totalCount": limit,
+            "processedCount": 0,
+            "throughput": 0,
+            "exitCode": None,
+            "error": None,
+            "outputTail": f"Starting batch processing for {limit} records using {method} method...",
+        })
+
+    worker = threading.Thread(
+        target=_run_batch_job,
+        args=(job_id, limit, method),
+        daemon=True,
+    )
+    worker.start()
+
+    return {
+        "status": "accepted",
+        "message": "Batch processing job started",
+        "job": batch_job_state,
+    }
+
+
+@api_router.get("/batch/job")
+def get_batch_job_status(current_user: str = Depends(get_current_user)):
+    with batch_job_lock:
+        return {"job": dict(batch_job_state)}
 
 @api_router.get("/training/samples")
 def training_samples(db: Session = Depends(get_db)):

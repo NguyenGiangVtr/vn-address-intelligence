@@ -169,4 +169,3 @@ def print_metrics(model_name: str, metrics: Dict):
         print(f"  {'Latency P99 (ms)':<{pad}}: {metrics['latency_p99_ms']:.2f}")
         print(f"  {'Throughput (qps)':<{pad}}: {metrics['throughput_qps']:.2f}")
     print(f"{'═'*60}")
-")

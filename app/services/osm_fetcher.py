@@ -16,7 +16,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from app.core.database import SessionLocal, OSMStreet, OSMBuilding, OSMPoi, Province, OSMRawEntity
 from app.core.config import Config
-from sqlalchemy import text as sql_text
+from sqlalchemy import text as sql_text, and_
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s.%(msecs)03d [%(levelname)s] %(message)s", datefmt="%H:%M:%S")
 logger = logging.getLogger("OSMFetcher")
@@ -42,7 +42,8 @@ class OSMFetcher:
             from app.core.database import District
             # Lay quan huyen, uu tien cac khu vuc chua co nhieu du lieu
             districts = session.query(District, Province.province_name)\
-                .join(Province, District.province_id == Province.province_id)\
+                .join(Province, and_(District.province_id == Province.province_id, District.admin_version == Province.admin_version))\
+                .filter(District.admin_version == 2, District.is_deleted == False, Province.is_deleted == False)\
                 .order_by(District.district_id).all()
             
             task_list = [(d.District.district_id, d.District.district_name, d.province_name, d.District.province_id) for d in districts]

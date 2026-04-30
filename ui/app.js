@@ -1467,7 +1467,7 @@ function setupBatchTool() {
   const progressFill = document.querySelector(".progress-fill");
 
   let isBatchRunning = false;
-  let currentInterval = null;
+  let batchPollTimer = null;
 
   function setButtonState(running) {
     isBatchRunning = running;
@@ -1482,64 +1482,91 @@ function setupBatchTool() {
     }
   }
 
-  if (btnToggle) btnToggle.addEventListener("click", () => {
-    if (isBatchRunning) {
-      // Stop batch
-      if (currentInterval) {
-        clearInterval(currentInterval);
-        currentInterval = null;
+  async function pollBatchStatus() {
+    try {
+      const response = await fetch(`${API_BASE}/batch/job`, {
+        headers: getAuthHeader(),
+      });
+      const payload = await response.json();
+      const job = payload?.job;
+
+      if (!job) return;
+
+      // Update Log
+      if (job.outputTail) {
+        log.innerText = job.outputTail;
+        log.scrollTop = log.scrollHeight;
       }
+
+      // Update Stats
+      if (job.processedCount !== undefined) {
+        document.getElementById("batch-done").textContent = job.processedCount.toLocaleString();
+      }
+      if (job.throughput !== undefined) {
+        document.getElementById("batch-throughput").textContent = `${job.throughput.toFixed(1)} items/s`;
+      }
+
+      // Update Progress (if total is known)
+      if (job.totalCount > 0) {
+        const percent = Math.min(Math.round((job.processedCount / job.totalCount) * 100), 100);
+        progressValue.textContent = `${percent}%`;
+        progressFill.style.width = `${percent}%`;
+      }
+
+      if (job.status === "running") {
+        batchPollTimer = setTimeout(pollBatchStatus, 2000);
+      } else {
+        setButtonState(false);
+        if (job.status === "success") {
+          showToast("Xử lý hàng loạt hoàn tất!", "success");
+        } else if (job.status === "failed") {
+          showToast(`Lỗi xử lý: ${job.error || "Unknown error"}`, "danger");
+        }
+      }
+    } catch (error) {
+      console.error("Batch poll error:", error);
       setButtonState(false);
-      log.innerHTML += `\n[${formatLogTime()}] ⛔ Batch stopped by user\n`;
+    }
+  }
+
+  if (btnToggle) btnToggle.addEventListener("click", async () => {
+    if (isBatchRunning) {
+      // For now, we don't have a stop endpoint, so we just stop polling UI-side
+      if (batchPollTimer) clearTimeout(batchPollTimer);
+      setButtonState(false);
+      log.innerHTML += `\n[${formatLogTime()}] ⛔ Stopped monitoring batch job.\n`;
       return;
     }
 
-    // Start batch
     const size = getNumericInputValue("batch-size") || 1000;
     const method = document.getElementById("batch-method").value;
 
-    // Reset progress and stats
-    progressValue.textContent = "0%";
-    progressFill.style.width = "0%";
-    document.getElementById("batch-done").textContent = "0";
-    document.getElementById("batch-throughput").textContent = "0";
+    try {
+      setButtonState(true);
+      log.innerHTML = `[${formatLogTime()}] Requesting batch processing...`;
+      
+      const response = await fetch(`${API_BASE}/batch/trigger`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...getAuthHeader(),
+        },
+        body: JSON.stringify({ batch_size: size, method: method }),
+      });
 
-    setButtonState(true);
-
-    log.innerHTML = `[${formatLogTime()}] Starting batch: ${size} records, method=${method}\n`;
-    log.innerHTML += `[${formatLogTime()}] Connecting to prq.address_cleansing_queue...\n`;
-
-    // Simulate progress
-    let processed = 0;
-    const startTime = Date.now();
-    currentInterval = setInterval(() => {
-      processed += Math.floor(Math.random() * 50) + 10;
-      const elapsed = (Date.now() - startTime) / 1000;
-      const tps = elapsed > 0 ? Math.round(processed / elapsed) : 0;
-      const progressPercent = Math.min(Math.round((processed / size) * 100), 100);
-
-      // Update progress bar
-      progressValue.textContent = `${progressPercent}%`;
-      progressFill.style.width = `${progressPercent}%`;
-
-      if (processed >= size) {
-        processed = size;
-        clearInterval(currentInterval);
-        currentInterval = null;
-        progressValue.textContent = "100%";
-        progressFill.style.width = "100%";
-        setButtonState(false);
-        log.innerHTML += `[${formatLogTime()}] ✅ Batch complete: ${processed.toLocaleString()} records processed\n`;
-        document.getElementById("batch-done").textContent = processed.toLocaleString();
-        document.getElementById("batch-throughput").textContent = `${tps.toLocaleString()} items/s`;
-        return;
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.detail || "Trigger failed");
       }
 
-      document.getElementById("batch-throughput").textContent = `${tps.toLocaleString()} items/s`;
-      document.getElementById("batch-done").textContent = processed.toLocaleString();
-      log.innerHTML += `[${formatLogTime()}] Processing... ${processed.toLocaleString()}/${size.toLocaleString()}\n`;
-      log.scrollTop = log.scrollHeight;
-    }, 800);
+      const data = await response.json();
+      log.innerHTML = `[${formatLogTime()}] Batch job accepted. ID: ${data.job.jobId}\n`;
+      
+      pollBatchStatus();
+    } catch (error) {
+      showToast(error.message, "danger");
+      setButtonState(false);
+    }
   });
 }
 
@@ -1692,6 +1719,9 @@ async function initMappingV3() {
     mappingState.version = vSelect.value;
     pInput.value = ''; dInput.value = ''; wInput.value = '';
     mappingState.provinces = {}; mappingState.districts = {}; mappingState.wards = {};
+    const listP = document.getElementById('list-provinces'); if (listP) listP.innerHTML = '';
+    const listD = document.getElementById('list-districts'); if (listD) listD.innerHTML = '';
+    const listW = document.getElementById('list-wards'); if (listW) listW.innerHTML = '';
     loadProvinces();
   });
 
@@ -1779,12 +1809,13 @@ async function initMappingV3() {
   loadProvinces();
 }
 
-async function showDetails(level, id) {
+async function showDetails(level, id, version = null) {
   const pl = document.getElementById('unit-details-panel');
   if (!pl) return;
+  if (!version) version = mappingState.version;
   pl.innerHTML = '<div class="text-center" style="padding:40px"><i class="fa-solid fa-spinner fa-spin fa-2x text-accent"></i></div>';
   try {
-    const res = await fetch(`${API_BASE}/unit-details/${level}/${id}`, { headers: getAuthHeader() });
+    const res = await fetch(`${API_BASE}/unit-details/${level}/${id}?version=${version}`, { headers: getAuthHeader() });
     if (!res.ok) throw new Error("Unit not found");
     const u = await res.json();
     pl.innerHTML = `
@@ -1857,7 +1888,7 @@ async function triggerMappingSearch() {
     }
     document.getElementById('mapping-result-count').textContent = `${data.length} records`;
     tbody.innerHTML = data.map(m => `
-      <tr style="cursor: pointer; transition: background 0.2s;" onclick="showDetails('ward', ${m.ward_id_new})">
+      <tr style="cursor: pointer; transition: background 0.2s;" onclick="showDetails('ward', ${m.ward_id_new}, 2)">
         <td data-label="ĐVHC Cũ" style="padding: 16px 20px;">
           <div class="font-700" style="font-size:15px; color:var(--text-primary)">${m.ward_name_old || (m.ward_id_old == -1 ? "(Tất cả Xã)" : "N/A")}</div>
           <div class="text-tertiary" style="font-size:12px; margin-top: 2px;">
