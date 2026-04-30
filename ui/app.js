@@ -2153,8 +2153,15 @@ function startLogPolling() {
       if (!res.ok) return;
       const logs = await res.json();
       const container = document.getElementById('nso-sync-logs');
-      if (container && logs.length > 0) {
-        container.innerHTML = logs.map(l => `<div>${l}</div>`).join('');
+      if (container && Array.isArray(logs) && logs.length > 0) {
+        container.innerHTML = logs.map(l => {
+          const colorMap = { 'error': 'var(--danger)', 'success': 'var(--success)', 'warning': 'var(--warning)' };
+          const color = colorMap[l.level] || 'inherit';
+          return `<div style="margin-bottom: 2px;">
+            <span style="color: var(--text-tertiary); font-size: 11px;">[${l.time || ''}]</span> 
+            <span style="color: ${color}">${l.message || ''}</span>
+          </div>`;
+        }).join('');
         container.scrollTop = container.scrollHeight;
       }
     } catch (e) { console.error("Log polling error", e); }
