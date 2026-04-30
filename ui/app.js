@@ -1766,32 +1766,35 @@ async function showDetails(level, id) {
     if (!res.ok) throw new Error("Unit not found");
     const u = await res.json();
     pl.innerHTML = `
-      <div class="flex items-center gap-24 w-full">
-        <div style="flex: 0 0 240px;">
-          <div class="flex items-center gap-12">
-            <span class="text-accent font-700" style="font-size:18px;">${u.ward_name || u.district_name || u.province_name}</span>
-            <span class="badge info" style="font-size:10px;">v${u.admin_version}</span>
+      <div class="unit-details-flex">
+        <!-- Main Info -->
+        <div class="unit-main-info">
+          <div class="flex items-center gap-12 mb-4">
+            <span class="unit-name-text">${u.ward_name || u.district_name || u.province_name}</span>
+            <span class="badge info">v${u.admin_version}</span>
           </div>
-          <div class="text-tertiary" style="font-size:11px;">
+          <div class="unit-meta-text">
             ${u.ward_name ? 'Phường/Xã' : (u.district_name ? 'Quận/Huyện' : 'Tỉnh/Thành phố')} • 
             Mã GSO: <span class="text-mono">${u.ward_no || u.district_no || u.province_no || "N/A"}</span>
           </div>
         </div>
 
-        <div class="flex gap-32 px-24" style="border-left: 1px solid var(--border-subtle); border-right: 1px solid var(--border-subtle);">
-          <div class="text-center">
-            <div class="text-tertiary mb-4" style="font-size:10px; text-transform:uppercase; letter-spacing:0.05em;">Dân số</div>
-            <div class="font-700" style="font-size:16px;">${(u.population || 0).toLocaleString()} <small class="font-400 text-tertiary" style="font-size:10px">người</small></div>
+        <!-- Stats -->
+        <div class="unit-stats-group">
+          <div class="unit-stat-item">
+            <div class="unit-stat-label">Dân số</div>
+            <div class="unit-stat-value">${(u.population || 0).toLocaleString()} <small>người</small></div>
           </div>
-          <div class="text-center">
-            <div class="text-tertiary mb-4" style="font-size:10px; text-transform:uppercase; letter-spacing:0.05em;">Diện tích</div>
-            <div class="font-700" style="font-size:16px;">${(u.area_km2 || 0).toLocaleString()} <small class="font-400 text-tertiary" style="font-size:10px">km²</small></div>
+          <div class="unit-stat-item">
+            <div class="unit-stat-label">Diện tích</div>
+            <div class="unit-stat-value">${(u.area_km2 || 0).toLocaleString()} <small>km²</small></div>
           </div>
         </div>
 
-        <div class="flex-1 pl-8">
-          <div class="text-tertiary mb-4" style="font-size:10px; text-transform:uppercase; letter-spacing:0.05em;">Cơ sở pháp lý / Nghị quyết</div>
-          <div class="text-secondary italic" style="font-size:12px; line-height:1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;" title="${u.decision_number || ""}">
+        <!-- Decision Info -->
+        <div class="unit-legal-info">
+          <div class="unit-stat-label">Cơ sở pháp lý / Nghị quyết</div>
+          <div class="unit-decision-text" title="${u.decision_number || ""}">
             ${u.decision_number || "Chưa có thông tin nghị quyết cụ thể trong hệ thống."}
           </div>
         </div>
@@ -1833,26 +1836,26 @@ async function triggerMappingSearch() {
     document.getElementById('mapping-result-count').textContent = `${data.length} records`;
     tbody.innerHTML = data.map(m => `
       <tr style="cursor: pointer; transition: background 0.2s;" onclick="showDetails('ward', ${m.ward_id_new})">
-        <td style="padding: 16px 20px;">
+        <td data-label="ĐVHC Cũ" style="padding: 16px 20px;">
           <div class="font-700" style="font-size:15px; color:var(--text-primary)">${m.ward_name_old || (m.ward_id_old == -1 ? "(Tất cả Xã)" : "N/A")}</div>
           <div class="text-tertiary" style="font-size:12px; margin-top: 2px;">
             ${[m.district_name_old, m.province_name_old].filter(x => x).join(" - ")}
           </div>
         </td>
-        <td class="text-center" style="vertical-align:middle; width: 60px;">
+        <td class="text-center mobile-hidden" style="vertical-align:middle; width: 60px;">
           <div style="background: var(--bg-hover); width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto;">
             <i class="fa-solid fa-chevron-right text-accent" style="font-size: 12px;"></i>
           </div>
         </td>
-        <td style="padding: 16px 20px;">
+        <td data-label="ĐVHC Mới" style="padding: 16px 20px;">
           <div class="font-700" style="font-size:15px; color:var(--success)">${m.ward_name_new || "N/A"}</div>
           <div class="text-tertiary" style="font-size:12px; margin-top: 2px;">${m.district_name_new || ""} - ${m.province_name_new || ""}</div>
         </td>
-        <td style="padding: 16px 20px;">
+        <td data-label="Diễn biến & Nghị quyết" style="padding: 16px 20px;">
           <div class="badge ${m.relationship_type === 'MERGE' ? 'warning' : 'info'}" style="font-size: 10px; margin-bottom: 6px;">${m.relationship_type || 'MAPPING'}</div>
           <div style="font-size:12px; line-height:1.5; color: var(--text-secondary)">${m.updated_note || "Cập nhật theo nghị quyết sáp nhập ĐVHC."}</div>
         </td>
-        <td class="text-tertiary" style="padding: 16px 20px; font-size:13px; font-family: var(--font-mono)">
+        <td data-label="Ngày áp dụng" class="text-tertiary" style="padding: 16px 20px; font-size:13px; font-family: var(--font-mono)">
           ${m.effective_date_from ? new Date(m.effective_date_from).toLocaleDateString('vi-VN') : "01/01/2021"}
         </td>
       </tr>

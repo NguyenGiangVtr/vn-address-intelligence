@@ -1,111 +1,429 @@
-<!-- ══════ PAGE: LOOKUP MAPPING ══════ -->
+<!-- ══════ PAGE: ADMINISTRATIVE UNIT EVOLUTION ══════ -->
 <div class="page full-height-page" id="lookup">
+    <style>
+        /* Senior-Friendly & High-Quality UI Refinements */
+        #lookup {
+            --font-senior: 16px;
+            --font-senior-lg: 18px;
+            --accent-senior: #4f46e5;
+        }
+
+        #lookup .page-header h2 {
+            font-size: 24px;
+            color: var(--text-primary);
+            letter-spacing: -0.5px;
+        }
+
+        #lookup .page-header p {
+            font-size: 15px;
+            color: var(--text-secondary);
+        }
+
+        /* Senior-friendly inputs */
+        #lookup .form-label {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        #lookup .form-input {
+            font-size: 16px;
+            /* Larger text for seniors */
+            padding: 12px 16px;
+            height: 48px;
+            background: var(--bg-app);
+            border-width: 1.5px;
+        }
+
+        #lookup .input-wrapper .btn-clear-input {
+            right: 32px;
+            /* Move away from the native dropdown arrow */
+            width: 32px;
+            height: 32px;
+            color: var(--text-tertiary);
+        }
+
+        #lookup .form-input.has-clear {
+            padding-right: 64px;
+            /* More padding for clear button + arrow */
+        }
+
+        #lookup .search-box {
+            display: flex;
+            align-items: stretch;
+            height: 52px;
+            border-radius: var(--radius-lg);
+            background: var(--bg-app);
+            border: 1.5px solid var(--border-default);
+            margin-top: 20px;
+            overflow: hidden;
+            transition: all var(--transition);
+        }
+
+        #lookup .search-box:focus-within {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 4px var(--accent-glow);
+        }
+
+        #lookup .search-box .search-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 16px;
+            color: var(--text-tertiary);
+            font-size: 18px;
+        }
+
+        #lookup .search-box .search-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            padding: 0;
+            font-size: 16px;
+            color: var(--text-primary);
+            outline: none;
+        }
+
+        #lookup .search-box .btn-primary {
+            height: 100%;
+            border-radius: 0;
+            font-size: 15px;
+            font-weight: 700;
+            padding: 0 32px;
+            background: var(--accent-senior);
+            border: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        #lookup .unit-details-card {
+            background: linear-gradient(135deg, var(--bg-surface), var(--bg-elevated));
+            border: 1px solid var(--border-default);
+            border-left: 4px solid var(--accent);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+        }
+
+        .unit-details-flex {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 24px;
+            align-items: center;
+            width: 100%;
+        }
+
+        .unit-main-info {
+            flex: 0 0 240px;
+        }
+
+        .unit-name-text {
+            color: var(--accent);
+            font-weight: 700;
+            font-size: 20px;
+        }
+
+        .unit-meta-text {
+            color: var(--text-tertiary);
+            font-size: 13px;
+        }
+
+        .unit-stats-group {
+            display: flex;
+            gap: 32px;
+            padding: 0 24px;
+            border-left: 1px solid var(--border-subtle);
+            border-right: 1px solid var(--border-subtle);
+        }
+
+        .unit-stat-item {
+            text-align: center;
+        }
+
+        .unit-stat-label {
+            color: var(--text-tertiary);
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 4px;
+            font-weight: 700;
+        }
+
+        .unit-stat-value {
+            font-weight: 700;
+            font-size: 18px;
+            color: var(--text-primary);
+        }
+
+        .unit-legal-info {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .unit-decision-text {
+            color: var(--text-secondary);
+            font-style: italic;
+            font-size: 13px;
+            line-height: 1.5;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        @media (max-width: 992px) {
+            .unit-stats-group {
+                border-right: none;
+                padding-right: 0;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .unit-details-flex {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 16px;
+            }
+            .unit-main-info, .unit-stats-group, .unit-legal-info {
+                flex: 1;
+                width: 100%;
+                padding: 0;
+                border: none;
+            }
+            .unit-stats-group {
+                justify-content: flex-start;
+                gap: 40px;
+            }
+            .unit-name-text {
+                font-size: 22px;
+            }
+        }
+
+        #lookup .detail-label {
+            font-size: 12px;
+            color: var(--text-tertiary);
+            text-transform: uppercase;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        #lookup .detail-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        /* Results Table Refinements */
+        #lookup .table-container thead th {
+            font-size: 12px;
+            font-weight: 700;
+            background: var(--bg-app);
+            padding: 14px;
+        }
+
+        #lookup .table-container tbody td {
+            font-size: 15px;
+            padding: 16px 14px;
+            vertical-align: middle;
+        }
+
+        /* Responsive / Mobile Optimization */
+        @media (max-width: 768px) {
+            #lookup .card-body {
+                padding: 16px;
+            }
+
+            #lookup .dm-filter-toolbar .card-body {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            #lookup .search-box {
+                flex-direction: column;
+                height: auto;
+                gap: 8px;
+                border: none;
+                background: transparent;
+                position: relative;
+            }
+
+            #lookup .search-box .search-icon {
+                position: absolute;
+                left: 0;
+                top: 0;
+                height: 48px;
+                width: 40px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 2;
+            }
+
+            #lookup .search-box .search-input {
+                background: var(--bg-app);
+                border: 1.5px solid var(--border-default);
+                border-radius: var(--radius-md);
+                height: 48px;
+                min-height: 48px;
+                padding: 0 16px 0 40px;
+                width: 100%;
+            }
+
+            #lookup .search-box .btn-primary {
+                height: 48px;
+                border-radius: var(--radius-md);
+                width: 100%;
+                justify-content: center;
+            }
+
+            /* Transform Table to Cards for mobile */
+            #lookup .lookup-results-table thead {
+                display: none;
+            }
+
+            #lookup .lookup-results-table table,
+            #lookup .lookup-results-table tbody,
+            #lookup .lookup-results-table tr,
+            #lookup .lookup-results-table td {
+                display: block;
+                width: 100%;
+            }
+
+            #lookup .lookup-results-table tr {
+                background: var(--bg-surface);
+                border: 1px solid var(--border-subtle);
+                border-radius: var(--radius-lg);
+                margin-bottom: 12px;
+                padding: 16px;
+            }
+
+            #lookup .lookup-results-table td {
+                padding: 4px 0;
+                border: none;
+            }
+
+            #lookup .lookup-results-table td::before {
+                content: attr(data-label);
+                display: block;
+                font-size: 11px;
+                font-weight: 700;
+                color: var(--text-tertiary);
+                text-transform: uppercase;
+                margin-bottom: 2px;
+            }
+        }
+    </style>
+
     <div class="page-header">
-        <h2>Tra cứu Biến động ĐVHC</h2>
-        <p>Theo dõi lịch sử sáp nhập, đổi tên xã phường qua các thời kỳ</p>
+        <h2>Chuyển đổi ĐVHC cũ - mới</h2>
+        <p>Thư viện tra cứu lịch sử sáp nhập, chia tách và đổi tên các cấp ĐVHC Việt Nam</p>
     </div>
 
-    <div class="card mb-20 dm-filter-sidebar dm-filter-toolbar">
+    <div class="card mb-16 dm-filter-sidebar dm-filter-toolbar shadow-lg">
         <div class="card-header">
-            <span class="card-title"><i class="fa-solid fa-filter mr-8"></i> Bộ lọc ĐVHC</span>
+            <span class="card-title"><i class="fa-solid fa-filter mr-8"></i> Bộ lọc Thông minh</span>
         </div>
         <div class="card-body">
-            <div class="form-group mb-12">
-                <label class="form-label">Phiên bản danh mục</label>
-                <select id="mapping-version-select" class="form-input">
-                    <option value="1" selected>Trước 01/7/2025</option>
-                    <option value="2">Sau 01/7/2025</option>
-                </select>
-            </div>
-            <div class="control-note">
-                <i class="fa-solid fa-circle-info mr-4"></i> Chọn version để tải danh sách ĐVHC
-                tương ứng.
-            </div>
-            <div class="form-group mb-0">
-                <label class="form-label">Tỉnh/Thành</label>
-                <div class="input-wrapper">
-                    <input list="list-provinces" id="mapping-province-input" class="form-input has-clear"
-                        placeholder="Tìm Tỉnh...">
-                    <button type="button" class="btn-clear-input"
-                        onclick="document.getElementById('mapping-province-input').value=''; document.getElementById('mapping-province-input').dispatchEvent(new Event('input'))"
-                        title="Xóa"><i class="fa-solid fa-xmark"></i></button>
+            <div style="display: flex; flex-wrap: wrap; gap: 12px; width: 100%;">
+                <div class="form-group" style="flex: 1; min-width: 180px;">
+                    <label class="form-label">Phiên bản danh mục</label>
+                    <select id="mapping-version-select" class="form-input">
+                        <option value="1" selected>Trước 01/07/2025</option>
+                        <option value="2">Sau 01/07/2025</option>
+                    </select>
                 </div>
-                <datalist id="list-provinces"></datalist>
-            </div>
-            <div class="form-group mb-0">
-                <label class="form-label">Quận/Huyện</label>
-                <div class="input-wrapper">
-                    <input list="list-districts" id="mapping-district-input" class="form-input has-clear"
-                        placeholder="Tìm Huyện...">
-                    <button type="button" class="btn-clear-input"
-                        onclick="document.getElementById('mapping-district-input').value=''; document.getElementById('mapping-district-input').dispatchEvent(new Event('input'))"
-                        title="Xóa"><i class="fa-solid fa-xmark"></i></button>
+
+                <div class="form-group" style="flex: 1; min-width: 200px;">
+                    <label class="form-label">Tỉnh/Thành phố</label>
+                    <div class="input-wrapper">
+                        <input list="list-provinces" id="mapping-province-input" class="form-input has-clear"
+                            placeholder="Chọn Tỉnh/Thành...">
+                        <button type="button" class="btn-clear-input"
+                            onclick="document.getElementById('mapping-province-input').value=''; document.getElementById('mapping-province-input').dispatchEvent(new Event('input'))"
+                            title="Xóa"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    <datalist id="list-provinces"></datalist>
                 </div>
-                <datalist id="list-districts"></datalist>
-            </div>
-            <div class="form-group mb-0">
-                <label class="form-label">Phường/Xã</label>
-                <div class="input-wrapper">
-                    <input list="list-wards" id="mapping-ward-input" class="form-input has-clear"
-                        placeholder="Tìm Xã...">
-                    <button type="button" class="btn-clear-input"
-                        onclick="document.getElementById('mapping-ward-input').value=''; document.getElementById('mapping-ward-input').dispatchEvent(new Event('input'))"
-                        title="Xóa"><i class="fa-solid fa-xmark"></i></button>
+
+                <div class="form-group" style="flex: 1; min-width: 200px;">
+                    <label class="form-label">Quận/Huyện/Thị xã</label>
+                    <div class="input-wrapper">
+                        <input list="list-districts" id="mapping-district-input" class="form-input has-clear"
+                            placeholder="Chọn Quận/Huyện...">
+                        <button type="button" class="btn-clear-input"
+                            onclick="document.getElementById('mapping-district-input').value=''; document.getElementById('mapping-district-input').dispatchEvent(new Event('input'))"
+                            title="Xóa"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    <datalist id="list-districts"></datalist>
                 </div>
-                <datalist id="list-wards"></datalist>
+
+                <div class="form-group" style="flex: 1; min-width: 200px;">
+                    <label class="form-label">Phường/Xã/Thị trấn</label>
+                    <div class="input-wrapper">
+                        <input list="list-wards" id="mapping-ward-input" class="form-input has-clear"
+                            placeholder="Chọn Phường/Xã...">
+                        <button type="button" class="btn-clear-input"
+                            onclick="document.getElementById('mapping-ward-input').value=''; document.getElementById('mapping-ward-input').dispatchEvent(new Event('input'))"
+                            title="Xóa"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    <datalist id="list-wards"></datalist>
+                </div>
             </div>
+
             <div class="search-box">
                 <i class="fa-solid fa-search search-icon"></i>
                 <input type="text" id="mapping-search-input" class="search-input"
-                    placeholder="Hoặc gõ mã/tên trực tiếp vào đây...">
-                <button class="btn btn-primary" id="btn-mapping-search">Tra cứu</button>
+                    placeholder="Tìm nhanh theo tên hoặc mã hành chính...">
+                <button class="btn btn-primary" id="btn-mapping-search">Tra cứu ngay</button>
             </div>
         </div>
     </div>
-    <div class="card">
-        <div class="dm-page-main flex flex-column gap-16 overflow-hidden">
-            <!-- Compact Details Bar (Horizontal) -->
-            <div class="card shadow-sm mb-0"
-                style="border-top: 3px solid var(--accent); background: var(--bg-primary);">
-                <div class="card-body py-12 px-16" id="unit-details-panel">
-                    <div class="flex items-center justify-center gap-24 text-tertiary" style="min-height: 48px;">
-                        <i class="fa-solid fa-hand-pointer" style="font-size: 20px"></i>
-                        <p class="m-0">Chọn một đơn vị hành chính từ kết quả hoặc bộ lọc để xem thông tin chi tiết.</p>
-                    </div>
-                </div>
-            </div>
 
-            <!-- Expanded Results Table -->
-            <div class="card flex flex-column overflow-hidden flex-1" style="min-height: 0;">
-                <div class="card-header"
-                    style="background: var(--accent-glow); border-bottom: 2px solid var(--accent); display: flex; justify-content: space-between; align-items: center;">
-                    <span class="card-title text-accent">
-                        <i class="fa-solid fa-map-location-dot mr-4"></i> Kết quả ánh xạ Đơn vị Hành chính (Cũ ↔ Mới)
-                    </span>
-                    <span class="badge info" id="mapping-result-count">0 records</span>
-                </div>
-                <div class="table-container lookup-results-table flex-1">
-                    <table style="font-size: 14px;">
-                        <thead>
-                            <tr>
-                                <th style="width: 250px;">ĐVHC Cũ</th>
-                                <th class="text-center" style="width: 60px;"></th>
-                                <th style="width: 250px;">ĐVHC Mới</th>
-                                <th>Ghi chú biến động / Nghị quyết</th>
-                                <th style="width: 140px;">Ngày hiệu lực</th>
-                            </tr>
-                        </thead>
-                        <tbody id="mapping-results-table">
-                            <tr>
-                                <td colspan="5" class="text-center text-tertiary" style="padding: 60px">
-                                    <i class="fa-solid fa-magnifying-glass mb-12"
-                                        style="font-size: 32px; display: block; opacity: 0.5;"></i>
-                                    Nhập từ khóa hoặc chọn khu vực để bắt đầu tra cứu
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
+    <div class="dm-page-main flex flex-column gap-16 overflow-hidden flex-1">
+        <!-- Details Card -->
+        <div class="unit-details-card" id="unit-details-panel">
+            <div class="flex items-center justify-center gap-16 text-tertiary"
+                style="min-height: 60px; text-align: center;">
+                <i class="fa-solid fa-lightbulb" style="font-size: 24px; color: var(--warning);"></i>
+                <p class="m-0" style="font-size: 16px;">Vui lòng chọn một đơn vị để xem chi tiết lịch sử và mã hành
+                    chính.</p>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div class="card flex flex-column overflow-hidden flex-1" style="min-height: 0;">
+            <div class="card-header"
+                style="background: var(--bg-elevated); border-bottom: 2px solid var(--accent); display: flex; justify-content: space-between; align-items: center;">
+                <span class="card-title" style="font-size: 15px;">
+                    <i class="fa-solid fa-list-check mr-8"></i> Danh sách Kết quả Ánh xạ
+                </span>
+                <span class="badge accent" id="mapping-result-count" style="font-size: 12px; padding: 4px 12px;">0 bản
+                    ghi</span>
+            </div>
+            <div class="table-container lookup-results-table flex-1">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 200px;">ĐVHC Cũ</th>
+                            <th class="text-center" style="width: 50px;"></th>
+                            <th style="width: 200px;">ĐVHC Mới</th>
+                            <th>Diễn biến & Nghị quyết</th>
+                            <th style="width: 130px;">Ngày áp dụng</th>
+                        </tr>
+                    </thead>
+                    <tbody id="mapping-results-table">
+                        <tr>
+                            <td colspan="5" class="text-center text-tertiary" style="padding: 80px">
+                                <i class="fa-solid fa-magnifying-glass-location mb-16"
+                                    style="font-size: 48px; display: block; opacity: 0.3;"></i>
+                                <span style="font-size: 16px;">Sử dụng bộ lọc phía trên để bắt đầu</span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
