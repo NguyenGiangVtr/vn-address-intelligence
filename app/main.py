@@ -22,7 +22,7 @@ from app.core.logging_config import setup_logging
 
 @click.group()
 def cli():
-    """Hệ thống Quản lý Dữ liệu Địa chỉ Thông minh (VN Address Intelligence)"""
+    """Smart Address Intelligence Management System (VN Address Intelligence)"""
     setup_logging()
 
 @cli.command()
@@ -133,15 +133,15 @@ def enrich_v2():
     for name, count in stats.items():
         click.echo(f"{name:25} : {count:10} rows")
 
-@cli.command()
-@click.option('--file', default='data/seed/AdministrativeUnitConversion.csv', help='Path to AdministrativeUnitConversion.csv')
+@cli.command('seed_v3')
+@click.option('--file', default='data/seed/AdministrativeUnitConversion.xlsx', help='Path to AdministrativeUnitConversion file (.xlsx or .csv)')
 def seed_v3(file):
-    """Import dữ liệu hành chính v3 từ AdministrativeUnitConversion.csv.
+    """Import administrative v3 data from conversion file.
     
-    Quy trình:
-      1. Mark is_deleted=True cho toàn bộ data cũ (4 bảng schema mat)
-      2. Insert Province/District/Ward mới (admin_version=2)
-      3. Insert WardMapping v1→v2
+    Process:
+      1. Mark is_deleted=True for all old data (4 tables in mat schema)
+      2. Insert new Province/District/Ward (admin_version=2)
+      3. Insert WardMapping v1 to v2
     """
     from tabulate import tabulate
     click.echo(f"--- Starting SeederV3 from {file} ---")

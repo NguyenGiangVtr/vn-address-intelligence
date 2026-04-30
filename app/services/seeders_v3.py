@@ -22,6 +22,7 @@ Cách chạy từ CLI:
     python -m app.main seed_v3
     python -m app.main seed_v3 --file data/seed/AdministrativeUnitConversion.csv
 """
+import os
 import re
 import logging
 import pandas as pd
@@ -110,31 +111,53 @@ REL_TYPE_CODE = {
 
 # Mapping note → relationship_type
 def _classify_note(note: str | None) -> str:
-    """Phân loại note từ CSV (encoding cp850 có thể có ? thay thế ký tự đặc biệt)."""
+    """Phân loại note từ Excel/CSV để xác định kiểu quan hệ giữa đơn vị cũ và mới."""
     if not note or pd.isna(note):
-        return "UNKNOWN"
+        return "RETAINED"
+    
     n = str(note).strip().lower()
-    # Ưu tiên kiểm tra SPECIAL_ZONE trước (s?p x?p ... ??c khu / đặc khu)
-    if "s?p x?p" in n or "??c khu" in n or "đặc khu" in n:       return "SPECIAL_ZONE"
-    # Giữ nguyên
-    if n.startswith("gi?") or n.startswith("giữ"):                 return "RETAINED"
-    # Đổi tên / đổi loại hình
-    if "?i tên" in n or "đổi tên" in n:                            return "RENAMED"
-    if "?i lo?i hình" in n or "đổi loại" in n:                     return "TYPE_CHANGED"
-    # Nhập toàn bộ
-    if "toàn b?" in n or "toàn bộ" in n:                           return "MERGED_FULL"
-    # Nhập một phần diện tích + dân số → MERGED_PARTIAL
-    if ("di?n tích" in n or "diện tích" in n) and ("dân s?" in n or "dân số" in n):
-        return "MERGED_PARTIAL"
-    # Nhập một phần diện tích
-    if "di?n tích" in n or "diện tích" in n:                        return "MERGED_AREA"
-    # Dân số
-    if "dân s?" in n or "dân số" in n:                              return "MERGED_POPULATION"
-    # Một phần / phần còn lại
-    if "m?t ph?n" in n or "một phần" in n:                         return "MERGED_PARTIAL"
-    if "ph?n còn l?i" in n or "phần còn lại" in n:                 return "MERGED_PARTIAL"
-    # Nhập (fallback)
-    if "nh?p" in n or "nhập" in n:                                  return "MERGED_FULL"
+    
+    # 1. Đặc khu / Sắp xếp
+    if "đặc khu" in n or "đ?c khu" in n or "sắp xếp" in n or "s?p x?p" in n:
+        return "SPECIAL_ZONE"
+    
+    # 2. Nhập toàn bộ (Full Merge)
+    if "toàn bộ" in n or "toàn b?" in n:
+        if "nhập" in n or "nh?p" in n:
+            return "MERGED_FULL"
+    
+    # 3. Nhập một phần (Partial Merges)
+    if "một phần" in n or "m?t ph?n" in n:
+        has_area = "diện tích" in n or "di?n tích" in n or "di?n tch" in n
+        has_pop  = "dân số" in n or "dân s?" in n
+        
+        if has_area and has_pop:
+            return "MERGED_PARTIAL"
+        if has_area:
+            return "MERGED_AREA"
+        if has_pop:
+            return "MERGED_POPULATION"
+        return "MERGED_PART"
+
+    # 4. Đổi tên / Đổi loại hình
+    has_rename = "đổi tên" in n or "?i tên" in n
+    has_type   = "đổi loại hình" in n or "?i lo?i hình" in n or "đổi loại" in n
+    
+    if has_rename and has_type:
+        return "RENAMED_TYPE_CHANGED"
+    if has_rename:
+        return "RENAMED"
+    if has_type:
+        return "TYPE_CHANGED"
+
+    # 5. Giữ nguyên
+    if "giữ nguyên" in n or "gi?" in n or "còn lại" in n:
+        return "RETAINED"
+    
+    # Fallback cho các trường hợp chứa từ khóa 'nhập'
+    if "nhập" in n or "nh?p" in n:
+        return "MERGED_FULL"
+        
     return "OTHER"
 
 
@@ -179,6 +202,14 @@ def _extract_type(name: str | None) -> str:
     return ""
 
 
+def _load_data(file_path: str) -> pd.DataFrame:
+    """Detect file type and load accordingly."""
+    ext = os.path.splitext(file_path)[1].lower()
+    if ext == '.xlsx':
+        return _load_excel(file_path)
+    return _load_csv(file_path)
+
+
 def _load_csv(csv_path: str) -> pd.DataFrame:
     """Load CSV, rename columns, clean, filter data rows."""
     # Đọc bằng latin-1 (1:1 byte) rồi decode TCVN3 thủ công
@@ -190,20 +221,38 @@ def _load_csv(csv_path: str) -> pd.DataFrame:
         "_x1", "_x2",
     ]
     df = df.drop(columns=["_x1", "_x2"], errors="ignore")
+    return _clean_and_process_df(df, fix_encoding=True)
 
+
+def _load_excel(excel_path: str) -> pd.DataFrame:
+    """Load Excel, rename columns, clean, filter data rows."""
+    df = pd.read_excel(excel_path)
+    # Excel has 9 columns based on analysis
+    df.columns = [
+        "province_new", "ward_name_new", "ward_code_new",
+        "ward_name_old", "ward_code_old", "note",
+        "district_old", "province_old", "_x1"
+    ]
+    df = df.drop(columns=["_x1"], errors="ignore")
+    return _clean_and_process_df(df, fix_encoding=False)
+
+
+def _clean_and_process_df(df: pd.DataFrame, fix_encoding: bool) -> pd.DataFrame:
+    """Common cleaning and processing logic for both formats."""
     # Bỏ các dòng header section (ward_name_new rỗng)
     df = df[df["ward_name_new"].notna()].copy()
 
     # Strip mọi string
     str_cols = df.select_dtypes("object").columns
-    df[str_cols] = df[str_cols].apply(lambda c: c.str.strip().str.strip("\n"))
+    df[str_cols] = df[str_cols].apply(lambda c: c.str.strip().str.strip("\n") if hasattr(c, "str") else c)
 
-    # Best-effort fix font lỗi (high-byte → Unicode, '?' không thể recover)
-    name_cols = ["province_new", "ward_name_new", "ward_name_old",
-                 "note", "district_old", "province_old"]
-    for col in name_cols:
-        if col in df.columns:
-            df[col] = df[col].apply(fix_font)
+    # Fix font nếu cần (CSV export lỗi)
+    if fix_encoding:
+        name_cols = ["province_new", "ward_name_new", "ward_name_old",
+                     "note", "district_old", "province_old"]
+        for col in name_cols:
+            if col in df.columns:
+                df[col] = df[col].apply(fix_font)
 
     # Derived columns
     df["prov_code_new"]  = df["province_new"].apply(_extract_code)
@@ -212,13 +261,13 @@ def _load_csv(csv_path: str) -> pd.DataFrame:
     df["prov_name_new"]  = df["province_new"].apply(_extract_name)
     df["prov_name_old"]  = df["province_old"].apply(_extract_name)
     df["dist_name_old"]  = df["district_old"].apply(_extract_name)
-    df["ward_name_new"]  = df["ward_name_new"].str.strip()
-    df["ward_name_old"]  = df["ward_name_old"].str.strip()
+    df["ward_name_new"]  = df["ward_name_new"].astype(str).str.strip()
+    df["ward_name_old"]  = df["ward_name_old"].astype(str).str.strip()
     df["ward_int_new"]   = pd.to_numeric(df["ward_code_new"], errors="coerce").astype("Int64")
     df["ward_int_old"]   = pd.to_numeric(df["ward_code_old"], errors="coerce").astype("Int64")
     df["rel_type"]       = df["note"].apply(_classify_note)
 
-    logger.info("CSV loaded: %d data rows", len(df))
+    logger.info("Data loaded: %d data rows", len(df))
     return df
 
 
@@ -548,9 +597,9 @@ def seed_ward_mapping_v3(df: pd.DataFrame):
             "effective_date_from": EFFECTIVE_DATE,
             "effective_date_to":  None,
             "created_date":       NOW,
-            "created_user":       0,
+            "created_user":       3415,
             "updated_date":       NOW,
-            "updated_user":       0,
+            "updated_user":       3415,
             "is_deleted":         False,
             "updated_note":       str(r.note).strip() if r.note and not pd.isna(r.note) else None,
             "relationship_type":  r.rel_type,
@@ -619,20 +668,20 @@ def _insert_batch(records: list[dict], table: str, chunk_size: int = 1000):
 
 # ── Public entry point ────────────────────────────────────────────────────────
 
-def run_seed_v3(csv_path: str):
+def run_seed_v3(file_path: str):
     """
     Entry point chính — gọi tuần tự 5 bước.
 
     Args:
-        csv_path: Đường dẫn tới AdministrativeUnitConversion.csv
+        file_path: Đường dẫn tới AdministrativeUnitConversion.xlsx hoặc .csv
     """
     logger.info("=" * 60)
-    logger.info("SeederV3: Starting full import from %s", csv_path)
+    logger.info("SeederV3: Starting full import from %s", file_path)
     logger.info("Quy trình: v1 (province/district/ward) → mark_deleted → v2 → ward_mapping")
     logger.info("=" * 60)
 
-    # Load & parse CSV
-    df = _load_csv(csv_path)
+    # Load & parse
+    df = _load_data(file_path)
 
     # Bước 1: Seed toàn bộ data v1 (admin_version=1) trước
     seed_provinces_v1(df)

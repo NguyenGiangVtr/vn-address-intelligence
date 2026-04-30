@@ -1544,7 +1544,7 @@ function setupBatchTool() {
     try {
       setButtonState(true);
       log.innerHTML = `[${formatLogTime()}] Requesting batch processing...`;
-      
+
       const response = await fetch(`${API_BASE}/batch/trigger`, {
         method: "POST",
         headers: {
@@ -1561,7 +1561,7 @@ function setupBatchTool() {
 
       const data = await response.json();
       log.innerHTML = `[${formatLogTime()}] Batch job accepted. ID: ${data.job.jobId}\n`;
-      
+
       pollBatchStatus();
     } catch (error) {
       showToast(error.message, "danger");
@@ -1706,6 +1706,7 @@ async function initMappingV3() {
   const vSelect = document.getElementById('mapping-version-select');
 
   if (!pInput) return;
+  if (vSelect) mappingState.version = parseInt(vSelect.value);
 
   const loadProvinces = async () => {
     try {
@@ -1716,7 +1717,7 @@ async function initMappingV3() {
   };
 
   vSelect?.addEventListener('change', () => {
-    mappingState.version = vSelect.value;
+    mappingState.version = parseInt(vSelect.value);
     pInput.value = ''; dInput.value = ''; wInput.value = '';
     mappingState.provinces = {}; mappingState.districts = {}; mappingState.wards = {};
     const listP = document.getElementById('list-provinces'); if (listP) listP.innerHTML = '';
@@ -2003,7 +2004,7 @@ function initNSOSyncTool() {
   btnClearLogs?.addEventListener('click', clearSyncLogs);
 
   // Start log polling
-  startLogPolling();
+  //startLogPolling();
 }
 
 async function loadNSOProvinces() {

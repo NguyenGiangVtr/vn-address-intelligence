@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, Request, HTTPException, status, APIRouter
+from fastapi import FastAPI, Depends, Request, HTTPException, status, APIRouter, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -632,7 +632,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         raise credentials_exception
 
 @api_router.get("/provinces")
-def get_provinces(version: Optional[int] = 1, db: Session = Depends(get_db)):
+def get_provinces(version: int = Query(1), db: Session = Depends(get_db)):
     """Fetch all provinces, filtered by admin version."""
     query = db.query(Province).filter(Province.admin_version == version)
     if version == 2:
@@ -645,7 +645,7 @@ def get_provinces_by_path(province_id: int, version: Optional[int] = 1, db: Sess
     return db.query(Province).filter(Province.province_id == province_id, Province.admin_version == version).first()
 
 @api_router.get("/districts")
-def get_districts(province_id: Optional[int] = None, version: Optional[int] = 1, db: Session = Depends(get_db)):
+def get_districts(province_id: Optional[int] = None, version: int = Query(1), db: Session = Depends(get_db)):
     """Fetch districts, optionally filtered by province ID and version."""
     query = db.query(District).filter(District.admin_version == version)
     if version == 2:
@@ -655,12 +655,12 @@ def get_districts(province_id: Optional[int] = None, version: Optional[int] = 1,
     return query.order_by(District.district_name).all()
 
 @api_router.get("/districts/{province_id}")
-def get_districts_by_path(province_id: int, version: Optional[int] = 1, db: Session = Depends(get_db)):
+def get_districts_by_path(province_id: int, version: int = Query(1), db: Session = Depends(get_db)):
     """Legacy support for path-based district lookup."""
     return get_districts(province_id=province_id, version=version, db=db)
 
 @api_router.get("/wards")
-def get_wards(district_id: Optional[int] = None, version: Optional[int] = 1, db: Session = Depends(get_db)):
+def get_wards(district_id: Optional[int] = None, version: int = Query(1), db: Session = Depends(get_db)):
     """Fetch wards, optionally filtered by district ID and version."""
     query = db.query(Ward).filter(Ward.admin_version == version)
     if version == 2:
@@ -671,7 +671,7 @@ def get_wards(district_id: Optional[int] = None, version: Optional[int] = 1, db:
     return query.order_by(Ward.ward_name).all()
 
 @api_router.get("/wards/{district_id}")
-def get_wards_by_path(district_id: int, version: Optional[int] = 1, db: Session = Depends(get_db)):
+def get_wards_by_path(district_id: int, version: int = Query(1), db: Session = Depends(get_db)):
     """Legacy support for path-based ward lookup."""
     return get_wards(district_id=district_id, version=version, db=db)
 
