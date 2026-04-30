@@ -199,9 +199,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // Load all pages first
   await loadPages();
-  console.log("[VNAI] Pages loaded.");
 
-  const safeInit = (name, fn) => { try { fn(); } catch(e) { console.error(`[VNAI] Init error in ${name}:`, e); } };
+  const safeInit = (name, fn) => { try { fn(); } catch (e) { console.error(`[VNAI] Init error in ${name}:`, e); } };
 
   safeInit("setupNavigation", setupNavigation);
   safeInit("applyUnifiedControlTemplate", applyUnifiedControlTemplate);
@@ -218,6 +217,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   safeInit("initMappingV3", initMappingV3);
   safeInit("initIntelligenceChart", initIntelligenceChart);
   safeInit("initModelBenchmarkUI", initModelBenchmarkUI);
+  safeInit("initTrainingHub", initTrainingHub);
 
   fetchStats();
   setInterval(fetchStats, 30000);
@@ -1122,7 +1122,6 @@ function setupParserTool() {
 
   // Build NER legend once
   _buildParserNERLegend();
-  console.log("[Parser] setupParserTool OK — btn-parse attached.");
 }
 
 function _buildParserNERLegend() {
@@ -1202,9 +1201,9 @@ async function runParser() {
   // Run all 4 models in PARALLEL — each updates its own card when done
   const models = [
     { key: "prelabeler", label: "PreLabeler" },
-    { key: "phobert",    label: "PhoBERT" },
-    { key: "mgte",       label: "mGTE" },
-    { key: "llm",        label: "Qwen LLM" },
+    { key: "phobert", label: "PhoBERT" },
+    { key: "mgte", label: "mGTE" },
+    { key: "llm", label: "Qwen LLM" },
   ];
 
   let completedCount = 0;
@@ -1586,48 +1585,53 @@ async function fetchStats(options = {}) {
 // ═══════════════════════════════════════════════════════════
 // TRAINING HUB LOGIC
 // ═══════════════════════════════════════════════════════════
-document.getElementById('btn-import-ls')?.addEventListener('click', async () => {
-  const fileInput = document.getElementById('ls-import-file');
-  const statusEl = document.getElementById('import-status');
+function initTrainingHub() {
+  const btnImport = document.getElementById('btn-import-ls');
+  if (!btnImport) return;
 
-  if (!fileInput.files.length) {
-    statusEl.innerHTML = '<span class="text-danger">Vui lòng chọn file JSON</span>';
-    return;
-  }
+  btnImport.addEventListener('click', async () => {
+    const fileInput = document.getElementById('ls-import-file');
+    const statusEl = document.getElementById('import-status');
 
-  statusEl.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Đang tải lên và tái huấn luyện...';
-
-  // Simulated delay for training
-  setTimeout(async () => {
-    try {
-      await createTrainingHistoryEntry({
-        version: "v2.4.1",
-        accuracy: 93.8,
-        f1: 91.5,
-        loss: 0.221,
-        samples: 26300,
-        notes: "Imported from dashboard training flow",
-      });
-
-      statusEl.innerHTML = '<span class="text-success">✅ Thành công! Mô hình đã được cập nhật bản v2.4.1</span>';
-
-      // Update last retrained text
-      const timeEl = document.getElementById('last-retrained-text');
-      if (timeEl) timeEl.textContent = "Vừa xong";
-
-      await loadTrainingHistoryFromDB({ silent: true });
-      if (window.__vnaiBenchmarkRefresh) {
-        window.__vnaiBenchmarkRefresh({ silent: true });
-      }
-    } catch (error) {
-      console.error("Training history create error:", error);
-      statusEl.innerHTML = '<span class="text-danger">❌ Không thể ghi training history vào database</span>';
-      if (showToast) {
-        showToast("Không thể ghi training history vào database", "danger");
-      }
+    if (!fileInput.files.length) {
+      statusEl.innerHTML = '<span class="text-danger">Vui lòng chọn file JSON</span>';
+      return;
     }
-  }, 3000);
-});
+
+    statusEl.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Đang tải lên và tái huấn luyện...';
+
+    // Simulated delay for training
+    setTimeout(async () => {
+      try {
+        await createTrainingHistoryEntry({
+          version: "v2.4.1",
+          accuracy: 93.8,
+          f1: 91.5,
+          loss: 0.221,
+          samples: 26300,
+          notes: "Imported from dashboard training flow",
+        });
+
+        statusEl.innerHTML = '<span class="text-success">✅ Thành công! Mô hình đã được cập nhật bản v2.4.1</span>';
+
+        // Update last retrained text
+        const timeEl = document.getElementById('last-retrained-text');
+        if (timeEl) timeEl.textContent = "Vừa xong";
+
+        await loadTrainingHistoryFromDB({ silent: true });
+        if (window.__vnaiBenchmarkRefresh) {
+          window.__vnaiBenchmarkRefresh({ silent: true });
+        }
+      } catch (error) {
+        console.error("Training history create error:", error);
+        statusEl.innerHTML = '<span class="text-danger">❌ Không thể ghi training history vào database</span>';
+        if (showToast) {
+          showToast("Không thể ghi training history vào database", "danger");
+        }
+      }
+    }, 3000);
+  });
+}
 
 // ═══════════════════════════════════════════════════════════
 // WARD MAPPING LOOKUP LOGIC (V3 - Fixed Search & UI)
@@ -1738,6 +1742,11 @@ async function initMappingV3() {
     }
   });
 
+  document.getElementById('btn-mapping-search')?.addEventListener('click', triggerMappingSearch);
+  document.getElementById('mapping-search-input')?.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') triggerMappingSearch();
+  });
+
   loadProvinces();
 }
 
@@ -1844,10 +1853,6 @@ async function triggerMappingSearch() {
   } catch (err) { tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger" style="padding:40px">Lỗi kết nối API</td></tr>'; }
 }
 
-document.getElementById('btn-mapping-search')?.addEventListener('click', triggerMappingSearch);
-document.getElementById('mapping-search-input')?.addEventListener('keypress', (e) => {
-  if (e.key === 'Enter') triggerMappingSearch();
-});
 
 // ═══════════════════════════════════════════════════════════
 // NSO SYNC LOGIC (v2 - Batch & Real-time Logs)
