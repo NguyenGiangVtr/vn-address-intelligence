@@ -1,55 +1,123 @@
 <!-- ══════ PAGE: NSO SYNC ══════ -->
 <div class="page" id="nso-sync">
+    <style>
+        #nso-sync .dm-filter-toolbar {
+            padding: 20px;
+        }
+
+        #nso-sync .batch-log {
+            background: #000;
+            color: #34d399;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            padding: 16px;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-subtle);
+        }
+
+        @media (max-width: 768px) {
+            #nso-sync .dm-filter-toolbar .card-body {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            #nso-sync .dm-filter-toolbar .flex.gap-12 {
+                width: 100%;
+            }
+
+            #nso-sync .dm-filter-toolbar .btn {
+                flex: 1;
+            }
+        }
+    </style>
+
     <div class="page-header">
         <h2>NSO Sync</h2>
         <p>Đồng bộ dữ liệu hành chính từ Tổng cục Thống kê (NSO - GSO)</p>
     </div>
 
     <!-- Filter Toolbar -->
-    <div class="card mb-20 dm-filter-sidebar dm-filter-toolbar">
-        <div class="card-body">
-            <div class="search-box">
-                <div class="search-icon"><i class="fa-solid fa-magnifying-glass"></i></div>
-                <input type="text" id="nso-search-input" class="search-input" placeholder="Tìm theo tên tỉnh...">
+    <div class="card mb-20 dm-filter-toolbar">
+        <div class="card-body flex flex-wrap gap-16 items-end">
+            <div class="form-group flex-1" style="min-width: 200px;">
+                <label class="form-label">Tỉnh / Thành phố</label>
+                <div class="input-wrapper">
+                    <input list="nso-list-provinces" id="nso-province-input" class="form-input" placeholder="Chọn Tỉnh...">
+                    <datalist id="nso-list-provinces"></datalist>
+                </div>
+            </div>
+            <div class="form-group flex-1" style="min-width: 200px;">
+                <label class="form-label">Quận / Huyện</label>
+                <div class="input-wrapper">
+                    <input list="nso-list-districts" id="nso-district-input" class="form-input" placeholder="Chọn Huyện...">
+                    <datalist id="nso-list-districts"></datalist>
+                </div>
+            </div>
+            <div class="form-group flex-1" style="min-width: 200px;">
+                <label class="form-label">Phường / Xã</label>
+                <div class="input-wrapper">
+                    <input list="nso-list-wards" id="nso-ward-input" class="form-input" placeholder="Chọn Xã...">
+                    <datalist id="nso-list-wards"></datalist>
+                </div>
             </div>
 
-            <button class="btn btn-primary" id="btn-nso-sync-all">
-                <i class="fa-solid fa-cloud-arrow-down"></i> Sync All Provinces
-            </button>
+            <div class="flex gap-12">
+                <button class="btn btn-primary" id="btn-nso-sync-selected">
+                    <i class="fa-solid fa-sync mr-4"></i> Sync Selected
+                </button>
+                <button class="btn btn-outline" id="btn-nso-sync-all">
+                    <i class="fa-solid fa-cloud-arrow-down mr-4"></i> Sync All
+                </button>
+            </div>
         </div>
     </div>
 
-    <div class="card mb-12">
-        <div class="card-header">
-            <span class="card-title">Danh sách Tỉnh/Thành từ NSO</span>
-            <span id="nso-count" class="badge-outline">0</span>
-        </div>
-        <div class="card-body">
-            <div class="card-body with-scroll" style="padding: 0px; overflow-y: auto; max-height: 400px;">
-                    <div class="table-container">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Mã</th>
-                                    <th>Tên Tỉnh / Thành</th>
-                                    <th class="text-right">Hành động</th>
-                                </tr>
-                            </thead>
-                            <tbody id="nso-province-body">
-                                <!-- Filled by JS -->
-                            </tbody>
-                        </table>
-                    </div>
+    <div class="content-grid sidebar-layout" style="gap: 16px;">
+        <!-- Results Section -->
+        <div class="card flex flex-column overflow-hidden flex-1" style="min-height: 400px;">
+            <div class="card-header">
+                <span class="card-title">Danh sách Đơn vị NSO</span>
+                <span id="nso-count" class="badge accent">0 bản ghi</span>
+            </div>
+            <div class="card-body p-0 overflow-auto">
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width: 80px;">Mã</th>
+                                <th>Tên Đơn vị</th>
+                                <th>Phân loại</th>
+                                <th class="text-right" style="width: 100px;">Hành động</th>
+                            </tr>
+                        </thead>
+                        <tbody id="nso-table-body">
+                            <tr>
+                                <td colspan="4" class="text-center text-tertiary" style="padding: 60px;">
+                                    <i class="fa-solid fa-cloud-download mb-12" style="font-size: 32px; opacity: 0.2; display: block;"></i>
+                                    Đang tải dữ liệu từ NSO...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
+            </div>
         </div>
-    </div>
-    <div class="card">
-        <div class="card-header">
-            <span class="card-title">Sync Details</span>
-            <div id="nso-sync-status" class="badge-outline">IDLE</div>
-        </div>
-        <div class="card-body">
-            <div class="batch-log" id="nso-sync-logs" style="overflow-y: auto; max-height: 398px;">[SYSTEM] Awaiting sync task...</div>
+
+        <!-- Logs Section -->
+        <div class="card flex flex-column overflow-hidden" style="flex: 0 0 350px;">
+            <div class="card-header">
+                <span class="card-title">Nhật ký Đồng bộ</span>
+                <div id="nso-sync-status" class="badge-outline">IDLE</div>
+            </div>
+            <div class="card-body p-12 overflow-hidden flex flex-column">
+                <div class="batch-log flex-1 overflow-auto" id="nso-sync-logs">
+                    <div style="color: #5c5c5f;">Awaiting sync task...</div>
+                </div>
+                <button class="btn btn-xs btn-ghost mt-8" id="btn-clear-nso-logs">
+                    <i class="fa-solid fa-trash mr-4"></i> Xóa nhật ký
+                </button>
+            </div>
         </div>
     </div>
 </div>

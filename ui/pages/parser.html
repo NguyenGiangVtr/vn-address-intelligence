@@ -9,10 +9,9 @@
         <div class="parser-hero-inner">
             <div class="parser-input-wrap">
                 <i class="fa-solid fa-location-dot parser-input-icon"></i>
-                <input type="text" id="parser-input" class="parser-input-field"
-                    placeholder="Ví dụ: 123 Lê Lợi, Phường Bến Thành, Quận 1, TP.HCM"
-                    value="123 Lê Lợi, Bến Thành, Quận 1, HCM"
-                    autocomplete="off" spellcheck="false">
+                <textarea id="parser-input" class="parser-input-field"
+                    placeholder="Ví dụ: 123 Lê Lợi, Phường Bến Thành, Quận 1, TP.HCM" rows="1" autocomplete="off"
+                    spellcheck="false">123 Lê Lợi, Bến Thành, Quận 1, HCM</textarea>
                 <div class="parser-input-actions">
                     <button class="parser-btn-sample" id="btn-parse-sample-local" type="button" title="Mẫu ngẫu nhiên">
                         <i class="fa-solid fa-shuffle"></i>
@@ -28,7 +27,8 @@
             </div>
             <div class="parser-status-bar">
                 <div id="parser-status-dot" class="pstatus-dot idle"></div>
-                <span id="parser-status" class="pstatus-text">Sẵn sàng phân tích — nhấn Enter hoặc click Phân tích</span>
+                <span id="parser-status" class="pstatus-text">Sẵn sàng phân tích — nhấn Enter hoặc click Phân
+                    tích</span>
                 <div class="parser-timing" id="parser-timing" style="display:none">
                     <i class="fa-solid fa-stopwatch"></i>
                     <span id="parser-timing-val">0ms</span>
@@ -38,13 +38,14 @@
     </div>
 
     <!-- ── NER Highlight Output ── -->
-    <div class="parser-ner-zone mt-12" id="parser-ner-zone">
+    <div class="parser-ner-zone" id="parser-ner-zone">
         <div class="parser-ner-header">
             <span class="parser-section-label"><i class="fa-solid fa-tags"></i> NER Tokens</span>
             <div class="parser-ner-legend" id="parser-ner-legend"></div>
         </div>
         <div id="parser-output" class="parser-ner-output">
-            <span class="parser-placeholder">Kết quả phân tích NER sẽ hiển thị tại đây với các entity được highlight theo màu</span>
+            <span class="parser-placeholder">Kết quả phân tích NER sẽ hiển thị tại đây với các entity được highlight
+                theo màu</span>
         </div>
     </div>
 
@@ -57,7 +58,7 @@
                     <div class="pmodel-name">PreLabeler</div>
                     <div class="pmodel-sub">Quy tắc + Từ điển địa phương</div>
                 </div>
-                <div class="pmodel-badge" id="pbadge-prelabeler"><span class="pmodel-spinner"></span></div>
+                <div class="pmodel-badge" id="pbadge-prelabeler"><span class="pmodel-badge-idle">READY</span></div>
             </div>
             <div class="pmodel-body">
                 <div class="pmodel-result" id="presult-prelabeler">
@@ -74,7 +75,7 @@
                     <div class="pmodel-name">PhoBERT Siamese</div>
                     <div class="pmodel-sub">Mô hình Transformer tiếng Việt</div>
                 </div>
-                <div class="pmodel-badge" id="pbadge-phobert"><span class="pmodel-spinner"></span></div>
+                <div class="pmodel-badge" id="pbadge-phobert"><span class="pmodel-badge-idle">READY</span></div>
             </div>
             <div class="pmodel-body">
                 <div class="pmodel-result" id="presult-phobert">
@@ -91,7 +92,7 @@
                     <div class="pmodel-name">mGTE Siamese</div>
                     <div class="pmodel-sub">Embedding đa ngôn ngữ</div>
                 </div>
-                <div class="pmodel-badge" id="pbadge-mgte"><span class="pmodel-spinner"></span></div>
+                <div class="pmodel-badge" id="pbadge-mgte"><span class="pmodel-badge-idle">READY</span></div>
             </div>
             <div class="pmodel-body">
                 <div class="pmodel-result" id="presult-mgte">
@@ -108,7 +109,7 @@
                     <div class="pmodel-name">Qwen 2.5 LLM</div>
                     <div class="pmodel-sub">Mô hình ngôn ngữ lớn</div>
                 </div>
-                <div class="pmodel-badge" id="pbadge-llm"><span class="pmodel-spinner"></span></div>
+                <div class="pmodel-badge" id="pbadge-llm"><span class="pmodel-badge-idle">READY</span></div>
             </div>
             <div class="pmodel-body">
                 <div class="pmodel-result" id="presult-llm">
@@ -123,7 +124,8 @@
     <div class="parser-footer-row">
         <div class="parser-meta-card" id="parser-meta">
             <i class="fa-solid fa-circle-info" style="color:var(--text-tertiary); font-size:12px"></i>
-            <span class="text-tertiary" style="font-size:12px">Nhập địa chỉ để bắt đầu quá trình phân tích bằng trí tuệ nhân tạo.</span>
+            <span class="text-tertiary" style="font-size:12px">Nhập địa chỉ để bắt đầu quá trình phân tích bằng trí tuệ
+                nhân tạo.</span>
         </div>
         <button class="btn btn-ghost btn-sm" data-goto="label-registry" style="flex-shrink:0">
             <i class="fa-solid fa-tags"></i> Entity Registry

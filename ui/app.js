@@ -956,12 +956,14 @@ function setupNavigation() {
   const closeMobileMenu = () => {
     sidebar.classList.remove("mobile-active");
     overlay.classList.remove("mobile-active");
+    document.body.classList.remove("no-scroll");
   };
 
   if (toggle) {
     toggle.addEventListener("click", () => {
-      sidebar.classList.toggle("mobile-active");
+      const isActive = sidebar.classList.toggle("mobile-active");
       overlay.classList.toggle("mobile-active");
+      document.body.classList.toggle("no-scroll", isActive);
     });
   }
 
@@ -1108,17 +1110,37 @@ function setupParserTool() {
 
   btnParse.addEventListener("click", () => runParser());
 
-  if (inputEl) inputEl.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") { e.preventDefault(); runParser(); }
-  });
+  const autoResizeInput = () => {
+    if (!inputEl) return;
+    inputEl.style.height = 'auto';
+    inputEl.style.height = (inputEl.scrollHeight) + 'px';
+  };
+
+  if (inputEl) {
+    inputEl.addEventListener("input", autoResizeInput);
+    inputEl.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        runParser();
+      }
+    });
+    setTimeout(autoResizeInput, 100); // Wait for page transition
+  }
 
   if (btnSampleLocal) btnSampleLocal.addEventListener("click", () => {
     const addr = SAMPLE_ADDRESSES[Math.floor(Math.random() * SAMPLE_ADDRESSES.length)];
-    if (inputEl) { inputEl.value = addr; inputEl.dataset.sampleId = ""; }
+    if (inputEl) {
+      inputEl.value = addr;
+      inputEl.dataset.sampleId = "";
+      autoResizeInput();
+    }
     runParser();
   });
 
-  if (btnSampleDB) btnSampleDB.addEventListener("click", fetchParserSampleDB);
+  if (btnSampleDB) btnSampleDB.addEventListener("click", async () => {
+    await fetchParserSampleDB();
+    autoResizeInput();
+  });
 
   // Build NER legend once
   _buildParserNERLegend();
@@ -1865,119 +1887,202 @@ async function triggerMappingSearch() {
 
 
 // ═══════════════════════════════════════════════════════════
-// NSO SYNC LOGIC (v2 - Batch & Real-time Logs)
+// NSO SYNC LOGIC (v3 - Hierarchical Filters & Improved Sync)
 // ═══════════════════════════════════════════════════════════
-let nsoProvinces = [];
+let nsoState = {
+  provinces: {},
+  districts: {},
+  wards: {},
+  currentLevel: 'province',
+  currentData: []
+};
+
 let logPollingInterval = null;
-let logPollingRetryTimer = null;
-let logPollingFailureCount = 0;
-
-function clearLogPollingRetryTimer() {
-  if (logPollingRetryTimer) {
-    clearTimeout(logPollingRetryTimer);
-    logPollingRetryTimer = null;
-  }
-}
-
-function scheduleLogPollingRetry() {
-  clearInterval(logPollingInterval);
-  logPollingInterval = null;
-
-  clearLogPollingRetryTimer();
-  logPollingRetryTimer = setTimeout(() => {
-    logPollingRetryTimer = null;
-    startLogPolling();
-  }, 15000);
-}
 
 function initNSOSyncTool() {
-  const btnLoad = document.getElementById('btn-load-nso-provinces');
-  const btnSyncAll = document.getElementById('btn-sync-all-provinces');
-  const filterInput = document.getElementById('nso-province-filter');
-  const logsContainer = document.getElementById('nso-sync-logs');
-  const clearLogsBtn = document.getElementById('btn-clear-nso-logs');
+  const pInput = document.getElementById('nso-province-input');
+  const dInput = document.getElementById('nso-district-input');
+  const wInput = document.getElementById('nso-ward-input');
+  const btnSyncSelected = document.getElementById('btn-nso-sync-selected');
+  const btnSyncAll = document.getElementById('btn-nso-sync-all');
+  const btnClearLogs = document.getElementById('btn-clear-nso-logs');
 
-  if (!btnLoad) return;
+  if (!pInput) return;
 
-  btnLoad.addEventListener('click', loadNSOProvinces);
-  btnSyncAll?.addEventListener('click', syncAllProvinces);
-  filterInput.addEventListener('input', renderNSOProvincesTable);
-  clearLogsBtn.addEventListener('click', async () => {
-    try {
-      await fetch(`${API_BASE}/sync/nso/logs`, { method: 'DELETE', headers: getAuthHeader() });
-      logsContainer.innerHTML = '<div style="color: #8b949e;">[System] Logs cleared.</div>';
-    } catch (error) {
-      console.warn('Unable to clear NSO logs', error);
-      if (showToast) {
-        showToast('Không thể xóa log vì API chưa phản hồi', 'danger');
-      }
+  // Initial Load
+  loadNSOProvinces();
+
+  // Listeners
+  pInput.addEventListener('input', async () => {
+    if (pInput.value === '') {
+      dInput.value = ''; wInput.value = '';
+      nsoState.districts = {}; nsoState.wards = {};
+      const listD = document.getElementById('nso-list-districts');
+      if (listD) listD.innerHTML = '';
+      const listW = document.getElementById('nso-list-wards');
+      if (listW) listW.innerHTML = '';
+      nsoState.currentLevel = 'province';
+      loadNSOProvinces();
+      return;
     }
+    const province = nsoState.provinces[pInput.value];
+    if (!province) return;
+
+    nsoState.currentLevel = 'district';
+    loadNSODistricts(province.MaTinh, province.TenTinh);
+    dInput.value = ''; wInput.value = '';
   });
+
+  dInput.addEventListener('input', async () => {
+    if (dInput.value === '') {
+      wInput.value = '';
+      nsoState.wards = {};
+      const listW = document.getElementById('nso-list-wards');
+      if (listW) listW.innerHTML = '';
+      const province = nsoState.provinces[pInput.value];
+      if (province) {
+        nsoState.currentLevel = 'district';
+        loadNSODistricts(province.MaTinh, province.TenTinh);
+      }
+      return;
+    }
+    const district = nsoState.districts[dInput.value];
+    if (!district) return;
+
+    nsoState.currentLevel = 'ward';
+    const province = nsoState.provinces[pInput.value];
+    loadNSOWards(province.MaTinh, province.TenTinh, district.MaHuyen, district.TenHuyen);
+    wInput.value = '';
+  });
+
+  wInput.addEventListener('input', () => {
+    if (wInput.value === '') {
+      const district = nsoState.districts[dInput.value];
+      if (district) {
+        const province = nsoState.provinces[pInput.value];
+        loadNSOWards(province.MaTinh, province.TenTinh, district.MaHuyen, district.TenHuyen);
+      }
+      return;
+    }
+    renderNSOTable(nsoState.currentData);
+  });
+
+  btnSyncSelected?.addEventListener('click', syncSelectedUnit);
+  btnSyncAll?.addEventListener('click', syncAllNSO);
+  btnClearLogs?.addEventListener('click', clearSyncLogs);
 
   // Start log polling
   startLogPolling();
 }
 
 async function loadNSOProvinces() {
-  const btn = document.getElementById('btn-load-nso-provinces');
-  const tbody = document.getElementById('nso-provinces-table');
-  btn.disabled = true;
-  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang tải...';
-  tbody.innerHTML = '<tr><td colspan="4" class="text-center"><i class="fa-solid fa-spinner fa-spin fa-2x"></i></td></tr>';
+  const tbody = document.getElementById('nso-table-body');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="4" class="text-center p-40"><i class="fa-solid fa-spinner fa-spin fa-2x text-accent"></i></td></tr>';
 
   try {
     const res = await fetch(`${API_BASE}/nso/provinces`, { headers: getAuthHeader() });
-    nsoProvinces = await res.json();
-    renderNSOProvincesTable();
+    const data = await res.json();
+    nsoState.currentData = data;
+    renderNSOTemplateDatalist('nso-list-provinces', data, 'TenTinh', 'MaTinh', nsoState.provinces);
+    renderNSOTable(data);
   } catch (e) {
-    tbody.innerHTML = '<tr><td colspan="4" class="text-center text-danger">Lỗi tải dữ liệu NSO</td></tr>';
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = '<i class="fa-solid fa-rotate mr-4"></i> Tải danh sách NSO';
+    tbody.innerHTML = '<tr><td colspan="4" class="text-center text-danger p-20">Lỗi tải danh mục Tỉnh từ NSO</td></tr>';
   }
 }
 
-function renderNSOProvincesTable() {
-  const tbody = document.getElementById('nso-provinces-table');
-  const filter = document.getElementById('nso-province-filter').value.toLowerCase();
+async function loadNSODistricts(pCode, pName) {
+  const tbody = document.getElementById('nso-table-body');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="4" class="text-center p-40"><i class="fa-solid fa-spinner fa-spin fa-2x text-accent"></i></td></tr>';
 
-  const filtered = nsoProvinces.filter(p =>
-    p.TenTinh.toLowerCase().includes(filter) || p.MaTinh.includes(filter)
-  );
-
-  if (filtered.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="4" class="text-center text-tertiary">Không tìm thấy tỉnh nào phù hợp.</td></tr>';
-    return;
+  try {
+    const res = await fetch(`${API_BASE}/nso/districts?province_no=${pCode}&province_name=${encodeURIComponent(pName)}`, { headers: getAuthHeader() });
+    const data = await res.json();
+    nsoState.currentData = data;
+    renderNSOTemplateDatalist('nso-list-districts', data, 'TenHuyen', 'MaHuyen', nsoState.districts);
+    renderNSOTable(data);
+  } catch (e) {
+    tbody.innerHTML = '<tr><td colspan="4" class="text-center text-danger p-20">Lỗi tải danh mục Huyện từ NSO</td></tr>';
   }
+}
 
-  tbody.innerHTML = filtered.map(p => `
-    <tr>
-      <td><span class="text-mono">${p.MaTinh}</span></td>
-      <td><strong>${p.TenTinh}</strong></td>
-      <td><span class="badge info">${p.LoaiHinh}</span></td>
-      <td class="text-right">
-        <button class="btn btn-xs btn-accent btn-sync-province" 
-                data-code="${p.MaTinh}" data-name="${p.TenTinh}">
-          <i class="fa-solid fa-cloud-arrow-down"></i> Sync
-        </button>
-      </td>
-    </tr>
-  `).join("");
+async function loadNSOWards(pCode, pName, dCode, dName) {
+  const tbody = document.getElementById('nso-table-body');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="4" class="text-center p-40"><i class="fa-solid fa-spinner fa-spin fa-2x text-accent"></i></td></tr>';
 
-  // Add listeners to new buttons
-  document.querySelectorAll('.btn-sync-province').forEach(btn => {
-    btn.addEventListener('click', () => syncSingleProvince(btn));
+  try {
+    const res = await fetch(`${API_BASE}/nso/wards?province_no=${pCode}&province_name=${encodeURIComponent(pName)}&district_no=${dCode}&district_name=${encodeURIComponent(dName)}`, { headers: getAuthHeader() });
+    const data = await res.json();
+    nsoState.currentData = data;
+    renderNSOTemplateDatalist('nso-list-wards', data, 'TenXa', 'MaXa', nsoState.wards);
+    renderNSOTable(data);
+  } catch (e) {
+    tbody.innerHTML = '<tr><td colspan="4" class="text-center text-danger p-20">Lỗi tải danh mục Xã từ NSO</td></tr>';
+  }
+}
+
+function renderNSOTemplateDatalist(listId, data, nameKey, idKey, stateMap) {
+  const list = document.getElementById(listId);
+  if (!list) return;
+  list.innerHTML = '';
+  // Reset state map
+  for (let k in stateMap) delete stateMap[k];
+
+  data.forEach(item => {
+    const opt = document.createElement('option');
+    opt.value = item[nameKey];
+    list.appendChild(opt);
+    stateMap[item[nameKey]] = item;
   });
 }
 
-async function syncSingleProvince(btn) {
-  const code = btn.getAttribute('data-code');
-  const name = btn.getAttribute('data-name');
+function renderNSOTable(data) {
+  const tbody = document.getElementById('nso-table-body');
+  const countEl = document.getElementById('nso-count');
+  if (!tbody) return;
 
-  btn.disabled = true;
-  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+  const searchVal = (document.getElementById('nso-ward-input')?.value ||
+    document.getElementById('nso-district-input')?.value ||
+    document.getElementById('nso-province-input')?.value || "").toLowerCase();
 
+  const filtered = data.filter(item => {
+    const name = (item.TenXa || item.TenHuyen || item.TenTinh || "").toLowerCase();
+    const code = (item.MaXa || item.MaHuyen || item.MaTinh || "");
+    return name.includes(searchVal) || code.includes(searchVal);
+  });
+
+  countEl.textContent = `${filtered.length.toLocaleString()} bản ghi`;
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" class="text-center p-20 text-tertiary">Không tìm thấy dữ liệu phù hợp.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(item => {
+    const code = item.MaXa || item.MaHuyen || item.MaTinh;
+    const name = item.TenXa || item.TenHuyen || item.TenTinh;
+    const type = item.LoaiHinh || "N/A";
+
+    return `
+      <tr>
+        <td><span class="text-mono">${code}</span></td>
+        <td><strong>${name}</strong></td>
+        <td><span class="badge info">${type}</span></td>
+        <td class="text-right">
+          <button class="btn btn-xs btn-accent" onclick="syncSingleNSOUnit('${code}', '${name}')">
+            <i class="fa-solid fa-sync"></i> Sync
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join("");
+}
+
+async function syncSingleNSOUnit(code, name) {
   updateSyncStatus('SYNCING', 'var(--warning)');
+  showToast(`🚀 Bắt đầu đồng bộ: ${name}...`);
 
   try {
     const res = await fetch(`${API_BASE}/sync/nso/province`, {
@@ -1986,111 +2091,82 @@ async function syncSingleProvince(btn) {
       body: JSON.stringify({ code, name })
     });
     const result = await res.json();
-
     if (result.status === 'success') {
-      showToast(`✅ Hoàn thành ${name}`);
+      showToast(`✅ Hoàn thành: ${name}`);
     } else {
-      showToast(`❌ Lỗi ${name}: ${result.message}`, 'danger');
+      showToast(`❌ Lỗi: ${result.message}`, 'danger');
     }
   } catch (e) {
-    showToast(`❌ Lỗi kết nối khi sync ${name}`, 'danger');
+    showToast(`❌ Lỗi kết nối khi đồng bộ ${name}`, 'danger');
   } finally {
-    btn.disabled = false;
-    btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-down"></i> Sync';
     updateSyncStatus('IDLE', '#8b949e');
   }
 }
 
-function updateSyncStatus(text, color) {
-  document.getElementById('sync-status-text').textContent = text;
-  document.getElementById('sync-status-dot').style.background = color;
+async function syncSelectedUnit() {
+  const pVal = document.getElementById('nso-province-input').value;
+  const dVal = document.getElementById('nso-district-input').value;
+  const wVal = document.getElementById('nso-ward-input').value;
+
+  const ward = nsoState.wards[wVal];
+  const district = nsoState.districts[dVal];
+  const province = nsoState.provinces[pVal];
+
+  if (ward) {
+    syncSingleNSOUnit(ward.MaXa, ward.TenXa);
+  } else if (district) {
+    syncSingleNSOUnit(district.MaHuyen, district.TenHuyen);
+  } else if (province) {
+    syncSingleNSOUnit(province.MaTinh, province.TenTinh);
+  } else {
+    showToast('Vui lòng chọn ít nhất một đơn vị để đồng bộ', 'warning');
+  }
+}
+
+async function syncAllNSO() {
+  const confirm = await showConfirm("Bạn có chắc chắn muốn đồng bộ TOÀN BỘ 63 tỉnh thành? Quá trình này có thể mất vài phút.");
+  if (!confirm) return;
+
+  updateSyncStatus('SYNCING ALL', 'var(--warning)');
+  try {
+    await fetch(`${API_BASE}/sync/nso`, { method: 'POST', headers: getAuthHeader() });
+    showToast("Đã gửi yêu cầu đồng bộ toàn bộ hệ thống.");
+  } catch (e) {
+    showToast("Lỗi khi gửi yêu cầu đồng bộ", "danger");
+  } finally {
+    updateSyncStatus('IDLE', '#8b949e');
+  }
+}
+
+async function clearSyncLogs() {
+  try {
+    await fetch(`${API_BASE}/sync/nso/logs`, { method: 'DELETE', headers: getAuthHeader() });
+    document.getElementById('nso-sync-logs').innerHTML = '<div style="color: #5c5c5f;">[System] Logs cleared.</div>';
+  } catch (e) { showToast('Không thể xóa nhật ký', 'danger'); }
 }
 
 function startLogPolling() {
   if (logPollingInterval) clearInterval(logPollingInterval);
-  clearLogPollingRetryTimer();
-  logPollingFailureCount = 0;
-
   logPollingInterval = setInterval(async () => {
-    const logsContainer = document.getElementById('nso-sync-logs');
-    if (!logsContainer) return;
-
     try {
       const res = await fetch(`${API_BASE}/sync/nso/logs`, { headers: getAuthHeader() });
+      if (!res.ok) return;
       const logs = await res.json();
-      logPollingFailureCount = 0;
-
-      const html = logs.map(l => {
-        let color = '#8b949e';
-        if (l.level === 'success') color = '#3fb950';
-        if (l.level === 'error') color = '#f85149';
-        if (l.level === 'warning') color = '#d29922';
-
-        return `<div style="margin-bottom: 4px;">
-          <span style="color: #484f58;">[${l.time}]</span> 
-          <span style="color: ${color}">${l.message}</span>
-        </div>`;
-      }).join("");
-
-      if (logsContainer.innerHTML !== html) {
-        logsContainer.innerHTML = html;
-        logsContainer.scrollTop = logsContainer.scrollHeight;
+      const container = document.getElementById('nso-sync-logs');
+      if (container && logs.length > 0) {
+        container.innerHTML = logs.map(l => `<div>${l}</div>`).join('');
+        container.scrollTop = container.scrollHeight;
       }
-    } catch (error) {
-      logPollingFailureCount += 1;
-
-      if (logsContainer && logPollingFailureCount === 1) {
-        logsContainer.innerHTML = '<div style="color: #8b949e;">[System] Log API unavailable. Retrying...</div>';
-      }
-
-      if (logPollingFailureCount >= 1) {
-        scheduleLogPollingRetry();
-      }
-    }
+    } catch (e) { console.error("Log polling error", e); }
   }, 2000);
 }
 
-async function syncAllProvinces() {
-  const btn = document.getElementById('btn-sync-all-provinces');
-  if (nsoProvinces.length === 0) {
-    showToast('Vui lòng tải danh sách Tỉnh trước', 'warning');
-    return;
-  }
-
-  const confirmMsg = `Hệ thống sẽ bắt đầu đồng bộ tuần tự ${nsoProvinces.length.toLocaleString()} tỉnh/thành. Quá trình này có thể kéo dài vài phút tùy thuộc vào tốc độ mạng. Bạn có chắc chắn muốn bắt đầu?`;
-  const isConfirmed = await showConfirm(confirmMsg);
-  if (!isConfirmed) return;
-
-  btn.disabled = true;
-  const originalHtml = btn.innerHTML;
-  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Syncing All...';
-
-  try {
-    for (let i = 0; i < nsoProvinces.length; i++) {
-      const p = nsoProvinces[i];
-      updateSyncStatus(`SYNCING (${(i + 1).toLocaleString()}/${nsoProvinces.length.toLocaleString()})`, 'var(--warning)');
-
-      // Update UI to highlight current province (optional but good)
-      // For now we just call the sync
-      try {
-        const res = await fetch(`${API_BASE}/sync/nso/province`, {
-          method: 'POST',
-          headers: { ...getAuthHeader(), 'Content-Type': 'application/json' },
-          body: JSON.stringify({ code: p.MaTinh, name: p.TenTinh })
-        });
-        const result = await res.json();
-        console.log(`Sync ${p.TenTinh} result:`, result);
-      } catch (err) {
-        console.error(`Failed to sync ${p.TenTinh}`, err);
-      }
-    }
-    showToast('✅ Đã hoàn thành đồng bộ toàn bộ danh sách!', 'success');
-  } catch (e) {
-    showToast('❌ Lỗi trong quá trình đồng bộ hàng loạt', 'danger');
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = originalHtml;
-    updateSyncStatus('IDLE', '#8b949e');
+function updateSyncStatus(text, color) {
+  const el = document.getElementById('nso-sync-status');
+  if (el) {
+    el.textContent = text;
+    el.style.borderColor = color;
+    el.style.color = color;
   }
 }
 
