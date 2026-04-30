@@ -34,7 +34,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from app.ai.constants import get_ner_label_list
+from app.ai.constants import get_ner_label_list, NER_LABELS
 from app.ai.job_artifacts import record_training_history
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s.%(msecs)03d [%(levelname)s] %(message)s", datefmt="%H:%M:%S")
@@ -74,18 +74,25 @@ def convert_labelstudio_to_bio(data: list, tokenizer, label2id: dict) -> list:
         elif "predictions" in item and item["predictions"]:
             annotations = item["predictions"][0].get("result", [])
 
-        # Lọc chỉ lấy labels type
+        # Lọc chỉ lấy labels type + Map text→value
         spans = []
+        text_to_value = {lbl["text"]: lbl["value"] for lbl in NER_LABELS}
+        
         for ann in annotations:
             if ann.get("type") != "labels":
                 continue
             value = ann.get("value", {})
-            label = value.get("labels", [None])[0]
-            if label and value.get("start") is not None:
+            label_text = value.get("labels", [None])[0]
+            if label_text and value.get("start") is not None:
+                # Map text label to value (Label Studio export uses text, training expects value)
+                label_value = text_to_value.get(label_text, label_text)
+                if label_value != label_text:
+                    logger.debug(f"Mapped: '{label_text}' → '{label_value}'")
+                
                 spans.append({
                     "start": value["start"],
                     "end": value["end"],
-                    "label": label
+                    "label": label_value
                 })
 
         # Sắp xếp spans theo vị trí
