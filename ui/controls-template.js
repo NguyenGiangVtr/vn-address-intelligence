@@ -23,7 +23,7 @@
     return div.innerHTML;
   }
 
-  function renderLookupTemplateDatalist(listId, rows, labelKey, idKey, stateMap) {
+  function renderLookupTemplateDatalist(listId, rows, labelKey, idKey, stateMap, countId) {
     const list = document.getElementById(listId);
     if (!list) return;
 
@@ -34,6 +34,11 @@
       if (label != null && id != null) stateMap[label] = id;
       return `<option value="${escapeHtml(String(label || ''))}" data-id="${id}"></option>`;
     }).join('');
+
+    if (countId) {
+      const countEl = document.getElementById(countId);
+      if (countEl) countEl.textContent = rows.length.toLocaleString();
+    }
   }
 
   function renderUnifiedSelectOptions(selectId, rows, valueKey, labelKey, placeholder) {
@@ -129,7 +134,7 @@
     const showDistrict = options.showDistrict !== false;
     const showWard = options.showWard !== false;
     const showSearch = options.showSearch !== false;
-    const searchPlaceholder = options.searchPlaceholder || "Tìm nhanh theo tên hoặc mã hành chính...";
+    const searchPlaceholder = options.searchPlaceholder || "Tìm theo tên hoặc mã...";
     const buttonText = options.buttonText || "Tra cứu ngay";
     const title = options.title || "Bộ lọc Thông minh";
 
@@ -157,7 +162,7 @@
     if (showProvince) {
       html += `
                 <div class="form-group smart-filter-item">
-                    <label class="form-label">Tỉnh/Thành phố</label>
+                    <label class="form-label">Tỉnh/Thành phố <span class="filter-item-count" id="${prefix}-province-count">0</span></label>
                     <div class="input-wrapper">
                         <input list="${prefix}-list-provinces" id="${prefix}-province-input" class="form-input has-clear"
                             placeholder="Chọn Tỉnh/Thành...">
@@ -171,7 +176,7 @@
     if (showDistrict) {
       html += `
                 <div class="form-group smart-filter-item">
-                    <label class="form-label">Quận/Huyện/Thị xã</label>
+                    <label class="form-label">Quận/Huyện/Thị xã <span class="filter-item-count" id="${prefix}-district-count">0</span></label>
                     <div class="input-wrapper">
                         <input list="${prefix}-list-districts" id="${prefix}-district-input" class="form-input has-clear"
                             placeholder="Chọn Quận/Huyện...">
@@ -185,7 +190,7 @@
     if (showWard) {
       html += `
                 <div class="form-group smart-filter-item">
-                    <label class="form-label">Phường/Xã/Thị trấn</label>
+                    <label class="form-label">Phường/Xã/Thị trấn <span class="filter-item-count" id="${prefix}-ward-count">0</span></label>
                     <div class="input-wrapper">
                         <input list="${prefix}-list-wards" id="${prefix}-ward-input" class="form-input has-clear"
                             placeholder="Chọn Phường/Xã...">
@@ -277,7 +282,7 @@
       try {
         const data = await fetchProvinces(state.version);
         state.currentData = data;
-        renderLookupTemplateDatalist(`${prefix}-list-provinces`, data, config.provinceNameKey || 'province_name', config.provinceIdKey || 'province_id', state.provinces);
+        renderLookupTemplateDatalist(`${prefix}-list-provinces`, data, config.provinceNameKey || 'province_name', config.provinceIdKey || 'province_id', state.provinces, `${prefix}-province-count`);
         onSearch(state);
       } catch (e) { console.error(e); }
     };
@@ -301,6 +306,8 @@
         state.districts = {}; state.wards = {};
         const listD = document.getElementById(`${prefix}-list-districts`); if (listD) listD.innerHTML = '';
         const listW = document.getElementById(`${prefix}-list-wards`); if (listW) listW.innerHTML = '';
+        const districtCount = document.getElementById(`${prefix}-district-count`); if (districtCount) districtCount.textContent = '0';
+        const wardCount = document.getElementById(`${prefix}-ward-count`); if (wardCount) wardCount.textContent = '0';
         loadProvinces(); // Reload top level if cleared
         return;
       }
@@ -319,7 +326,7 @@
       try {
         const data = await fetchDistricts(id, state.version, val);
         state.currentData = data;
-        renderLookupTemplateDatalist(`${prefix}-list-districts`, data, config.districtNameKey || 'district_name', config.districtIdKey || 'district_id', state.districts);
+        renderLookupTemplateDatalist(`${prefix}-list-districts`, data, config.districtNameKey || 'district_name', config.districtIdKey || 'district_id', state.districts, `${prefix}-district-count`);
         onSearch(state);
       } catch (e) { console.error(e); }
     });
@@ -329,6 +336,7 @@
         if (wInput) wInput.value = '';
         state.wards = {};
         const listW = document.getElementById(`${prefix}-list-wards`); if (listW) listW.innerHTML = '';
+        const wardCount = document.getElementById(`${prefix}-ward-count`); if (wardCount) wardCount.textContent = '0';
         // Reload districts
         const pVal = state.provinces[pInput.value];
         const pId = typeof pVal === 'object' ? (pVal[config.provinceIdKey || 'province_id'] || pVal.MaTinh) : pVal;
@@ -351,7 +359,7 @@
       try {
         const data = await fetchWards(id, state.version, val);
         state.currentData = data;
-        renderLookupTemplateDatalist(`${prefix}-list-wards`, data, config.wardNameKey || 'ward_name', config.wardIdKey || 'ward_id', state.wards);
+        renderLookupTemplateDatalist(`${prefix}-list-wards`, data, config.wardNameKey || 'ward_name', config.wardIdKey || 'ward_id', state.wards, `${prefix}-ward-count`);
         onSearch(state);
       } catch (e) { console.error(e); }
     });

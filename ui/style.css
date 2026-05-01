@@ -982,6 +982,22 @@ tbody tr:hover td {
   margin-bottom: 6px;
 }
 
+.form-label .filter-item-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 8px;
+  min-width: 32px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-primary);
+  transition: background var(--transition), color var(--transition), border-color var(--transition);
+}
+
 .form-input,
 .form-textarea {
   width: 100%;
@@ -1024,6 +1040,10 @@ tbody tr:hover td {
     gap: 8px;
   }
 
+  .form-input {
+    font-size: 16px;
+  }
+
   .input-group>.form-input,
   .input-group>.btn {
     border-radius: var(--radius-md) !important;
@@ -1040,6 +1060,12 @@ select.form-input {
   background-position: right 12px center;
   background-size: 16px;
   padding-right: 36px;
+}
+
+@media (max-width: 768px) {
+  .form-input {
+    font-size: 16px;
+  }
 }
 
 .control-template-dropdown {

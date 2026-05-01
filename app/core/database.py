@@ -177,6 +177,7 @@ class WardMapping(Base):
     district_id_old = Column(Integer)
     ward_id_new = Column(Integer)
     province_id_new = Column(Integer)
+    district_id_new = Column(Integer)
     effective_date_from = Column(DateTime)
     effective_date_to = Column(DateTime)
     created_date = Column(DateTime, default=func.now())

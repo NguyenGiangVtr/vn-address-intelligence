@@ -876,19 +876,19 @@ async function runOSMJobFromUI() {
   try {
     const pInput = document.getElementById('osm-province-input');
     const pId = osmState.provinces[pInput?.value];
-    
+
     let limitProvinces = 63;
     let provinceId = null;
-    
+
     if (pId) {
-        limitProvinces = 1;
-        provinceId = pId;
+      limitProvinces = 1;
+      provinceId = pId;
     }
 
     const targetTotal = getNumericInputValue("osm-target-total") || 5000000;
-    const confirmMessage = pId 
-        ? `Chạy crawl OSM cho tỉnh ${pInput.value} với target ${targetTotal.toLocaleString()} entities?`
-        : `Chạy crawl OSM cho tất cả 63 tỉnh/thành với target ${targetTotal.toLocaleString()} entities?`;
+    const confirmMessage = pId
+      ? `Chạy crawl OSM cho tỉnh ${pInput.value} với target ${targetTotal.toLocaleString()} entities?`
+      : `Chạy crawl OSM cho tất cả 63 tỉnh/thành với target ${targetTotal.toLocaleString()} entities?`;
 
     if (showConfirm) {
       const confirmed = await showConfirm(confirmMessage);
@@ -1731,7 +1731,7 @@ async function initMappingV3() {
   VNAIControls.renderSmartFilter('lookup-filter-container', {
     prefix: 'mapping',
     title: 'Bộ lọc Thông minh (Mapping History)',
-    searchPlaceholder: 'Tìm nhanh theo tên hoặc mã hành chính...'
+    searchPlaceholder: 'Tìm theo tên hoặc mã...'
   });
 
   mappingState = await VNAIControls.initSmartFilter('mapping', {

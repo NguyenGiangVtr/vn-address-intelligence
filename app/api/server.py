@@ -731,7 +731,7 @@ def lookup_mapping(
     ).outerjoin(
         DistV1, and_(DistV1.district_id == func.coalesce(WardV1.district_id, WardMapping.district_id_old), DistV1.admin_version == 1)
     ).outerjoin(
-        DistV2, and_(DistV2.district_id == WardV2.district_id, DistV2.is_deleted == False, DistV2.admin_version == 2)
+        DistV2, and_(DistV2.district_id == func.coalesce(WardV2.district_id, WardMapping.district_id_new), DistV2.is_deleted == False, DistV2.admin_version == 2)
     ).outerjoin(
         ProvV1, and_(ProvV1.province_id == func.coalesce(DistV1.province_id, WardMapping.province_id_old), ProvV1.admin_version == 1)
     ).outerjoin(
@@ -767,10 +767,11 @@ def lookup_mapping(
         if version == 1:
             filters.append(or_(WardMapping.district_id_old == district_id, WardV1.district_id == district_id, DistV1.district_id == district_id))
         elif version == 2:
-            filters.append(or_(WardV2.district_id == district_id, DistV2.district_id == district_id))
+            filters.append(or_(WardMapping.district_id_new == district_id, WardV2.district_id == district_id, DistV2.district_id == district_id))
         else:
             filters.append(or_(
                 WardMapping.district_id_old == district_id, 
+                WardMapping.district_id_new == district_id,
                 WardV1.district_id == district_id,
                 WardV2.district_id == district_id,
                 DistV1.district_id == district_id,
@@ -800,7 +801,11 @@ def lookup_mapping(
     if filters:
         base_query = base_query.filter(and_(*filters))
     
-    results = base_query.order_by(WardMapping.effective_date_from.desc().nulls_last()).limit(500).all()
+    try:
+        results = base_query.order_by(WardMapping.effective_date_from.desc().nulls_last()).limit(500).all()
+    except Exception as e:
+        logger.error(f"Error in lookup_mapping query: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Database query error: {str(e)}")
 
     # 4. Format lại output và xử lý các case đặc biệt (-1)
     enriched_results = []
