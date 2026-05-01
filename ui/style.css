@@ -2184,6 +2184,21 @@ select.form-input {
   transform: translateY(0);
 }
 
+.modal-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  width: 100%;
+  max-width: 500px;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  transform: translateY(20px);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.modal-overlay.active .modal-card {
+  transform: translateY(0);
+}
+
 .modal-header {
   display: flex;
   align-items: center;

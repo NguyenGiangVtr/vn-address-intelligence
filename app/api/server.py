@@ -645,13 +645,15 @@ def get_provinces_by_path(province_id: int, version: Optional[int] = 1, db: Sess
     return db.query(Province).filter(Province.province_id == province_id, Province.admin_version == version).first()
 
 @api_router.get("/districts")
-def get_districts(province_id: Optional[int] = None, version: int = Query(1), db: Session = Depends(get_db)):
-    """Fetch districts, optionally filtered by province ID and version."""
+def get_districts(province_id: Optional[int] = None, district_id: Optional[int] = None, version: int = Query(1), db: Session = Depends(get_db)):
+    """Fetch districts, optionally filtered by province ID, district ID and version."""
     query = db.query(District).filter(District.admin_version == version)
     if version == 2:
         query = query.filter(District.is_deleted == False)
     if province_id:
         query = query.filter(District.province_id == province_id)
+    if district_id:
+        query = query.filter(District.district_id == district_id)
     return query.order_by(District.district_name).all()
 
 @api_router.get("/districts/{province_id}")
@@ -660,14 +662,16 @@ def get_districts_by_path(province_id: int, version: int = Query(1), db: Session
     return get_districts(province_id=province_id, version=version, db=db)
 
 @api_router.get("/wards")
-def get_wards(district_id: Optional[int] = None, version: int = Query(1), db: Session = Depends(get_db)):
-    """Fetch wards, optionally filtered by district ID and version."""
+def get_wards(district_id: Optional[int] = None, ward_id: Optional[int] = None, version: int = Query(1), db: Session = Depends(get_db)):
+    """Fetch wards, optionally filtered by district ID, ward_id and version."""
     query = db.query(Ward).filter(Ward.admin_version == version)
     if version == 2:
         query = query.filter(Ward.is_deleted == False)
     
     if district_id:
         query = query.filter(Ward.district_id == district_id)
+    if ward_id:
+        query = query.filter(Ward.ward_id == ward_id)
     return query.order_by(Ward.ward_name).all()
 
 @api_router.get("/wards/{district_id}")
@@ -710,6 +714,8 @@ def lookup_mapping(
         WardMapping.ward_id_new,
         WardMapping.province_id_old,
         WardMapping.province_id_new,
+        WardMapping.district_id_old,
+        WardMapping.district_id_new,
         WardMapping.updated_note,
         WardMapping.effective_date_from,
         WardMapping.effective_date_to,
@@ -720,9 +726,7 @@ def lookup_mapping(
         WardV2.ward_name.label("ward_name_new"),
         ProvV1.province_name.label("province_name_old"),
         ProvV2.province_name.label("province_name_new"),
-        WardV1.district_id.label("district_id_old"),
         DistV1.district_name.label("district_name_old"),
-        WardV2.district_id.label("district_id_new"),
         DistV2.district_name.label("district_name_new")
     ).outerjoin(
         WardV1, and_(WardV1.ward_id == WardMapping.ward_id_old, WardV1.admin_version == 1) 
@@ -810,12 +814,30 @@ def lookup_mapping(
     # 4. Format lại output và xử lý các case đặc biệt (-1)
     enriched_results = []
     for r in results:
-        res = r._asdict()
-        if res["ward_id_old"] == -1:
-            res["ward_name_old"] = "(Tất cả Xã)"
-        if res["ward_name_old"] is None:
-            res["ward_name_old"] = "N/A"
-        enriched_results.append(res)
+        try:
+            res = r._asdict()
+            # Handle ward -1 (All wards)
+            if res.get("ward_id_old") == -1:
+                res["ward_name_old"] = "(Tất cả Xã)"
+            
+            # Ensure all name fields are not None for UI
+            name_fields = [
+                "ward_name_old", "ward_name_new", 
+                "district_name_old", "district_name_new", 
+                "province_name_old", "province_name_new"
+            ]
+            for field in name_fields:
+                if res.get(field) is None:
+                    res[field] = "N/A"
+            
+            # Ensure note is not None
+            if res.get("updated_note") is None:
+                res["updated_note"] = ""
+                
+            enriched_results.append(res)
+        except Exception as e:
+            logger.error(f"Error processing mapping result row: {e}")
+            continue
 
     return enriched_results
 

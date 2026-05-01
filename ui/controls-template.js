@@ -207,7 +207,7 @@
 
     if (showSearch) {
       html += `
-            <div class="search-box-unified">
+            <div class="search-box-unified" style="margin-top: 0;">
                 <i class="fa-solid fa-search search-icon"></i>
                 <input type="text" id="${prefix}-search-input" class="search-input"
                     placeholder="${searchPlaceholder}">

@@ -15,7 +15,7 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 db = SessionLocal()
 
 def test_lookup_mapping():
-    district_id = 92
+    district_id = 79
     version = 2
     
     ProvV1 = aliased(Province)

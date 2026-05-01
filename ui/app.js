@@ -2116,7 +2116,8 @@ function updateSyncStatus(text, color) {
 
 window.editAdminUnit = async function (level, id) {
   try {
-    const res = await fetch(`${API_BASE}/${level}s/${id}`, { headers: getAuthHeader() });
+    const version = adminState ? adminState.version : 1;
+    const res = await fetch(`${API_BASE}/${level}s/${id}?version=${version}`, { headers: getAuthHeader() });
     const item = await res.json();
 
     document.getElementById('admin-modal-title').textContent = `Chỉnh sửa ${item[`${level}_name`]}`;
@@ -2250,16 +2251,16 @@ async function initAdminManager() {
   });
 
   adminState = await VNAIControls.initSmartFilter('admin', {
-    fetchProvinces: async () => {
-      const res = await fetch(`${API_BASE}/provinces?limit=100`, { headers: getAuthHeader() });
+    fetchProvinces: async (v) => {
+      const res = await fetch(`${API_BASE}/provinces?limit=100&version=${v}`, { headers: getAuthHeader() });
       return await res.json();
     },
-    fetchDistricts: async (pId) => {
-      const res = await fetch(`${API_BASE}/districts?province_id=${pId}&limit=500`, { headers: getAuthHeader() });
+    fetchDistricts: async (pId, v) => {
+      const res = await fetch(`${API_BASE}/districts?province_id=${pId}&limit=500&version=${v}`, { headers: getAuthHeader() });
       return await res.json();
     },
-    fetchWards: async (dId) => {
-      const res = await fetch(`${API_BASE}/wards?district_id=${dId}&limit=500`, { headers: getAuthHeader() });
+    fetchWards: async (dId, v) => {
+      const res = await fetch(`${API_BASE}/wards?district_id=${dId}&limit=500&version=${v}`, { headers: getAuthHeader() });
       return await res.json();
     },
     onSearch: (state) => loadAdminData(state)
@@ -2279,6 +2280,17 @@ async function initAdminManager() {
     await saveAdminUnit();
   });
 
+  // Close modal handlers
+  document.querySelectorAll('#modal-admin-unit .close-modal').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.getElementById('modal-admin-unit').classList.remove('active');
+    });
+  });
+
+  // Add search listeners
+  document.getElementById('admin-search-input')?.addEventListener('input', () => loadAdminData());
+  document.getElementById('admin-btn-search')?.addEventListener('click', () => loadAdminData());
+
   loadAdminData();
 }
 
@@ -2286,9 +2298,15 @@ function getAdminCurrentLevel(state) {
   const activeState = state || adminState;
   const pInput = document.getElementById('admin-province-input');
   const dInput = document.getElementById('admin-district-input');
+  const wInput = document.getElementById('admin-ward-input');
 
+  // If a ward is selected, we are definitely at ward level
+  if (wInput && wInput.value && activeState.wards[wInput.value]) return 'ward';
+  // If a district is selected, we show wards of that district
   if (dInput && dInput.value && activeState.districts[dInput.value]) return 'ward';
+  // If a province is selected, we show districts of that province
   if (pInput && pInput.value && activeState.provinces[pInput.value]) return 'district';
+  
   return 'province';
 }
 
@@ -2300,9 +2318,11 @@ async function loadAdminData(state) {
 
   const pInput = document.getElementById('admin-province-input');
   const dInput = document.getElementById('admin-district-input');
+  const wInput = document.getElementById('admin-ward-input');
 
   const provinceId = pInput && pInput.value ? activeState.provinces[pInput.value] : null;
   const districtId = dInput && dInput.value ? activeState.districts[dInput.value] : null;
+  const wardId = wInput && wInput.value ? activeState.wards[wInput.value] : null;
 
   const searchInput = document.getElementById('admin-search-input');
   const q = searchInput ? searchInput.value.toLowerCase() : '';
@@ -2313,9 +2333,10 @@ async function loadAdminData(state) {
 
   tableBody.innerHTML = '<tr><td colspan="6" class="text-center p-24"><i class="fa-solid fa-spinner fa-spin mr-8"></i> Đang tải dữ liệu...</td></tr>';
 
-  let url = `${API_BASE}/${level}s?limit=500`;
+  let url = `${API_BASE}/${level}s?limit=500&version=${activeState.version}`;
   if (level === 'district' && provinceId) url += `&province_id=${provinceId}`;
   if (level === 'ward' && districtId) url += `&district_id=${districtId}`;
+  if (level === 'ward' && wardId) url += `&ward_id=${wardId}`;
 
   try {
     const res = await fetch(url, { headers: getAuthHeader() });
@@ -2324,6 +2345,11 @@ async function loadAdminData(state) {
     // Sort by GSO code (_no) - Numeric sort
     const noField = `${level}_no`;
     data.sort((a, b) => (a[noField] || '').localeCompare(b[noField] || '', undefined, { numeric: true }));
+
+    // Filter by selected ward if level is ward and ward is selected
+    if (level === 'ward' && wardId) {
+      data = data.filter(item => item[`${level}_id`] == wardId);
+    }
 
     // Render Headers
     const headers = ['ID', 'Mã số', 'Tên đơn vị', 'Tên Tiếng Anh', 'Loại hình'];
@@ -2589,10 +2615,6 @@ async function fetchLabelStudioTasks() {
   }
 }
 // Admin Unit CRUD Stubs
-function editAdminUnit(level, id) {
-  showToast(`Chức năng chỉnh sửa ${level} (ID: ${id}) đang được phát triển.`, 'info');
-}
-
 async function deleteAdminUnit(level, id, name) {
   const confirmed = await showConfirm(`Bạn có chắc chắn muốn xóa ${level}: ${name}?`);
   if (confirmed) {
@@ -2602,6 +2624,5 @@ async function deleteAdminUnit(level, id, name) {
 
 // Expose to window for inline onclick handlers
 window.showDetails = showDetails;
-window.editAdminUnit = editAdminUnit;
 window.deleteAdminUnit = deleteAdminUnit;
 window.loadTrainingHistoryFromDB = loadTrainingHistoryFromDB;
