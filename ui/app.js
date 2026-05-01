@@ -2117,8 +2117,10 @@ function updateSyncStatus(text, color) {
 window.editAdminUnit = async function (level, id) {
   try {
     const version = adminState ? adminState.version : 1;
-    const res = await fetch(`${API_BASE}/${level}s/${id}?version=${version}`, { headers: getAuthHeader() });
+    const res = await fetch(`${API_BASE}/unit-details/${level}/${id}?version=${version}`, { headers: getAuthHeader() });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const item = await res.json();
+    if (!item) throw new Error('Unit not found');
 
     document.getElementById('admin-modal-title').textContent = `Chỉnh sửa ${item[`${level}_name`]}`;
     document.getElementById('admin-form-id').value = id;
@@ -2130,6 +2132,7 @@ window.editAdminUnit = async function (level, id) {
     renderExtraFields(item);
     document.getElementById('modal-admin-unit').classList.add('active');
   } catch (e) {
+    console.error('Error loading unit details:', e);
     showToast('Lỗi khi tải thông tin chi tiết', 'danger');
   }
 }
@@ -2470,6 +2473,10 @@ async function initDataExplorer() {
   explorerState = await VNAIControls.initSmartFilter('explorer', {
     onSearch: loadData
   });
+
+  // Add search listeners
+  document.getElementById('explorer-search-input')?.addEventListener('input', () => loadData());
+  document.getElementById('explorer-btn-search')?.addEventListener('click', () => loadData());
 
   loadData();
 }

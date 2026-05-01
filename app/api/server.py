@@ -682,11 +682,20 @@ def get_wards_by_path(district_id: int, version: int = Query(1), db: Session = D
 @api_router.get("/unit-details/{level}/{unit_id}")
 def get_unit_details(level: str, unit_id: int, version: Optional[int] = 1, db: Session = Depends(get_db)):
     if level == "province":
-        return db.query(Province).filter(Province.province_id == unit_id, Province.admin_version == version).first()
+        query = db.query(Province).filter(Province.province_id == unit_id, Province.admin_version == version)
+        if version == 2:
+            query = query.filter(Province.is_deleted == False)
+        return query.first()
     if level == "district":
-        return db.query(District).filter(District.district_id == unit_id, District.admin_version == version).first()
+        query = db.query(District).filter(District.district_id == unit_id, District.admin_version == version)
+        if version == 2:
+            query = query.filter(District.is_deleted == False)
+        return query.first()
     if level == "ward":
-        return db.query(Ward).filter(Ward.ward_id == unit_id, Ward.admin_version == version).first()
+        query = db.query(Ward).filter(Ward.ward_id == unit_id, Ward.admin_version == version)
+        if version == 2:
+            query = query.filter(Ward.is_deleted == False)
+        return query.first()
     return {"error": "Invalid level"}
 
 @api_router.get("/lookup/mapping")
