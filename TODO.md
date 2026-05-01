@@ -6,3 +6,7 @@
 - [x] Improve NER logging message to clarify fallback behavior (Regex fallback, not model error)
 - [x] Update pipeline initialization to pass only local fine-tuned path (or force fallback)
 - [x] Mark completion after quick consistency review
+- [x] Update admin units grid column: replace "Tên Tiếng Anh" with "Ngày cập nhật (updated_date)"
+- [x] Verify header label and row binding are updated in ui/app.js
+- [x] Standardize parser page wording for scientific research + SaaS context
+- [x] Standardize parser-footer-row UI structure and styling

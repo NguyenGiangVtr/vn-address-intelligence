@@ -1958,7 +1958,7 @@ async function triggerMappingSearch(state) {
           <div style="font-size:12px; line-height:1.5; color: var(--text-secondary)">${m.updated_note || "Cập nhật theo nghị quyết sáp nhập ĐVHC."}</div>
         </td>
         <td data-label="Ngày áp dụng" class="text-tertiary" style="padding: 16px 20px; font-size:13px; font-family: var(--font-mono)">
-          ${m.effective_date_from ? new Date(m.effective_date_from).toLocaleDateString('vi-VN') : "01/01/2021"}
+          ${m.effective_date_from ? new Date(m.effective_date_from).toLocaleDateString('vi-VN') : "01/07/2025"}
         </td>
       </tr>
     `).join("");
@@ -2423,6 +2423,22 @@ function getAdminCurrentLevel(state) {
   return 'province';
 }
 
+function formatDateTime(dateInput) {
+    if (!dateInput) return '-';
+
+    const d = new Date(dateInput);
+
+    const yyyy = d.getFullYear();
+    const MM = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+
+    const HH = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+    const ss = String(d.getSeconds()).padStart(2, '0');
+
+    return `${yyyy}-${MM}-${dd} ${HH}:${mm}:${ss}`;
+}
+
 async function loadAdminData(state) {
   const activeState = state || adminState;
   if (!activeState.provinces) return;
@@ -2465,7 +2481,7 @@ async function loadAdminData(state) {
     }
 
     // Render Headers
-    const headers = ['ID', 'Mã số', 'Tên đơn vị', 'Tên Tiếng Anh', 'Loại hình'];
+    const headers = ['ID', 'Mã số', 'Tên đơn vị', 'Ngày cập nhật', 'Loại hình'];
     tableHead.innerHTML = headers.map(h => `<th>${h}</th>`).join('') + '<th class="text-right">Thao tác</th>';
 
     // Apply client-side search filter
@@ -2495,7 +2511,7 @@ async function loadAdminData(state) {
             <span class="${level !== 'province' ? 'text-secondary' : 'font-600'}">${item[`${level}_name`]}</span>
           </div>
         </td>
-        <td class="text-tertiary text-xs">${item[`${level}_name_en`] || '-'}</td>
+        <td class="text-tertiary text-xs">${item.updated_date ? formatDateTime(item.updated_date) : '-'}</td>
         <td><span class="badge badge-outline">${item.type_name || '-'}</span></td>
         <td class="text-right">
           <button class="btn btn-icon btn-sm" onclick="editAdminUnit('${level}', ${item[`${level}_id`]})" title="Sửa"><i class="fa-solid fa-pen-to-square"></i></button>

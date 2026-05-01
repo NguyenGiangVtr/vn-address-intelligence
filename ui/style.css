@@ -3456,19 +3456,59 @@ select.form-input {
 /* ── Footer Row ── */
 .parser-footer-row {
   display: flex;
-  align-items: center;
+  align-items: stretch;
+  justify-content: space-between;
   gap: 12px;
-  padding: 8px 24px 12px;
+  padding: 10px 0 4px;
+  margin-top: 10px;
   flex-shrink: 0;
-  border-top: 1px solid var(--border-subtle);
 }
 
 .parser-meta-card {
   flex: 1;
   display: flex;
-  align-items: center;
-  gap: 8px;
+  align-items: flex-start;
+  gap: 10px;
   min-width: 0;
+  padding: 10px 12px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.parser-meta-icon {
+  color: var(--info);
+  font-size: 12px;
+  margin-top: 3px;
+  flex-shrink: 0;
+}
+
+.parser-meta-content {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.parser-meta-title {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.parser-meta-text {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  line-height: 1.45;
+}
+
+.parser-footer-action {
+  align-self: center;
+  white-space: nowrap;
+  border: 1px solid var(--border-default);
+  background: var(--bg-app);
 }
 
 /* Responsive: collapse to 2-col on narrow screens */
@@ -3481,18 +3521,6 @@ select.form-input {
 @media (max-width: 640px) {
   .parser-models-grid {
     grid-template-columns: 1fr;
-  }
-
-  .parser-hero {
-    padding: 12px 12px 0;
-  }
-
-  .parser-ner-zone {
-    margin: 10px 12px 0;
-  }
-
-  .parser-footer-row {
-    padding: 8px 12px;
   }
 
   .parser-input-wrap {
@@ -3518,6 +3546,17 @@ select.form-input {
     flex: 1;
     justify-content: center;
     height: 42px;
+  }
+
+  .parser-footer-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .parser-footer-action {
+    width: 100%;
+    justify-content: center;
   }
 }
 

@@ -1,8 +1,8 @@
 <!-- ══════ PAGE: ADDRESS PARSER ══════ -->
 <div class="page" id="parser">
     <div class="page-header">
-        <h2>AI Address Parser</h2>
-        <p>Trí tuệ nhân tạo phân tích địa chỉ Việt Nam</p>
+        <h2>Vietnamese Address Intelligence Parser</h2>
+        <p>Nền tảng phân tích địa chỉ phục vụ nghiên cứu khoa học và triển khai SaaS</p>
     </div>
     <!-- ── Hero Input Zone ── -->
     <div class="parser-hero mb-20">
@@ -10,25 +10,24 @@
             <div class="parser-input-wrap">
                 <i class="fa-solid fa-location-dot parser-input-icon"></i>
                 <textarea id="parser-input" class="parser-input-field"
-                    placeholder="Ví dụ: 123 Lê Lợi, Phường Bến Thành, Quận 1, TP.HCM" rows="1" autocomplete="off"
+                    placeholder="Ví dụ: 123 Lê Lợi, Phường Bến Thành, Quận 1, TP. Hồ Chí Minh" rows="1" autocomplete="off"
                     spellcheck="false">123 Lê Lợi, Bến Thành, Quận 1, HCM</textarea>
                 <div class="parser-input-actions">
-                    <button class="parser-btn-sample" id="btn-parse-sample-local" type="button" title="Mẫu ngẫu nhiên">
+                    <button class="parser-btn-sample" id="btn-parse-sample-local" type="button" title="Nạp mẫu nghiên cứu ngẫu nhiên">
                         <i class="fa-solid fa-shuffle"></i>
                     </button>
-                    <button class="parser-btn-sample" id="btn-parse-sample-db" type="button" title="Mẫu từ Database">
+                    <button class="parser-btn-sample" id="btn-parse-sample-db" type="button" title="Nạp mẫu từ cơ sở dữ liệu">
                         <i class="fa-solid fa-database"></i>
                     </button>
                     <button class="parser-btn-run" id="btn-parse" type="button">
                         <i class="fa-solid fa-wand-magic-sparkles"></i>
-                        <span>Phân tích</span>
+                        <span>Phân tích địa chỉ</span>
                     </button>
                 </div>
             </div>
             <div class="parser-status-bar">
                 <div id="parser-status-dot" class="pstatus-dot idle"></div>
-                <span id="parser-status" class="pstatus-text">Sẵn sàng phân tích — nhấn Enter hoặc click Phân
-                    tích</span>
+                <span id="parser-status" class="pstatus-text">Sẵn sàng chạy pipeline — nhấn Enter hoặc chọn Phân tích địa chỉ</span>
                 <div class="parser-timing" id="parser-timing" style="display:none">
                     <i class="fa-solid fa-stopwatch"></i>
                     <span id="parser-timing-val">0ms</span>
@@ -40,12 +39,11 @@
     <!-- ── NER Highlight Output ── -->
     <div class="parser-ner-zone" id="parser-ner-zone">
         <div class="parser-ner-header">
-            <span class="parser-section-label"><i class="fa-solid fa-tags"></i> NER Tokens</span>
+            <span class="parser-section-label"><i class="fa-solid fa-tags"></i> NER Entities</span>
             <div class="parser-ner-legend" id="parser-ner-legend"></div>
         </div>
         <div id="parser-output" class="parser-ner-output">
-            <span class="parser-placeholder">Kết quả phân tích NER sẽ hiển thị tại đây với các entity được highlight
-                theo màu</span>
+            <span class="parser-placeholder">Kết quả tách thực thể sẽ hiển thị tại đây, được tô màu theo nhãn NER chuẩn hóa</span>
         </div>
     </div>
 
@@ -56,7 +54,7 @@
                 <div class="pmodel-icon" style="--mc:#fbbf24"><i class="fa-solid fa-bolt"></i></div>
                 <div class="pmodel-title">
                     <div class="pmodel-name">PreLabeler</div>
-                    <div class="pmodel-sub">Quy tắc + Từ điển địa phương</div>
+                    <div class="pmodel-sub">Baseline luật + từ điển địa danh</div>
                 </div>
                 <div class="pmodel-badge" id="pbadge-prelabeler"><span class="pmodel-badge-idle">READY</span></div>
             </div>
@@ -73,7 +71,7 @@
                 <div class="pmodel-icon" style="--mc:#818cf8"><i class="fa-solid fa-brain"></i></div>
                 <div class="pmodel-title">
                     <div class="pmodel-name">PhoBERT Siamese</div>
-                    <div class="pmodel-sub">Mô hình Transformer tiếng Việt</div>
+                    <div class="pmodel-sub">Backbone Transformer tiếng Việt cho tác vụ NER</div>
                 </div>
                 <div class="pmodel-badge" id="pbadge-phobert"><span class="pmodel-badge-idle">READY</span></div>
             </div>
@@ -90,7 +88,7 @@
                 <div class="pmodel-icon" style="--mc:#34d399"><i class="fa-solid fa-vector-square"></i></div>
                 <div class="pmodel-title">
                     <div class="pmodel-name">mGTE Siamese</div>
-                    <div class="pmodel-sub">Embedding đa ngôn ngữ</div>
+                    <div class="pmodel-sub">Embedding ngữ nghĩa đa ngôn ngữ cho truy hồi</div>
                 </div>
                 <div class="pmodel-badge" id="pbadge-mgte"><span class="pmodel-badge-idle">READY</span></div>
             </div>
@@ -107,7 +105,7 @@
                 <div class="pmodel-icon" style="--mc:#f472b6"><i class="fa-solid fa-sparkles"></i></div>
                 <div class="pmodel-title">
                     <div class="pmodel-name">Qwen 2.5 LLM</div>
-                    <div class="pmodel-sub">Mô hình ngôn ngữ lớn</div>
+                    <div class="pmodel-sub">Large Language Model cho suy luận ngữ cảnh</div>
                 </div>
                 <div class="pmodel-badge" id="pbadge-llm"><span class="pmodel-badge-idle">READY</span></div>
             </div>
@@ -123,12 +121,14 @@
     <!-- ── Meta + Legend Row ── -->
     <div class="parser-footer-row">
         <div class="parser-meta-card" id="parser-meta">
-            <i class="fa-solid fa-circle-info" style="color:var(--text-tertiary); font-size:12px"></i>
-            <span class="text-tertiary" style="font-size:12px">Nhập địa chỉ để bắt đầu quá trình phân tích bằng trí tuệ
-                nhân tạo.</span>
+            <i class="fa-solid fa-circle-info parser-meta-icon"></i>
+            <div class="parser-meta-content">
+                <span class="parser-meta-title">Research &amp; SaaS Note</span>
+                <span class="parser-meta-text">Nhập địa chỉ để chạy pipeline NER đa mô hình, phục vụ đánh giá nghiên cứu và tích hợp vận hành SaaS.</span>
+            </div>
         </div>
-        <button class="btn btn-ghost btn-sm" data-goto="label-registry" style="flex-shrink:0">
-            <i class="fa-solid fa-tags"></i> Entity Registry
+        <button class="btn btn-ghost btn-sm parser-footer-action" data-goto="label-registry" style="flex-shrink:0">
+            <i class="fa-solid fa-tags"></i> NER Label Registry
         </button>
     </div>
 
