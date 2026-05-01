@@ -171,7 +171,7 @@ vn-address-intelligence/
 - Import path: Scripts trong `app/ai/` dùng `sys.path.insert(0, str(Path(__file__).parent))`
 
 ### 6.2. Database
-- Cột địa chỉ thô: `raw_address` (KHÔNG phải `address_raw`)
+- Cột địa chỉ thô: `raw_address`
 - Bảng chính: `prq.address_cleansing_queue`
 - Luôn dùng parameterized queries, không string interpolation cho WHERE clause
 - JOIN master data qua: `mat.ward`, `mat.district`, `mat.province`

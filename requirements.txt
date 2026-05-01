@@ -1,29 +1,34 @@
 # ── Core ──
-sqlalchemy>=2.0.0
-psycopg2-binary>=2.9.0
-python-dotenv>=1.0.0
+sqlalchemy>=2.0.25
+psycopg2-binary>=2.9.9
+python-dotenv>=1.0.1
 requests>=2.31.0
-pandas>=2.0.0
-click>=8.1.0
-tqdm>=4.66.0
-pyyaml>=6.0
+pandas>=2.2.0
+openpyxl>=3.1.2
+click>=8.1.7
+tqdm>=4.66.1
+pyyaml>=6.0.1
 
 # ── Web API ──
-fastapi>=0.100.0
-uvicorn[standard]>=0.23.0
+fastapi>=0.110.0
+uvicorn[standard]>=0.27.1
 gunicorn>=21.2.0
-python-multipart>=0.0.6
+python-multipart>=0.0.9
 PyJWT>=2.8.0
 passlib[bcrypt]>=1.7.4
 
 # ── AI / ML ──
-transformers>=4.30.0
-datasets>=2.12.0
-torch>=2.0.0
-sentence-transformers>=2.2.0
+transformers>=4.38.0
+datasets>=2.17.0
+torch>=2.2.0
+sentence-transformers>=2.5.1
 seqeval>=1.2.2
-numpy>=1.24.0
-scikit-learn>=1.3.0
+numpy>=1.26.0
+scikit-learn>=1.4.0
+bitsandbytes>=0.42.0
+accelerate>=0.27.0
+einops>=0.7.0
+scipy>=1.12.0
 
 # ── Vietnamese NLP ──
 pyvi>=0.1.1
