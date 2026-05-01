@@ -1,120 +1,219 @@
 <!-- ══════ PAGE: OVERVIEW ══════ -->
 <div class="page active" id="overview">
     <style>
-        /* Premium Responsive refinements for Dashboard */
-        #overview .stats-grid {
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 16px;
+        #overview .overview-section {
+            margin-bottom: 16px;
         }
 
-        #overview .workflow-diagram.horizontal {
-            display: flex;
-            flex-wrap: nowrap;
-            justify-content: space-between;
-            gap: 8px;
-            padding: 8px 0;
-            overflow: hidden; /* Ensure no overflow/scroll */
+        #overview .overview-grid {
+            display: grid;
+            gap: 12px;
+        }
+
+        #overview .overview-grid.cols-4 {
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+        }
+
+        #overview .overview-grid.cols-3 {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        #overview .overview-grid.cols-5 {
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+        }
+
+        #overview .overview-grid.split-6-4 {
+            grid-template-columns: minmax(0, 6fr) minmax(0, 4fr);
+        }
+
+        #overview .stat-card.compact {
+            display: inline-flex;
+            align-items: center;
+            justify-content: space-around;
+            column-gap: 10px;
+            row-gap: 0;
+            padding: 9px 10px !important;
+            min-height: 64px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        #overview .stat-card.compact .stat-meta {
+            min-width: 0;
+            flex: 0 1 auto;
+            display: inline-flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 4px;
+            max-width: 70%;
+        }
+
+        #overview .stat-card.compact .stat-label {
+            font-size: 10px !important;
+            line-height: 1.1;
+            margin: 0;
+            opacity: 0.85;
+        }
+
+        #overview .stat-card.compact .stat-change {
+            font-size: 9px !important;
+            line-height: 1.1;
+            margin: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 140px;
+        }
+
+        #overview .stat-card.compact .stat-value {
+            font-size: 18px !important;
+            line-height: 1;
+            margin: 0;
+            white-space: nowrap;
+            flex: 0 0 auto;
+            text-align: left;
+            padding-left: 0;
+        }
+
+        #overview .chart-container {
+            width: 100%;
+            min-height: 220px;
+            position: relative;
         }
 
         #overview .workflow-step {
-            flex: 1;
-            min-width: 0; /* Allow shrinking */
+            min-width: 0;
             padding: 12px 8px;
-            flex-direction: column;
             text-align: center;
         }
 
         #overview .workflow-step h4 {
             font-size: 11px;
+            margin: 0;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
 
-        #overview .workflow-step .step-icon {
-            width: 32px;
-            height: 32px;
-            font-size: 14px;
-            margin: 0 auto 8px;
-        }
 
-        #overview .workflow-arrow {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 12px;
-            color: var(--text-tertiary);
-            opacity: 0.5;
-        }
-
-        #overview .chart-container {
-            width: 100%;
-            aspect-ratio: 21 / 9;
-            min-height: 200px;
-            overflow: hidden;
-            position: relative;
-        }
-
-        @media (max-width: 1400px) {
-            #overview .chart-container {
-                aspect-ratio: 16 / 9;
+        @media (max-width: 1199.98px) {
+            #overview .overview-grid.cols-4 {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
             }
-        }
-
-        @media (max-width: 1200px) {
-            #overview .content-grid.sidebar-layout {
+            #overview .overview-grid.cols-3 {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+            #overview .overview-grid.cols-5 {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+            #overview .overview-grid.split-6-4 {
                 grid-template-columns: 1fr;
             }
-            #overview .workflow-diagram.horizontal {
-                flex-wrap: wrap;
-                justify-content: center;
-            }
-            #overview .workflow-step {
-                flex: 0 0 calc(33.33% - 16px);
-                max-width: 180px;
-            }
-            #overview .workflow-arrow {
-                display: none; /* Hide arrows when wrapping */
-            }
+
+            #overview .model-desc { display: none; }
+            #overview .badge { display: none; }
+            #overview .step-content { display: block; }
         }
 
-        @media (max-width: 768px) {
-            #overview .stats-grid {
-                grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        @media (max-width: 767.98px) {
+            #overview .overview-grid.cols-4,
+            #overview .overview-grid.cols-3,
+            #overview .overview-grid.cols-5 {
+                grid-template-columns: 1fr;
             }
 
-            #overview .workflow-step {
-                flex: 0 0 calc(50% - 16px);
+            #overview .stat-card.compact {
+                gap: 8px;
+                padding: 8px 9px !important;
             }
 
-            #overview .chart-container {
-                aspect-ratio: 4 / 3;
+            #overview .stat-card.compact .stat-meta {
+                flex: 0 1 auto;
+                min-width: 0;
+                max-width: 72%;
             }
+
+            #overview .stat-card.compact .stat-label {
+                font-size: inherit !important;
+                line-height: inherit;
+            }
+
+            #overview .stat-card.compact .stat-change {
+                font-size: inherit !important;
+                line-height: inherit;
+                max-width: none;
+            }
+
+            #overview .stat-card.compact .stat-value {
+                font-size: inherit !important;
+                line-height: inherit;
+                max-width: none;
+                overflow: visible;
+                text-overflow: clip;
+            }
+
+            #overview .workflow-step h4 {
+                font-size: inherit;
+                line-height: inherit;
+            }
+
+            #overview .model-desc {
+                display: block;
+                font-size: inherit;
+                line-height: inherit;
+            }
+
+            #overview .badge {
+                display: none;
+                font-size: inherit;
+                line-height: inherit;
+            }
+
+            #overview .step-content { display: block; }
         }
 
-        @media (max-width: 480px) {
-            #overview .stats-grid {
-                grid-template-columns: 1fr 1fr;
-                gap: 10px;
-            }
+        @media (max-width: 575.98px) {
             #overview .page-header {
                 flex-direction: column;
                 align-items: flex-start !important;
                 gap: 12px;
             }
+
             #overview .workflow-step {
-                flex: 1 1 100%;
-                max-width: 100%;
-                flex-direction: row;
-                text-align: left;
-                padding: 10px 16px;
-                gap: 12px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+                padding: 10px;
+                text-align: center;
             }
+
             #overview .workflow-step .step-icon {
                 margin: 0;
+                flex-shrink: 0;
             }
+
+            #overview .workflow-step .step-content {
+                display: flex !important;
+                align-items: center;
+                justify-content: center;
+            }
+
             #overview .workflow-step h4 {
-                font-size: 13px;
+                margin: 0;
+                white-space: nowrap;
+            }
+
+            #overview .model-d  esc { display: block; }
+            #overview .badge { display: block; }
+            #overview .model-card {
+                flex-direction: row;
+                text-align: justify;
+                gap: 12px;
+                padding: 20px;
+            }
+            #overview .card-title, .activity-text {
+                font-size: 14px;
             }
         }
     </style>
@@ -132,146 +231,93 @@
         </div>
     </div>
 
-    <div class="stats-grid" style="margin-bottom: 16px;">
-        <div class="stat-card" style="padding: 12px;">
-            <div class="stat-label" style="font-size: 11px;">Total Visits</div>
-            <div class="stat-value" id="stat-total-visits" style="font-size: 20px;">0</div>
-            <div class="stat-change positive" style="font-size: 10px;"><i class="fa-solid fa-eye"></i> All time</div>
-        </div>
-        <div class="stat-card" style="padding: 12px;">
-            <div class="stat-label" style="font-size: 11px;">Unique Visitors</div>
-            <div class="stat-value" id="stat-unique-ips" style="font-size: 20px;">0</div>
-            <div class="stat-change positive" style="font-size: 10px;"><i class="fa-solid fa-user-check"></i> Unique IPs
+    <div class="overview-section">
+        <div class="overview-grid cols-4" style="margin-bottom: 12px;">
+            <div class="stat-card compact">
+                <div class="stat-meta">
+                    <div class="stat-label">Total Visits</div>
+                    <div class="stat-change positive"><i class="fa-solid fa-eye"></i> All time</div>
+                </div>
+                <div class="stat-value" id="stat-total-visits">0</div>
+            </div>
+            <div class="stat-card compact">
+                <div class="stat-meta">
+                    <div class="stat-label">Unique Visitors</div>
+                    <div class="stat-change positive"><i class="fa-solid fa-user-check"></i> Unique IPs</div>
+                </div>
+                <div class="stat-value" id="stat-unique-ips">0</div>
+            </div>
+            <div class="stat-card compact">
+                <div class="stat-meta">
+                    <div class="stat-label">Online Users</div>
+                    <div class="stat-change positive"><i class="fa-solid fa-circle-dot pulse"></i> Real-time</div>
+                </div>
+                <div class="stat-value" id="stat-online-users" style="color:var(--success);">0</div>
+            </div>
+            <div class="stat-card compact">
+                <div class="stat-meta">
+                    <div class="stat-label">Queue</div>
+                    <div class="stat-change warning"><i class="fa-solid fa-clock"></i> Pending</div>
+                </div>
+                <div class="stat-value" id="stat-queue">505,094</div>
             </div>
         </div>
-        <div class="stat-card" style="padding: 12px;">
-            <div class="stat-label" style="font-size: 11px;">Online Users</div>
-            <div class="stat-value" id="stat-online-users" style="color:var(--success); font-size: 20px;">0</div>
-            <div class="stat-change positive" style="font-size: 10px;"><i class="fa-solid fa-circle-dot pulse"></i>
-                Real-time</div>
-        </div>
-        <div class="stat-card" style="padding: 12px;">
-            <div class="stat-label" style="font-size: 11px;">Queue</div>
-            <div class="stat-value" id="stat-queue" style="font-size: 20px;">505,094</div>
-            <div class="stat-change warning" style="font-size: 10px;"><i class="fa-solid fa-clock"></i> Pending</div>
-        </div>
-        <div class="stat-card" style="padding: 12px;">
-            <div class="stat-label" style="font-size: 11px;">Master Data</div>
-            <div class="stat-value" id="stat-master" style="font-size: 20px;">16,427</div>
-            <div class="stat-change positive" style="font-size: 10px;"><i class="fa-solid fa-arrow-up"></i> P+D+W</div>
-        </div>
-        <div class="stat-card" style="padding: 12px;">
-            <div class="stat-label" style="font-size: 11px;">OSM Entities</div>
-            <div class="stat-value" id="stat-osm" style="font-size: 20px;">615,547</div>
-            <div class="stat-change positive" style="font-size: 10px;"><i class="fa-solid fa-arrow-up"></i> OSM</div>
-        </div>
-        <div class="stat-card" style="padding: 12px;">
-            <div class="stat-label" style="font-size: 11px;">Training Data</div>
-            <div class="stat-value" id="stat-training" style="font-size: 20px;">25,130</div>
-            <div class="stat-change positive" style="font-size: 10px;"><i class="fa-solid fa-check"></i> Labeled</div>
-        </div>
-    </div>
 
-    <!-- ══════ AI WORKFLOW LIFECYCLE ══════ -->
-    <div class="card mb-12">
-        <div class="card-header" style="padding: 10px 18px;">
-            <span class="card-title">AI Intelligence Lifecycle</span>
-        </div>
-        <div class="card-body" style="padding: 12px 18px;">
-            <div class="workflow-diagram horizontal">
-                <div class="workflow-step clickable" data-goto="batch">
-                    <div class="step-icon"><i class="fa-solid fa-file-import"></i></div>
-                    <div class="step-content">
-                        <h4>1. Thu thập</h4>
-                    </div>
+        <div class="overview-grid cols-3">
+            <div class="stat-card compact">
+                <div class="stat-meta">
+                    <div class="stat-label">Master Data</div>
+                    <div class="stat-change positive"><i class="fa-solid fa-arrow-up"></i> P+D+W</div>
                 </div>
-                <div class="workflow-arrow"><i class="fa-solid fa-arrow-right"></i></div>
-                <div class="workflow-step clickable" data-goto="parser">
-                    <div class="step-icon"><i class="fa-solid fa-microchip"></i></div>
-                    <div class="step-content">
-                        <h4>2. Xử lý NER</h4>
-                    </div>
+                <div class="stat-value" id="stat-master">16,427</div>
+            </div>
+            <div class="stat-card compact">
+                <div class="stat-meta">
+                    <div class="stat-label">OSM Entities</div>
+                    <div class="stat-change positive"><i class="fa-solid fa-arrow-up"></i> OSM</div>
                 </div>
-                <div class="workflow-arrow"><i class="fa-solid fa-arrow-right"></i></div>
-                <div class="workflow-step accent clickable" data-goto="label-studio">
-                    <div class="step-icon"><i class="fa-solid fa-user-check"></i></div>
-                    <div class="step-content">
-                        <h4>3. Gán nhãn</h4>
-                    </div>
+                <div class="stat-value" id="stat-osm">615,547</div>
+            </div>
+            <div class="stat-card compact">
+                <div class="stat-meta">
+                    <div class="stat-label">Training Data</div>
+                    <div class="stat-change positive"><i class="fa-solid fa-check"></i> Labeled</div>
                 </div>
-                <div class="workflow-arrow"><i class="fa-solid fa-arrow-right"></i></div>
-                <div class="workflow-step glow clickable" data-goto="training">
-                    <div class="step-icon"><i class="fa-solid fa-rotate"></i></div>
-                    <div class="step-content">
-                        <h4>4. Retrain</h4>
-                    </div>
-                </div>
-                <div class="workflow-arrow"><i class="fa-solid fa-arrow-right"></i></div>
-                <div class="workflow-step success">
-                    <div class="step-icon"><i class="fa-solid fa-rocket"></i></div>
-                    <div class="step-content">
-                        <h4>5. Tăng trưởng</h4>
-                    </div>
-                </div>
+                <div class="stat-value" id="stat-training">25,130</div>
             </div>
         </div>
     </div>
 
-    <div class="content-grid sidebar-layout" style="margin-bottom: 0;">
-        <div class="card">
-            <div class="card-header">
-                <span class="card-title">Tiến độ xử lý theo Schema</span>
-            </div>
-            <div class="card-body" style="display: flex; flex-direction: column; padding: 12px 18px;">
-                <div class="chart-container">
-                    <canvas id="chart-overview"></canvas>
-                </div>
-            </div>
+    <!-- <div class="page-header mt-12">
+        <span class="card-title">AI Intelligence Lifecycle</span>
+    </div> -->
+    <div class="overview-grid cols-5 mt-12">
+        <div class="workflow-step clickable" data-goto="batch">
+            <div class="step-icon"><i class="fa-solid fa-file-import"></i></div>
+            <div class="step-content"><h4>1. Thu thập</h4></div>
         </div>
-        <div class="card">
-            <div class="card-header">
-                <span class="card-title">Hoạt động gần đây</span>
-            </div>
-            <div class="card-body" style="padding-right: 4px; padding-top: 4px;">
-                <ul class="activity-list" id="activity-feed" style="overflow-y: hidden; max-height: 500px;">
-                    <li class="activity-item">
-                        <div class="activity-dot"></div>
-                        <div>
-                            <div class="activity-text">Export 1,000 NER samples prelabeled</div>
-                            <div class="activity-time">2 giờ trước</div>
-                        </div>
-                    </li>
-                    <li class="activity-item">
-                        <div class="activity-dot" style="background:var(--success)"></div>
-                        <div>
-                            <div class="activity-text">Hybrid PreLabeler v2 deployed</div>
-                            <div class="activity-time">5 giờ trước</div>
-                        </div>
-                    </li>
-                    <li class="activity-item">
-                        <div class="activity-dot" style="background:var(--warning)"></div>
-                        <div>
-                            <div class="activity-text">Ward Mapping: 10,635 rules synced</div>
-                            <div class="activity-time">1 ngày trước</div>
-                        </div>
-                    </li>
-                    <li class="activity-item">
-                        <div class="activity-dot" style="background:var(--info)"></div>
-                        <div>
-                            <div class="activity-text">OSM crawl completed: 63 provinces</div>
-                            <div class="activity-time">3 ngày trước</div>
-                        </div>
-                    </li>
-                </ul>
-            </div>
+        <div class="workflow-step clickable" data-goto="parser">
+            <div class="step-icon"><i class="fa-solid fa-microchip"></i></div>
+            <div class="step-content"><h4>2. Xử lý NER</h4></div>
+        </div>
+        <div class="workflow-step accent clickable" data-goto="label-studio">
+            <div class="step-icon"><i class="fa-solid fa-user-check"></i></div>
+            <div class="step-content"><h4>3. Gán nhãn</h4></div>
+        </div>
+        <div class="workflow-step glow clickable" data-goto="training">
+            <div class="step-icon"><i class="fa-solid fa-rotate"></i></div>
+            <div class="step-content"><h4>4. Retrain</h4></div>
+        </div>
+        <div class="workflow-step success">
+            <div class="step-icon"><i class="fa-solid fa-rocket"></i></div>
+            <div class="step-content"><h4>5. Tăng trưởng</h4></div>
         </div>
     </div>
-
-    <!-- Model Status -->
+<!--     
     <div class="page-header mt-12">
-        <h2>Model Status</h2>
-    </div>
-    <div class="stats-grid">
+        <span class="card-title">Model Status</span>
+    </div> -->
+    <div class="overview-grid cols-4 mt-12">
         <div class="model-card">
             <div class="model-icon ner"><i class="fa-solid fa-tags"></i></div>
             <div class="model-info">
@@ -305,4 +351,56 @@
             <span class="badge info">Standby</span>
         </div>
     </div>
+    <div class="overview-section mt-12">
+        <div class="overview-grid split-6-4">
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">Tiến độ xử lý theo Schema</span>
+                </div>
+                <div class="card-body" style="display: flex; flex-direction: column; padding: 12px 18px;">
+                    <div class="chart-container">
+                        <canvas id="chart-overview"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">Hoạt động gần đây</span>
+                </div>
+                <div class="card-body" style="padding-right: 4px; padding-top: 4px;">
+                    <ul class="activity-list" id="activity-feed" style="overflow-y: hidden; max-height: 500px;">
+                        <li class="activity-item">
+                            <div class="activity-dot"></div>
+                            <div>
+                                <div class="activity-text">Export 1,000 NER samples prelabeled</div>
+                                <div class="activity-time">2 giờ trước</div>
+                            </div>
+                        </li>
+                        <li class="activity-item">
+                            <div class="activity-dot" style="background:var(--success)"></div>
+                            <div>
+                                <div class="activity-text">Hybrid PreLabeler v2 deployed</div>
+                                <div class="activity-time">5 giờ trước</div>
+                            </div>
+                        </li>
+                        <li class="activity-item">
+                            <div class="activity-dot" style="background:var(--warning)"></div>
+                            <div>
+                                <div class="activity-text">Ward Mapping: 10,635 rules synced</div>
+                                <div class="activity-time">1 ngày trước</div>
+                            </div>
+                        </li>
+                        <li class="activity-item">
+                            <div class="activity-dot" style="background:var(--info)"></div>
+                            <div>
+                                <div class="activity-text">OSM crawl completed: 63 provinces</div>
+                                <div class="activity-time">3 ngày trước</div>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </div>

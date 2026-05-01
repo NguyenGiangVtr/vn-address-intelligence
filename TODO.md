@@ -1,8 +1,11 @@
-# TODO: Fix mobile zoom effect for mapping-search-input in lookup smart filter
+# TODO: Overview Bootstrap responsive cards
 
 ## ✅ Plan đã được approve
-- [ ] **ui/controls-template.js**: add scoped class hook `smart-filter-search-input` to smart filter search textbox (`${prefix}-search-input`)
-- [ ] **ui/style.css**: add mobile-safe rule for `.search-box-unified .smart-filter-search-input` with font-size 16px to prevent iOS auto-zoom
-- [ ] Verify style remains consistent with current theme and no regression for existing smart filter inputs
+- [ ] **ui/pages/overview.html**: Stats group 1 (Total Visits, Unique Visitors, Online Users, Queue) => 4 columns
+- [ ] **ui/pages/overview.html**: Stats group 2 (Master Data, OSM Entities, Training Data) => 3 columns
+- [ ] **ui/pages/overview.html**: AI Intelligence Lifecycle => 5 columns
+- [ ] **ui/pages/overview.html**: Schema progress + Recent activity => 6:4 columns
+- [ ] **ui/pages/overview.html**: Model Status => 4 columns
+- [ ] Verify responsive behavior and keep existing IDs/hooks intact
 
-**Current step:** Update `ui/controls-template.js`
+**Current step:** Update `ui/pages/overview.html`
