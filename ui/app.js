@@ -1775,11 +1775,11 @@ async function showDetails(level, id, version = null) {
           </div>
         </div>
 
-        <!-- Decision Info -->
-        <div class="unit-legal-info">
-          <div class="unit-stat-label">Cơ sở pháp lý / Nghị quyết</div>
-          <div class="unit-decision-text" title="${u.decision_number || ""}">
-            ${u.decision_number || "Chưa có thông tin nghị quyết cụ thể trong hệ thống."}
+        <!-- Note Info -->
+        <div class="unit-note-info">
+          <div class="unit-stat-label">Ghi chú</div>
+          <div class="unit-note-text" title="${u.notes || ""}">
+            ${u.notes || "Chưa có ghi chú trong hệ thống."}
           </div>
         </div>
       </div>

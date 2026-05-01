@@ -1,9 +1,8 @@
-# TODO: Cập nhật Training cho Label Studio Import
+# TODO: Fix mobile zoom effect for mapping-search-input in lookup smart filter
 
 ## ✅ Plan đã được approve
-- [ ] **app/ai/train_ner.py**: Thêm mapping text→value labels trong `convert_labelstudio_to_bio`
-- [ ] **app/main.py**: Thêm CLI `import-labelstudio` để convert standalone
-- [ ] Test với sample LS JSON
-- [ ] Update UI nếu cần
+- [ ] **ui/controls-template.js**: add scoped class hook `smart-filter-search-input` to smart filter search textbox (`${prefix}-search-input`)
+- [ ] **ui/style.css**: add mobile-safe rule for `.search-box-unified .smart-filter-search-input` with font-size 16px to prevent iOS auto-zoom
+- [ ] Verify style remains consistent with current theme and no regression for existing smart filter inputs
 
-**Current step:** Đang implement app/ai/train_ner.py
+**Current step:** Update `ui/controls-template.js`

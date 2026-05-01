@@ -135,7 +135,7 @@
     const showWard = options.showWard !== false;
     const showSearch = options.showSearch !== false;
     const searchPlaceholder = options.searchPlaceholder || "Tìm theo tên hoặc mã...";
-    const buttonText = options.buttonText || "Tra cứu ngay";
+    const buttonText = options.buttonText || "Tìm";
     const title = options.title || "Bộ lọc Thông minh";
 
     let html = `
@@ -164,7 +164,7 @@
                 <div class="form-group smart-filter-item">
                     <label class="form-label">Tỉnh/Thành phố <span class="filter-item-count" id="${prefix}-province-count">0</span></label>
                     <div class="input-wrapper">
-                        <input list="${prefix}-list-provinces" id="${prefix}-province-input" class="form-input has-clear"
+                        <input list="${prefix}-list-provinces" id="${prefix}-province-input" class="form-input has-clear smart-filter-input"
                             placeholder="Chọn Tỉnh/Thành...">
                         <button type="button" class="btn-clear-input" id="${prefix}-btn-clear-province" title="Xóa"><i class="fa-solid fa-xmark"></i></button>
                     </div>
@@ -178,7 +178,7 @@
                 <div class="form-group smart-filter-item">
                     <label class="form-label">Quận/Huyện/Thị xã <span class="filter-item-count" id="${prefix}-district-count">0</span></label>
                     <div class="input-wrapper">
-                        <input list="${prefix}-list-districts" id="${prefix}-district-input" class="form-input has-clear"
+                        <input list="${prefix}-list-districts" id="${prefix}-district-input" class="form-input has-clear smart-filter-input"
                             placeholder="Chọn Quận/Huyện...">
                         <button type="button" class="btn-clear-input" id="${prefix}-btn-clear-district" title="Xóa"><i class="fa-solid fa-xmark"></i></button>
                     </div>
@@ -192,7 +192,7 @@
                 <div class="form-group smart-filter-item">
                     <label class="form-label">Phường/Xã/Thị trấn <span class="filter-item-count" id="${prefix}-ward-count">0</span></label>
                     <div class="input-wrapper">
-                        <input list="${prefix}-list-wards" id="${prefix}-ward-input" class="form-input has-clear"
+                        <input list="${prefix}-list-wards" id="${prefix}-ward-input" class="form-input has-clear smart-filter-input"
                             placeholder="Chọn Phường/Xã...">
                         <button type="button" class="btn-clear-input" id="${prefix}-btn-clear-ward" title="Xóa"><i class="fa-solid fa-xmark"></i></button>
                     </div>
@@ -209,7 +209,7 @@
       html += `
             <div class="search-box-unified" style="margin-top: 0;">
                 <i class="fa-solid fa-search search-icon"></i>
-                <input type="text" id="${prefix}-search-input" class="search-input"
+                <input type="text" id="${prefix}-search-input" class="search-input smart-filter-search-input"
                     placeholder="${searchPlaceholder}">
                 <button class="btn-search" id="${prefix}-btn-search">${buttonText}</button>
             </div>

@@ -35,7 +35,7 @@ logger = logging.getLogger("SeederV3")
 
 # ── Hằng số ──────────────────────────────────────────────────────────────────
 
-EFFECTIVE_DATE = datetime(2025, 3, 1)   # Ngày hiệu lực chung các Nghị quyết 2025
+EFFECTIVE_DATE = datetime(2025, 7, 1)   # Ngày hiệu lực chung các Nghị quyết 2025
 NOW            = datetime.utcnow()
 
 # ── Font decode table ────────────────────────────────────────────────────────
