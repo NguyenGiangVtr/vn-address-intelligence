@@ -138,7 +138,7 @@ class LLMQwen3:
             candidates=self._build_candidate_str(candidates),
         )
         try:
-            inputs = self.tokenizer(prompt, return_tensors="pt").to(
+            inputs = self.tokenizer(prompt, return_tensors="pt", max_length=2048, truncation=True).to(
                 next(self.model.parameters()).device
             )
             with torch.no_grad():
@@ -197,4 +197,3 @@ class LLMQwen3:
             self.normalize(q, cands)
             for q, cands in zip(queries, candidates_list)
         ]
-     ]

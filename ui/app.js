@@ -1493,9 +1493,85 @@ function setupBatchTool() {
   const log = document.getElementById("batch-log");
   const progressValue = document.getElementById("batch-progress-value");
   const progressFill = document.querySelector(".progress-fill");
+  const methodSelect = document.getElementById("batch-method");
+  const methodDescription = document.getElementById("batch-method-description");
+  const doneEl = document.getElementById("batch-done");
+  const throughputEl = document.getElementById("batch-throughput");
+  const progressStatusEl = document.getElementById("batch-progress-status");
+
+  if (!btnToggle || !log || !progressValue || !progressFill || !methodSelect || !doneEl || !throughputEl || !progressStatusEl) {
+    console.warn("[Batch] Missing required DOM nodes. Batch tool is not initialized.");
+    return;
+  }
+
+  // Ensure progress bar is visible
+  progressFill.style.background = 'var(--accent)';
+  progressFill.style.height = '100%';
+  progressFill.style.borderRadius = '2px';
+
+  const modeDescriptions = {
+    hybrid: "Cân bằng giữa tốc độ xử lý và độ chính xác, phù hợp cho phần lớn nhu cầu vận hành.",
+    "ner-only": "Ưu tiên tốc độ tách thực thể (số nhà, đường, phường...) và bỏ qua các bước chuẩn hóa sâu.",
+    "full-chain": "Chạy đầy đủ pipeline chuẩn hóa nhiều tầng để tối đa độ chính xác, thời gian xử lý sẽ lâu hơn."
+  };
+
+  const formatInt = (value) => new Intl.NumberFormat('vi-VN').format(Number(value || 0));
+  const formatFloat = (value, digits = 1) => Number(value || 0).toLocaleString('vi-VN', {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits
+  });
+
+  function formatNumbersInText(text) {
+    return text.replace(/\b\d{1,3}(?:,\d{3})*\b/g, (match) => formatInt(match.replace(/,/g, '')));
+  }
+
+  function parseProgressFromText(text) {
+    if (!text) return null;
+    const progressRegex = /Progress:\s*(\d+)\s*\/\s*(\d+)/gi;
+    const progressMatches = Array.from(text.matchAll(progressRegex));
+    if (progressMatches.length) {
+      const lastMatch = progressMatches[progressMatches.length - 1];
+      return {
+        processed: Number(lastMatch[1]),
+        total: Number(lastMatch[2]),
+      };
+    }
+    const totalRegex = /Processing\s+(\d+)\s+rows?/gi;
+    const totalMatches = Array.from(text.matchAll(totalRegex));
+    if (totalMatches.length) {
+      return { total: Number(totalMatches[totalMatches.length - 1][1]) };
+    }
+    return null;
+  }
 
   let isBatchRunning = false;
   let batchPollTimer = null;
+  let lastKnownProgress = 0;
+  let lastStatusText = '';
+
+  function setProgressStatus(message) {
+    if (!progressStatusEl) return;
+    if (message === lastStatusText) return;
+    lastStatusText = message;
+    progressStatusEl.textContent = message;
+  }
+
+  function updateMethodDescription() {
+    if (!methodDescription) return;
+    methodDescription.textContent = modeDescriptions[methodSelect.value] || modeDescriptions.hybrid;
+  }
+
+  function appendLogLine(message) {
+    log.innerText += `${log.innerText ? '\n' : ''}[${formatLogTime()}] ${message}`;
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function setProgress(percent) {
+    const safePercent = Math.max(0, Math.min(100, Math.round(Number(percent) || 0)));
+    progressValue.textContent = `${safePercent}%`;
+    progressFill.style.width = `${safePercent}%`;
+    lastKnownProgress = safePercent;
+  }
 
   function setButtonState(running) {
     isBatchRunning = running;
@@ -1515,30 +1591,49 @@ function setupBatchTool() {
       const response = await fetch(`${API_BASE}/batch/job`, {
         headers: getAuthHeader(),
       });
+
+      if (!response.ok) {
+        throw new Error(`Batch status failed (${response.status})`);
+      }
+
       const payload = await response.json();
       const job = payload?.job;
 
-      if (!job) return;
+      if (!job) {
+        batchPollTimer = setTimeout(pollBatchStatus, 2000);
+        return;
+      }
 
-      // Update Log
-      if (job.outputTail) {
-        log.innerText = job.outputTail;
+      const parsedProgress = parseProgressFromText(job.outputTail);
+      const effectiveJob = { ...job };
+      if (parsedProgress) {
+        if (parsedProgress.total) effectiveJob.totalCount = parsedProgress.total;
+        if (parsedProgress.processed !== undefined) effectiveJob.processedCount = parsedProgress.processed;
+      }
+
+      if (job.outputTail !== undefined && job.outputTail !== null) {
+        log.innerText = formatNumbersInText(job.outputTail);
         log.scrollTop = log.scrollHeight;
       }
 
-      // Update Stats
-      if (job.processedCount !== undefined) {
-        document.getElementById("batch-done").textContent = job.processedCount.toLocaleString();
-      }
-      if (job.throughput !== undefined) {
-        document.getElementById("batch-throughput").textContent = `${job.throughput.toFixed(1)} items/s`;
+      if (effectiveJob.processedCount !== undefined) {
+        doneEl.textContent = formatInt(effectiveJob.processedCount);
       }
 
-      // Update Progress (if total is known)
-      if (job.totalCount > 0) {
-        const percent = Math.min(Math.round((job.processedCount / job.totalCount) * 100), 100);
-        progressValue.textContent = `${percent}%`;
-        progressFill.style.width = `${percent}%`;
+      if (effectiveJob.throughput !== undefined) {
+        throughputEl.textContent = `${formatFloat(effectiveJob.throughput, 1)} items/s`;
+      }
+
+      const processed = Number(effectiveJob.processedCount || 0);
+      const total = Number(effectiveJob.totalCount || 0);
+
+      if (total > 0) {
+        setProgress((processed / total) * 100);
+        setProgressStatus(`Đã xử lý ${formatInt(processed)}/${formatInt(total)} bản ghi (${lastKnownProgress}%).`);
+      } else if (job.status === "running") {
+        const fallbackProgress = Math.max(lastKnownProgress, processed > 0 ? 1 : 0);
+        setProgress(fallbackProgress);
+        setProgressStatus(`Đang xử lý ${formatInt(processed)} bản ghi…`);
       }
 
       if (job.status === "running") {
@@ -1546,32 +1641,45 @@ function setupBatchTool() {
       } else {
         setButtonState(false);
         if (job.status === "success") {
+          if (total <= 0) setProgress(100);
           showToast("Xử lý hàng loạt hoàn tất!", "success");
+          appendLogLine("Hoàn tất xử lý hàng loạt.");
         } else if (job.status === "failed") {
           showToast(`Lỗi xử lý: ${job.error || "Unknown error"}`, "danger");
+          appendLogLine(`Lỗi xử lý: ${job.error || "Unknown error"}`);
         }
       }
     } catch (error) {
       console.error("Batch poll error:", error);
+      showToast("Không thể theo dõi trạng thái batch job", "danger");
       setButtonState(false);
     }
   }
 
-  if (btnToggle) btnToggle.addEventListener("click", async () => {
+  methodSelect.addEventListener("change", updateMethodDescription);
+  updateMethodDescription();
+  setProgress(0);
+
+  btnToggle.addEventListener("click", async () => {
     if (isBatchRunning) {
-      // For now, we don't have a stop endpoint, so we just stop polling UI-side
       if (batchPollTimer) clearTimeout(batchPollTimer);
       setButtonState(false);
-      log.innerHTML += `\n[${formatLogTime()}] ⛔ Stopped monitoring batch job.\n`;
+      appendLogLine("⛔ Đã dừng theo dõi batch job trên giao diện.");
       return;
     }
 
     const size = getNumericInputValue("batch-size") || 1000;
-    const method = document.getElementById("batch-method").value;
+    const method = methodSelect.value;
 
     try {
       setButtonState(true);
-      log.innerHTML = `[${formatLogTime()}] Requesting batch processing...`;
+      doneEl.textContent = "0";
+      throughputEl.textContent = "0,0 items/s";
+      setProgress(0);
+      lastStatusText = '';
+      setProgressStatus("Khởi tạo batch... chờ phản hồi server.");
+      log.innerText = "";
+      appendLogLine(`Yêu cầu xử lý batch: ${formatInt(size)} bản ghi | Chế độ: ${method}.`);
 
       const response = await fetch(`${API_BASE}/batch/trigger`, {
         method: "POST",
@@ -1588,11 +1696,13 @@ function setupBatchTool() {
       }
 
       const data = await response.json();
-      log.innerHTML = `[${formatLogTime()}] Batch job accepted. ID: ${data.job.jobId}\n`;
+      appendLogLine(`Batch job accepted. ID: ${data?.job?.jobId || "-"}`);
+      setProgressStatus("Batch đã được chấp nhận. Đang bắt đầu theo dõi tiến trình...");
 
       pollBatchStatus();
     } catch (error) {
       showToast(error.message, "danger");
+      appendLogLine(`Không thể khởi chạy batch: ${error.message}`);
       setButtonState(false);
     }
   });

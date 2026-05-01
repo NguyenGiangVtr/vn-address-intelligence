@@ -1051,6 +1051,10 @@ tbody tr:hover td {
     width: 100% !important;
     height: 42px;
   }
+
+  #parser .parser-input-field{
+    min-height: 100px;
+  }
 }
 
 select.form-input {

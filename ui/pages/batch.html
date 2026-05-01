@@ -8,41 +8,48 @@
 
     <!-- BLOCK 2: Configuration & Stats -->
     <div class="card mb-20">
-        <div class="card-body" style="padding: 12px 18px;">
-            <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start;">
-                <!-- Config -->
-                <div
-                    style="flex: 2; min-width: 300px; display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end;">
-                    <div class="form-group" style="margin-bottom: 0; flex: 1; min-width: 140px;">
-                        <label class="form-label" style="margin-bottom: 4px; font-size: 11px;">Số lượng địa chỉ mỗi
-                            lô</label>
-                        <input type="text" class="form-input" id="batch-size" value="1,000" style="font-size: 13px;">
+        <div class="card-body" style="padding: 20px;">
+            <div style="display: flex; flex-wrap: wrap; gap: 32px; align-items: stretch;">
+                <!-- Configuration Section -->
+                <div style="flex: 1; min-width: 320px;">
+                    <div style="display: flex; flex-direction: column; gap: 16px;">
+                        <!-- Method Selection -->
+                        <div class="form-group">
+                            <label class="form-label" style="margin-bottom: 8px; font-size: 12px; font-weight: 500;">Chế độ xử lý</label>
+                            <select class="form-input" id="batch-method" style="font-size: 14px;">
+                                <option value="hybrid">Cân bằng tốc độ & độ chính xác (Khuyến nghị)</option>
+                                <option value="ner-only">Tách thực thể nhanh (NER-only)</option>
+                                <option value="full-chain">Chuẩn hóa đầy đủ nhiều tầng (Full chain)</option>
+                            </select>
+                            <div id="batch-method-description" style="margin-top: 8px; font-size: 12px; color: var(--text-tertiary); line-height: 1.4;">
+                                Cân bằng giữa tốc độ xử lý và độ chính xác, phù hợp cho phần lớn nhu cầu vận hành.
+                            </div>
+                        </div>
+
+                        <!-- Batch Size & Action -->
+                        <div style="display: flex; gap: 12px; align-items: flex-end;">
+                            <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                                <label class="form-label" style="margin-bottom: 8px; font-size: 12px; font-weight: 500;">Số lượng địa chỉ mỗi lô</label>
+                                <input type="text" class="form-input" id="batch-size" value="1,000" style="font-size: 14px;">
+                            </div>
+                            <button class="page-hero-btn" id="btn-batch-toggle" style="height: 40px; padding: 0 20px; white-space: nowrap;">
+                                <i class="fa-solid fa-play"></i> Xử lý
+                            </button>
+                        </div>
                     </div>
-                    <div class="form-group" style="margin-bottom: 0; flex: 1; min-width: 160px;">
-                        <label class="form-label" style="margin-bottom: 4px; font-size: 11px;">Chế độ xử lý</label>
-                        <select class="form-input" id="batch-method" style="font-size: 13px;">
-                            <option value="hybrid">Hybrid (Nhanh nhất)</option>
-                            <option value="ner-only">Chỉ NER</option>
-                            <option value="full-chain">Chuẩn hóa đầy đủ</option>
-                        </select>
-                    </div>
-                    <button class="page-hero-btn" id="btn-batch-toggle" style="height: 34px; padding: 0 16px;">
-                        <i class="fa-solid fa-play"></i> Bắt đầu xử lý
-                    </button>
                 </div>
 
-                <!-- Stats -->
-                <div style="flex: 1; min-width: 200px; display: flex; gap: 12px;">
-                    <div class="stat-card batch-stat-card"
-                        style="flex: 1; padding: 8px 12px; background: var(--bg-app);">
-                        <div class="stat-label" style="font-size: 10px;">Đã xử lý</div>
-                        <div class="stat-value batch-stat-value" id="batch-done" style="font-size: 18px;">0</div>
-                    </div>
-                    <div class="stat-card batch-stat-card"
-                        style="flex: 1; padding: 8px 12px; background: var(--bg-app);">
-                        <div class="stat-label" style="font-size: 10px;">Tốc độ</div>
-                        <div class="stat-value batch-stat-value text-success" id="batch-throughput"
-                            style="font-size: 18px;">0</div>
+                <!-- Stats Section -->
+                <div style="flex: 1; min-width: 280px;">
+                    <div style="display: flex; gap: 16px; height: 100%;">
+                        <div class="stat-card batch-stat-card" style="flex: 1; padding: 16px; background: var(--bg-app); border: 1px solid var(--border); border-radius: 8px;">
+                            <div class="stat-label" style="font-size: 11px; color: var(--text-secondary); margin-bottom: 8px;">Đã xử lý</div>
+                            <div class="stat-value batch-stat-value" id="batch-done" style="font-size: 24px; font-weight: 600; color: var(--text-primary);">0</div>
+                        </div>
+                        <div class="stat-card batch-stat-card" style="flex: 1; padding: 16px; background: var(--bg-app); border: 1px solid var(--border); border-radius: 8px;">
+                            <div class="stat-label" style="font-size: 11px; color: var(--text-secondary); margin-bottom: 8px;">Tốc độ</div>
+                            <div class="stat-value batch-stat-value text-success" id="batch-throughput" style="font-size: 24px; font-weight: 600;">0</div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -62,9 +69,10 @@
                     <span class="batch-progress-label">Tiến độ tổng thể</span>
                     <span class="batch-progress-value" id="batch-progress-value">0%</span>
                 </div>
-                <div class="progress-track">
-                    <div class="progress-fill" style="width: 0%;"></div>
+                <div class="progress-track" style="height: 10px; background: var(--bg-muted); border-radius: 999px; overflow: hidden;">
+                    <div class="progress-fill" style="width: 0%; background: var(--accent); height: 100%; border-radius: 999px;"></div>
                 </div>
+                <div id="batch-progress-status" style="margin-top: 12px; font-size: 12px; color: var(--text-secondary);">Chưa bắt đầu.</div>
             </div>
 
             <!-- Console Output Section -->

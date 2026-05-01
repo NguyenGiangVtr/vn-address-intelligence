@@ -239,8 +239,24 @@ def _run_batch_job(job_id: str, limit: int, method: str):
 
                 output_tail = (output_tail + "\n" + line).strip()[-6000:]
                 
-                # Update the log tail for realtime feedback in UI
-                _update_batch_job_state(outputTail=output_tail)
+                # Parse progress from log lines
+                progress_match = re.search(r'Progress:\s*(\d+)/(\d+)', line)
+                if progress_match:
+                    processed = int(progress_match.group(1))
+                    total = int(progress_match.group(2))
+                    # Calculate throughput (simple estimation)
+                    start_time = datetime.fromisoformat(batch_job_state["startedAt"].replace("Z", ""))
+                    elapsed = max(1, (datetime.utcnow() - start_time).total_seconds())
+                    throughput = processed / elapsed
+                    _update_batch_job_state(
+                        processedCount=processed,
+                        totalCount=total,
+                        throughput=throughput,
+                        outputTail=output_tail
+                    )
+                else:
+                    # Update the log tail for realtime feedback in UI
+                    _update_batch_job_state(outputTail=output_tail)
 
         return_code = proc.wait()
 
@@ -249,6 +265,7 @@ def _run_batch_job(job_id: str, limit: int, method: str):
                 status="success",
                 finishedAt=datetime.utcnow().isoformat() + "Z",
                 exitCode=return_code,
+                processedCount=batch_job_state.get("totalCount", 0),  # Set to total when complete
                 error=None,
                 outputTail=output_tail,
             )

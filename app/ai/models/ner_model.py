@@ -24,9 +24,17 @@ class AddressNER:
     def __init__(self, model_path: str = "vinai/phobert-base", device: str = "auto"):
         self.device = 0 if (device == "auto" and torch.cuda.is_available()) else -1
         self.model_path = model_path
+        self.ner_pipeline = None
+
+        model_dir = model_path.strip() if isinstance(model_path, str) else ""
+        is_local_dir = bool(model_dir) and model_dir != "vinai/phobert-base"
+
+        if not is_local_dir:
+            logger.info("NER fine-tuned model not configured/found. Using Regex fallback.")
+            return
         
         try:
-            logger.info(f" Loading NER Model from {model_path}...")
+            logger.info(f"Loading fine-tuned NER model from {model_path}...")
             self.tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
             self.model = AutoModelForTokenClassification.from_pretrained(model_path)
             
@@ -36,12 +44,13 @@ class AddressNER:
                 model=self.model, 
                 tokenizer=self.tokenizer, 
                 device=self.device,
-                aggregation_strategy="simple" # Gộp các sub-tokens thành word
+                aggregation_strategy="simple", # Gộp các sub-tokens thành word
+                max_length=512,
+                truncation=True
             )
-            logger.info(" NER Model loaded.")
+            logger.info("Fine-tuned NER model loaded.")
         except Exception as e:
-            logger.warning(f"️ Chưa có model Fine-tuned tại {model_path}. Hệ thống sẽ dùng Regex-fallback. Lỗi: {e}")
-            self.ner_pipeline = None
+            logger.warning(f"Cannot load fine-tuned NER model at {model_path}. Using Regex fallback. Error: {e}")
 
     def extract(self, text: str) -> Dict[str, str]:
         """
@@ -80,4 +89,3 @@ class AddressNER:
         else:
             result['STR'] = text
         return result
-lt

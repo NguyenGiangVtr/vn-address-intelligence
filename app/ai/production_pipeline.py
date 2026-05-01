@@ -46,7 +46,10 @@ def run_pipeline(config_path: str, limit: int = None):
     
     # Load NER Model (Đã Fine-tuned hoặc dùng Regex fallback)
     ner_path = "models/phobert-ner-vn"
-    ner = AddressNER(model_path=ner_path if Path(ner_path).exists() else "vinai/phobert-base")
+    ner_model_path = ner_path if Path(ner_path).exists() else ""
+    if not ner_model_path:
+        logger.info("Fine-tuned NER model not found at models/phobert-ner-vn. Regex fallback will be used.")
+    ner = AddressNER(model_path=ner_model_path)
     
     llm = LLMQwen3(model_name=mod_cfg["llm"]["model_name"], use_quantization=False)
 
@@ -69,7 +72,7 @@ def run_pipeline(config_path: str, limit: int = None):
         db.disconnect()
         return
 
-    logger.info(f"Processing {len(rows)} rows with Hybrid Pipeline...")
+    logger.info(f"Processing {len(rows):,} rows with Hybrid Pipeline...")
 
     batch_results = []
     for row in rows:
@@ -117,10 +120,12 @@ def run_pipeline(config_path: str, limit: int = None):
             })
             
             if len(batch_results) % 50 == 0:
-                logger.info(f" Progress: {len(batch_results)}/{len(rows)}")
+                logger.info(f" Progress: {len(batch_results):,}/{len(rows):,}")
                 
         except Exception as e:
-            logger.error(f"Error processing row {row.get('id')}: {e}")
+            row_id = row.get("id")
+            row_id_display = f"{row_id:,}" if isinstance(row_id, int) else str(row_id)
+            logger.error(f"Error processing row {row_id_display}: {e}")
             batch_results.append({
                 "id": row['id'],
                 "processing_status": "ERROR",

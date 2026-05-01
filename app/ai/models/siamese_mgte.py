@@ -82,4 +82,3 @@ class SiameseMGTE:
     # ------------------------------------------------------------------
     def normalize_batch(self, queries: List[str]) -> List[Tuple[str, float, float]]:
         return [self.normalize(q) for q in queries]
-eries]
