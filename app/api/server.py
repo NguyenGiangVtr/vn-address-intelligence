@@ -368,8 +368,8 @@ def _serialize_parser_sample(sample: AddressCleansingQueue) -> dict:
     }
 
 
-def _load_parser_corpus(db: Session) -> list[str]:
-    corpus: list[str] = []
+def _load_parser_corpus(db: Session) -> List[str]:
+    corpus: List[str] = []
 
     standardized_rows = (
         db.query(AddressCleansingQueue.address_standardized)

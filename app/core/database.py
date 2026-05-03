@@ -289,6 +289,28 @@ class RawAddress(Base):
     confidence_score = Column(Float)
     created_at = Column(DateTime, default=func.now())
 
+class GoogleGroundTruth(Base):
+    """Dữ liệu địa chỉ chuẩn hóa (Ground Truth) từ Google/Typesense."""
+    __tablename__ = 'google_ground_truth'
+    __table_args__ = {'schema': 'mat'}
+    
+    id = Column(BigInteger, primary_key=True)
+    address = Column(Text)
+    old_address = Column(Text)
+    ward_id = Column(Integer)
+    district_id = Column(Integer)
+    province_id = Column(Integer)
+    old_ward_id = Column(Integer)
+    old_district_id = Column(Integer)
+    old_province_id = Column(Integer)
+    old_address_eng = Column(Text)
+    address_eng = Column(Text)
+    latitude = Column(Float)
+    longitude = Column(Float)
+    popular = Column(Integer)
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+
 def create_all_tables():
     init_db_schemas()
     Base.metadata.create_all(bind=engine)
@@ -345,5 +367,119 @@ def seed_training_metadata():
         if session.query(BenchmarkModelBaseline).count() == 0:
             session.add_all(benchmark_seed_rows)
             session.commit()
+    finally:
+        session.close()
+
+def sync_typesense_to_db(province_id: int = None, limit: int = None):
+    """
+    Crawl data từ Typesense và lưu vào database.
+    - province_id: Lọc theo tỉnh thành (nếu có).
+    - limit: Giới hạn số lượng bản ghi.
+    """
+    import requests
+    import json
+    from sqlalchemy.dialects.postgresql import insert
+
+    print(f"Starting sync from Typesense collection: {Config.TYPESENSE_COLLECTION}")
+    
+    # 1. Khởi tạo Typesense connection
+    # Sử dụng requests để gọi API trực tiếp để tránh phụ thuộc thư viện bên thứ 3
+    base_url = f"{Config.TYPESENSE_PROTOCOL}://{Config.TYPESENSE_HOST}:{Config.TYPESENSE_PORT}/collections/{Config.TYPESENSE_COLLECTION}/documents/search"
+    headers = {
+        "X-TYPESENSE-API-KEY": Config.TYPESENSE_API_KEY,
+        "Content-Type": "application/json"
+    }
+
+    # 2. Xây dựng query
+    batch_size = 250
+    offset = 0
+    total_processed = 0
+    
+    filter_by = f"province_id:={province_id}" if province_id else ""
+    
+    session = SessionLocal()
+    try:
+        while True:
+            # Tính toán limit cho batch hiện tại
+            current_limit = batch_size
+            if limit and (total_processed + batch_size > limit):
+                current_limit = limit - total_processed
+            
+            if current_limit <= 0:
+                break
+
+            params = {
+                "q": "*",
+                "filter_by": filter_by,
+                "per_page": current_limit,
+                "page": (offset // batch_size) + 1
+            }
+
+            response = requests.get(base_url, headers=headers, params=params)
+            if response.status_code != 200:
+                print(f"Error calling Typesense: {response.text}")
+                break
+            
+            data = response.json()
+            hits = data.get("hits", [])
+            if not hits:
+                break
+            
+            # 3. Chuyển đổi và chuẩn bị dữ liệu cho database
+            db_records = []
+            for hit in hits:
+                doc = hit["document"]
+                
+                # Trích xuất location [lat, lon]
+                location = doc.get("location", [None, None])
+                lat = location[0] if len(location) > 0 else None
+                lon = location[1] if len(location) > 1 else None
+                
+                record = {
+                    "id": int(doc.get("id")),
+                    "address": doc.get("address"),
+                    "old_address": doc.get("old_address"),
+                    "ward_id": doc.get("ward_id"),
+                    "district_id": doc.get("district_id"),
+                    "province_id": doc.get("province_id"),
+                    "old_ward_id": doc.get("old_ward_id"),
+                    "old_district_id": doc.get("old_district_id"),
+                    "old_province_id": doc.get("old_province_id"),
+                    "old_address_eng": doc.get("old_address_eng"),
+                    "address_eng": doc.get("address_eng"),
+                    "latitude": lat,
+                    "longitude": lon,
+                    "popular": doc.get("popular", 0)
+                }
+                db_records.append(record)
+            
+            # 4. Upsert (Merge) vào database
+            if db_records:
+                stmt = insert(GoogleGroundTruth).values(db_records)
+                stmt = stmt.on_conflict_do_update(
+                    index_elements=['id'],
+                    set_={
+                        k: v for k, v in record.items() if k != 'id'
+                    }
+                )
+                session.execute(stmt)
+                session.commit()
+            
+            total_processed += len(hits)
+            offset += len(hits)
+            
+            print(f"Processed {total_processed} records...")
+            
+            if limit and total_processed >= limit:
+                break
+                
+            if len(hits) < batch_size:
+                break
+                
+        print(f"Sync completed. Total records synced: {total_processed}")
+        
+    except Exception as e:
+        print(f"Error during sync: {str(e)}")
+        session.rollback()
     finally:
         session.close()

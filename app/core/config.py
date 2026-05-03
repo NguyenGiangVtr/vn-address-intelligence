@@ -38,3 +38,10 @@ class Config:
     KIBANA_LOG_HOST = os.getenv("KIBANA_LOG_HOST", "localhost")
     KIBANA_LOG_PORT = int(os.getenv("KIBANA_LOG_PORT", "5044"))
     KIBANA_LOG_APP_NAME = os.getenv("KIBANA_LOG_APP_NAME", "vn-address-intelligence")
+
+    # Typesense
+    TYPESENSE_HOST = os.getenv("TYPESENSE_HOST", "localhost")
+    TYPESENSE_PORT = os.getenv("TYPESENSE_PORT", "8108")
+    TYPESENSE_PROTOCOL = os.getenv("TYPESENSE_PROTOCOL", "http")
+    TYPESENSE_API_KEY = os.getenv("TYPESENSE_API_KEY", "xyz")
+    TYPESENSE_COLLECTION = os.getenv("TYPESENSE_COLLECTION", "google_addresses")
