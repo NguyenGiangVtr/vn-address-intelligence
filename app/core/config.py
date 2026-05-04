@@ -45,3 +45,9 @@ class Config:
     TYPESENSE_PROTOCOL = os.getenv("TYPESENSE_PROTOCOL", "http")
     TYPESENSE_API_KEY = os.getenv("TYPESENSE_API_KEY", "xyz")
     TYPESENSE_COLLECTION = os.getenv("TYPESENSE_COLLECTION", "google_addresses")
+
+    # SMTP Settings
+    SMTP_HOST = os.getenv("SMTP_HOST", "smtp.gmail.com")
+    SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
+    SMTP_USER = os.getenv("SMTP_USER")
+    SMTP_PASS = os.getenv("SMTP_PASS")

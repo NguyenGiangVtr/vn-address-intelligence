@@ -96,6 +96,17 @@
                 <label class="form-label">Username</label>
                 <input type="text" id="username" class="form-input" placeholder="admin" required>
             </div>
+            <div class="form-group" id="email-group" style="display:none;">
+                <label class="form-label">Email</label>
+                <div style="display:flex; gap:8px;">
+                    <input type="email" id="email" class="form-input" placeholder="example@email.com" style="flex:1;">
+                    <button type="button" id="send-code-btn" class="btn btn-outline" style="padding: 0 12px; font-size: 12px; white-space: nowrap;">Send Code</button>
+                </div>
+            </div>
+            <div class="form-group" id="code-group" style="display:none;">
+                <label class="form-label">Verification Code</label>
+                <input type="text" id="verification-code" class="form-input" placeholder="6-digit code">
+            </div>
             <div class="form-group">
                 <label class="form-label">Password</label>
                 <input type="password" id="password" class="form-input" placeholder="••••••••" required>
@@ -128,10 +139,19 @@
         const loginModeBtn = document.getElementById('mode-login');
         const registerModeBtn = document.getElementById('mode-register');
 
+        const emailGroup = document.getElementById('email-group');
+        const codeGroup = document.getElementById('code-group');
+        const sendCodeBtn = document.getElementById('send-code-btn');
+        const emailInput = document.getElementById('email');
+        const codeInput = document.getElementById('verification-code');
+
         function setMode(nextMode) {
             mode = nextMode;
             const isRegister = mode === 'register';
             displayNameGroup.style.display = isRegister ? 'block' : 'none';
+            emailGroup.style.display = isRegister ? 'block' : 'none';
+            codeGroup.style.display = isRegister ? 'block' : 'none';
+            
             submitBtn.innerHTML = isRegister
               ? 'Create Account <i class="fa-solid fa-user-plus" style="margin-left: 8px;"></i>'
               : 'Sign In <i class="fa-solid fa-arrow-right" style="margin-left: 8px;"></i>';
@@ -139,6 +159,51 @@
             registerModeBtn.className = isRegister ? 'btn btn-primary' : 'btn btn-outline';
             errorEl.style.display = 'none';
         }
+
+        sendCodeBtn.addEventListener('click', async () => {
+            const email = emailInput.value.trim();
+            if (!email) {
+                errorEl.textContent = 'Please enter your email first';
+                errorEl.style.display = 'block';
+                return;
+            }
+
+            sendCodeBtn.disabled = true;
+            sendCodeBtn.textContent = 'Sending...';
+
+            try {
+                const response = await fetch(`${API_BASE}/register/send-code`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email })
+                });
+
+                if (response.ok) {
+                    alert('Verification code sent! Please check your email.');
+                    let countdown = 60;
+                    const timer = setInterval(() => {
+                        countdown--;
+                        sendCodeBtn.textContent = `Resend (${countdown}s)`;
+                        if (countdown <= 0) {
+                            clearInterval(timer);
+                            sendCodeBtn.disabled = false;
+                            sendCodeBtn.textContent = 'Send Code';
+                        }
+                    }, 1000);
+                } else {
+                    const err = await response.json();
+                    errorEl.textContent = err.detail || 'Failed to send code';
+                    errorEl.style.display = 'block';
+                    sendCodeBtn.disabled = false;
+                    sendCodeBtn.textContent = 'Send Code';
+                }
+            } catch (err) {
+                errorEl.textContent = 'Connection error';
+                errorEl.style.display = 'block';
+                sendCodeBtn.disabled = false;
+                sendCodeBtn.textContent = 'Send Code';
+            }
+        });
 
         loginModeBtn.addEventListener('click', () => setMode('login'));
         registerModeBtn.addEventListener('click', () => setMode('register'));
@@ -153,14 +218,25 @@
 
             try {
                 const endpoint = mode === 'register' ? '/register' : '/login';
+                let body;
+                if (mode === 'register') {
+                    body = JSON.stringify({ 
+                        username: user, 
+                        email: emailInput.value,
+                        password: pass, 
+                        verification_code: codeInput.value,
+                        display_name: displayName 
+                    });
+                } else {
+                    body = new URLSearchParams({ username: user, password: pass });
+                }
+
                 const response = await fetch(`${API_BASE}${endpoint}`, {
                     method: 'POST',
                     headers: mode === 'register'
                         ? { 'Content-Type': 'application/json' }
                         : { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: mode === 'register'
-                        ? JSON.stringify({ username: user, password: pass, display_name: displayName })
-                        : new URLSearchParams({ username: user, password: pass })
+                    body: body
                 });
 
                 if (response.ok) {

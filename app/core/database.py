@@ -290,12 +290,24 @@ class AuthUser(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     username = Column(String(100), nullable=False, unique=True, index=True)
+    email = Column(String(150), unique=True, index=True)
     password_hash = Column(String(255), nullable=False)
     display_name = Column(String(200))
     role = Column(String(50), default='user', nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime, default=func.now(), nullable=False)
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now(), nullable=False)
+
+class EmailVerification(Base):
+    __tablename__ = 'email_verifications'
+    __table_args__ = {'schema': 'ath'} # Store in AI/Auth schema
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    email = Column(String(150), nullable=False, index=True)
+    code = Column(String(10), nullable=False)
+    expires_at = Column(DateTime, nullable=False)
+    is_verified = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=func.now())
 
 # --- DOMAIN 4: Processing Queue (prq) ---
 
