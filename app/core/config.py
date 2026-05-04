@@ -46,6 +46,14 @@ class Config:
     TYPESENSE_API_KEY = os.getenv("TYPESENSE_API_KEY", "xyz")
     TYPESENSE_COLLECTION = os.getenv("TYPESENSE_COLLECTION", "google_addresses")
 
+    # Redis Cache
+    REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
+    REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
+    REDIS_PASSWORD = os.getenv("REDIS_PASSWORD") or None
+    REDIS_DB = int(os.getenv("REDIS_DB", "0"))
+    REDIS_CACHE_TTL = int(os.getenv("REDIS_CACHE_TTL", "3600"))
+    REDIS_ENABLED = os.getenv("REDIS_ENABLED", "true").lower() == "true"
+
     # SMTP Settings
     SMTP_HOST = os.getenv("SMTP_HOST", "smtp.gmail.com")
     SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))

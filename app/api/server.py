@@ -35,6 +35,16 @@ import json
 
 from app.core.logging_config import setup_logging
 from app.core.config import Config  # noqa: F401 - import to trigger load_dotenv from .env
+from app.core.cache import (
+    cache_provinces_get, cache_provinces_set,
+    cache_districts_get, cache_districts_set,
+    cache_wards_get, cache_wards_set,
+    cache_unit_get, cache_unit_set,
+    cache_mapping_get, cache_mapping_set,
+    invalidate_provinces, invalidate_districts, invalidate_wards,
+    invalidate_ward_mapping, invalidate_all_admin,
+    cache_health, get_redis,
+)
 
 # ── Logging Setup ──
 logger = setup_logging()
@@ -130,8 +140,18 @@ parser_runtime_bundle = None
 
 
 def _ensure_auth_user_table():
+    # 1. Create tables if not exist
     AuthUser.__table__.create(bind=engine, checkfirst=True)
     EmailVerification.__table__.create(bind=engine, checkfirst=True)
+    
+    # 2. Add email column to auth_users if missing (for existing installations)
+    try:
+        with engine.connect() as conn:
+            # PostgreSQL syntax to add column if not exists
+            conn.execute(text("ALTER TABLE auth_users ADD COLUMN IF NOT EXISTS email VARCHAR(150) UNIQUE"))
+            conn.commit()
+    except Exception as e:
+        logger.warning(f"Failed to auto-migrate auth_users table: {e}")
 
 
 def _normalize_int_value(value: object, default: int) -> int:
@@ -589,18 +609,38 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ── Visitor Tracking Middleware ──
+# ── Visitor Tracking & Kibana Logging Middleware ──
 @app.middleware("http")
-async def track_visitors(request: Request, call_next):
-    # Get client IP (handle proxy headers if on VPS)
-    forwarded = request.headers.get("X-Forwarded-For")
-    ip = forwarded.split(",")[0] if forwarded else request.client.host
+async def log_requests(request: Request, call_next):
+    start_time = time.time()
     
-    # Track only page loads and API calls, ignore static assets if needed
+    # Extract client IP
+    forwarded = request.headers.get("X-Forwarded-For")
+    ip = forwarded.split(",")[0] if forwarded else (request.client.host if request.client else "unknown")
+    
+    # 1. Visitor Tracking (Internal stats)
     if not request.url.path.startswith(("/ui", "/favicon.ico")):
         stats_tracker.track(ip)
         
     response = await call_next(request)
+    
+    # 2. Kibana/Logstash Logging
+    if Config.KIBANA_LOG_ENABLED:
+        duration_ms = round((time.time() - start_time) * 1000, 2)
+        log_data = {
+            "method": request.method,
+            "path": request.url.path,
+            "status_code": response.status_code,
+            "duration_ms": duration_ms,
+            "client_ip": ip,
+            "user_agent": request.headers.get("User-Agent", "unknown"),
+        }
+        # Log detail for Kibana indexing
+        logger.info(
+            f"HTTP {request.method} {request.url.path} - {response.status_code} ({duration_ms}ms)",
+            extra=log_data
+        )
+        
     return response
 
 # Serve UI static files
@@ -679,15 +719,26 @@ def get_provinces(version: int = Query(1), db: Session = Depends(get_db)):
     Lấy toàn bộ danh sách tỉnh/thành phố.
     - **version**: 1 (Dữ liệu cũ), 2 (Dữ liệu mới quy chuẩn).
     """
+    cached = cache_provinces_get(version)
+    if cached is not None:
+        return cached
     query = db.query(Province).filter(Province.admin_version == version)
     if version == 2:
         query = query.filter(Province.is_deleted == False)
-    return query.order_by(Province.province_name).all()
+    rows = query.order_by(Province.province_name).all()
+    cache_provinces_set(version, rows)
+    return rows
 
 @api_router.get("/provinces/{province_id}")
 def get_provinces_by_path(province_id: int, version: Optional[int] = 1, db: Session = Depends(get_db)):
     """Fetch a single province by ID and version."""
-    return db.query(Province).filter(Province.province_id == province_id, Province.admin_version == version).first()
+    cached = cache_unit_get("province", version, province_id)
+    if cached is not None:
+        return cached
+    row = db.query(Province).filter(Province.province_id == province_id, Province.admin_version == version).first()
+    if row:
+        cache_unit_set("province", version, province_id, row)
+    return row
 
 @api_router.get("/districts", tags=["Đơn vị hành chính"], summary="Lấy danh sách Quận/Huyện")
 def get_districts(province_id: Optional[int] = None, district_id: Optional[int] = None, version: int = Query(1), db: Session = Depends(get_db)):
@@ -697,6 +748,10 @@ def get_districts(province_id: Optional[int] = None, district_id: Optional[int] 
     - **district_id**: Lấy chính xác 1 huyện theo mã.
     - **version**: 1 hoặc 2.
     """
+    if district_id is None:
+        cached = cache_districts_get(version, province_id)
+        if cached is not None:
+            return cached
     query = db.query(District).filter(District.admin_version == version)
     if version == 2:
         query = query.filter(District.is_deleted == False)
@@ -704,7 +759,10 @@ def get_districts(province_id: Optional[int] = None, district_id: Optional[int] 
         query = query.filter(District.province_id == province_id)
     if district_id:
         query = query.filter(District.district_id == district_id)
-    return query.order_by(District.district_name).all()
+    rows = query.order_by(District.district_name).all()
+    if district_id is None:
+        cache_districts_set(version, province_id, rows)
+    return rows
 
 @api_router.get("/districts/{province_id}")
 def get_districts_by_path(province_id: int, version: int = Query(1), db: Session = Depends(get_db)):
@@ -719,15 +777,21 @@ def get_wards(district_id: Optional[int] = None, ward_id: Optional[int] = None, 
     - **ward_id**: Lấy chính xác 1 xã theo mã.
     - **version**: 1 hoặc 2.
     """
+    if ward_id is None:
+        cached = cache_wards_get(version, district_id)
+        if cached is not None:
+            return cached
     query = db.query(Ward).filter(Ward.admin_version == version)
     if version == 2:
         query = query.filter(Ward.is_deleted == False)
-    
     if district_id:
         query = query.filter(Ward.district_id == district_id)
     if ward_id:
         query = query.filter(Ward.ward_id == ward_id)
-    return query.order_by(Ward.ward_name).all()
+    rows = query.order_by(Ward.ward_name).all()
+    if ward_id is None:
+        cache_wards_set(version, district_id, rows)
+    return rows
 
 @api_router.get("/wards/{district_id}")
 def get_wards_by_path(district_id: int, version: int = Query(1), db: Session = Depends(get_db)):
@@ -742,22 +806,30 @@ def get_unit_details(level: str, unit_id: int, version: Optional[int] = 1, db: S
     - **unit_id**: Mã định danh của đơn vị.
     - **version**: Phiên bản dữ liệu (1 hoặc 2).
     """
+    cached = cache_unit_get(level, version, unit_id)
+    if cached is not None:
+        return cached
+    row = None
     if level == "province":
         query = db.query(Province).filter(Province.province_id == unit_id, Province.admin_version == version)
         if version == 2:
             query = query.filter(Province.is_deleted == False)
-        return query.first()
-    if level == "district":
+        row = query.first()
+    elif level == "district":
         query = db.query(District).filter(District.district_id == unit_id, District.admin_version == version)
         if version == 2:
             query = query.filter(District.is_deleted == False)
-        return query.first()
-    if level == "ward":
+        row = query.first()
+    elif level == "ward":
         query = db.query(Ward).filter(Ward.ward_id == unit_id, Ward.admin_version == version)
         if version == 2:
             query = query.filter(Ward.is_deleted == False)
-        return query.first()
-    return {"error": "Invalid level"}
+        row = query.first()
+    else:
+        return {"error": "Invalid level"}
+    if row:
+        cache_unit_set(level, version, unit_id, row)
+    return row
 
 @api_router.get("/lookup/mapping", tags=["Biến động địa giới"], summary="Tra cứu chuyển đổi ĐVHC (V1 sang V2)")
 def lookup_mapping(
@@ -915,8 +987,8 @@ def lookup_mapping(
 @api_router.post("/sync/nso", tags=["Đồng bộ dữ liệu"], summary="Kích hoạt đồng bộ toàn bộ NSO")
 def trigger_nso_sync(db: Session = Depends(get_db)):
     """Đồng bộ toàn bộ danh mục Tỉnh/Huyện/Xã từ server NSO (danhmuchanhchinh.nso.gov.vn)."""
-    # This should ideally be a background task
     result = sync_full_nso(db)
+    invalidate_all_admin()
     return result
 
 @api_router.post("/sync/nso/province", tags=["Đồng bộ dữ liệu"], summary="Đồng bộ một Tỉnh từ NSO")
@@ -926,9 +998,12 @@ async def trigger_nso_province_sync(data: dict, db: Session = Depends(get_db)):
     p_name = data.get("name")
     if not p_code or not p_name:
         raise HTTPException(status_code=400, detail="Thiếu mã hoặc tên tỉnh")
-    
-    # Run sync (Ideally background, but for batch we try sync for now)
-    return sync_province_nso(db, p_code, p_name)
+    result = sync_province_nso(db, p_code, p_name)
+    invalidate_provinces()
+    invalidate_districts()
+    invalidate_wards()
+    invalidate_ward_mapping()
+    return result
 
 @api_router.get("/sync/nso/logs", tags=["Đồng bộ dữ liệu"], summary="Lấy nhật ký đồng bộ")
 def get_sync_logs():
@@ -1010,35 +1085,41 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
 @api_router.post("/register/send-code", tags=["Xác thực hệ thống"], summary="Gửi mã xác thực qua email")
 async def send_reg_code(payload: SendCodePayload, db: Session = Depends(get_db)):
     """Gửi mã xác thực 6 chữ số tới email của người dùng."""
+    _ensure_auth_user_table()
     email = payload.email.strip().lower()
     
-    # 1. Check if email already exists
-    existing_user = db.query(AuthUser).filter(AuthUser.email == email).first()
-    if existing_user:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email này đã được đăng ký")
+    try:
+        # 1. Check if email already exists
+        existing_user = db.query(AuthUser).filter(AuthUser.email == email).first()
+        if existing_user:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email này đã được đăng ký")
 
-    # 2. Generate 6-digit code
-    code = ''.join(random.choices(string.digits, k=6))
-    expires_at = datetime.utcnow() + timedelta(minutes=10)
+        # 2. Generate 6-digit code
+        code = ''.join(random.choices(string.digits, k=6))
+        expires_at = datetime.utcnow() + timedelta(minutes=10)
 
-    # 3. Store in DB
-    verification = EmailVerification(
-        email=email,
-        code=code,
-        expires_at=expires_at
-    )
-    db.add(verification)
-    db.commit()
+        # 3. Store in DB
+        verification = EmailVerification(
+            email=email,
+            code=code,
+            expires_at=expires_at
+        )
+        db.add(verification)
+        db.commit()
 
-    # 4. Send Email
-    success = send_verification_email(email, code)
-    if not success:
-        # If email fails but we're in dev, maybe just return the code? 
-        # For now, let's just return success if we can't send, but log it.
-        # In production, this should be a failure.
-        pass
+        # 4. Send Email
+        success = send_verification_email(email, code)
+        if not success:
+            logger.error(f"Email failed to send to {email}")
+            # If email fails, we might want to tell the user
+            raise HTTPException(status_code=500, detail="Không thể gửi email xác thực. Vui lòng kiểm tra lại cấu hình SMTP.")
 
-    return {"message": "Mã xác thực đã được gửi tới email của bạn", "expires_in": "10 minutes"}
+        return {"message": "Mã xác thực đã được gửi tới email của bạn", "expires_in": "10 minutes"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in send_reg_code: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Lỗi hệ thống: {str(e)}")
 
 
 @api_router.post("/register", tags=["Xác thực hệ thống"], summary="Đăng ký tài khoản mới")
@@ -1881,6 +1962,35 @@ def evidence_file(key: str):
         raise HTTPException(status_code=404, detail="Requested file does not exist")
 
     return FileResponse(str(file_path), filename=file_path.name)
+
+
+# ── Cache Management Endpoints ──
+
+@api_router.get("/cache/health", tags=["Cache"], summary="Trạng thái Redis cache")
+def get_cache_health():
+    """Trả về thông tin kết nối Redis và số lượng key cache đơn vị hành chính."""
+    return cache_health()
+
+
+@api_router.delete("/cache/admin", tags=["Cache"], summary="Xóa toàn bộ cache đơn vị hành chính")
+def clear_admin_cache(level: Optional[str] = None):
+    """
+    Xóa cache đơn vị hành chính.
+    - **level**: 'province', 'district', 'ward', 'mapping' hoặc để trống để xóa tất cả.
+    """
+    if level == "province":
+        n = invalidate_provinces()
+    elif level == "district":
+        n = invalidate_districts()
+    elif level == "ward":
+        n = invalidate_wards()
+    elif level == "mapping":
+        n = invalidate_ward_mapping()
+    elif level is None:
+        n = invalidate_all_admin()
+    else:
+        raise HTTPException(status_code=400, detail="level phải là: province, district, ward, mapping hoặc để trống")
+    return {"status": "cleared", "keys_deleted": n, "level": level or "all"}
 
 
 app.include_router(api_router, prefix="/api") # Match frontend API_BASE
