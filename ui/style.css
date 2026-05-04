@@ -3393,6 +3393,128 @@ select.form-input {
   font-weight: 500;
 }
 
+/* Task badge inside model card */
+.pmodel-task-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: 3px;
+  padding: 2px 6px;
+  margin-bottom: 6px;
+}
+
+/* Not-loaded / error state inside card */
+.pmodel-not-loaded {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Comparison summary table below the 4-card grid */
+.parser-compare-summary {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  margin-top: 12px;
+}
+
+.pcs-header {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pcs-note {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  margin-bottom: 10px;
+  font-style: italic;
+}
+
+.pcs-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.pcs-table th {
+  text-align: left;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--text-tertiary);
+  padding: 4px 8px 6px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.pcs-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  vertical-align: middle;
+}
+
+.pcs-table tr:last-child td {
+  border-bottom: none;
+}
+
+.pcs-name {
+  font-weight: 600;
+  color: var(--text-primary) !important;
+  white-space: nowrap;
+}
+
+.pcs-task {
+  color: var(--text-tertiary) !important;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.pcs-output {
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.pcs-output.normalized {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.pcs-output.entities {
+  color: var(--warning);
+}
+
+.pcs-output.empty {
+  color: var(--text-tertiary);
+}
+
+.pcs-conf {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--success);
+  background: var(--success-bg, rgba(52,211,153,0.1));
+  border-radius: 4px;
+  padding: 1px 6px;
+}
+
 /* Shimmer loading */
 .pmodel-shimmer {
   height: 10px;

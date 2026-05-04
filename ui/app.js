@@ -1225,6 +1225,8 @@ function _resetModelCards() {
     if (stats) { stats.innerHTML = ""; }
     if (badge) { badge.innerHTML = '<span class="pmodel-spinner"></span>'; }
   });
+  const existingSummary = document.getElementById("parser-compare-summary");
+  if (existingSummary) existingSummary.remove();
 }
 
 async function fetchParserSampleDB() {
@@ -1292,13 +1294,30 @@ async function runParser() {
         body: JSON.stringify(payload)
       });
       const latency = Date.now() - t0;
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (!res.ok) {
+        // Try to extract server error detail for better user message
+        let errDetail = `HTTP ${res.status}`;
+        try {
+          const errBody = await res.json();
+          const note = errBody?.detail?.note || errBody?.detail?.error || errBody?.detail;
+          if (note && typeof note === "string") errDetail = note;
+        } catch (_) {}
+        throw new Error(errDetail);
+      }
       const data = await res.json();
       const out = data.outputs?.[key];
       if (data.meta) lastMeta = data.meta;
+      if (data.acs && !lastMeta?._acs) {
+        if (!lastMeta) lastMeta = {};
+        lastMeta._acs = data.acs;
+      }
 
-      // Render this card
-      _renderModelCard(key, out, latency);
+      // HTTP 200 but server returned a fallback error (PreLabeler-only mode)
+      if (data.error && !out) {
+        _renderModelCard(key, { error: data.error, status: "Not loaded" }, latency);
+      } else {
+        _renderModelCard(key, out, latency);
+      }
 
       // Show NER from prelabeler immediately
       if (key === "prelabeler" && !firstNERDone) {
@@ -1307,7 +1326,7 @@ async function runParser() {
         renderNERHighlight(entities);
       }
     } catch (e) {
-      _renderModelCardError(key, label);
+      _renderModelCardError(key, label, e.message);
     } finally {
       completedCount++;
       _setParserStatus("running", `Đang phân tích — ${completedCount}/4 model hoàn thành...`);
@@ -1323,13 +1342,23 @@ async function runParser() {
 
     // Update meta footer
     if (lastMeta) _updateParserMeta(lastMeta);
+    // Render comparison summary
+    _renderParserCompareSummary();
   } catch (err) {
     _setParserStatus("error", "Đã xảy ra lỗi trong quá trình phân tích");
   } finally {
     if (heroInner) heroInner.classList.remove("is-running");
-    if (btnParse) { btnParse.disabled = false; btnParse.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i><span>Phân tích</span>'; }
+    if (btnParse) { btnParse.disabled = false; btnParse.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i><span>Phân tích địa chỉ</span>'; }
   }
 }
+
+// Model task metadata for contextual display
+const _MODEL_TASK_META = {
+  prelabeler: { task: "NER",         icon: "fa-tags",           taskLabel: "Trích xuất thực thể",     outputType: "entities" },
+  phobert:    { task: "Retrieval",   icon: "fa-magnifying-glass", taskLabel: "Chuẩn hóa ngữ nghĩa",   outputType: "normalized" },
+  mgte:       { task: "Embedding",   icon: "fa-layer-group",    taskLabel: "Embedding đa ngôn ngữ",  outputType: "normalized" },
+  llm:        { task: "LLM",         icon: "fa-brain",          taskLabel: "Suy luận ngôn ngữ",      outputType: "normalized" },
+};
 
 function _renderModelCard(model, out, latencyMs) {
   const card = document.getElementById(`pcard-${model}`);
@@ -1337,6 +1366,8 @@ function _renderModelCard(model, out, latencyMs) {
   const statsEl = document.getElementById(`pstats-${model}`);
   const badgeEl = document.getElementById(`pbadge-${model}`);
   if (!card) return;
+
+  const taskMeta = _MODEL_TASK_META[model] || {};
 
   card.classList.add("is-done");
 
@@ -1346,49 +1377,134 @@ function _renderModelCard(model, out, latencyMs) {
     resultEl.classList.add("has-result");
     if (!out) {
       resultEl.innerHTML = `<span style="color:var(--text-tertiary);font-size:11px">Không có kết quả</span>`;
+    } else if (out.error && !out.normalizedAddress && !Array.isArray(out.result)) {
+      // Model loaded but errored, or not loaded at all
+      const errMsg = out.error || "Model chưa được nạp";
+      const isNotLoaded = (out.status === "Not loaded");
+      resultEl.innerHTML = `<div class="pmodel-not-loaded">
+        <i class="fa-solid fa-circle-exclamation" style="color:var(--warning)"></i>
+        <span style="color:var(--warning);font-size:11px">${isNotLoaded ? "Model chưa được nạp vào bộ nhớ" : escapeHtml(errMsg)}</span>
+        <span style="display:block;color:var(--text-tertiary);font-size:10px;margin-top:2px">Khởi động lại server để nạp model AI</span>
+      </div>`;
     } else {
-      const normalized = out.normalizedAddress || out.status || "";
+      const normalized = out.normalizedAddress || "";
       const entities = Array.isArray(out.result) ? out.result : [];
       const labelInfo = {};
       NER_LABELS.forEach(l => labelInfo[l.value] = l);
 
       let html = "";
+
+      // Task type badge
+      if (taskMeta.taskLabel) {
+        html += `<div class="pmodel-task-badge"><i class="fa-solid ${taskMeta.icon || 'fa-circle'}"></i> ${taskMeta.taskLabel}</div>`;
+      }
+
       if (normalized) {
         html += `<span class="pmodel-normalized">${escapeHtml(normalized)}</span>`;
       }
       if (entities.length > 0) {
-        const chips = entities.slice(0, 8).map(e => {
+        const chips = entities.slice(0, 10).map(e => {
           const lbl = e.label || (e.value?.labels?.[0]) || "?";
           const txt = e.text || e.value?.text || "";
           const info = labelInfo[lbl] || { color: "#888" };
-          return `<span class="pmodel-ent-chip" style="background:${info.color}18;color:${info.color}">${lbl}: ${escapeHtml(txt)}</span>`;
+          return `<span class="pmodel-ent-chip" style="background:${info.color}18;color:${info.color}" title="${info.text || lbl}">${lbl}: ${escapeHtml(txt)}</span>`;
         }).join("");
         html += `<div class="pmodel-entities">${chips}</div>`;
       }
-      if (!normalized && entities.length === 0) {
-        html = `<span style="color:var(--text-tertiary);font-size:11px">NER xử lý xong — ${out.entityCount || 0} entities</span>`;
+      if (!normalized && entities.length === 0 && !out.error) {
+        // Only truly empty result
+        html += `<span style="color:var(--text-tertiary);font-size:11px">Không tìm thấy kết quả phù hợp</span>`;
       }
       resultEl.innerHTML = html;
     }
   }
 
   if (statsEl) {
-    const conf = out?.score ?? out?.entityCount ?? null;
-    const count = Array.isArray(out?.result) ? out.result.length : (out?.entityCount ?? null);
+    const score = typeof out?.score === "number" ? out.score : null;
+    const count = Array.isArray(out?.result) ? out.result.length : (typeof out?.entityCount === "number" ? out.entityCount : null);
+    const modelLatency = typeof out?.latencyMs === "number" ? out.latencyMs : null;
     let chips = `<span class="pstat-chip latency"><i class="fa-solid fa-stopwatch"></i>${latencyMs}ms</span>`;
+    if (modelLatency !== null && modelLatency !== latencyMs) {
+      chips += `<span class="pstat-chip latency" title="Thời gian xử lý model"><i class="fa-solid fa-microchip"></i>${modelLatency.toFixed(0)}ms</span>`;
+    }
     if (count !== null) chips += `<span class="pstat-chip count"><i class="fa-solid fa-tags"></i>${count} entities</span>`;
-    if (conf !== null && typeof conf === "number" && conf <= 1) chips += `<span class="pstat-chip conf"><i class="fa-solid fa-chart-line"></i>${(conf * 100).toFixed(0)}%</span>`;
+    if (score !== null) chips += `<span class="pstat-chip conf" title="Độ tương đồng ngữ nghĩa"><i class="fa-solid fa-chart-line"></i>${(score * 100).toFixed(1)}%</span>`;
     statsEl.innerHTML = chips;
   }
 }
 
-function _renderModelCardError(model, label) {
-  const card = document.getElementById(`pcard-${model}`);
+function _renderModelCardError(model, label, errMsg) {
+  const card     = document.getElementById(`pcard-${model}`);
   const resultEl = document.getElementById(`presult-${model}`);
-  const badgeEl = document.getElementById(`pbadge-${model}`);
+  const badgeEl  = document.getElementById(`pbadge-${model}`);
   if (card) card.classList.add("is-error");
   if (badgeEl) badgeEl.innerHTML = `<span class="pmodel-badge-done error">ERR</span>`;
-  if (resultEl) resultEl.innerHTML = `<span style="color:var(--danger);font-size:11px"><i class="fa-solid fa-triangle-exclamation"></i> Không thể kết nối model</span>`;
+  const detail = errMsg ? `<span style="display:block;color:var(--text-tertiary);font-size:10px;margin-top:3px">${escapeHtml(errMsg)}</span>` : "";
+  if (resultEl) resultEl.innerHTML = `<div style="display:flex;flex-direction:column;gap:2px">
+    <span style="color:var(--danger);font-size:11px"><i class="fa-solid fa-triangle-exclamation"></i> Không thể kết nối model</span>
+    ${detail}
+  </div>`;
+}
+
+function _renderParserCompareSummary() {
+  const grid = document.getElementById("parser-models-grid");
+  if (!grid) return;
+  // Remove previous summary if any
+  const existing = document.getElementById("parser-compare-summary");
+  if (existing) existing.remove();
+
+  // Collect results from all rendered cards
+  const modelKeys = ["prelabeler", "phobert", "mgte", "llm"];
+  const modelNames = { prelabeler: "PreLabeler", phobert: "PhoBERT", mgte: "mGTE", llm: "Qwen LLM" };
+  const rows = modelKeys.map(k => {
+    const resultEl = document.getElementById(`presult-${k}`);
+    const statsEl = document.getElementById(`pstats-${k}`);
+    const isError = document.getElementById(`pcard-${k}`)?.classList.contains("is-error");
+    const isNotLoaded = resultEl?.querySelector(".pmodel-not-loaded") !== null;
+    const normalizedEl = resultEl?.querySelector(".pmodel-normalized");
+    const entChips = resultEl?.querySelectorAll(".pmodel-ent-chip");
+    const confChip = statsEl?.querySelector(".pstat-chip.conf");
+
+    return {
+      key: k,
+      name: modelNames[k],
+      isError,
+      isNotLoaded,
+      normalized: normalizedEl?.textContent?.trim() || null,
+      entityCount: entChips?.length || 0,
+      confidence: confChip?.textContent?.trim() || null,
+    };
+  }).filter(r => !r.isError && !r.isNotLoaded);
+
+  if (!rows.length) return;
+
+  const summaryEl = document.createElement("div");
+  summaryEl.id = "parser-compare-summary";
+  summaryEl.className = "parser-compare-summary";
+
+  const rowsHtml = rows.map(r => {
+    const outputHtml = r.normalized
+      ? `<span class="pcs-output normalized">${escapeHtml(r.normalized)}</span>`
+      : (r.entityCount > 0 ? `<span class="pcs-output entities">${r.entityCount} thực thể trích xuất</span>` : `<span class="pcs-output empty">—</span>`);
+    const confHtml = r.confidence ? `<span class="pcs-conf">${r.confidence}</span>` : "";
+    const taskMeta = _MODEL_TASK_META[r.key];
+    return `<tr>
+      <td class="pcs-name"><i class="fa-solid ${taskMeta?.icon || 'fa-circle'}"></i> ${r.name}</td>
+      <td class="pcs-task">${taskMeta?.taskLabel || ""}</td>
+      <td class="pcs-output-cell">${outputHtml}</td>
+      <td class="pcs-conf-cell">${confHtml}</td>
+    </tr>`;
+  }).join("");
+
+  summaryEl.innerHTML = `
+    <div class="pcs-header"><i class="fa-solid fa-table-columns"></i> So sánh kết quả các mô hình</div>
+    <div class="pcs-note">Mỗi mô hình thực hiện một tác vụ khác nhau — kết quả trả về khác nhau là bình thường.</div>
+    <table class="pcs-table">
+      <thead><tr><th>Mô hình</th><th>Tác vụ</th><th>Kết quả</th><th>Điểm</th></tr></thead>
+      <tbody>${rowsHtml}</tbody>
+    </table>`;
+
+  grid.after(summaryEl);
 }
 
 function _updateParserMeta(meta) {
@@ -2246,8 +2362,17 @@ function updateSyncStatus(text, color) {
 }
 
 // ═══ ADMINISTRATIVE MANAGER (CRUD) ═══
+const ADMIN_CRUD_ENABLED = false;
+
+function showAdminCrudUnavailable() {
+  showToast('Chức năng thêm/sửa/xóa đã được tắt do API đã gom lại.', 'warning');
+}
 
 window.editAdminUnit = async function (level, id) {
+  if (!ADMIN_CRUD_ENABLED) {
+    showAdminCrudUnavailable();
+    return;
+  }
   try {
     const version = adminState ? adminState.version : 1;
     const res = await fetch(`${API_BASE}/unit-details/${level}/${id}?version=${version}`, { headers: getAuthHeader() });
@@ -2311,6 +2436,10 @@ async function renderExtraFields(item = null) {
 }
 
 window.deleteAdminUnit = async function (level, id, name) {
+  if (!ADMIN_CRUD_ENABLED) {
+    showAdminCrudUnavailable();
+    return;
+  }
   const ok = await showConfirm(`Bạn có chắc chắn muốn xóa "${name}"? Hành động này không thể hoàn tác.`);
   if (!ok) return;
 
@@ -2332,6 +2461,10 @@ window.deleteAdminUnit = async function (level, id, name) {
 }
 
 async function saveAdminUnit() {
+  if (!ADMIN_CRUD_ENABLED) {
+    showAdminCrudUnavailable();
+    return;
+  }
   const level = getAdminCurrentLevel();
   const id = document.getElementById('admin-form-id').value;
   const name = document.getElementById('admin-form-name').value;
@@ -2403,6 +2536,10 @@ async function initAdminManager() {
   });
 
   document.getElementById('btn-admin-add-new')?.addEventListener('click', () => {
+    if (!ADMIN_CRUD_ENABLED) {
+      showAdminCrudUnavailable();
+      return;
+    }
     const level = getAdminCurrentLevel();
     document.getElementById('admin-modal-title').textContent = `Thêm ${level === 'province' ? 'Tỉnh/Thành' : level === 'district' ? 'Quận/Huyện' : 'Phường/Xã'} mới`;
     document.getElementById('admin-form-id').value = '';
@@ -2415,6 +2552,12 @@ async function initAdminManager() {
     e.preventDefault();
     await saveAdminUnit();
   });
+
+  const addButton = document.getElementById('btn-admin-add-new');
+  if (addButton && !ADMIN_CRUD_ENABLED) {
+    addButton.disabled = true;
+    addButton.title = 'Tạm tắt do backend đã gom API quản trị danh mục';
+  }
 
   // Close modal handlers
   document.querySelectorAll('#modal-admin-unit .close-modal').forEach(btn => {
@@ -2537,8 +2680,10 @@ async function loadAdminData(state) {
         <td class="text-tertiary text-xs">${item.updated_date ? formatDateTime(item.updated_date) : '-'}</td>
         <td><span class="badge badge-outline">${item.type_name || '-'}</span></td>
         <td class="text-right">
-          <button class="btn btn-icon btn-sm" onclick="editAdminUnit('${level}', ${item[`${level}_id`]})" title="Sửa"><i class="fa-solid fa-pen-to-square"></i></button>
-          <button class="btn btn-icon btn-sm text-danger" onclick="deleteAdminUnit('${level}', ${item[`${level}_id`]}, '${item[`${level}_name`]}')" title="Xóa"><i class="fa-solid fa-trash"></i></button>
+          ${ADMIN_CRUD_ENABLED
+            ? `<button class="btn btn-icon btn-sm" onclick="editAdminUnit('${level}', ${item[`${level}_id`]})" title="Sửa"><i class="fa-solid fa-pen-to-square"></i></button>
+               <button class="btn btn-icon btn-sm text-danger" onclick="deleteAdminUnit('${level}', ${item[`${level}_id`]}, '${item[`${level}_name`]}')" title="Xóa"><i class="fa-solid fa-trash"></i></button>`
+            : `<span class="text-tertiary text-xs">Read-only</span>`}
         </td>
       </tr>
     `).join('');
@@ -2829,13 +2974,83 @@ async function loadPages() {
 // ═══════════════════════════════════════════════════════════
 async function initLabelStudioIntegration() {
   const btnRefresh = document.getElementById('btn-ls-refresh');
-  if (!btnRefresh) return;
+  const btnTest = document.getElementById('btn-ls-test');
+  const btnSync = document.getElementById('btn-ls-sync');
+  
+  if (btnRefresh) {
+    btnRefresh.addEventListener('click', fetchLabelStudioTasks);
+  }
 
-  btnRefresh.addEventListener('click', fetchLabelStudioTasks);
+  if (btnTest) {
+    btnTest.addEventListener('click', testLabelStudioConnection);
+  }
+
+  if (btnSync) {
+    btnSync.addEventListener('click', syncLabelStudioTasks);
+  }
 
   // Initial fetch if page is active
-  if (document.getElementById('label-studio').classList.contains('active')) {
+  const page = document.getElementById('label-studio');
+  if (page && page.classList.contains('active')) {
     fetchLabelStudioTasks();
+  }
+}
+
+async function syncLabelStudioTasks() {
+  const btn = document.getElementById('btn-ls-sync');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Syncing...';
+  }
+
+  try {
+    const response = await fetch(`${API_BASE}/label-studio/sync`, {
+      method: 'POST',
+      headers: getAuthHeader()
+    });
+    const result = await response.json();
+
+    if (response.ok) {
+      showToast(result.message, "success");
+    } else {
+      showToast(result.detail || "Lỗi khi đồng bộ dữ liệu", "danger");
+    }
+  } catch (err) {
+    showToast("Không thể kết nối tới API server", "danger");
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-cloud-download"></i> Sync Labeled to Training Hub';
+    }
+  }
+}
+
+async function testLabelStudioConnection() {
+  const btn = document.getElementById('btn-ls-test');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Testing...';
+  }
+
+  try {
+    const response = await fetch(`${API_BASE}/label-studio/debug`, {
+      headers: getAuthHeader()
+    });
+    const result = await response.json();
+
+    if (result.status === "success") {
+      showToast(result.message, "success");
+    } else {
+      showToast(result.message, "danger");
+      console.error("LS Debug Details:", result.details);
+    }
+  } catch (err) {
+    showToast("Không thể kết nối tới API server", "danger");
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-vial"></i> Check Connection';
+    }
   }
 }
 

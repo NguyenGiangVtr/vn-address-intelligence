@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any, Mapping, Optional
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
@@ -25,7 +25,7 @@ def record_training_history(
     f1_score: float,
     loss: float,
     samples_count: int,
-    notes: str | None = None,
+    notes: Optional[str] = None,
 ) -> None:
     """Append one training run to ath.training_history."""
     session = SessionLocal()
@@ -54,7 +54,7 @@ def upsert_benchmark_baseline(
     cost_per_million: float,
     google_match: float,
     sample_size: int,
-    notes: str | None = None,
+    notes: Optional[str] = None,
 ) -> None:
     """Upsert a benchmark baseline row in ath.benchmark_model_baselines."""
     session = SessionLocal()
@@ -80,7 +80,7 @@ def upsert_benchmark_baseline(
 def upsert_benchmark_baselines(
     metrics_by_model: Mapping[str, Mapping[str, Any]],
     *,
-    notes: str | None = None,
+    notes: Optional[str] = None,
 ) -> int:
     """Persist multiple benchmark rows and return how many were written."""
     display_names = {

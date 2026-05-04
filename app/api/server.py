@@ -1,3 +1,4 @@
+from __future__ import annotations
 from fastapi import FastAPI, Depends, Request, HTTPException, status, APIRouter, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -23,6 +24,7 @@ from difflib import SequenceMatcher
 from concurrent.futures import ThreadPoolExecutor
 import random
 import string
+from types import SimpleNamespace
 from app.core.database import SessionLocal, Province, District, Ward, OSMStreet, OSMBuilding, OSMPoi, OSMRawEntity, TrainingDataset, TrainingHistory, BenchmarkModelBaseline, AddressCleansingQueue, WardMapping, AuthUser, EmailVerification, SyncLog, UnitEdge, engine, seed_training_metadata
 from app.services.scd_sync import get_unit_at_date, get_sync_summary
 from app.services.auth import verify_password, create_access_token, get_password_hash, ALGORITHM, SECRET_KEY
@@ -32,7 +34,7 @@ from app.services.nso_api import get_nso_provinces, get_nso_districts, get_nso_w
 from app.api import schemas
 from app.api.boundary import router as boundary_router
 from app.api.spatial import router as spatial_router
-from typing import List, Optional
+from typing import List, Optional, Union
 import json
 
 from app.core.logging_config import setup_logging
@@ -73,7 +75,7 @@ class RegisterPayload(BaseModel):
     email: str
     password: str
     verification_code: str
-    display_name: str | None = None
+    display_name: Optional[str] = None
 
 # ── Visitor Stats State ──
 class VisitorStats:
@@ -396,19 +398,46 @@ def _run_osm_job(job_id: str, limit_provinces: int, target_total: int):
         )
 
 
-def _serialize_parser_sample(sample: AddressCleansingQueue) -> dict:
+def _queue_sample_columns() -> tuple:
+    return (
+        AddressCleansingQueue.id,
+        AddressCleansingQueue.raw_address,
+        AddressCleansingQueue.street_address,
+        AddressCleansingQueue.ward_name,
+        AddressCleansingQueue.district_name,
+        AddressCleansingQueue.province_name,
+        AddressCleansingQueue.address_standardized,
+        AddressCleansingQueue.selected_ai_model,
+        AddressCleansingQueue.processing_status,
+        AddressCleansingQueue.processing_method,
+        AddressCleansingQueue.updated_at,
+    )
+
+
+def _to_queue_sample(row: object) -> Optional[SimpleNamespace]:
+    if row is None:
+        return None
+    if hasattr(row, "_mapping"):
+        return SimpleNamespace(**dict(row._mapping))
+    if isinstance(row, dict):
+        return SimpleNamespace(**row)
+    return row
+
+
+def _serialize_parser_sample(sample: Union[AddressCleansingQueue, SimpleNamespace, dict]) -> dict:
+    getter = sample.get if isinstance(sample, dict) else lambda k, d=None: getattr(sample, k, d)
     return {
-        "id": sample.id,
-        "raw_address": sample.raw_address,
-        "street_address": sample.street_address,
-        "ward_name": sample.ward_name,
-        "district_name": sample.district_name,
-        "province_name": sample.province_name,
-        "address_standardized": sample.address_standardized,
-        "selected_ai_model": sample.selected_ai_model,
-        "processing_status": sample.processing_status,
-        "processing_method": sample.processing_method,
-        "updated_at": sample.updated_at.isoformat() + "Z" if sample.updated_at else None,
+        "id": getter("id"),
+        "raw_address": getter("raw_address"),
+        "street_address": getter("street_address"),
+        "ward_name": getter("ward_name"),
+        "district_name": getter("district_name"),
+        "province_name": getter("province_name"),
+        "address_standardized": getter("address_standardized"),
+        "selected_ai_model": getter("selected_ai_model"),
+        "processing_status": getter("processing_status"),
+        "processing_method": getter("processing_method"),
+        "updated_at": getter("updated_at").isoformat() + "Z" if getter("updated_at") else None,
     }
 
 
@@ -499,12 +528,13 @@ def _get_parser_runtime_bundle() -> dict:
 
 
 def _get_random_parser_sample(db: Session) -> AddressCleansingQueue:
-    return (
-        db.query(AddressCleansingQueue)
+    row = (
+        db.query(*_queue_sample_columns())
         .filter(AddressCleansingQueue.raw_address.isnot(None))
         .order_by(text("random()"))
         .first()
     )
+    return _to_queue_sample(row)
 
 
 def _run_parser_research(sample: AddressCleansingQueue, target_model: Optional[str] = None) -> dict:
@@ -514,7 +544,7 @@ def _run_parser_research(sample: AddressCleansingQueue, target_model: Optional[s
     district_name = sample.district_name
     province_name = sample.province_name
 
-    def _build_llm_candidates() -> list[str]:
+    def _build_llm_candidates() -> List[str]:
         corpus = bundle.get("corpus") or []
         mgte = bundle.get("mgte")
         if not corpus or not mgte or not getattr(mgte, "_corpus_emb", None):
@@ -763,10 +793,42 @@ def get_provinces(version: int = Query(1), db: Session = Depends(get_db)):
     cached = cache_provinces_get(version)
     if cached is not None:
         return cached
-    query = db.query(Province).filter(Province.admin_version == version)
+    query = db.query(
+        Province.row_id,
+        Province.province_id,
+        Province.area_id,
+        Province.bonus_area_id,
+        Province.country_id,
+        Province.province_no,
+        Province.province_name,
+        Province.type_name,
+        Province.is_default,
+        Province.created_user,
+        Province.created_date,
+        Province.updated_user,
+        Province.updated_date,
+        Province.is_deleted,
+        Province.province_name_en,
+        Province.old_id,
+        Province.served_radius,
+        Province.north_pole_lat,
+        Province.north_pole_lng,
+        Province.east_pole_lat,
+        Province.east_pole_lng,
+        Province.south_pole_lat,
+        Province.south_pole_lng,
+        Province.west_pole_lat,
+        Province.west_pole_lng,
+        Province.admin_version,
+        Province.population,
+        Province.area_km2,
+        Province.decision_number,
+        Province.decision_date,
+        Province.notes,
+    ).filter(Province.admin_version == version)
     if version == 2:
         query = query.filter(Province.is_deleted == False)
-    rows = query.order_by(Province.province_name).all()
+    rows = [dict(r._mapping) for r in query.order_by(Province.province_name).all()]
     cache_provinces_set(version, rows)
     return rows
 
@@ -776,7 +838,41 @@ def get_provinces_by_path(province_id: int, version: Optional[int] = 1, db: Sess
     cached = cache_unit_get("province", version, province_id)
     if cached is not None:
         return cached
-    row = db.query(Province).filter(Province.province_id == province_id, Province.admin_version == version).first()
+    row = db.query(
+        Province.row_id,
+        Province.province_id,
+        Province.area_id,
+        Province.bonus_area_id,
+        Province.country_id,
+        Province.province_no,
+        Province.province_name,
+        Province.type_name,
+        Province.is_default,
+        Province.created_user,
+        Province.created_date,
+        Province.updated_user,
+        Province.updated_date,
+        Province.is_deleted,
+        Province.province_name_en,
+        Province.old_id,
+        Province.served_radius,
+        Province.north_pole_lat,
+        Province.north_pole_lng,
+        Province.east_pole_lat,
+        Province.east_pole_lng,
+        Province.south_pole_lat,
+        Province.south_pole_lng,
+        Province.west_pole_lat,
+        Province.west_pole_lng,
+        Province.admin_version,
+        Province.population,
+        Province.area_km2,
+        Province.decision_number,
+        Province.decision_date,
+        Province.notes,
+    ).filter(Province.province_id == province_id, Province.admin_version == version).first()
+    if row:
+        row = dict(row._mapping)
     if row:
         cache_unit_set("province", version, province_id, row)
     return row
@@ -793,14 +889,39 @@ def get_districts(province_id: Optional[int] = None, district_id: Optional[int] 
         cached = cache_districts_get(version, province_id)
         if cached is not None:
             return cached
-    query = db.query(District).filter(District.admin_version == version)
+    query = db.query(
+        District.row_id,
+        District.district_id,
+        District.province_id,
+        District.district_no,
+        District.district_name,
+        District.type_name,
+        District.location,
+        District.is_default,
+        District.created_user,
+        District.created_date,
+        District.updated_user,
+        District.updated_date,
+        District.is_deleted,
+        District.district_name_en,
+        District.old_id,
+        District.sfdc_id,
+        District.is_active,
+        District.type_name_en,
+        District.admin_version,
+        District.population,
+        District.area_km2,
+        District.decision_number,
+        District.decision_date,
+        District.notes,
+    ).filter(District.admin_version == version)
     if version == 2:
         query = query.filter(District.is_deleted == False)
     if province_id:
         query = query.filter(District.province_id == province_id)
     if district_id:
         query = query.filter(District.district_id == district_id)
-    rows = query.order_by(District.district_name).all()
+    rows = [dict(r._mapping) for r in query.order_by(District.district_name).all()]
     if district_id is None:
         cache_districts_set(version, province_id, rows)
     return rows
@@ -822,14 +943,39 @@ def get_wards(district_id: Optional[int] = None, ward_id: Optional[int] = None, 
         cached = cache_wards_get(version, district_id)
         if cached is not None:
             return cached
-    query = db.query(Ward).filter(Ward.admin_version == version)
+    query = db.query(
+        Ward.row_id,
+        Ward.ward_id,
+        Ward.district_id,
+        Ward.province_no,
+        Ward.ward_no,
+        Ward.ward_name,
+        Ward.type_name,
+        Ward.location,
+        Ward.is_default,
+        Ward.created_user,
+        Ward.created_date,
+        Ward.updated_user,
+        Ward.updated_date,
+        Ward.is_deleted,
+        Ward.ward_name_en,
+        Ward.old_id,
+        Ward.is_active,
+        Ward.type_name_en,
+        Ward.admin_version,
+        Ward.population,
+        Ward.area_km2,
+        Ward.decision_number,
+        Ward.decision_date,
+        Ward.notes,
+    ).filter(Ward.admin_version == version)
     if version == 2:
         query = query.filter(Ward.is_deleted == False)
     if district_id:
         query = query.filter(Ward.district_id == district_id)
     if ward_id:
         query = query.filter(Ward.ward_id == ward_id)
-    rows = query.order_by(Ward.ward_name).all()
+    rows = [dict(r._mapping) for r in query.order_by(Ward.ward_name).all()]
     if ward_id is None:
         cache_wards_set(version, district_id, rows)
     return rows
@@ -852,23 +998,106 @@ def get_unit_details(level: str, unit_id: int, version: Optional[int] = 1, db: S
         return cached
     row = None
     if level == "province":
-        query = db.query(Province).filter(Province.province_id == unit_id, Province.admin_version == version)
+        query = db.query(
+            Province.row_id,
+            Province.province_id,
+            Province.area_id,
+            Province.bonus_area_id,
+            Province.country_id,
+            Province.province_no,
+            Province.province_name,
+            Province.type_name,
+            Province.is_default,
+            Province.created_user,
+            Province.created_date,
+            Province.updated_user,
+            Province.updated_date,
+            Province.is_deleted,
+            Province.province_name_en,
+            Province.old_id,
+            Province.served_radius,
+            Province.north_pole_lat,
+            Province.north_pole_lng,
+            Province.east_pole_lat,
+            Province.east_pole_lng,
+            Province.south_pole_lat,
+            Province.south_pole_lng,
+            Province.west_pole_lat,
+            Province.west_pole_lng,
+            Province.admin_version,
+            Province.population,
+            Province.area_km2,
+            Province.decision_number,
+            Province.decision_date,
+            Province.notes,
+        ).filter(Province.province_id == unit_id, Province.admin_version == version)
         if version == 2:
             query = query.filter(Province.is_deleted == False)
         row = query.first()
     elif level == "district":
-        query = db.query(District).filter(District.district_id == unit_id, District.admin_version == version)
+        query = db.query(
+            District.row_id,
+            District.district_id,
+            District.province_id,
+            District.district_no,
+            District.district_name,
+            District.type_name,
+            District.location,
+            District.is_default,
+            District.created_user,
+            District.created_date,
+            District.updated_user,
+            District.updated_date,
+            District.is_deleted,
+            District.district_name_en,
+            District.old_id,
+            District.sfdc_id,
+            District.is_active,
+            District.type_name_en,
+            District.admin_version,
+            District.population,
+            District.area_km2,
+            District.decision_number,
+            District.decision_date,
+            District.notes,
+        ).filter(District.district_id == unit_id, District.admin_version == version)
         if version == 2:
             query = query.filter(District.is_deleted == False)
         row = query.first()
     elif level == "ward":
-        query = db.query(Ward).filter(Ward.ward_id == unit_id, Ward.admin_version == version)
+        query = db.query(
+            Ward.row_id,
+            Ward.ward_id,
+            Ward.district_id,
+            Ward.province_no,
+            Ward.ward_no,
+            Ward.ward_name,
+            Ward.type_name,
+            Ward.location,
+            Ward.is_default,
+            Ward.created_user,
+            Ward.created_date,
+            Ward.updated_user,
+            Ward.updated_date,
+            Ward.is_deleted,
+            Ward.ward_name_en,
+            Ward.old_id,
+            Ward.is_active,
+            Ward.type_name_en,
+            Ward.admin_version,
+            Ward.population,
+            Ward.area_km2,
+            Ward.decision_number,
+            Ward.decision_date,
+            Ward.notes,
+        ).filter(Ward.ward_id == unit_id, Ward.admin_version == version)
         if version == 2:
             query = query.filter(Ward.is_deleted == False)
         row = query.first()
     else:
         return {"error": "Invalid level"}
     if row:
+        row = dict(row._mapping)
         cache_unit_set(level, version, unit_id, row)
     return row
 
@@ -1236,29 +1465,30 @@ def logout(current_user: str = Depends(get_current_user)):
 def get_stats(db: Session = Depends(get_db)):
     """Trả về số lượng bản ghi tổng hợp của tất cả các bảng chính (Admin, OSM, AI) và thống kê khách truy cập."""
     """Returns absolute counts and metadata for all tables. Robust version."""
-    def safe_count(query):
+    def safe_count(model):
         try:
-            return query.count()
+            return db.query(func.count()).select_from(model).scalar() or 0
         except Exception as e:
             logger.error(f"Stats Error: {e}")
+            db.rollback()
             return 0
 
     return {
         "master": {
-            "provinces": safe_count(db.query(Province)),
-            "districts": safe_count(db.query(District)),
-            "wards": safe_count(db.query(Ward)),
-            "mappings": safe_count(db.query(WardMapping))
+            "provinces": safe_count(Province),
+            "districts": safe_count(District),
+            "wards": safe_count(Ward),
+            "mappings": safe_count(WardMapping)
         },
         "osm": {
-            "total": safe_count(db.query(OSMRawEntity)),
-            "streets": safe_count(db.query(OSMStreet)),
-            "buildings": safe_count(db.query(OSMBuilding)),
-            "pois": safe_count(db.query(OSMPoi)),
+            "total": safe_count(OSMRawEntity),
+            "streets": safe_count(OSMStreet),
+            "buildings": safe_count(OSMBuilding),
+            "pois": safe_count(OSMPoi),
         },
         "ai": {
-            "training_samples": safe_count(db.query(TrainingDataset)),
-            "cleansing_queue": safe_count(db.query(AddressCleansingQueue)),
+            "training_samples": safe_count(TrainingDataset),
+            "cleansing_queue": safe_count(AddressCleansingQueue),
         },
         "visitors": {
             "total": stats_tracker.total_visits,
@@ -1617,7 +1847,40 @@ def get_visitor_stats():
 @api_router.get("/admin-v2/provinces", tags=["Đơn vị hành chính"], summary="Danh sách tỉnh phiên bản v2")
 def list_provinces_v2(db: Session = Depends(get_db)):
     """Lấy danh sách toàn bộ các tỉnh thành thuộc phiên bản quản lý mới (v2)."""
-    provinces = db.query(Province).filter(Province.admin_version == 2).all()
+    provinces = db.query(
+        Province.row_id,
+        Province.province_id,
+        Province.area_id,
+        Province.bonus_area_id,
+        Province.country_id,
+        Province.province_no,
+        Province.province_name,
+        Province.type_name,
+        Province.is_default,
+        Province.created_user,
+        Province.created_date,
+        Province.updated_user,
+        Province.updated_date,
+        Province.is_deleted,
+        Province.province_name_en,
+        Province.old_id,
+        Province.served_radius,
+        Province.north_pole_lat,
+        Province.north_pole_lng,
+        Province.east_pole_lat,
+        Province.east_pole_lng,
+        Province.south_pole_lat,
+        Province.south_pole_lng,
+        Province.west_pole_lat,
+        Province.west_pole_lng,
+        Province.admin_version,
+        Province.population,
+        Province.area_km2,
+        Province.decision_number,
+        Province.decision_date,
+        Province.notes,
+    ).filter(Province.admin_version == 2).all()
+    provinces = [dict(r._mapping) for r in provinces]
     return provinces
 
 @api_router.get("/osm/summary", tags=["Dữ liệu OpenStreetMap"], summary="Tổng quan dữ liệu thực địa (OSM)")
@@ -1745,8 +2008,20 @@ def training_samples(db: Session = Depends(get_db)):
 @api_router.get("/enrichment/summary", tags=["Đơn vị hành chính"], summary="Thống kê dữ liệu làm giàu (Enrichment)")
 def enrichment_summary(db: Session = Depends(get_db)):
     """Trả về số lượng Tỉnh và Xã đã được bổ sung thông tin chi tiết (Quyết định thành lập, Ghi chú)."""
-    enriched_provinces = db.query(Province).filter(Province.decision_number != None).count()
-    enriched_wards = db.query(Ward).filter(Ward.decision_number != None).count()
+    enriched_provinces = (
+        db.query(func.count())
+        .select_from(Province)
+        .filter(Province.decision_number.isnot(None))
+        .scalar()
+        or 0
+    )
+    enriched_wards = (
+        db.query(func.count())
+        .select_from(Ward)
+        .filter(Ward.decision_number.isnot(None))
+        .scalar()
+        or 0
+    )
     return {
         "enriched_provinces": enriched_provinces,
         "enriched_wards": enriched_wards,
@@ -1781,7 +2056,12 @@ def analyze_parser_address(data: dict, model: Optional[str] = None, db: Session 
     raw_text = data.get("raw_address")
     
     if sample_id:
-        sample = db.query(AddressCleansingQueue).filter(AddressCleansingQueue.id == sample_id).first()
+        row = (
+            db.query(*_queue_sample_columns())
+            .filter(AddressCleansingQueue.id == sample_id)
+            .first()
+        )
+        sample = _to_queue_sample(row)
     elif raw_text:
         # Tạo sample giả lập nếu chỉ có text
         sample = AddressCleansingQueue(
@@ -1828,20 +2108,24 @@ def analyze_parser_address(data: dict, model: Optional[str] = None, db: Session 
             }
         except Exception as fallback_err:
             logger.error(f"Critical Fallback Error: {str(fallback_err)}")
-            return {
-                "sample": {"raw_address": raw_text},
-                "outputs": {},
-                "error": f"Model error: {str(e)}. Fallback error: {str(fallback_err)}",
-                "meta": {
-                    "corpusSize": 0,
-                    "evaluatedAt": datetime.utcnow().isoformat() + "Z",
-                    "note": "Service partially unavailable"
+            raise HTTPException(
+                status_code=503,
+                detail={
+                    "error": f"Model error: {str(e)}. Fallback error: {str(fallback_err)}",
+                    "note": "Service partially unavailable",
                 }
-            }
+            )
 
 def _read_explorer_queue(db: Session, limit: int, q: str):
     try:
-        query = db.query(AddressCleansingQueue)
+        query = db.query(
+            AddressCleansingQueue.id,
+            AddressCleansingQueue.raw_address,
+            AddressCleansingQueue.ward_name,
+            AddressCleansingQueue.district_name,
+            AddressCleansingQueue.province_name,
+            AddressCleansingQueue.processing_status,
+        )
         if q:
             query = query.filter(AddressCleansingQueue.raw_address.ilike(f"%{q}%"))
         
@@ -1873,6 +2157,151 @@ def get_explorer_queue(db: Session = Depends(get_db), limit: int = 100, q: str =
 def get_explorer_queue_root(db: Session = Depends(get_db), limit: int = 100, q: str = ""):
     return _read_explorer_queue(db, limit, q)
 
+@api_router.get("/label-studio/debug", tags=["AI Address Parser"], summary="Kiểm tra kết nối Label Studio")
+async def debug_ls_connection(current_user: str = Depends(get_current_user)):
+    """Kiểm tra cấu hình và kết nối tới API của Label Studio."""
+    ls_token = os.getenv("LABEL_STUDIO_API_TOKEN")
+    ls_url = (os.getenv("LABEL_STUDIO_URL", "https://label.nod.io.vn") or "").strip()
+    project_id = os.getenv("LABEL_STUDIO_PROJECT_ID", "1")
+
+    if not ls_token:
+        return {"status": "error", "message": "LABEL_STUDIO_API_TOKEN chưa được cấu hình trong .env"}
+
+    results = []
+    # Endpoint candidates: 
+    # 1. /api/tasks/?project=X (Standard tasks list with filter)
+    # 2. /api/projects/X/tasks (Project specific tasks)
+    # 3. /api/projects/ (List projects to check auth)
+    
+    ls_url_clean = ls_url.rstrip('/')
+    test_urls = [
+        ("Auth Check", f"{ls_url_clean}/api/projects/"),
+        ("Project Tasks", f"{ls_url_clean}/api/projects/{project_id}/tasks"),
+        ("Standard Tasks", f"{ls_url_clean}/api/tasks/?project={project_id}")
+    ]
+
+    auth_headers = [
+        ("Token", {"Authorization": f"Token {ls_token}"}),
+        ("Bearer", {"Authorization": f"Bearer {ls_token}"})
+    ]
+
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        for url_name, url in test_urls:
+            for auth_name, headers in auth_headers:
+                try:
+                    logger.info(f"Label Studio Debug: Testing {url_name} with {auth_name} auth")
+                    resp = await client.get(url, headers=headers)
+                    results.append({
+                        "test": url_name,
+                        "auth": auth_name,
+                        "status_code": resp.status_code,
+                        "success": resp.status_code == 200,
+                        "message": resp.text[:200] if resp.status_code != 200 else "Success"
+                    })
+                    if resp.status_code == 200:
+                        # Found a working combination
+                        return {
+                            "status": "success",
+                            "message": f"Kết nối thành công bằng {auth_name} tới {url_name}",
+                            "working_config": {"auth": auth_name, "test": url_name},
+                            "details": results
+                        }
+                except Exception as e:
+                    results.append({
+                        "test": url_name,
+                        "auth": auth_name,
+                        "status_code": 0,
+                        "success": False,
+                        "message": str(e)
+                    })
+
+    return {
+        "status": "error", 
+        "message": "Không thể kết nối tới Label Studio với các cấu hình hiện tại. Vui lòng kiểm tra lại Token và URL.",
+        "details": results
+    }
+
+@api_router.post("/label-studio/sync", tags=["AI Address Parser"], summary="Đồng bộ dữ liệu đã gán nhãn về Training Hub")
+async def sync_ls_to_training(db: Session = Depends(get_db), current_user: str = Depends(get_current_user)):
+    """Tự động tải các task đã gán nhãn từ Label Studio và lưu vào CSDL huấn luyện."""
+    ls_token = os.getenv("LABEL_STUDIO_API_TOKEN")
+    ls_url = (os.getenv("LABEL_STUDIO_URL", "https://label.nod.io.vn") or "").strip()
+    project_id = os.getenv("LABEL_STUDIO_PROJECT_ID", "1")
+
+    if not ls_token:
+        raise HTTPException(status_code=400, detail="Label Studio API Token chưa được cấu hình.")
+
+    ls_api_url = f"{ls_url.rstrip('/')}/api/tasks/"
+    params = {"project": project_id, "page_size": 1000}
+    headers = {"Authorization": f"Token {ls_token}"}
+    
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.get(ls_api_url, headers=headers, params=params)
+            if response.status_code != 200:
+                # Try Bearer
+                headers = {"Authorization": f"Bearer {ls_token}"}
+                response = await client.get(ls_api_url, headers=headers, params=params)
+
+            if response.status_code != 200:
+                raise HTTPException(status_code=response.status_code, detail="Không thể tải dữ liệu từ Label Studio.")
+
+            data = response.json()
+            all_tasks = data if isinstance(data, list) else data.get("tasks", data.get("results", []))
+            
+            # Filter tasks with annotations
+            labeled_tasks = [t for t in all_tasks if t.get("annotations") and len(t["annotations"]) > 0]
+            
+            count_new = 0
+            count_skipped = 0
+            
+            for task in labeled_tasks:
+                ls_id = task.get("id")
+                # Check if already imported (using external_id if possible or just raw_text check)
+                raw_text = task.get("data", {}).get("text", task.get("data", {}).get("address", ""))
+                if not raw_text:
+                    continue
+                
+                exists = db.query(TrainingDataset).filter(TrainingDataset.raw_text == raw_text).first()
+                if exists:
+                    count_skipped += 1
+                    continue
+                
+                # Convert LS annotations to BIO tags
+                # This is a simplified conversion for the project's labels
+                annotation = task["annotations"][0] # Take the first annotation
+                results = annotation.get("result", [])
+                
+                # Sort results by start position
+                results.sort(key=lambda x: x.get("value", {}).get("start", 0))
+                
+                # For simplicity, we store the raw results as ner_tags_json 
+                # because the training pipeline can handle them or we can convert them later.
+                # However, the DB schema says BIO tags array.
+                # Let's store a compatible format.
+                
+                new_entry = TrainingDataset(
+                    raw_text=raw_text,
+                    ner_tags_json=results,
+                    is_synthetic=False,
+                    noise_level="low"
+                )
+                db.add(new_entry)
+                count_new += 1
+            
+            db.commit()
+            
+            return {
+                "status": "success",
+                "message": f"Đã đồng bộ {count_new} bản ghi mới từ Label Studio ({count_skipped} bản ghi đã tồn tại).",
+                "total_labeled_found": len(labeled_tasks),
+                "new_imported": count_new
+            }
+            
+    except Exception as e:
+        logger.error(f"Error syncing Label Studio: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @api_router.get("/label-studio/tasks", tags=["AI Address Parser"], summary="Lấy Task từ Label Studio")
 async def get_ls_tasks(current_user: str = Depends(get_current_user)):
     """Truy xuất danh sách các tác vụ gán nhãn dữ liệu từ API của Label Studio."""
@@ -1888,49 +2317,53 @@ async def get_ls_tasks(current_user: str = Depends(get_current_user)):
             {"id": 103, "data": {"address": "456 Nguyễn Huệ, Q1, HCM"}, "created_at": "2026-04-29T00:15:00Z", "is_labeled": False, "project": project_id},
         ]
 
-    ls_api_url = f"{ls_url.rstrip('/')}/api/projects/{project_id}/tasks"
-    # Label Studio auth:
-    # - PAT: Authorization: Bearer <token>
-    # - Legacy: Authorization: Token <token>
-    # Ref: https://labelstud.io/guide/api.html
-    auth_candidates = [
-        ("Bearer", {"Authorization": f"Bearer {ls_token}"}),
-        ("Token", {"Authorization": f"Token {ls_token}"}),
-    ]
+    # Try standard tasks endpoint first
+    ls_api_url = f"{ls_url.rstrip('/')}/api/tasks/"
+    params = {"project": project_id, "page_size": 100}
+    
+    # Try multiple auth modes
+    headers_token = {"Authorization": f"Token {ls_token}"}
+    headers_bearer = {"Authorization": f"Bearer {ls_token}"}
 
     try:
         async with httpx.AsyncClient(timeout=15.0) as client:
-            last_response = None
+            # 1. Try Token auth (Standard)
+            response = await client.get(ls_api_url, headers=headers_token, params=params)
+            
+            # 2. Try Bearer if Token failed or if it's a JWT
+            if response.status_code != 200:
+                logger.info(f"Label Studio Token auth failed (status={response.status_code}), trying Bearer...")
+                response = await client.get(ls_api_url, headers=headers_bearer, params=params)
 
-            for auth_name, headers in auth_candidates:
-                logger.info(f"Trying Label Studio auth mode={auth_name}, url={ls_api_url}")
-                response = await client.get(ls_api_url, headers=headers, params={"page_size": 100})
-                last_response = response
+            # 3. Try fallback endpoint if still failed
+            if response.status_code != 200:
+                fallback_url = f"{ls_url.rstrip('/')}/api/projects/{project_id}/tasks"
+                logger.info(f"Trying fallback Label Studio endpoint: {fallback_url}")
+                response = await client.get(fallback_url, headers=headers_token)
+                if response.status_code != 200:
+                    response = await client.get(fallback_url, headers=headers_bearer)
 
-                if response.status_code == 200:
-                    tasks = response.json()
-                    if isinstance(tasks, dict) and "tasks" in tasks:
-                        tasks = tasks["tasks"]
-                    elif isinstance(tasks, dict) and "results" in tasks:
-                        tasks = tasks["results"]
-
-                    logger.info(
-                        f"Label Studio fetch success: project_id={project_id}, tasks_count={len(tasks) if isinstance(tasks, list) else 0}"
-                    )
-                    return tasks if isinstance(tasks, list) else []
-
-                logger.warning(
-                    f"Label Studio auth mode={auth_name} failed, status={response.status_code}, body={response.text[:300]}"
+            if response.status_code == 200:
+                data = response.json()
+                tasks = []
+                if isinstance(data, list):
+                    tasks = data
+                elif isinstance(data, dict):
+                    tasks = data.get("tasks", data.get("results", []))
+                
+                logger.info(f"Label Studio fetch success: project_id={project_id}, tasks_count={len(tasks)}")
+                return tasks
+            else:
+                logger.error(f"Label Studio fetch failed after all attempts. Last status: {response.status_code}")
+                raise HTTPException(
+                    status_code=response.status_code if response.status_code >= 400 else 500,
+                    detail=f"Label Studio API error: {response.status_code}"
                 )
-
-            if last_response is not None:
-                logger.error(
-                    f"Label Studio request failed for all auth modes. status={last_response.status_code}, body={last_response.text[:500]}"
-                )
-            return []
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Error connecting to Label Studio ({ls_api_url}): {e}")
-        return []
+        logger.error(f"Error connecting to Label Studio: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 # Register API router
 api_router_v1 = APIRouter(prefix="/api/v1")
@@ -1941,7 +2374,7 @@ def _get_evidence_dirs():
     project_root = Path(__file__).resolve().parents[2]
     return [project_root / "reports" / "evidence_real", project_root / "reports" / "evidence"]
 
-def _find_latest_manifest(dirs: list[Path]) -> Optional[Path]:
+def _find_latest_manifest(dirs: List[Path]) -> Optional[Path]:
     for d in dirs:
         try:
             if not d.exists():
@@ -2175,9 +2608,9 @@ def migrate_address(payload: MigrateAddressRequest, db: Session = Depends(get_db
     }
 
 
-app.include_router(api_router, prefix="/api") # Match frontend API_BASE
 api_router.include_router(boundary_router, prefix="/boundary")
 api_router.include_router(spatial_router)
+app.include_router(api_router, prefix="/api") # Match frontend API_BASE
 app.include_router(api_router_v1) # Support /api/v1/*
 
 if __name__ == "__main__":

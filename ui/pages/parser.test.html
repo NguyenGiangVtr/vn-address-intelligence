@@ -1,0 +1,1227 @@
+<!DOCTYPE html>
+<!--
+  parser.test.html — Standalone browser test suite cho trang Phân tích địa chỉ.
+  Mở trực tiếp trong browser (file://) — không cần build hay server.
+  Toàn bộ fetch() được mock. Bao phủ 100% tính năng parser page.
+-->
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <title>Parser — Test Suite</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body   { font-family: 'Segoe UI', sans-serif; background: #0f1117; color: #e2e8f0; padding: 24px; font-size: 13px; }
+    h1     { font-size: 15px; font-weight: 700; color: #a78bfa; margin-bottom: 2px; }
+    .sub   { color: #64748b; font-size: 11px; margin-bottom: 20px; }
+    /* Summary bar */
+    #bar   { display: flex; gap: 16px; padding: 12px 16px; background: #1a1d2e; border: 1px solid #2a2d45;
+             border-radius: 8px; margin-bottom: 20px; align-items: center; }
+    .bnum  { font-size: 22px; font-weight: 700; line-height: 1; }
+    .blbl  { font-size: 9px; text-transform: uppercase; letter-spacing: .5px; color: #64748b; }
+    .pass  { color: #34d399; } .fail { color: #f87171; } .muted { color: #475569; }
+    #progress-bar { flex: 1; height: 6px; background: #1e2130; border-radius: 3px; overflow: hidden; margin-left: 8px; }
+    #progress-fill { height: 100%; background: #34d399; width: 0; transition: width .3s; border-radius: 3px; }
+    /* Group */
+    #suite { display: flex; flex-direction: column; gap: 14px; }
+    .grp   { background: #1a1d2e; border: 1px solid #2a2d45; border-radius: 8px; overflow: hidden; }
+    .gtitle{ padding: 8px 14px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px;
+             color: #94a3b8; background: #1e2130; border-bottom: 1px solid #2a2d45;
+             display: flex; justify-content: space-between; align-items: center; }
+    .gcnt  { font-weight: 400; font-size: 10px; }
+    /* Row */
+    .trow  { display: flex; gap: 10px; padding: 7px 14px; border-bottom: 1px solid #1e2130; align-items: flex-start; }
+    .trow:last-child { border-bottom: none; }
+    .ticon { flex-shrink: 0; font-size: 12px; margin-top: 1px; }
+    .tname { flex: 1; color: #cbd5e1; font-size: 12px; }
+    .terr  { font-size: 11px; color: #fca5a5; background: #2d1a1a; border-radius: 4px;
+             padding: 3px 8px; margin-top: 3px; font-family: monospace; white-space: pre-wrap; }
+    /* Hidden fixture */
+    #fixture { position: fixed; left: -9999px; top: 0; width: 900px; }
+  </style>
+</head>
+<body>
+
+<h1>🧪 Parser Page — Test Suite</h1>
+<div class="sub">Giả lập toàn bộ tính năng · Không cần server · fetch() được mock hoàn toàn</div>
+
+<div id="bar">
+  <div><div class="bnum pass" id="s-pass">…</div><div class="blbl">PASS</div></div>
+  <div><div class="bnum fail" id="s-fail">…</div><div class="blbl">FAIL</div></div>
+  <div><div class="bnum muted" id="s-total">…</div><div class="blbl">TOTAL</div></div>
+  <div><div class="bnum muted" id="s-ms">…</div><div class="blbl">ms</div></div>
+  <div id="progress-bar"><div id="progress-fill"></div></div>
+</div>
+
+<div id="suite"></div>
+
+<!-- ══ DOM Fixture — mirrors parser.html structure exactly ══ -->
+<div id="fixture">
+  <div class="page" id="parser">
+    <textarea id="parser-input" rows="1">123 Lê Lợi, Bến Thành, Quận 1, HCM</textarea>
+    <button id="btn-parse"></button>
+    <button id="btn-parse-sample-local"></button>
+    <button id="btn-parse-sample-db"></button>
+    <div id="parser-status-dot" class="pstatus-dot idle"></div>
+    <span id="parser-status" class="pstatus-text">Sẵn sàng</span>
+    <div id="parser-timing" style="display:none"><span id="parser-timing-val">0ms</span></div>
+    <div class="parser-hero-inner"></div>
+    <div id="parser-output"><span class="parser-placeholder">placeholder</span></div>
+    <div id="parser-ner-legend"></div>
+    <div id="parser-models-grid">
+      <div id="pcard-prelabeler" class="pmodel-card">
+        <div id="pbadge-prelabeler"></div>
+        <div id="presult-prelabeler" class="pmodel-result"><div class="pmodel-shimmer"></div></div>
+        <div id="pstats-prelabeler"></div>
+      </div>
+      <div id="pcard-phobert" class="pmodel-card">
+        <div id="pbadge-phobert"></div>
+        <div id="presult-phobert" class="pmodel-result"><div class="pmodel-shimmer"></div></div>
+        <div id="pstats-phobert"></div>
+      </div>
+      <div id="pcard-mgte" class="pmodel-card">
+        <div id="pbadge-mgte"></div>
+        <div id="presult-mgte" class="pmodel-result"><div class="pmodel-shimmer"></div></div>
+        <div id="pstats-mgte"></div>
+      </div>
+      <div id="pcard-llm" class="pmodel-card">
+        <div id="pbadge-llm"></div>
+        <div id="presult-llm" class="pmodel-result"><div class="pmodel-shimmer"></div></div>
+        <div id="pstats-llm"></div>
+      </div>
+    </div>
+    <div id="parser-meta">
+      <div class="parser-meta-content">
+        <span class="parser-meta-title">Note</span>
+        <span class="parser-meta-text">default text</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ══════════════════════════════════════════════════════════════════
+   1. TEST FRAMEWORK  (async-first, single-pass registration)
+   ══════════════════════════════════════════════════════════════════ */
+const _groups  = [];   // [{ name, tests:[ {name, fn} ] }]
+let   _current = null;
+
+function describe(name, bodyFn) {
+  _current = { name, tests: [] };
+  _groups.push(_current);
+  bodyFn();              // bodyFn is SYNC — registers tests only
+  _current = null;
+}
+
+function it(name, asyncFn) {
+  if (!_current) throw new Error("it() called outside describe()");
+  _current.tests.push({ name, fn: asyncFn });
+}
+
+/* Assertions */
+function assert(cond, msg)            { if (!cond)     throw new Error(msg || "Assertion failed"); }
+function assertEqual(a, b, msg)       { if (a !== b)   throw new Error(msg || `Expected ${JSON.stringify(b)}, got ${JSON.stringify(a)}`); }
+function assertContains(s, sub, msg)  { if (!String(s).includes(sub)) throw new Error(msg || `"${sub}" not found in: ${String(s).slice(0,120)}`); }
+function assertNotContains(s, sub, msg){ if (String(s).includes(sub)) throw new Error(msg || `"${sub}" should NOT appear in: ${String(s).slice(0,120)}`); }
+
+/* ══════════════════════════════════════════════════════════════════
+   2. GLOBALS / STUBS  (replicate exactly what app.js exposes)
+   ══════════════════════════════════════════════════════════════════ */
+window.API_BASE = "http://localhost:8081/api";
+
+window.NER_LABELS = [
+  { value:"PCD", text:"Plus Code",   color:"#f032e6" },
+  { value:"BLD", text:"Tòa nhà",     color:"#f58231" },
+  { value:"POI", text:"Địa danh",    color:"#911eb4" },
+  { value:"ALY", text:"Hẻm/Ngõ",    color:"#4363d8" },
+  { value:"NUM", text:"Số nhà",      color:"#e6194B" },
+  { value:"STR", text:"Tên đường",   color:"#3cb44b" },
+  { value:"NHB", text:"Khu phố",     color:"#469990" },
+  { value:"WDS", text:"Phường/Xã",   color:"#ffe119" },
+  { value:"DST", text:"Quận/Huyện",  color:"#800000" },
+  { value:"PRO", text:"Tỉnh/TP",     color:"#000075" },
+];
+
+window.SAMPLE_ADDRESSES = [
+  "2695/7 Đường Phạm Thế Hiển, phường 7, Quận 8, Thành phố Hồ Chí Minh",
+  "Chung Cư Tecco Green Nest, Phan Văn Hớn, Tân Thới Nhất, Quận 12",
+  "số 5 ngõ 10 phố Tôn Thất Tùng, phường Trung Tự, quận Đống Đa, Hà Nội",
+];
+
+window.showToast = () => {};
+
+function getAuthHeader() { return { Authorization: "Bearer test-token" }; }
+
+function escapeHtml(str) {
+  const d = document.createElement("div");
+  d.textContent = String(str);
+  return d.innerHTML;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   3. PRODUCTION FUNCTIONS UNDER TEST  (exact copies from app.js)
+   ══════════════════════════════════════════════════════════════════ */
+
+const _MODEL_TASK_META = {
+  prelabeler: { task:"NER",       icon:"fa-tags",             taskLabel:"Trích xuất thực thể",   outputType:"entities"   },
+  phobert:    { task:"Retrieval", icon:"fa-magnifying-glass", taskLabel:"Chuẩn hóa ngữ nghĩa",   outputType:"normalized" },
+  mgte:       { task:"Embedding", icon:"fa-layer-group",      taskLabel:"Embedding đa ngôn ngữ", outputType:"normalized" },
+  llm:        { task:"LLM",       icon:"fa-brain",            taskLabel:"Suy luận ngôn ngữ",     outputType:"normalized" },
+};
+
+function _setParserStatus(state, text) {
+  const dot = document.getElementById("parser-status-dot");
+  const txt = document.getElementById("parser-status");
+  if (dot) dot.className = `pstatus-dot ${state}`;
+  if (txt) { txt.textContent = text; txt.className = `pstatus-text ${state}`; }
+}
+
+function _resetModelCards() {
+  ["prelabeler","phobert","mgte","llm"].forEach(m => {
+    const card   = document.getElementById(`pcard-${m}`);
+    const result = document.getElementById(`presult-${m}`);
+    const stats  = document.getElementById(`pstats-${m}`);
+    const badge  = document.getElementById(`pbadge-${m}`);
+    if (card)   card.classList.remove("is-done","is-error");
+    if (result) { result.className = "pmodel-result"; result.innerHTML = '<div class="pmodel-shimmer"></div>'; }
+    if (stats)  stats.innerHTML = "";
+    if (badge)  badge.innerHTML = '<span class="pmodel-spinner"></span>';
+  });
+  document.getElementById("parser-compare-summary")?.remove();
+}
+
+function _renderModelCard(model, out, latencyMs) {
+  const card     = document.getElementById(`pcard-${model}`);
+  const resultEl = document.getElementById(`presult-${model}`);
+  const statsEl  = document.getElementById(`pstats-${model}`);
+  const badgeEl  = document.getElementById(`pbadge-${model}`);
+  if (!card) return;
+  const taskMeta = _MODEL_TASK_META[model] || {};
+  card.classList.add("is-done");
+  if (badgeEl) badgeEl.innerHTML = `<span class="pmodel-badge-done success">DONE</span>`;
+  if (resultEl) {
+    resultEl.classList.add("has-result");
+    if (!out) {
+      resultEl.innerHTML = `<span class="no-result">Không có kết quả</span>`;
+    } else if (out.error && !out.normalizedAddress && !Array.isArray(out.result)) {
+      const isNotLoaded = out.status === "Not loaded";
+      resultEl.innerHTML = `<div class="pmodel-not-loaded">
+        <span>${isNotLoaded ? "Model chưa được nạp vào bộ nhớ" : escapeHtml(out.error)}</span>
+      </div>`;
+    } else {
+      const normalized = out.normalizedAddress || "";
+      const entities   = Array.isArray(out.result) ? out.result : [];
+      const labelInfo  = {};
+      NER_LABELS.forEach(l => labelInfo[l.value] = l);
+      let html = "";
+      if (taskMeta.taskLabel)
+        html += `<div class="pmodel-task-badge">${taskMeta.taskLabel}</div>`;
+      if (normalized)
+        html += `<span class="pmodel-normalized">${escapeHtml(normalized)}</span>`;
+      if (entities.length > 0) {
+        const chips = entities.slice(0, 10).map(e => {
+          const lbl  = e.label || (e.value?.labels?.[0]) || "?";
+          const txt  = e.text  || e.value?.text || "";
+          const info = labelInfo[lbl] || { color:"#888" };
+          return `<span class="pmodel-ent-chip" style="color:${info.color}">${lbl}: ${escapeHtml(txt)}</span>`;
+        }).join("");
+        html += `<div class="pmodel-entities">${chips}</div>`;
+      }
+      if (!normalized && entities.length === 0 && !out.error)
+        html += `<span class="empty-result">Không tìm thấy kết quả phù hợp</span>`;
+      resultEl.innerHTML = html;
+    }
+  }
+  if (statsEl) {
+    const score    = typeof out?.score       === "number" ? out.score       : null;
+    const count    = Array.isArray(out?.result) ? out.result.length
+                   : (typeof out?.entityCount === "number" ? out.entityCount : null);
+    const modelLat = typeof out?.latencyMs   === "number" ? out.latencyMs   : null;
+    let chips = `<span class="pstat-chip latency">${latencyMs}ms</span>`;
+    if (modelLat !== null && modelLat !== latencyMs)
+      chips += `<span class="pstat-chip latency model">${modelLat.toFixed(0)}ms</span>`;
+    if (count  !== null)
+      chips += `<span class="pstat-chip count">${count} entities</span>`;
+    if (score  !== null)
+      chips += `<span class="pstat-chip conf">${(score * 100).toFixed(1)}%</span>`;
+    statsEl.innerHTML = chips;
+  }
+}
+
+function _renderModelCardError(model) {
+  const card     = document.getElementById(`pcard-${model}`);
+  const resultEl = document.getElementById(`presult-${model}`);
+  const badgeEl  = document.getElementById(`pbadge-${model}`);
+  if (card)     card.classList.add("is-error");
+  if (badgeEl)  badgeEl.innerHTML = `<span class="pmodel-badge-done error">ERR</span>`;
+  if (resultEl) resultEl.innerHTML = `<span class="conn-err">Không thể kết nối model</span>`;
+}
+
+function _renderParserCompareSummary() {
+  const grid = document.getElementById("parser-models-grid");
+  if (!grid) return;
+  document.getElementById("parser-compare-summary")?.remove();
+  const MODEL_NAMES = { prelabeler:"PreLabeler", phobert:"PhoBERT", mgte:"mGTE", llm:"Qwen LLM" };
+  const rows = ["prelabeler","phobert","mgte","llm"].map(k => {
+    const resultEl    = document.getElementById(`presult-${k}`);
+    const statsEl     = document.getElementById(`pstats-${k}`);
+    const isError     = document.getElementById(`pcard-${k}`)?.classList.contains("is-error");
+    const isNotLoaded = !!resultEl?.querySelector(".pmodel-not-loaded");
+    const normEl      = resultEl?.querySelector(".pmodel-normalized");
+    const entChips    = resultEl?.querySelectorAll(".pmodel-ent-chip");
+    const confChip    = statsEl?.querySelector(".pstat-chip.conf");
+    return { key:k, name:MODEL_NAMES[k], isError, isNotLoaded,
+             normalized:  normEl?.textContent?.trim() || null,
+             entityCount: entChips?.length || 0,
+             confidence:  confChip?.textContent?.trim() || null };
+  }).filter(r => !r.isError && !r.isNotLoaded);
+
+  if (!rows.length) return;
+
+  const el = document.createElement("div");
+  el.id = "parser-compare-summary";
+  el.className = "parser-compare-summary";
+  const rowsHtml = rows.map(r => {
+    const tm = _MODEL_TASK_META[r.key];
+    const out = r.normalized
+      ? `<span class="pcs-output normalized">${escapeHtml(r.normalized)}</span>`
+      : r.entityCount > 0
+        ? `<span class="pcs-output entities">${r.entityCount} thực thể</span>`
+        : `<span class="pcs-output empty">—</span>`;
+    const conf = r.confidence ? `<span class="pcs-conf">${r.confidence}</span>` : "";
+    return `<tr>
+      <td class="pcs-name">${r.name}</td>
+      <td class="pcs-task">${tm?.taskLabel||""}</td>
+      <td class="pcs-output-cell">${out}</td>
+      <td class="pcs-conf-cell">${conf}</td>
+    </tr>`;
+  }).join("");
+  el.innerHTML = `
+    <div class="pcs-header">So sánh kết quả các mô hình</div>
+    <div class="pcs-note">Mỗi mô hình thực hiện một tác vụ khác nhau — kết quả trả về khác nhau là bình thường.</div>
+    <table class="pcs-table">
+      <thead><tr><th>Mô hình</th><th>Tác vụ</th><th>Kết quả</th><th>Điểm</th></tr></thead>
+      <tbody>${rowsHtml}</tbody>
+    </table>`;
+  grid.after(el);
+}
+
+function _buildParserNERLegend() {
+  const legend = document.getElementById("parser-ner-legend");
+  if (!legend) return;
+  legend.innerHTML = NER_LABELS.map(l =>
+    `<span class="plegend-item" style="color:${l.color}">${l.value}</span>`
+  ).join("");
+}
+
+function _updateParserMeta(meta) {
+  const el = document.getElementById("parser-meta");
+  if (!el) return;
+  const corpus = meta.corpusSize
+    ? `<strong id="meta-corpus">${meta.corpusSize.toLocaleString("vi-VN")}</strong> địa chỉ trong corpus` : "";
+  const note   = meta.note
+    ? `<span id="meta-note">${meta.note}</span>` : "";
+  el.innerHTML = [corpus, note].filter(Boolean).join("") || el.innerHTML;
+}
+
+function renderNERHighlight(entities) {
+  const nerEl   = document.getElementById("parser-output");
+  const inputEl = document.getElementById("parser-input");
+  if (!nerEl || !inputEl) return;
+  const text = inputEl.value;
+  if (!entities || !Array.isArray(entities) || entities.length === 0) {
+    nerEl.innerHTML = escapeHtml(text);
+    return;
+  }
+  const norm = entities.map(e => {
+    if (e.value?.labels)
+      return { start:e.value.start, end:e.value.end, label:e.value.labels[0], text:e.value.text };
+    return { start:e.start??0, end:e.end??0, label:e.label||"?", text:e.text||"" };
+  }).filter(e => e.end > e.start);
+
+  const sorted = [...norm].sort((a,b) => a.start - b.start);
+  const filtered = [];
+  sorted.forEach(e => {
+    if (!filtered.length || e.start >= filtered[filtered.length-1].end) filtered.push(e);
+  });
+
+  const labelInfo = {};
+  NER_LABELS.forEach(l => labelInfo[l.value] = l);
+
+  let html = "", cursor = 0;
+  filtered.forEach(e => {
+    if (e.start > cursor) html += escapeHtml(text.slice(cursor, e.start));
+    const info = labelInfo[e.label] || { color:"#888" };
+    html += `<span class="ner-entity ner-${e.label}" data-label="${e.label}" style="color:${info.color}">${escapeHtml(text.slice(e.start, e.end))}</span>`;
+    cursor = e.end;
+  });
+  if (cursor < text.length) html += escapeHtml(text.slice(cursor));
+  nerEl.innerHTML = html;
+}
+
+async function runParser() {
+  const inputEl  = document.getElementById("parser-input");
+  const text     = inputEl?.value?.trim();
+  const sampleId = inputEl?.dataset?.sampleId;
+  if (!text) return;
+
+  const btnParse  = document.getElementById("btn-parse");
+  const heroInner = document.querySelector(".parser-hero-inner");
+  const timingEl  = document.getElementById("parser-timing");
+  const timingVal = document.getElementById("parser-timing-val");
+
+  _resetModelCards();
+  _setParserStatus("running", "Đang phân tích — gửi yêu cầu đến 4 model...");
+  if (heroInner) heroInner.classList.add("is-running");
+  if (btnParse)  { btnParse.disabled = true;  btnParse.innerHTML = "<span>Đang xử lý</span>"; }
+  if (timingEl)  timingEl.style.display = "none";
+
+  const nerOut = document.getElementById("parser-output");
+  if (nerOut) nerOut.innerHTML = "<span>Đang chờ...</span>";
+
+  const startTs = Date.now();
+  const payload = sampleId ? { id: parseInt(sampleId) } : { raw_address: text };
+  const MODELS  = [
+    { key:"prelabeler" }, { key:"phobert" }, { key:"mgte" }, { key:"llm" },
+  ];
+  let completedCount = 0, firstNERDone = false, lastMeta = null;
+
+  const fetchModel = async ({ key }) => {
+    const t0 = Date.now();
+    try {
+      const res = await fetch(`${API_BASE}/parser/analyze?model=${key}`, {
+        method: "POST",
+        headers: { ...getAuthHeader(), "Content-Type":"application/json" },
+        body: JSON.stringify(payload),
+      });
+      const latency = Date.now() - t0;
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      const out  = data.outputs?.[key];
+      if (data.meta) lastMeta = data.meta;
+      if (data.acs && !lastMeta?._acs) { if (!lastMeta) lastMeta={}; lastMeta._acs = data.acs; }
+      _renderModelCard(key, out, latency);
+      if (key === "prelabeler" && !firstNERDone) {
+        firstNERDone = true;
+        renderNERHighlight(out?.result || []);
+      }
+    } catch {
+      _renderModelCardError(key);
+    } finally {
+      completedCount++;
+      _setParserStatus("running", `Đang phân tích — ${completedCount}/4 model hoàn thành...`);
+    }
+  };
+
+  try {
+    await Promise.all(MODELS.map(fetchModel));
+    const totalMs = Date.now() - startTs;
+    _setParserStatus("done", `Hoàn thành — tổng ${totalMs}ms`);
+    if (timingEl && timingVal) { timingVal.textContent = `${totalMs}ms`; timingEl.style.display = "flex"; }
+    if (lastMeta) _updateParserMeta(lastMeta);
+    _renderParserCompareSummary();
+  } catch {
+    _setParserStatus("error", "Đã xảy ra lỗi trong quá trình phân tích");
+  } finally {
+    if (heroInner) heroInner.classList.remove("is-running");
+    if (btnParse)  { btnParse.disabled = false; btnParse.innerHTML = "<span>Phân tích địa chỉ</span>"; }
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   4. MOCK FETCH HELPERS
+   ══════════════════════════════════════════════════════════════════ */
+const MOCK_ENTITIES = [
+  { label:"NUM", text:"123",       start:0,  end:3  },
+  { label:"STR", text:"Lê Lợi",   start:4,  end:11 },
+  { label:"WDS", text:"Bến Thành",start:13, end:22 },
+  { label:"DST", text:"Quận 1",   start:24, end:30 },
+  { label:"PRO", text:"HCM",      start:32, end:35 },
+];
+
+function mockFetch(overrides = {}) {
+  const defaults = {
+    prelabeler: { outputs:{ prelabeler:{ mode:"rule_based_hybrid", result:MOCK_ENTITIES, entityCount:5 } },
+                  meta:{ corpusSize:10000, evaluatedAt:"2026-05-04T00:00:00Z", note:"" },
+                  acs:{ acs_score:0.88, acs_decision:"PASS" } },
+    phobert:    { outputs:{ phobert:{ mode:"phoBERT_siamese", normalizedAddress:"123 Lê Lợi, Phường Bến Thành, Quận 1, TP. Hồ Chí Minh", score:0.921, latencyMs:42 } },
+                  meta:{ corpusSize:10000 } },
+    mgte:       { outputs:{ mgte:{ mode:"mGTE_siamese", normalizedAddress:"123 Lê Lợi, Phường Bến Thành, Quận 1, Thành phố Hồ Chí Minh", score:0.954, latencyMs:38 } },
+                  meta:{ corpusSize:10000 } },
+    llm:        { outputs:{ llm:{ mode:"qwen2.5_llm", normalizedAddress:"123 Lê Lợi, Bến Thành, Quận 1, TP. Hồ Chí Minh", score:0.897, latencyMs:219 } },
+                  meta:{ corpusSize:10000 } },
+  };
+  const merged = { ...defaults, ...overrides };
+
+  window.fetch = async (url, opts) => {
+    const key = ["prelabeler","phobert","mgte","llm"].find(k => url.includes(`model=${k}`));
+    const cfg = merged[key];
+    if (!cfg) throw new Error(`No mock for ${url}`);
+    if (cfg._throw) throw new Error(cfg._throw);
+    if (cfg._status && cfg._status >= 400)
+      return { ok:false, status:cfg._status, json:async()=>({}) };
+    return { ok:true, status:200, json:async()=>cfg };
+  };
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   5. TEST SUITES
+   ══════════════════════════════════════════════════════════════════ */
+
+// ── 1. DOM Fixture ────────────────────────────────────────────────
+describe("DOM Fixture — phần tử bắt buộc", () => {
+  const REQUIRED_IDS = [
+    "parser-input","btn-parse","btn-parse-sample-local","btn-parse-sample-db",
+    "parser-status-dot","parser-status","parser-timing","parser-timing-val",
+    "parser-output","parser-ner-legend","parser-models-grid","parser-meta",
+    "pcard-prelabeler","pcard-phobert","pcard-mgte","pcard-llm",
+    "presult-prelabeler","presult-phobert","presult-mgte","presult-llm",
+    "pstats-prelabeler","pstats-phobert","pstats-mgte","pstats-llm",
+    "pbadge-prelabeler","pbadge-phobert","pbadge-mgte","pbadge-llm",
+  ];
+  REQUIRED_IDS.forEach(id => {
+    it(`#${id} tồn tại`, () => assert(document.getElementById(id), `#${id} không tìm thấy`));
+  });
+  it("parser-input có default value", () => assert(document.getElementById("parser-input").value.trim().length > 0));
+  it("parser-timing ẩn theo mặc định", () => assertEqual(document.getElementById("parser-timing").style.display, "none"));
+});
+
+// ── 2. _buildParserNERLegend ──────────────────────────────────────
+describe("_buildParserNERLegend — legend nhãn NER", () => {
+  it("tạo đúng 10 legend items", () => {
+    _buildParserNERLegend();
+    assertEqual(document.querySelectorAll("#parser-ner-legend .plegend-item").length, 10, "Phải có 10 nhãn NER");
+  });
+  it("legend items chứa đủ 10 mã nhãn", () => {
+    _buildParserNERLegend();
+    const texts = Array.from(document.querySelectorAll("#parser-ner-legend .plegend-item")).map(el => el.textContent.trim());
+    NER_LABELS.forEach(l => assert(texts.includes(l.value), `Thiếu nhãn ${l.value}`));
+  });
+  it("mỗi legend item có inline color", () => {
+    _buildParserNERLegend();
+    const items = document.querySelectorAll("#parser-ner-legend .plegend-item");
+    items.forEach((el, i) => assert(el.style.color, `Item ${i} thiếu style.color`));
+  });
+  it("gọi lại vẫn đúng (idempotent)", () => {
+    _buildParserNERLegend();
+    _buildParserNERLegend();
+    assertEqual(document.querySelectorAll("#parser-ner-legend .plegend-item").length, 10);
+  });
+});
+
+// ── 3. _setParserStatus ───────────────────────────────────────────
+describe("_setParserStatus — cập nhật status bar", () => {
+  it("state='running' → dot class đúng", () => {
+    _setParserStatus("running", "x");
+    assertEqual(document.getElementById("parser-status-dot").className, "pstatus-dot running");
+  });
+  it("state='done' → dot class đúng", () => {
+    _setParserStatus("done", "x");
+    assertContains(document.getElementById("parser-status-dot").className, "done");
+  });
+  it("state='error' → dot class đúng", () => {
+    _setParserStatus("error", "x");
+    assertContains(document.getElementById("parser-status-dot").className, "error");
+  });
+  it("state='idle' → dot class đúng", () => {
+    _setParserStatus("idle", "x");
+    assertContains(document.getElementById("parser-status-dot").className, "idle");
+  });
+  it("text được cập nhật đúng", () => {
+    _setParserStatus("done", "Hoàn thành pipeline");
+    assertEqual(document.getElementById("parser-status").textContent, "Hoàn thành pipeline");
+  });
+  it("status element className cập nhật cùng state", () => {
+    _setParserStatus("running", "Chạy...");
+    assertContains(document.getElementById("parser-status").className, "running");
+  });
+});
+
+// ── 4. _resetModelCards ───────────────────────────────────────────
+describe("_resetModelCards — đặt lại UI về trạng thái ban đầu", () => {
+  it("xóa class is-done khỏi tất cả 4 card", () => {
+    ["prelabeler","phobert","mgte","llm"].forEach(m =>
+      document.getElementById(`pcard-${m}`).classList.add("is-done"));
+    _resetModelCards();
+    ["prelabeler","phobert","mgte","llm"].forEach(m =>
+      assert(!document.getElementById(`pcard-${m}`).classList.contains("is-done"), `pcard-${m} vẫn có is-done`));
+  });
+  it("xóa class is-error khỏi tất cả 4 card", () => {
+    ["prelabeler","phobert","mgte","llm"].forEach(m =>
+      document.getElementById(`pcard-${m}`).classList.add("is-error"));
+    _resetModelCards();
+    ["prelabeler","phobert","mgte","llm"].forEach(m =>
+      assert(!document.getElementById(`pcard-${m}`).classList.contains("is-error"), `pcard-${m} vẫn có is-error`));
+  });
+  it("xóa parser-compare-summary nếu tồn tại", () => {
+    const div = document.createElement("div");
+    div.id = "parser-compare-summary";
+    document.getElementById("parser-models-grid").after(div);
+    _resetModelCards();
+    assert(!document.getElementById("parser-compare-summary"), "Summary vẫn còn sau reset");
+  });
+  it("thêm lại pmodel-shimmer vào mỗi result div", () => {
+    _resetModelCards();
+    ["prelabeler","phobert","mgte","llm"].forEach(m =>
+      assert(document.querySelector(`#presult-${m} .pmodel-shimmer`), `Thiếu shimmer trong presult-${m}`));
+  });
+  it("xóa stats innerHTML", () => {
+    document.getElementById("pstats-prelabeler").innerHTML = "old-content";
+    _resetModelCards();
+    assertEqual(document.getElementById("pstats-prelabeler").innerHTML, "");
+  });
+  it("badge bị reset (không còn DONE/ERR)", () => {
+    document.getElementById("pbadge-prelabeler").innerHTML = `<span class="pmodel-badge-done success">DONE</span>`;
+    _resetModelCards();
+    assertNotContains(document.getElementById("pbadge-prelabeler").innerHTML, "DONE");
+  });
+});
+
+// ── 5. _renderModelCard — PreLabeler (NER entities) ───────────────
+describe("_renderModelCard — PreLabeler (NER entities output)", () => {
+  it("card nhận class is-done", () => {
+    _resetModelCards();
+    _renderModelCard("prelabeler", { result:MOCK_ENTITIES, entityCount:5 }, 120);
+    assert(document.getElementById("pcard-prelabeler").classList.contains("is-done"));
+  });
+  it("badge hiển thị DONE", () => {
+    _resetModelCards();
+    _renderModelCard("prelabeler", { result:MOCK_ENTITIES, entityCount:5 }, 120);
+    assertContains(document.getElementById("pbadge-prelabeler").innerHTML, "DONE");
+  });
+  it("task badge 'Trích xuất thực thể' xuất hiện", () => {
+    _resetModelCards();
+    _renderModelCard("prelabeler", { result:MOCK_ENTITIES, entityCount:5 }, 120);
+    assertContains(document.getElementById("presult-prelabeler").innerHTML, "Trích xuất thực thể");
+  });
+  it("tạo đúng 5 entity chips", () => {
+    _resetModelCards();
+    _renderModelCard("prelabeler", { result:MOCK_ENTITIES, entityCount:5 }, 120);
+    assertEqual(document.querySelectorAll("#presult-prelabeler .pmodel-ent-chip").length, 5);
+  });
+  it("chip NUM: 123 hiển thị đúng", () => {
+    _resetModelCards();
+    _renderModelCard("prelabeler", { result:MOCK_ENTITIES, entityCount:5 }, 120);
+    assertContains(document.getElementById("presult-prelabeler").innerHTML, "NUM: 123");
+  });
+  it("chip STR: Lê Lợi hiển thị đúng", () => {
+    _resetModelCards();
+    _renderModelCard("prelabeler", { result:MOCK_ENTITIES, entityCount:5 }, 120);
+    assertContains(document.getElementById("presult-prelabeler").innerHTML, "STR: Lê Lợi");
+  });
+  it("chip WDS: Bến Thành hiển thị đúng", () => {
+    _resetModelCards();
+    _renderModelCard("prelabeler", { result:MOCK_ENTITIES, entityCount:5 }, 120);
+    assertContains(document.getElementById("presult-prelabeler").innerHTML, "WDS: Bến Thành");
+  });
+  it("chip PRO: HCM hiển thị đúng", () => {
+    _resetModelCards();
+    _renderModelCard("prelabeler", { result:MOCK_ENTITIES, entityCount:5 }, 120);
+    assertContains(document.getElementById("presult-prelabeler").innerHTML, "PRO: HCM");
+  });
+  it("stats có latency chip 120ms", () => {
+    _resetModelCards();
+    _renderModelCard("prelabeler", { result:MOCK_ENTITIES, entityCount:5 }, 120);
+    assertContains(document.getElementById("pstats-prelabeler").innerHTML, "120ms");
+  });
+  it("stats có count chip '5 entities'", () => {
+    _resetModelCards();
+    _renderModelCard("prelabeler", { result:MOCK_ENTITIES, entityCount:5 }, 120);
+    assertContains(document.getElementById("pstats-prelabeler").innerHTML, "5 entities");
+  });
+  it("stats KHÔNG có score% (prelabeler không có score)", () => {
+    _resetModelCards();
+    _renderModelCard("prelabeler", { result:MOCK_ENTITIES, entityCount:5 }, 120);
+    assertNotContains(document.getElementById("pstats-prelabeler").innerHTML, "pstat-chip conf");
+  });
+  it("out=null → 'Không có kết quả'", () => {
+    _resetModelCards();
+    _renderModelCard("prelabeler", null, 50);
+    assertContains(document.getElementById("presult-prelabeler").innerHTML, "Không có kết quả");
+  });
+  it("result=[] → 'Không tìm thấy'", () => {
+    _resetModelCards();
+    _renderModelCard("prelabeler", { result:[], entityCount:0 }, 50);
+    assertContains(document.getElementById("presult-prelabeler").innerHTML, "Không tìm thấy");
+  });
+  it("tối đa 10 chips (cắt sau chip thứ 10)", () => {
+    _resetModelCards();
+    const many = Array.from({length:15},(_,i) => ({label:"NUM",text:`${i}`,start:i*3,end:i*3+2}));
+    _renderModelCard("prelabeler", { result:many, entityCount:15 }, 50);
+    assert(document.querySelectorAll("#presult-prelabeler .pmodel-ent-chip").length <= 10);
+  });
+});
+
+// ── 6. _renderModelCard — Siamese/LLM (normalizedAddress) ─────────
+describe("_renderModelCard — PhoBERT/mGTE/LLM (normalizedAddress output)", () => {
+  const CASES = [
+    { m:"phobert", addr:"123 Lê Lợi, Phường Bến Thành, Quận 1, TP. Hồ Chí Minh", score:0.921, lat:42,  label:"Chuẩn hóa ngữ nghĩa"   },
+    { m:"mgte",    addr:"123 Lê Lợi, Quận 1, Thành phố Hồ Chí Minh",              score:0.954, lat:38,  label:"Embedding đa ngôn ngữ" },
+    { m:"llm",     addr:"123 Lê Lợi, Bến Thành, Quận 1, TP. Hồ Chí Minh",         score:0.897, lat:219, label:"Suy luận ngôn ngữ"     },
+  ];
+  CASES.forEach(({ m, addr, score, lat, label }) => {
+    it(`[${m}] task badge = "${label}"`, () => {
+      _resetModelCards();
+      _renderModelCard(m, { normalizedAddress:addr, score, latencyMs:lat }, 300);
+      assertContains(document.getElementById(`presult-${m}`).innerHTML, label);
+    });
+    it(`[${m}] normalizedAddress hiển thị trong result`, () => {
+      _resetModelCards();
+      _renderModelCard(m, { normalizedAddress:addr, score, latencyMs:lat }, 300);
+      assertContains(document.getElementById(`presult-${m}`).innerHTML, addr.slice(0, 12));
+    });
+    it(`[${m}] KHÔNG hiển thị "0 entities" fallback (bug đã fix)`, () => {
+      _resetModelCards();
+      _renderModelCard(m, { normalizedAddress:addr, score, latencyMs:lat }, 300);
+      assertNotContains(document.getElementById(`presult-${m}`).innerHTML, "0 entities");
+    });
+    it(`[${m}] KHÔNG hiển thị "NER xử lý xong" (bug đã fix)`, () => {
+      _resetModelCards();
+      _renderModelCard(m, { normalizedAddress:addr, score, latencyMs:lat }, 300);
+      assertNotContains(document.getElementById(`presult-${m}`).innerHTML, "NER xử lý xong");
+    });
+    it(`[${m}] stats: score = ${(score*100).toFixed(1)}%`, () => {
+      _resetModelCards();
+      _renderModelCard(m, { normalizedAddress:addr, score, latencyMs:lat }, 300);
+      assertContains(document.getElementById(`pstats-${m}`).innerHTML, (score*100).toFixed(1)+"%");
+    });
+    it(`[${m}] stats: model latency = ${lat}ms (infer time từ API)`, () => {
+      _resetModelCards();
+      _renderModelCard(m, { normalizedAddress:addr, score, latencyMs:lat }, 9999);
+      assertContains(document.getElementById(`pstats-${m}`).innerHTML, lat+"ms");
+    });
+    it(`[${m}] result có class has-result`, () => {
+      _resetModelCards();
+      _renderModelCard(m, { normalizedAddress:addr, score, latencyMs:lat }, 300);
+      assert(document.getElementById(`presult-${m}`).classList.contains("has-result"));
+    });
+  });
+});
+
+// ── 7. _renderModelCard — Model not loaded / runtime error ────────
+describe("_renderModelCard — model chưa nạp hoặc lỗi runtime", () => {
+  it("status='Not loaded' → cảnh báo 'Model chưa được nạp'", () => {
+    _resetModelCards();
+    _renderModelCard("phobert", { status:"Not loaded", error:"No RAM" }, 5);
+    assertContains(document.getElementById("presult-phobert").innerHTML, "Model chưa được nạp");
+  });
+  it("error thuần (không phải Not loaded) → hiện error message", () => {
+    _resetModelCards();
+    _renderModelCard("mgte", { error:"CUDA OOM", status:"crashed" }, 5);
+    assertContains(document.getElementById("presult-mgte").innerHTML, "CUDA OOM");
+  });
+  it("Not loaded KHÔNG hiển thị '0 entities'", () => {
+    _resetModelCards();
+    _renderModelCard("llm", { status:"Not loaded", error:"x" }, 5);
+    assertNotContains(document.getElementById("presult-llm").innerHTML, "0 entities");
+  });
+  it("Not loaded KHÔNG hiển thị 'NER xử lý xong'", () => {
+    _resetModelCards();
+    _renderModelCard("phobert", { status:"Not loaded", error:"x" }, 5);
+    assertNotContains(document.getElementById("presult-phobert").innerHTML, "NER xử lý xong");
+  });
+  it("not-loaded div có class pmodel-not-loaded", () => {
+    _resetModelCards();
+    _renderModelCard("phobert", { status:"Not loaded", error:"x" }, 5);
+    assert(document.querySelector("#presult-phobert .pmodel-not-loaded"));
+  });
+  it("error message được escape HTML (XSS safe)", () => {
+    _resetModelCards();
+    _renderModelCard("mgte", { error:"<script>alert(1)<\/script>", status:"err" }, 5);
+    assertNotContains(document.getElementById("presult-mgte").innerHTML, "<script>");
+    assertContains(document.getElementById("presult-mgte").innerHTML, "&lt;script&gt;");
+  });
+});
+
+// ── 8. _renderModelCardError (network/HTTP error) ─────────────────
+describe("_renderModelCardError — lỗi kết nối", () => {
+  it("prelabeler: is-error class", () => {
+    _resetModelCards(); _renderModelCardError("prelabeler");
+    assert(document.getElementById("pcard-prelabeler").classList.contains("is-error"));
+  });
+  it("phobert: badge = ERR", () => {
+    _resetModelCards(); _renderModelCardError("phobert");
+    assertContains(document.getElementById("pbadge-phobert").innerHTML, "ERR");
+  });
+  it("llm: result = 'Không thể kết nối'", () => {
+    _resetModelCards(); _renderModelCardError("llm");
+    assertContains(document.getElementById("presult-llm").innerHTML, "Không thể kết nối");
+  });
+  it("is-error KHÔNG ghi đè is-done (card lỗi sau card xong)", () => {
+    _resetModelCards();
+    document.getElementById("pcard-mgte").classList.add("is-done");
+    _renderModelCardError("mgte");
+    assert(document.getElementById("pcard-mgte").classList.contains("is-error"));
+  });
+});
+
+// ── 9. renderNERHighlight ─────────────────────────────────────────
+describe("renderNERHighlight — tô màu NER trên text đầu vào", () => {
+  it("entity rỗng → hiển thị text thô", () => {
+    document.getElementById("parser-input").value = "Hà Nội";
+    renderNERHighlight([]);
+    assertContains(document.getElementById("parser-output").textContent, "Hà Nội");
+    assert(!document.querySelector("#parser-output .ner-entity"), "Không được tạo entity spans");
+  });
+  it("tạo đúng 5 ner-entity spans", () => {
+    document.getElementById("parser-input").value = "123 Lê Lợi, Bến Thành, Quận 1, HCM";
+    renderNERHighlight(MOCK_ENTITIES);
+    assertEqual(document.querySelectorAll("#parser-output .ner-entity").length, 5);
+  });
+  it("data-label='NUM' đúng cho span số nhà", () => {
+    document.getElementById("parser-input").value = "123 Lê Lợi, Bến Thành, Quận 1, HCM";
+    renderNERHighlight(MOCK_ENTITIES);
+    assertEqual(document.querySelector("#parser-output [data-label='NUM']").textContent, "123");
+  });
+  it("data-label='STR' đúng cho tên đường", () => {
+    document.getElementById("parser-input").value = "123 Lê Lợi, Bến Thành, Quận 1, HCM";
+    renderNERHighlight(MOCK_ENTITIES);
+    assertEqual(document.querySelector("#parser-output [data-label='STR']").textContent, "Lê Lợi");
+  });
+  it("class ner-NUM trên span NUM", () => {
+    document.getElementById("parser-input").value = "123 Lê Lợi, Bến Thành, Quận 1, HCM";
+    renderNERHighlight(MOCK_ENTITIES);
+    assert(document.querySelector("#parser-output .ner-NUM"), "Thiếu class ner-NUM");
+  });
+  it("span có inline color từ NER_LABELS", () => {
+    document.getElementById("parser-input").value = "123 Lê Lợi, Bến Thành, Quận 1, HCM";
+    renderNERHighlight(MOCK_ENTITIES);
+    const span = document.querySelector("#parser-output .ner-entity");
+    assert(span?.style?.color, "Thiếu inline color style");
+  });
+  it("hỗ trợ format Label Studio (value.labels)", () => {
+    document.getElementById("parser-input").value = "Phường 1, Quận 3";
+    renderNERHighlight([
+      { value:{ labels:["WDS"], start:0, end:9,  text:"Phường 1" } },
+      { value:{ labels:["DST"], start:11, end:17, text:"Quận 3"  } },
+    ]);
+    assertEqual(document.querySelectorAll("#parser-output .ner-entity").length, 2);
+    assertEqual(document.querySelector("#parser-output [data-label='WDS']").textContent, "Phường 1");
+  });
+  it("overlapping entities → chỉ giữ entity đầu tiên (không overlap)", () => {
+    document.getElementById("parser-input").value = "Hồ Chí Minh";
+    renderNERHighlight([
+      { label:"PRO", text:"Hồ Chí Minh", start:0, end:11 },
+      { label:"DST", text:"Chí Minh",    start:3, end:11 }, // overlap
+    ]);
+    assertEqual(document.querySelectorAll("#parser-output .ner-entity").length, 1, "Overlap phải bị loại");
+  });
+  it("entities được sắp xếp theo start position", () => {
+    document.getElementById("parser-input").value = "Quận 1, 123 đường";
+    renderNERHighlight([
+      { label:"NUM", text:"123",    start:8, end:11 },
+      { label:"DST", text:"Quận 1", start:0, end:6  },
+    ]);
+    const spans = document.querySelectorAll("#parser-output .ner-entity");
+    assertEqual(spans[0].dataset.label, "DST", "DST (start=0) phải đứng trước NUM (start=8)");
+  });
+  it("text phần không phải entity được giữ nguyên", () => {
+    document.getElementById("parser-input").value = "số 5, Hà Nội";
+    renderNERHighlight([{ label:"NUM", text:"5", start:4, end:5 }]);
+    assertContains(document.getElementById("parser-output").textContent, "số");
+    assertContains(document.getElementById("parser-output").textContent, "Hà Nội");
+  });
+  it("entities với end<=start bị bỏ qua (invalid range)", () => {
+    document.getElementById("parser-input").value = "test";
+    renderNERHighlight([
+      { label:"NUM", text:"x", start:5, end:3 }, // invalid
+      { label:"STR", text:"test", start:0, end:4 }, // valid
+    ]);
+    assertEqual(document.querySelectorAll("#parser-output .ner-entity").length, 1, "Entity invalid range phải bị lọc");
+  });
+});
+
+// ── 10. _renderParserCompareSummary ──────────────────────────────
+describe("_renderParserCompareSummary — bảng so sánh kết quả", () => {
+  it("không tạo summary khi tất cả card đều lỗi", () => {
+    _resetModelCards();
+    ["prelabeler","phobert","mgte","llm"].forEach(m => _renderModelCardError(m));
+    _renderParserCompareSummary();
+    assert(!document.getElementById("parser-compare-summary"), "Không được tạo summary khi all error");
+  });
+  it("tạo summary sau parser-models-grid khi có ít nhất 1 model DONE", () => {
+    _resetModelCards();
+    _renderModelCard("prelabeler", { result:MOCK_ENTITIES, entityCount:5 }, 100);
+    _renderParserCompareSummary();
+    assert(document.getElementById("parser-compare-summary"), "Thiếu summary element");
+    assertEqual(
+      document.getElementById("parser-compare-summary").previousElementSibling?.id,
+      "parser-models-grid", "Summary phải nằm ngay sau parser-models-grid"
+    );
+  });
+  it("bảng có 4 rows khi tất cả model DONE", () => {
+    _resetModelCards();
+    ["prelabeler","phobert","mgte","llm"].forEach(m =>
+      _renderModelCard(m, m==="prelabeler"
+        ? { result:MOCK_ENTITIES, entityCount:5 }
+        : { normalizedAddress:"Kết quả", score:0.9, latencyMs:30 }, 100));
+    _renderParserCompareSummary();
+    assertEqual(document.querySelectorAll("#parser-compare-summary .pcs-table tbody tr").length, 4);
+  });
+  it("chứa tên các mô hình đúng", () => {
+    _resetModelCards();
+    _renderModelCard("prelabeler", { result:[], entityCount:0 }, 50);
+    _renderParserCompareSummary();
+    assertContains(document.getElementById("parser-compare-summary").innerHTML, "PreLabeler");
+  });
+  it("chứa taskLabel đúng cho mGTE", () => {
+    _resetModelCards();
+    _renderModelCard("mgte", { normalizedAddress:"x", score:0.9, latencyMs:30 }, 100);
+    _renderParserCompareSummary();
+    assertContains(document.getElementById("parser-compare-summary").innerHTML, "Embedding đa ngôn ngữ");
+  });
+  it("chứa taskLabel đúng cho LLM", () => {
+    _resetModelCards();
+    _renderModelCard("llm", { normalizedAddress:"x", score:0.88, latencyMs:200 }, 300);
+    _renderParserCompareSummary();
+    assertContains(document.getElementById("parser-compare-summary").innerHTML, "Suy luận ngôn ngữ");
+  });
+  it("gọi lại 2 lần → chỉ có 1 summary (không nhân đôi)", () => {
+    _resetModelCards();
+    _renderModelCard("prelabeler", { result:MOCK_ENTITIES, entityCount:5 }, 50);
+    _renderParserCompareSummary();
+    _renderParserCompareSummary();
+    assertEqual(document.querySelectorAll("#parser-compare-summary").length, 1);
+  });
+  it("card is-error bị loại khỏi bảng", () => {
+    _resetModelCards();
+    _renderModelCard("prelabeler",  { result:MOCK_ENTITIES, entityCount:5 }, 100);
+    _renderModelCardError("phobert");
+    _renderModelCard("mgte",        { normalizedAddress:"ok", score:0.9, latencyMs:30 }, 100);
+    _renderModelCardError("llm");
+    _renderParserCompareSummary();
+    assertEqual(
+      document.querySelectorAll("#parser-compare-summary .pcs-table tbody tr").length, 2,
+      "Chỉ 2 model thành công mới xuất hiện"
+    );
+  });
+  it("card not-loaded bị loại khỏi bảng", () => {
+    _resetModelCards();
+    _renderModelCard("prelabeler", { result:MOCK_ENTITIES, entityCount:5 }, 100);
+    _renderModelCard("phobert", { status:"Not loaded", error:"x" }, 5); // not-loaded
+    _renderModelCard("mgte", { normalizedAddress:"ok", score:0.9, latencyMs:30 }, 100);
+    _renderModelCard("llm", { status:"Not loaded", error:"x" }, 5); // not-loaded
+    _renderParserCompareSummary();
+    assertEqual(
+      document.querySelectorAll("#parser-compare-summary .pcs-table tbody tr").length, 2
+    );
+  });
+  it("normalized address hiển thị trong cột kết quả", () => {
+    _resetModelCards();
+    _renderModelCard("mgte", { normalizedAddress:"Phường Bến Thành, Quận 1", score:0.95, latencyMs:30 }, 100);
+    _renderParserCompareSummary();
+    assertContains(document.getElementById("parser-compare-summary").innerHTML, "Phường Bến Thành");
+  });
+  it("score% hiển thị trong cột điểm", () => {
+    _resetModelCards();
+    _renderModelCard("phobert", { normalizedAddress:"x", score:0.921, latencyMs:40 }, 100);
+    _renderParserCompareSummary();
+    assertContains(document.getElementById("parser-compare-summary").innerHTML, "92.1%");
+  });
+  it("note giải thích 'kết quả trả về khác nhau là bình thường'", () => {
+    _resetModelCards();
+    _renderModelCard("prelabeler", { result:MOCK_ENTITIES, entityCount:5 }, 100);
+    _renderParserCompareSummary();
+    assertContains(document.getElementById("parser-compare-summary").innerHTML, "bình thường");
+  });
+});
+
+// ── 11. _updateParserMeta ─────────────────────────────────────────
+describe("_updateParserMeta — cập nhật meta footer", () => {
+  it("hiển thị corpusSize định dạng vi-VN (12.345)", () => {
+    _updateParserMeta({ corpusSize:12345 });
+    assertContains(document.getElementById("parser-meta").innerHTML, "12.345");
+  });
+  it("hiển thị note cảnh báo khi có note", () => {
+    _updateParserMeta({ corpusSize:0, note:"FALLBACK MODE active" });
+    assertContains(document.getElementById("parser-meta").innerHTML, "FALLBACK MODE active");
+  });
+  it("giữ nguyên nội dung cũ khi meta={}", () => {
+    document.getElementById("parser-meta").innerHTML = `<span id="keep-test">UNCHANGED</span>`;
+    _updateParserMeta({});
+    assert(document.getElementById("keep-test"), "Nội dung cũ bị xóa mất");
+  });
+  it("corpusSize=0 với note → không hiển thị số corpus", () => {
+    _updateParserMeta({ corpusSize:0, note:"Test note" });
+    assertNotContains(document.getElementById("parser-meta").innerHTML, "địa chỉ trong corpus");
+  });
+});
+
+// ── 12. _MODEL_TASK_META ──────────────────────────────────────────
+describe("_MODEL_TASK_META — metadata tác vụ các model", () => {
+  it("4 model đều có entry", () => {
+    ["prelabeler","phobert","mgte","llm"].forEach(k =>
+      assert(_MODEL_TASK_META[k], `Thiếu entry cho ${k}`));
+  });
+  it("prelabeler outputType = 'entities'", () =>
+    assertEqual(_MODEL_TASK_META.prelabeler.outputType, "entities"));
+  it("phobert/mgte/llm outputType = 'normalized'", () =>
+    ["phobert","mgte","llm"].forEach(k =>
+      assertEqual(_MODEL_TASK_META[k].outputType, "normalized", `${k} outputType sai`)));
+  it("mỗi entry có taskLabel", () =>
+    Object.entries(_MODEL_TASK_META).forEach(([k,v]) =>
+      assert(v.taskLabel, `${k} thiếu taskLabel`)));
+  it("mỗi entry có icon", () =>
+    Object.entries(_MODEL_TASK_META).forEach(([k,v]) =>
+      assert(v.icon, `${k} thiếu icon`)));
+  it("prelabeler task = 'NER'", () => assertEqual(_MODEL_TASK_META.prelabeler.task, "NER"));
+  it("llm task = 'LLM'", ()     => assertEqual(_MODEL_TASK_META.llm.task, "LLM"));
+});
+
+// ── 13. runParser() — full pipeline với mock fetch ────────────────
+describe("runParser() — pipeline tích hợp (mock fetch)", () => {
+  it("trả về sớm khi input rỗng — không gọi fetch", async () => {
+    document.getElementById("parser-input").value = "  ";
+    let called = false;
+    window.fetch = async () => { called = true; return { ok:true, json:async()=>({}) }; };
+    await runParser();
+    assert(!called, "fetch không được gọi khi input rỗng");
+  });
+  it("button disabled trong lúc chạy → enabled lại sau khi xong", async () => {
+    document.getElementById("parser-input").value = "test";
+    mockFetch();
+    await runParser();
+    assert(!document.getElementById("btn-parse").disabled, "Button phải được enable lại");
+  });
+  it("button text = 'Phân tích địa chỉ' sau khi xong", async () => {
+    document.getElementById("parser-input").value = "test";
+    mockFetch();
+    await runParser();
+    assertContains(document.getElementById("btn-parse").innerHTML, "Phân tích địa chỉ");
+  });
+  it("status text = 'Hoàn thành' sau khi 4 model xong", async () => {
+    document.getElementById("parser-input").value = "test";
+    mockFetch();
+    await runParser();
+    assertContains(document.getElementById("parser-status").textContent, "Hoàn thành");
+  });
+  it("parser-timing hiển thị (display:flex)", async () => {
+    document.getElementById("parser-input").value = "test";
+    mockFetch();
+    await runParser();
+    assertEqual(document.getElementById("parser-timing").style.display, "flex");
+  });
+  it("timing value là số kết thúc bằng 'ms'", async () => {
+    document.getElementById("parser-input").value = "test";
+    mockFetch();
+    await runParser();
+    assertContains(document.getElementById("parser-timing-val").textContent, "ms");
+  });
+  it("NER highlight tạo entity spans từ PreLabeler", async () => {
+    const input = document.getElementById("parser-input");
+    input.value = "123 Lê Lợi, Bến Thành, Quận 1, HCM";
+    input.dataset.sampleId = "";
+    mockFetch();
+    await runParser();
+    assert(document.querySelectorAll("#parser-output .ner-entity").length > 0, "Phải có NER spans");
+  });
+  it("4 card đều có class is-done", async () => {
+    document.getElementById("parser-input").value = "test";
+    mockFetch();
+    await runParser();
+    ["prelabeler","phobert","mgte","llm"].forEach(m =>
+      assert(document.getElementById(`pcard-${m}`).classList.contains("is-done"), `${m} chưa DONE`));
+  });
+  it("comparison summary tồn tại sau khi xong", async () => {
+    document.getElementById("parser-input").value = "test";
+    mockFetch();
+    await runParser();
+    assert(document.getElementById("parser-compare-summary"), "Thiếu comparison summary");
+  });
+  it("meta corpusSize = 10.000 được cập nhật", async () => {
+    document.getElementById("parser-input").value = "test";
+    mockFetch();
+    await runParser();
+    assertContains(document.getElementById("parser-meta").innerHTML, "10.000");
+  });
+  it("phobert HTTP 500 → pcard-phobert có is-error", async () => {
+    document.getElementById("parser-input").value = "test";
+    mockFetch({ phobert: { _status:500 } });
+    await runParser();
+    assert(document.getElementById("pcard-phobert").classList.contains("is-error"),
+      "phobert phải is-error khi HTTP 500");
+  });
+  it("phobert HTTP 500 → các model khác vẫn DONE", async () => {
+    document.getElementById("parser-input").value = "test";
+    mockFetch({ phobert: { _status:500 } });
+    await runParser();
+    ["prelabeler","mgte","llm"].forEach(m =>
+      assert(document.getElementById(`pcard-${m}`).classList.contains("is-done"),
+        `${m} phải DONE dù phobert lỗi`));
+  });
+  it("network error (throw) → card có is-error", async () => {
+    document.getElementById("parser-input").value = "test";
+    mockFetch({ prelabeler: { _throw:"Connection refused" } });
+    await runParser();
+    assert(document.getElementById("pcard-prelabeler").classList.contains("is-error"));
+  });
+  it("all models network error → không crash, status không rỗng", async () => {
+    document.getElementById("parser-input").value = "test";
+    window.fetch = async () => { throw new Error("offline"); };
+    await runParser();
+    assert(document.getElementById("parser-status").textContent.length > 0);
+  });
+  it("payload = { id:42 } khi có sampleId='42'", async () => {
+    const input = document.getElementById("parser-input");
+    input.value = "địa chỉ"; input.dataset.sampleId = "42";
+    let body = null;
+    window.fetch = async (url, opts) => {
+      body = JSON.parse(opts.body);
+      const key = ["prelabeler","phobert","mgte","llm"].find(k => url.includes(`model=${k}`));
+      return { ok:true, json:async()=>({ outputs:{ [key]:{ normalizedAddress:"x", score:0.9, latencyMs:10 } }, meta:{ corpusSize:1 } }) };
+    };
+    await runParser();
+    assert(body?.id === 42, `Payload phải có id=42, thấy: ${JSON.stringify(body)}`);
+    input.dataset.sampleId = "";
+  });
+  it("payload = { raw_address } khi không có sampleId", async () => {
+    const input = document.getElementById("parser-input");
+    input.value = "456 Nguyễn Trãi, Q5"; input.dataset.sampleId = "";
+    let body = null;
+    window.fetch = async (url, opts) => {
+      body = JSON.parse(opts.body);
+      const key = ["prelabeler","phobert","mgte","llm"].find(k => url.includes(`model=${k}`));
+      return { ok:true, json:async()=>({ outputs:{ [key]:{ normalizedAddress:"x", score:0.9, latencyMs:10 } }, meta:{ corpusSize:1 } }) };
+    };
+    await runParser();
+    assertEqual(body?.raw_address, "456 Nguyễn Trãi, Q5");
+  });
+  it("Authorization header được gửi", async () => {
+    document.getElementById("parser-input").value = "test auth";
+    let headers = null;
+    window.fetch = async (url, opts) => {
+      headers = opts.headers;
+      const key = ["prelabeler","phobert","mgte","llm"].find(k => url.includes(`model=${k}`));
+      return { ok:true, json:async()=>({ outputs:{ [key]:{ normalizedAddress:"x", score:0.9, latencyMs:10 } }, meta:{} }) };
+    };
+    await runParser();
+    assertContains(headers?.Authorization || "", "Bearer", "Thiếu Authorization header");
+  });
+  it("4 fetch calls gọi đúng endpoint /parser/analyze?model=*", async () => {
+    document.getElementById("parser-input").value = "test endpoint";
+    const called = new Set();
+    window.fetch = async (url, opts) => {
+      const key = ["prelabeler","phobert","mgte","llm"].find(k => url.includes(`model=${k}`));
+      if (key) called.add(key);
+      return { ok:true, json:async()=>({ outputs:{ [key]:{ normalizedAddress:"x", score:0.9, latencyMs:10 } }, meta:{} }) };
+    };
+    await runParser();
+    assertEqual(called.size, 4, `Phải gọi 4 model, thực tế: ${[...called]}`);
+    ["prelabeler","phobert","mgte","llm"].forEach(k => assert(called.has(k), `Thiếu call model=${k}`));
+  });
+  it("parser-compare-summary bị xóa trước mỗi lần chạy mới", async () => {
+    document.getElementById("parser-input").value = "test reset";
+    mockFetch();
+    await runParser(); // first run
+    assert(document.getElementById("parser-compare-summary"), "Summary phải có sau run 1");
+    await runParser(); // second run
+    assertEqual(document.querySelectorAll("#parser-compare-summary").length, 1, "Phải chỉ có 1 summary sau run 2");
+  });
+});
+
+// ── 14. Sample buttons ────────────────────────────────────────────
+describe("Nút mẫu — btn-parse-sample-local", () => {
+  // Wire up btn-parse-sample-local
+  (() => {
+    const btn = document.getElementById("btn-parse-sample-local");
+    const inp = document.getElementById("parser-input");
+    btn.addEventListener("click", () => {
+      inp.value = SAMPLE_ADDRESSES[Math.floor(Math.random() * SAMPLE_ADDRESSES.length)];
+      inp.dataset.sampleId = "";
+      runParser();
+    });
+  })();
+
+  it("click → input value là 1 trong SAMPLE_ADDRESSES", async () => {
+    mockFetch();
+    document.getElementById("btn-parse-sample-local").click();
+    await new Promise(r => setTimeout(r, 10));
+    const val = document.getElementById("parser-input").value;
+    assert(SAMPLE_ADDRESSES.includes(val), `Input phải là sample address, thấy: "${val}"`);
+  });
+  it("click → sampleId bị xóa", async () => {
+    document.getElementById("parser-input").dataset.sampleId = "99";
+    mockFetch();
+    document.getElementById("btn-parse-sample-local").click();
+    await new Promise(r => setTimeout(r, 10));
+    assertEqual(document.getElementById("parser-input").dataset.sampleId, "");
+  });
+  it("click → parse chạy (có NER output)", async () => {
+    mockFetch();
+    document.getElementById("btn-parse-sample-local").click();
+    await new Promise(r => setTimeout(r, 50));
+    // Status không còn là "Sẵn sàng" (parse đã chạy)
+    assertNotContains(document.getElementById("parser-status").textContent, "Sẵn sàng");
+  });
+});
+
+/* ══════════════════════════════════════════════════════════════════
+   6. RUNNER — async-first, single-pass
+   ══════════════════════════════════════════════════════════════════ */
+(async () => {
+  const t0 = performance.now();
+  let totalPass = 0, totalFail = 0, totalCount = 0;
+  const suiteEl = document.getElementById("suite");
+
+  for (const group of _groups) {
+    const groupEl = document.createElement("div");
+    groupEl.className = "grp";
+
+    const gTests = [];
+    for (const { name, fn } of group.tests) {
+      totalCount++;
+      let status = "pass", err = "";
+      try { await fn(); }
+      catch(e) { status = "fail"; err = e.message; }
+      gTests.push({ name, status, err });
+      if (status === "pass") totalPass++;
+      else totalFail++;
+
+      // Live progress
+      document.getElementById("s-pass").textContent  = totalPass;
+      document.getElementById("s-fail").textContent  = totalFail;
+      document.getElementById("s-total").textContent = totalCount;
+      const pct = totalCount / _groups.reduce((s,g)=>s+g.tests.length,0) * 100;
+      document.getElementById("progress-fill").style.width = pct + "%";
+      if (totalFail > 0) document.getElementById("progress-fill").style.background = "#f87171";
+      await new Promise(r => setTimeout(r, 0)); // yield to DOM
+    }
+
+    const gPass = gTests.filter(t => t.status === "pass").length;
+    const gFail = gTests.filter(t => t.status === "fail").length;
+    const titleEl = document.createElement("div");
+    titleEl.className = "gtitle";
+    titleEl.innerHTML = `${group.name}
+      <span class="gcnt">
+        <span class="pass">${gPass}✓</span>
+        ${gFail ? `<span class="fail"> ${gFail}✗</span>` : ""}
+      </span>`;
+    groupEl.appendChild(titleEl);
+
+    for (const t of gTests) {
+      const row = document.createElement("div");
+      row.className = "trow";
+      const icon = t.status === "pass" ? "✅" : "❌";
+      row.innerHTML = `<span class="ticon">${icon}</span>
+        <div>
+          <div class="tname">${t.name}</div>
+          ${t.err ? `<div class="terr">${t.err}</div>` : ""}
+        </div>`;
+      groupEl.appendChild(row);
+    }
+    suiteEl.appendChild(groupEl);
+  }
+
+  const elapsed = Math.round(performance.now() - t0);
+  document.getElementById("s-ms").textContent = elapsed + "ms";
+  document.getElementById("progress-fill").style.width = "100%";
+  if (totalFail === 0) {
+    document.getElementById("s-fail").style.color = "#475569";
+    document.getElementById("progress-fill").style.background = "#34d399";
+  }
+
+  console.log(`[Parser Tests] PASS=${totalPass} FAIL=${totalFail} TOTAL=${totalCount} (${elapsed}ms)`);
+})();
+</script>
+</body>
+</html>

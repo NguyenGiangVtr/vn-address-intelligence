@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 services/scd_sync.py
 ====================
@@ -24,7 +25,7 @@ import hashlib
 import json
 import uuid
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
 
 from sqlalchemy.orm import Session
 
@@ -52,14 +53,14 @@ _ID_FIELD_MAP = {
 }
 
 
-def _compute_checksum(data: dict, fields: list[str]) -> str:
+def _compute_checksum(data: dict, fields: List[str]) -> str:
     """Tính SHA-256 checksum từ các trường theo dõi thay đổi."""
     payload = {f: str(data.get(f, '')) for f in fields}
     raw = json.dumps(payload, sort_keys=True, ensure_ascii=False)
     return hashlib.sha256(raw.encode()).hexdigest()
 
 
-def _model_to_dict(obj, fields: list[str]) -> dict:
+def _model_to_dict(obj, fields: List[str]) -> dict:
     """Chuyển SQLAlchemy model object sang dict với các trường chỉ định."""
     return {f: getattr(obj, f, None) for f in fields}
 

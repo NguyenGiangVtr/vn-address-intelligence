@@ -29,6 +29,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 from sqlalchemy import text as sql_text
+from typing import Dict, List, Optional
 from app.core.database import engine
 
 logger = logging.getLogger("SeederV3")
@@ -43,7 +44,7 @@ NOW            = datetime.utcnow()
 # Nhiều ký tự bị mất thành '?' (0x3f) — không thể recover.
 # Các high-byte (>0x7f) còn lại có thể decode được theo bảng dưới.
 # Bảng được xây dựng bằng cách đối chiếu tên tỉnh/huyện/xã chuẩn vs raw bytes.
-_FONT_MAP: dict[int, str] = {
+_FONT_MAP: Dict[int, str] = {
     # Confirmed from province/district name alignment:
     0x82: '\u00e9',   # é  — Nhé, Lé, Chéng
     0x83: '\u00e2',   # â  — Châu, Tây, Lâm, Xuân, Tân
@@ -110,7 +111,7 @@ REL_TYPE_CODE = {
 }
 
 # Mapping note → relationship_type
-def _classify_note(note: str | None) -> str:
+def _classify_note(note: Optional[str]) -> str:
     """Phân loại note từ Excel/CSV để xác định kiểu quan hệ giữa đơn vị cũ và mới."""
     if not note or pd.isna(note):
         return "RETAINED"
@@ -163,7 +164,7 @@ def _classify_note(note: str | None) -> str:
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-def _extract_code(s: str | None) -> int | None:
+def _extract_code(s: Optional[str]) -> Optional[int]:
     """Trích mã số từ chuỗi dạng 'Tên đơn vị (012)' → 12."""
     if not s or pd.isna(s):
         return None
@@ -171,7 +172,7 @@ def _extract_code(s: str | None) -> int | None:
     return int(m.group(1)) if m else None
 
 
-def _extract_name(s: str | None) -> str | None:
+def _extract_name(s: Optional[str]) -> Optional[str]:
     """Bỏ phần '(code)' ở cuối, strip whitespace/newline."""
     if not s or pd.isna(s):
         return None
@@ -222,7 +223,7 @@ def remove_vietnamese_marks(s, strip_prefix=True):
     return s
 
 
-def _extract_type(name: str | None) -> str:
+def _extract_type(name: Optional[str]) -> str:
     """Đoán type_name từ prefix tên đơn vị (cp850-decoded strings)."""
     if not name:
         return ""
@@ -656,10 +657,10 @@ def seed_ward_mapping_v3(df: pd.DataFrame):
 # ── Utilities ─────────────────────────────────────────────────────────────────
 
 def _upsert_batch(
-    records: list[dict],
+    records: List[dict],
     table: str,
     pk_col: str,
-    update_cols: list[str],
+    update_cols: List[str],
     chunk_size: int = 500,
 ):
     """UPSERT batch với ON CONFLICT DO UPDATE."""
@@ -685,7 +686,7 @@ def _upsert_batch(
                 raise
 
 
-def _insert_batch(records: list[dict], table: str, chunk_size: int = 1000):
+def _insert_batch(records: List[dict], table: str, chunk_size: int = 1000):
     """INSERT batch, bỏ qua conflict (ward_mapping không có PK tự nhiên)."""
     if not records:
         return

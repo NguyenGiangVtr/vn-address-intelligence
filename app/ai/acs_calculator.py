@@ -19,7 +19,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field, asdict
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -209,7 +209,7 @@ class ACSCalculator:
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
-def _tokenize(text: str) -> list[str]:
+def _tokenize(text: str) -> List[str]:
     """Tách từ đơn giản: lowercase + loại bỏ dấu câu."""
     import re
     return re.sub(r"[^\w\s]", " ", text.lower()).split()

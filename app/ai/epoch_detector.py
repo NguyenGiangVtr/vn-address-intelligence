@@ -14,7 +14,7 @@ from __future__ import annotations
 import logging
 import re
 from dataclasses import dataclass
-from typing import Optional, List
+from typing import List, Optional, Set
 
 logger = logging.getLogger(__name__)
 
@@ -75,8 +75,8 @@ class EpochDetector:
 
     def __init__(self, db_session=None):
         self._db = db_session
-        self._pre_unit_names: set[str] = set()
-        self._post_unit_names: set[str] = set()
+        self._pre_unit_names: Set[str] = set()
+        self._post_unit_names: Set[str] = set()
         self._loaded = False
 
     def load_from_db(self):

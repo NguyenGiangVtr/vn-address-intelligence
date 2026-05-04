@@ -13,6 +13,7 @@ import argparse
 import logging
 import sys
 from pathlib import Path
+from typing import Dict
 
 import pandas as pd
 import yaml
@@ -49,7 +50,7 @@ def _has_ground_truth(df: pd.DataFrame) -> bool:
     return "standard_address" in df.columns and df["standard_address"].notna().any()
 
 
-def _build_benchmark_snapshot(all_metrics: dict) -> dict[str, dict]:
+def _build_benchmark_snapshot(all_metrics: Dict) -> Dict[str, Dict]:
     """Convert raw experiment metrics into dashboard baseline rows."""
     hourly_cost = {
         "phobert": 0.85,
@@ -62,7 +63,7 @@ def _build_benchmark_snapshot(all_metrics: dict) -> dict[str, dict]:
         "llm": "LLM (Qwen3)",
     }
 
-    snapshot: dict[str, dict] = {}
+    snapshot: Dict[str, Dict] = {}
     for model_key, metric_name in (("phobert", "PhoBERT"), ("siamese", "mGTE"), ("llm", "LLM")):
         metric = all_metrics.get(metric_name)
         if not metric:

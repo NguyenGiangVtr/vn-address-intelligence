@@ -23,7 +23,7 @@ import sys
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict, List, Optional
 
 from sqlalchemy import func
 
@@ -55,8 +55,8 @@ class TrainingHistoryRow:
     f1_score: float
     loss: float
     samples_count: int
-    created_at: str | None
-    notes: str | None
+    created_at: Optional[str]
+    notes: Optional[str]
     source: str
 
 
@@ -69,7 +69,7 @@ class BenchmarkBaselineRow:
     cost_per_million: float
     google_match: float
     sample_size: int
-    notes: str | None
+    notes: Optional[str]
     source: str
 
 
@@ -81,7 +81,7 @@ class InventoryRow:
     source: str
 
 
-def _dt_to_str(value: Any) -> str | None:
+def _dt_to_str(value: Any) -> Optional[str]:
     if value is None:
         return None
     if isinstance(value, datetime):
@@ -89,7 +89,7 @@ def _dt_to_str(value: Any) -> str | None:
     return str(value)
 
 
-def _write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
+def _write_csv(path: Path, rows: List[Dict[str, Any]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=list(rows[0].keys()))
@@ -107,7 +107,7 @@ class EvidenceGenerator:
         seed_training_metadata()
         return SessionLocal()
 
-    def fetch_training_history(self) -> list[TrainingHistoryRow]:
+    def fetch_training_history(self) -> List[TrainingHistoryRow]:
         session = self._open_session()
         try:
             rows = (
@@ -131,7 +131,7 @@ class EvidenceGenerator:
         finally:
             session.close()
 
-    def fetch_benchmark_baselines(self) -> list[BenchmarkBaselineRow]:
+    def fetch_benchmark_baselines(self) -> List[BenchmarkBaselineRow]:
         session = self._open_session()
         try:
             rows = session.query(BenchmarkModelBaseline).order_by(BenchmarkModelBaseline.id.asc()).all()
@@ -152,10 +152,10 @@ class EvidenceGenerator:
         finally:
             session.close()
 
-    def fetch_inventory(self) -> list[InventoryRow]:
+    def fetch_inventory(self) -> List[InventoryRow]:
         session = self._open_session()
         try:
-            inventory: list[InventoryRow] = []
+            inventory: List[InventoryRow] = []
 
             training_total = session.query(TrainingDataset).count()
             inventory.append(
@@ -213,12 +213,12 @@ class EvidenceGenerator:
         finally:
             session.close()
 
-    def fetch_ward_mapping_sample(self) -> list[dict[str, Any]]:
+    def fetch_ward_mapping_sample(self) -> List[Dict[str, Any]]:
         sample_path = PROJECT_ROOT / "evidence" / "ward_mapping_2025_samples.csv"
         if not sample_path.exists():
             raise FileNotFoundError(f"Ward mapping sample not found: {sample_path}")
 
-        normalized_rows: list[dict[str, Any]] = []
+        normalized_rows: List[Dict[str, Any]] = []
         with sample_path.open("r", encoding="utf-8") as handle:
             for row in csv.DictReader(handle):
                 summary = row.get("updated_note") or ""
@@ -231,7 +231,7 @@ class EvidenceGenerator:
                 })
         return normalized_rows
 
-    def generate_phobert_training_evidence(self) -> list[TrainingHistoryRow]:
+    def generate_phobert_training_evidence(self) -> List[TrainingHistoryRow]:
         logger.info("Fetching real training history from ath.training_history...")
         rows = self.fetch_training_history()
         if not rows:
@@ -242,7 +242,7 @@ class EvidenceGenerator:
         logger.info("Saved training history: %s", csv_path)
         return rows
 
-    def generate_benchmark_evidence(self) -> list[BenchmarkBaselineRow]:
+    def generate_benchmark_evidence(self) -> List[BenchmarkBaselineRow]:
         logger.info("Fetching real benchmark baselines from ath.benchmark_model_baselines...")
         rows = self.fetch_benchmark_baselines()
         if not rows:
@@ -253,7 +253,7 @@ class EvidenceGenerator:
         logger.info("Saved benchmark baselines: %s", csv_path)
         return rows
 
-    def generate_inventory_evidence(self) -> list[InventoryRow]:
+    def generate_inventory_evidence(self) -> List[InventoryRow]:
         logger.info("Fetching real inventory counts from ath.training_datasets and prq.address_cleansing_queue...")
         rows = self.fetch_inventory()
         csv_path = self.output_dir / f"data_inventory_{self.timestamp}.csv"
@@ -261,7 +261,7 @@ class EvidenceGenerator:
         logger.info("Saved inventory evidence: %s", csv_path)
         return rows
 
-    def generate_ward_mapping_evidence(self) -> list[dict[str, Any]]:
+    def generate_ward_mapping_evidence(self) -> List[Dict[str, Any]]:
         logger.info("Loading real ward mapping sample evidence...")
         rows = self.fetch_ward_mapping_sample()
         csv_path = self.output_dir / f"ward_mapping_sample_{self.timestamp}.csv"
@@ -271,10 +271,10 @@ class EvidenceGenerator:
 
     def _render_summary_markdown(
         self,
-        training_rows: list[TrainingHistoryRow],
-        benchmark_rows: list[BenchmarkBaselineRow],
-        inventory_rows: list[InventoryRow],
-        ward_rows: list[dict[str, Any]],
+        training_rows: List[TrainingHistoryRow],
+        benchmark_rows: List[BenchmarkBaselineRow],
+        inventory_rows: List[InventoryRow],
+        ward_rows: List[Dict[str, Any]],
     ) -> str:
         latest_training = training_rows[-1]
         benchmark_by_key = {row.model_key: row for row in benchmark_rows}
@@ -378,10 +378,10 @@ class EvidenceGenerator:
 
     def _render_html_report(
         self,
-        training_rows: list[TrainingHistoryRow],
-        benchmark_rows: list[BenchmarkBaselineRow],
-        inventory_rows: list[InventoryRow],
-        ward_rows: list[dict[str, Any]],
+        training_rows: List[TrainingHistoryRow],
+        benchmark_rows: List[BenchmarkBaselineRow],
+        inventory_rows: List[InventoryRow],
+        ward_rows: List[Dict[str, Any]],
     ) -> str:
         latest_training = training_rows[-1]
         benchmark_lookup = {row.model_key: row for row in benchmark_rows}
@@ -482,7 +482,7 @@ th {{ background: #e8eefc; }}
 </body>
 </html>"""
 
-    def build(self) -> dict[str, Path]:
+    def build(self) -> Dict[str, Path]:
         logger.info("Starting real evidence generation")
         training_rows = self.generate_phobert_training_evidence()
         benchmark_rows = self.generate_benchmark_evidence()
