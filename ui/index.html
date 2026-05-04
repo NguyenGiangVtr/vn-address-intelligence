@@ -23,76 +23,110 @@
                 <h1>VNAI <span>SaaS</span></h1>
             </div>
 
-            <div class="nav-section">
-                <div class="nav-section-title">Hệ thống</div>
-            </div>
-            <nav class="nav-menu">
+            <nav class="nav-menu" id="main-nav">
+                <!-- ── Tổng quan ── -->
                 <a href="#" class="nav-item active" data-page="overview">
-                    <i class="fa-solid fa-house"></i> Tổng quan
+                    <i class="fa-solid fa-house"></i>
+                    <span>Tổng quan</span>
                 </a>
 
                 <div class="nav-divider"></div>
-                <div class="nav-section">
-                    <div class="nav-section-title">Bước 1: Nhập dữ liệu</div>
+
+                <!-- ── Group: Đồng bộ hành chính (BR1) ── -->
+                <button class="nav-group-toggle" data-group="gov-sync">
+                    <span class="nav-group-icon"><i class="fa-solid fa-rotate"></i></span>
+                    <span class="nav-group-label">Đồng bộ hành chính</span>
+                    <i class="fa-solid fa-chevron-down nav-chevron"></i>
+                </button>
+                <div class="nav-group-items" id="group-gov-sync">
+                    <a href="#" class="nav-item nav-sub" data-page="nso-sync">
+                        <i class="fa-solid fa-cloud-arrow-down"></i>
+                        <span>Đồng bộ NSO / Gov</span>
+                    </a>
+                    <a href="#" class="nav-item nav-sub" data-page="admin-units">
+                        <i class="fa-solid fa-building-user"></i>
+                        <span>Quản lý ĐVHC</span>
+                    </a>
                 </div>
-                <a href="#" class="nav-item" data-page="batch">
-                    <i class="fa-solid fa-layer-group"></i> Xử lý hàng loạt
-                </a>
-                <a href="#" class="nav-item" data-page="nso-sync">
-                    <i class="fa-solid fa-cloud-arrow-down"></i> Đồng bộ NSO
-                </a>
+
+                <!-- ── Group: Nhập & Xử lý địa chỉ (BR2) ── -->
+                <button class="nav-group-toggle" data-group="address-processing">
+                    <span class="nav-group-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
+                    <span class="nav-group-label">Chuẩn hóa địa chỉ</span>
+                    <i class="fa-solid fa-chevron-down nav-chevron"></i>
+                </button>
+                <div class="nav-group-items" id="group-address-processing">
+                    <a href="#" class="nav-item nav-sub" data-page="parser">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i>
+                        <span>Phân tích địa chỉ</span>
+                    </a>
+                    <a href="#" class="nav-item nav-sub" data-page="batch">
+                        <i class="fa-solid fa-layer-group"></i>
+                        <span>Xử lý hàng loạt</span>
+                    </a>
+                    <a href="#" class="nav-item nav-sub" data-page="explorer">
+                        <i class="fa-solid fa-database"></i>
+                        <span>Khám phá hàng đợi</span>
+                    </a>
+                </div>
+
+                <!-- ── Group: Tra cứu & Không gian (BR3, BR4) ── -->
+                <button class="nav-group-toggle" data-group="spatial">
+                    <span class="nav-group-icon"><i class="fa-solid fa-map-location-dot"></i></span>
+                    <span class="nav-group-label">Tra cứu & Không gian</span>
+                    <i class="fa-solid fa-chevron-down nav-chevron"></i>
+                </button>
+                <div class="nav-group-items" id="group-spatial">
+                    <a href="#" class="nav-item nav-sub" data-page="lookup">
+                        <i class="fa-solid fa-arrow-right-arrow-left"></i>
+                        <span>Chuyển đổi ĐVHC</span>
+                    </a>
+                    <a href="#" class="nav-item nav-sub" data-page="boundary-visualization">
+                        <i class="fa-solid fa-border-all"></i>
+                        <span>Ranh giới hành chính</span>
+                    </a>
+                </div>
+
+                <!-- ── Group: Làm giàu dữ liệu (BR5) ── -->
+                <button class="nav-group-toggle" data-group="enrichment">
+                    <span class="nav-group-icon"><i class="fa-solid fa-seedling"></i></span>
+                    <span class="nav-group-label">Làm giàu dữ liệu</span>
+                    <i class="fa-solid fa-chevron-down nav-chevron"></i>
+                </button>
+                <div class="nav-group-items" id="group-enrichment">
+                    <a href="#" class="nav-item nav-sub" data-page="osm-enrichment">
+                        <i class="fa-solid fa-map"></i>
+                        <span>Làm giàu OSM</span>
+                    </a>
+                </div>
+
+                <!-- ── Group: AI & Benchmark (BR6) ── -->
+                <button class="nav-group-toggle" data-group="ai-bench">
+                    <span class="nav-group-icon"><i class="fa-solid fa-brain"></i></span>
+                    <span class="nav-group-label">AI & Benchmark</span>
+                    <i class="fa-solid fa-chevron-down nav-chevron"></i>
+                </button>
+                <div class="nav-group-items" id="group-ai-bench">
+                    <a href="#" class="nav-item nav-sub" data-page="label-studio">
+                        <i class="fa-solid fa-tags"></i>
+                        <span>Nhãn dữ liệu</span>
+                    </a>
+                    <a href="#" class="nav-item nav-sub" data-page="training">
+                        <i class="fa-solid fa-microchip"></i>
+                        <span>Huấn luyện mô hình</span>
+                    </a>
+                    <a href="#" class="nav-item nav-sub" data-page="experiments">
+                        <i class="fa-solid fa-flask-vial"></i>
+                        <span>So sánh mô hình</span>
+                    </a>
+                </div>
 
                 <div class="nav-divider"></div>
-                <div class="nav-section">
-                    <div class="nav-section-title">Bước 2: Chuẩn hóa & Xử lý</div>
-                </div>
-                <a href="#" class="nav-item" data-page="parser">
-                    <i class="fa-solid fa-wand-magic-sparkles"></i> Phân tích địa chỉ
-                </a>
-                <a href="#" class="nav-item" data-page="explorer">
-                    <i class="fa-solid fa-database"></i> Khám phá dữ liệu
-                </a>
 
-                <div class="nav-divider"></div>
-                <div class="nav-section">
-                    <div class="nav-section-title">Bước 3: Huấn luyện AI</div>
-                </div>
-                <a href="#" class="nav-item" data-page="label-studio">
-                    <i class="fa-solid fa-tags"></i> Nhãn dữ liệu
-                </a>
-                <a href="#" class="nav-item" data-page="training">
-                    <i class="fa-solid fa-brain"></i> Trung tâm huấn luyện
-                </a>
-                <a href="#" class="nav-item" data-page="experiments">
-                    <i class="fa-solid fa-flask-vial"></i> So sánh mô hình
-                </a>
-
-                <div class="nav-divider"></div>
-                <div class="nav-section">
-                    <div class="nav-section-title">Tra cứu & Chuyển đổi</div>
-                </div>
-                <a href="#" class="nav-item" data-page="lookup">
-                    <i class="fa-solid fa-map-location-dot"></i> Chuyển đổi ĐVHC
-                </a>
-                <a href="#" class="nav-item" data-page="boundary-visualization">
-                    <i class="fa-solid fa-border-all"></i> Ranh giới hành chính
-                </a>
-                <a href="#" class="nav-item" data-page="evidence">
-                    <i class="fa-solid fa-file-lines"></i> Evidence Report
-                </a>
-
-                <div class="nav-divider"></div>
-                <div class="nav-section">
-                    <div class="nav-section-title">Quản lý</div>
-                </div>
-                <a href="#" class="nav-item" data-page="admin-units">
-                    <i class="fa-solid fa-building-user"></i> Quản lý ĐVHC
-                </a>
-                <a href="#" class="nav-item" data-page="osm-enrichment">
-                    <i class="fa-solid fa-tractor"></i> Làm giàu dữ liệu OSM
-                </a>
+                <!-- ── Cài đặt ── -->
                 <a href="#" class="nav-item" data-page="settings">
-                    <i class="fa-solid fa-gear"></i> Cài đặt
+                    <i class="fa-solid fa-gear"></i>
+                    <span>Cài đặt</span>
                 </a>
             </nav>
 

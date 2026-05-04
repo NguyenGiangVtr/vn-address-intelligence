@@ -2,9 +2,52 @@
    VN Address Intelligence — SaaS App Logic
    ══════════════════════════════════════════════════════════════ */
 
-const API_BASE = window.location.hostname === "localhost" || window.location.protocol === "file:"
+const DEFAULT_API_BASE = window.location.hostname === "localhost" || window.location.protocol === "file:"
   ? "http://localhost:8081/api"
   : "/api";
+
+const UI_SETTINGS_STORAGE_KEY = 'vnai_ui_settings_v1';
+const VALID_THEMES = new Set(['dark', 'light', 'oled-black']);
+const VALID_MOTION_MODES = new Set(['smooth', 'fast', 'off']);
+
+function normalizeApiBase(url) {
+  const raw = String(url || '').trim();
+  if (!raw) return DEFAULT_API_BASE;
+  return raw.replace(/\/+$/, '');
+}
+
+function loadUISettings() {
+  try {
+    const raw = localStorage.getItem(UI_SETTINGS_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch (_err) {
+    return {};
+  }
+}
+
+function saveUISettings(settings) {
+  localStorage.setItem(UI_SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+}
+
+function resolveTheme(theme) {
+  return VALID_THEMES.has(theme) ? theme : 'dark';
+}
+
+function resolveMotionMode(mode) {
+  return VALID_MOTION_MODES.has(mode) ? mode : 'smooth';
+}
+
+function applyVisualSettings(settings) {
+  const theme = resolveTheme(settings?.theme);
+  const motion = resolveMotionMode(settings?.animations);
+  document.documentElement.setAttribute('data-theme', theme);
+  document.documentElement.setAttribute('data-motion', motion);
+}
+
+let API_BASE = normalizeApiBase(loadUISettings().apiBaseUrl);
+applyVisualSettings(loadUISettings());
 
 const PAGES = [
   "overview", "parser", "batch", "training", "label-studio",
@@ -234,6 +277,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   safeInit("initEvidenceView", initEvidenceView);
   safeInit("initTrainingHub", initTrainingHub);
   safeInit("initBoundaryVisualizationUI", initBoundaryVisualizationUI);
+  safeInit("initSettingsPage", initSettingsPage);
 
   document.getElementById('btn-logout')?.addEventListener('click', async () => {
     const confirmed = !showConfirm ? true : await showConfirm('Bạn có chắc chắn muốn đăng xuất?');
@@ -246,6 +290,128 @@ document.addEventListener("DOMContentLoaded", async () => {
   setInterval(fetchStats, 30000);
   loadTrainingHistoryFromDB({ silent: true });
 });
+
+function getSettingsFormData() {
+  const settingsPage = document.getElementById('settings');
+  if (!settingsPage) return null;
+
+  const env = {};
+  settingsPage.querySelectorAll('[data-env-key]').forEach((input) => {
+    const key = input.getAttribute('data-env-key');
+    if (!key) return;
+    env[key] = input.value.trim();
+  });
+
+  const apiInput = document.getElementById('cfg-api-url');
+  const themeSelect = document.getElementById('cfg-theme');
+  const motionSelect = document.getElementById('cfg-animations');
+
+  return {
+    apiBaseUrl: normalizeApiBase(apiInput?.value),
+    theme: resolveTheme(themeSelect?.value),
+    animations: resolveMotionMode(motionSelect?.value),
+    env,
+  };
+}
+
+function populateSettingsForm() {
+  const settingsPage = document.getElementById('settings');
+  if (!settingsPage) return;
+
+  const stored = loadUISettings();
+  const env = stored?.env && typeof stored.env === 'object' ? stored.env : {};
+
+  const apiInput = document.getElementById('cfg-api-url');
+  const themeSelect = document.getElementById('cfg-theme');
+  const motionSelect = document.getElementById('cfg-animations');
+
+  if (apiInput) {
+    apiInput.value = normalizeApiBase(stored.apiBaseUrl || API_BASE || DEFAULT_API_BASE);
+  }
+  if (themeSelect) {
+    themeSelect.value = resolveTheme(stored.theme);
+  }
+  if (motionSelect) {
+    motionSelect.value = resolveMotionMode(stored.animations);
+  }
+
+  settingsPage.querySelectorAll('[data-env-key]').forEach((input) => {
+    const key = input.getAttribute('data-env-key');
+    if (!key) return;
+    input.value = typeof env[key] === 'string' ? env[key] : '';
+  });
+}
+
+async function testLabelStudioConnectionFromSettings(buttonNode) {
+  if (!buttonNode) return;
+  const original = buttonNode.innerHTML;
+  buttonNode.disabled = true;
+  buttonNode.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang kiểm tra...';
+
+  try {
+    const response = await fetch(`${API_BASE}/label-studio/debug`, {
+      headers: getAuthHeader()
+    });
+    const result = await response.json();
+
+    if (result.status === 'success') {
+      showToast(result.message || 'Kết nối Label Studio thành công', 'success');
+    } else {
+      showToast(result.message || 'Kết nối Label Studio thất bại', 'danger');
+    }
+  } catch (_err) {
+    showToast('Không thể kết nối tới API server', 'danger');
+  } finally {
+    buttonNode.disabled = false;
+    buttonNode.innerHTML = original;
+  }
+}
+
+function initSettingsPage() {
+  const settingsPage = document.getElementById('settings');
+  if (!settingsPage) return;
+
+  populateSettingsForm();
+
+  const saveBtn = document.getElementById('btn-settings-save');
+  const testLsBtn = document.getElementById('btn-settings-ls-test');
+  const themeSelect = document.getElementById('cfg-theme');
+  const motionSelect = document.getElementById('cfg-animations');
+
+  if (themeSelect) {
+    themeSelect.addEventListener('change', () => {
+      const current = loadUISettings();
+      current.theme = resolveTheme(themeSelect.value);
+      saveUISettings(current);
+      applyVisualSettings(current);
+    });
+  }
+
+  if (motionSelect) {
+    motionSelect.addEventListener('change', () => {
+      const current = loadUISettings();
+      current.animations = resolveMotionMode(motionSelect.value);
+      saveUISettings(current);
+      applyVisualSettings(current);
+    });
+  }
+
+  if (testLsBtn) {
+    testLsBtn.addEventListener('click', () => testLabelStudioConnectionFromSettings(testLsBtn));
+  }
+
+  if (saveBtn) {
+    saveBtn.addEventListener('click', () => {
+      const formData = getSettingsFormData();
+      if (!formData) return;
+
+      saveUISettings(formData);
+      API_BASE = formData.apiBaseUrl;
+      applyVisualSettings(formData);
+      showToast('Đã lưu cấu hình Settings trên trình duyệt', 'success');
+    });
+  }
+}
 
 function setDashboardRefreshState(isLoading) {
   const btn = document.getElementById('btn-dashboard-refresh');
@@ -995,6 +1161,52 @@ async function initOSMEnrichmentUI() {
 // ═══════════════════════════════════════════════════════════
 // NAVIGATION
 // ═══════════════════════════════════════════════════════════
+
+/** Map each data-page value → its parent group id */
+const PAGE_GROUP_MAP = {
+  'nso-sync':               'gov-sync',
+  'admin-units':            'gov-sync',
+  'parser':                 'address-processing',
+  'batch':                  'address-processing',
+  'explorer':               'address-processing',
+  'lookup':                 'spatial',
+  'boundary-visualization': 'spatial',
+  'osm-enrichment':         'enrichment',
+  'label-studio':           'ai-bench',
+  'training':               'ai-bench',
+  'experiments':            'ai-bench',
+};
+
+function openNavGroup(groupId) {
+  const btn   = document.querySelector(`.nav-group-toggle[data-group="${groupId}"]`);
+  const panel = document.getElementById(`group-${groupId}`);
+  if (!btn || !panel) return;
+  btn.classList.add('open');
+  panel.classList.add('open');
+}
+
+function closeNavGroup(groupId) {
+  const btn   = document.querySelector(`.nav-group-toggle[data-group="${groupId}"]`);
+  const panel = document.getElementById(`group-${groupId}`);
+  if (!btn || !panel) return;
+  btn.classList.remove('open');
+  panel.classList.remove('open');
+}
+
+function setupNavGroupToggles() {
+  document.querySelectorAll('.nav-group-toggle').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const groupId = btn.getAttribute('data-group');
+      const isOpen  = btn.classList.contains('open');
+      if (isOpen) {
+        closeNavGroup(groupId);
+      } else {
+        openNavGroup(groupId);
+      }
+    });
+  });
+}
+
 function setupNavigation() {
   const navItems = document.querySelectorAll(".nav-item");
   const pages = document.querySelectorAll(".page");
@@ -1020,6 +1232,14 @@ function setupNavigation() {
 
   if (overlay) overlay.addEventListener("click", closeMobileMenu);
 
+  // Setup collapsible group buttons
+  setupNavGroupToggles();
+
+  // Auto-open all groups by default
+  document.querySelectorAll('.nav-group-toggle[data-group]').forEach(btn => {
+    openNavGroup(btn.getAttribute('data-group'));
+  });
+
   navItems.forEach(item => {
     item.addEventListener("click", (e) => {
       e.preventDefault();
@@ -1028,7 +1248,14 @@ function setupNavigation() {
 
       const targetId = item.getAttribute("data-page");
       pages.forEach(p => p.classList.toggle("active", p.id === targetId));
-      titleEl.textContent = item.textContent.trim();
+
+      // Use span text if available, else full text
+      const spanEl = item.querySelector('span');
+      titleEl.textContent = (spanEl ? spanEl.textContent : item.textContent).trim();
+
+      // Open parent group if navigating to a sub-item
+      const group = PAGE_GROUP_MAP[targetId];
+      if (group) openNavGroup(group);
 
       // UX: Scroll to top when page changes
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1039,6 +1266,12 @@ function setupNavigation() {
 
       // Calculate layout height after page transition
       setTimeout(adjustActivePageHeight, 350);
+
+      // Refresh parser model status when navigating to parser page
+      if (targetId === "parser") {
+        if (_parserStatusPollTimer) clearTimeout(_parserStatusPollTimer);
+        _pollParserModelStatus();
+      }
     });
   });
 
@@ -1148,6 +1381,113 @@ function populateLabelRegistry() {
 // ═══════════════════════════════════════════════════════════
 // ADDRESS PARSER TOOL
 // ═══════════════════════════════════════════════════════════
+
+// Model status polling
+let _parserStatusPollTimer = null;
+
+function _updateParserModelStatusBar(status) {
+  const bar = document.getElementById("parser-model-status-bar");
+  const dot = document.getElementById("pmsb-dot");
+  const text = document.getElementById("pmsb-text");
+  const chips = document.getElementById("pmsb-chips");
+  const reloadBtn = document.getElementById("pmsb-reload-btn");
+  if (!bar) return;
+
+  const MODEL_LABELS = {
+    prelabeler: "PreLabeler",
+    phobert: "PhoBERT",
+    mgte: "mGTE",
+    llm: "Qwen LLM",
+  };
+  const ALL_AI_MODELS = ["phobert", "mgte", "llm"];
+
+  const loaded = new Set(status.loadedModels || []);
+  const errors = status.errors || {};
+
+  // Update dot
+  if (dot) {
+    dot.className = `pmsb-dot ${status.status}`;
+  }
+
+  // Update text
+  if (text) {
+    const statusLabels = {
+      idle: "Model AI chưa được nạp — nhấn Tải model để bắt đầu",
+      loading: `Đang nạp model AI vào bộ nhớ... (${status.loadedModels?.length || 0}/3 hoàn thành)`,
+      ready: `Model sẵn sàng — ${status.loadedModels?.length || 0}/3 model AI đã nạp${status.corpusSize ? `, ${status.corpusSize.toLocaleString()} địa chỉ corpus` : ""}`,
+      error: "Một số model không thể nạp — xem chi tiết bên dưới",
+    };
+    text.textContent = statusLabels[status.status] || status.status;
+  }
+
+  // Render chips
+  if (chips) {
+    let html = "";
+    ALL_AI_MODELS.forEach(key => {
+      const lbl = MODEL_LABELS[key] || key;
+      if (loaded.has(key)) {
+        html += `<span class="pmsb-chip loaded" title="${lbl} sẵn sàng">${lbl} ✓</span>`;
+      } else if (errors[key]) {
+        const shortErr = errors[key].length > 60 ? errors[key].slice(0, 60) + "…" : errors[key];
+        html += `<span class="pmsb-chip failed" title="${shortErr}">${lbl} ✗</span>`;
+      } else if (status.status === "loading") {
+        html += `<span class="pmsb-chip loading" title="Đang nạp...">${lbl} ⏳</span>`;
+      } else {
+        html += `<span class="pmsb-chip failed" title="Chưa nạp">${lbl} —</span>`;
+      }
+    });
+    chips.innerHTML = html;
+  }
+
+  // Show/hide reload button
+  if (reloadBtn) {
+    const isLoading = status.status === "loading";
+    reloadBtn.disabled = isLoading;
+    reloadBtn.innerHTML = isLoading
+      ? '<i class="fa-solid fa-spinner fa-spin"></i> Đang nạp...'
+      : '<i class="fa-solid fa-rotate-right"></i> Tải model';
+  }
+}
+
+async function _pollParserModelStatus() {
+  try {
+    const res = await fetch(`${API_BASE}/parser/status`, { headers: getAuthHeader() });
+    if (!res.ok) return;
+    const data = await res.json();
+    _updateParserModelStatusBar(data);
+
+    // Keep polling while loading
+    if (data.status === "loading") {
+      _parserStatusPollTimer = setTimeout(_pollParserModelStatus, 3000);
+    } else {
+      _parserStatusPollTimer = null;
+    }
+  } catch (_) {
+    // Silently ignore — server might be starting up
+  }
+}
+
+async function _reloadParserModels() {
+  const btn = document.getElementById("pmsb-reload-btn");
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang nạp...'; }
+
+  try {
+    const res = await fetch(`${API_BASE}/parser/reload`, {
+      method: "POST",
+      headers: { ...getAuthHeader(), "Content-Type": "application/json" },
+    });
+    const data = await res.json();
+    if (showToast) showToast(data.message || "Đã kích hoạt tải model", "info");
+  } catch (err) {
+    if (showToast) showToast("Không thể kích hoạt tải model: " + err.message, "danger");
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-rotate-right"></i> Tải model'; }
+  } finally {
+    // Start polling to reflect updated state
+    if (_parserStatusPollTimer) clearTimeout(_parserStatusPollTimer);
+    _parserStatusPollTimer = setTimeout(_pollParserModelStatus, 1500);
+  }
+}
+
 function setupParserTool() {
   const btnParse = document.getElementById("btn-parse");
   const btnSampleLocal = document.getElementById("btn-parse-sample-local");
@@ -1193,8 +1533,15 @@ function setupParserTool() {
     autoResizeInput();
   });
 
+  // Wire up reload button
+  const reloadBtn = document.getElementById("pmsb-reload-btn");
+  if (reloadBtn) reloadBtn.addEventListener("click", _reloadParserModels);
+
   // Build NER legend once
   _buildParserNERLegend();
+
+  // Poll model status on page open
+  _pollParserModelStatus();
 }
 
 function _buildParserNERLegend() {
@@ -1510,12 +1857,19 @@ function _renderParserCompareSummary() {
 function _updateParserMeta(meta) {
   const el = document.getElementById("parser-meta");
   if (!el) return;
-  const corpus = meta.corpusSize ? `<strong>${meta.corpusSize.toLocaleString()}</strong> địa chỉ trong corpus` : "";
-  const note = meta.note ? `<span style="color:var(--warning)"><i class="fa-solid fa-triangle-exclamation"></i> ${meta.note}</span>` : "";
-  el.innerHTML = [
-    corpus && `<i class="fa-solid fa-database" style="color:var(--text-tertiary);font-size:11px"></i><span class="text-tertiary" style="font-size:12px">${corpus}</span>`,
-    note
-  ].filter(Boolean).join("") || el.innerHTML;
+  const parts = [];
+  if (meta.corpusSize) {
+    parts.push(`<i class="fa-solid fa-database" style="color:var(--text-tertiary);font-size:11px"></i><span class="text-tertiary" style="font-size:12px"><strong>${meta.corpusSize.toLocaleString()}</strong> địa chỉ trong corpus</span>`);
+  }
+  if (meta._acs) {
+    const acs = meta._acs;
+    const scoreColor = acs.acs_score >= 0.8 ? "var(--success)" : acs.acs_score >= 0.5 ? "var(--warning)" : "var(--danger)";
+    parts.push(`<span style="font-size:11px;color:var(--text-secondary)">ACS <strong style="color:${scoreColor}">${(acs.acs_score * 100).toFixed(1)}%</strong> · ${acs.acs_decision || ""}</span>`);
+    if (acs.address_epoch) {
+      parts.push(`<span style="font-size:11px;color:var(--text-tertiary)">Epoch: ${acs.address_epoch}</span>`);
+    }
+  }
+  if (parts.length) el.innerHTML = parts.join('<span style="color:var(--border-default);margin:0 6px">·</span>');
 }
 
 function renderNERHighlight(entities) {

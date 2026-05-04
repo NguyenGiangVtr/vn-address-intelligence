@@ -61,6 +61,12 @@ app = FastAPI(
     redoc_url="/api/redoc"
 )
 
+
+@app.on_event("startup")
+async def on_startup():
+    """Pre-load AI models in background so the first analyze request is fast."""
+    _start_background_model_loading()
+
 # Use APIRouter for cleaner route management
 api_router = APIRouter()
 
@@ -141,6 +147,13 @@ batch_job_state = {
 
 parser_runtime_lock = threading.Lock()
 parser_runtime_bundle = None
+parser_loading_state = {
+    "status": "idle",       # idle | loading | ready | error
+    "startedAt": None,
+    "finishedAt": None,
+    "errors": {},
+    "loadedModels": [],
+}
 
 
 def _ensure_auth_user_table():
@@ -469,8 +482,17 @@ def _load_parser_corpus(db: Session) -> List[str]:
 
 def _build_parser_runtime_bundle() -> dict:
     """Load AI models for parser research. Handles errors gracefully."""
+    global parser_loading_state
     from app.ai.models import LLMQwen3, PhoBERTSiamese, SiameseMGTE
     from app.ai.export_for_annotation import PreLabeler
+
+    parser_loading_state.update({
+        "status": "loading",
+        "startedAt": datetime.utcnow().isoformat() + "Z",
+        "finishedAt": None,
+        "errors": {},
+        "loadedModels": [],
+    })
 
     bundle = {
         "phobert": None,
@@ -494,9 +516,12 @@ def _build_parser_runtime_bundle() -> dict:
         if bundle["corpus"]:
             phobert.encode_corpus(bundle["corpus"])
         bundle["phobert"] = phobert
+        parser_loading_state["loadedModels"].append("phobert")
+        logger.info("PhoBERT model loaded successfully")
     except Exception as e:
         logger.error(f"Failed to load PhoBERT: {e}")
         bundle["errors"]["phobert"] = str(e)
+        parser_loading_state["errors"]["phobert"] = str(e)
 
     # Load mGTE
     try:
@@ -504,17 +529,29 @@ def _build_parser_runtime_bundle() -> dict:
         if bundle["corpus"]:
             mgte.encode_corpus(bundle["corpus"])
         bundle["mgte"] = mgte
+        parser_loading_state["loadedModels"].append("mgte")
+        logger.info("mGTE model loaded successfully")
     except Exception as e:
         logger.error(f"Failed to load mGTE: {e}")
         bundle["errors"]["mgte"] = str(e)
+        parser_loading_state["errors"]["mgte"] = str(e)
 
-    # Load LLM (Use a more realistic model name: Qwen2.5-1.5B-Instruct is small and fast)
+    # Load LLM (Qwen2.5-1.5B-Instruct is small and fast)
     try:
         llm = LLMQwen3(model_name="Qwen/Qwen2.5-1.5B-Instruct", use_quantization=False, device="auto")
         bundle["llm"] = llm
+        parser_loading_state["loadedModels"].append("llm")
+        logger.info("LLM Qwen model loaded successfully")
     except Exception as e:
         logger.error(f"Failed to load LLM: {e}")
         bundle["errors"]["llm"] = str(e)
+        parser_loading_state["errors"]["llm"] = str(e)
+
+    has_errors = bool(bundle["errors"])
+    parser_loading_state.update({
+        "status": "error" if not parser_loading_state["loadedModels"] and has_errors else "ready",
+        "finishedAt": datetime.utcnow().isoformat() + "Z",
+    })
 
     return bundle
 
@@ -525,6 +562,26 @@ def _get_parser_runtime_bundle() -> dict:
         if parser_runtime_bundle is None:
             parser_runtime_bundle = _build_parser_runtime_bundle()
         return parser_runtime_bundle
+
+
+def _start_background_model_loading():
+    """Trigger model loading in a background thread at server startup."""
+    global parser_runtime_bundle, parser_loading_state
+    with parser_runtime_lock:
+        if parser_runtime_bundle is not None or parser_loading_state["status"] == "loading":
+            return
+        parser_loading_state["status"] = "loading"
+
+    def _load():
+        global parser_runtime_bundle
+        bundle = _build_parser_runtime_bundle()
+        with parser_runtime_lock:
+            parser_runtime_bundle = bundle
+        logger.info(f"Background model loading complete. Loaded: {parser_loading_state['loadedModels']}")
+
+    t = threading.Thread(target=_load, daemon=True, name="model-loader")
+    t.start()
+    logger.info("Background AI model loading started")
 
 
 def _get_random_parser_sample(db: Session) -> AddressCleansingQueue:
@@ -668,7 +725,7 @@ def _run_parser_research(sample: AddressCleansingQueue, target_model: Optional[s
         "meta": {
             "corpusSize": len(bundle.get("corpus") or []),
             "evaluatedAt": datetime.utcnow().isoformat() + "Z",
-            "note": "Research comparison matrix. First run loads AI models which may cause initial delay.",
+            "note": None,
         },
     }
 
@@ -2030,6 +2087,39 @@ def enrichment_summary(db: Session = Depends(get_db)):
 # Note: CRUD routes merged into core admin endpoints.
 
 # ── ADDRESS PARSER RESEARCH ENDPOINTS ──
+
+@api_router.get("/parser/status", tags=["AI Address Parser"], summary="Trạng thái nạp model AI")
+def get_parser_status():
+    """Trả về trạng thái nạp model AI (idle/loading/ready/error) cùng danh sách model đã sẵn sàng."""
+    with parser_runtime_lock:
+        loaded = parser_loading_state.get("loadedModels", [])
+        # prelabeler is always available (rule-based)
+        available = list(loaded) + ["prelabeler"]
+        return {
+            "status": parser_loading_state["status"],
+            "startedAt": parser_loading_state.get("startedAt"),
+            "finishedAt": parser_loading_state.get("finishedAt"),
+            "loadedModels": loaded,
+            "availableModels": list(set(available)),
+            "errors": parser_loading_state.get("errors", {}),
+            "corpusSize": len(parser_runtime_bundle.get("corpus", [])) if parser_runtime_bundle else 0,
+        }
+
+
+@api_router.post("/parser/reload", tags=["AI Address Parser"], summary="Tải lại model AI")
+def reload_parser_models(current_user: str = Depends(get_current_user)):
+    """Xóa bundle cũ và kích hoạt tải lại tất cả model AI ở background."""
+    global parser_runtime_bundle, parser_loading_state
+    with parser_runtime_lock:
+        if parser_loading_state.get("status") == "loading":
+            return {"status": "loading", "message": "Model đang được nạp, vui lòng chờ..."}
+        # Reset bundle so next request or background thread reloads
+        parser_runtime_bundle = None
+        parser_loading_state["status"] = "idle"
+
+    _start_background_model_loading()
+    return {"status": "accepted", "message": "Đã kích hoạt tải lại model AI ở background"}
+
 
 @api_router.get("/parser/sample", tags=["AI Address Parser"], summary="Lấy mẫu địa chỉ nghiên cứu")
 def get_parser_sample(db: Session = Depends(get_db)):

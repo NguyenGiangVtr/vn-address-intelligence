@@ -2,54 +2,196 @@
 <div class="page" id="settings">
     <div class="page-header">
         <h2>Settings</h2>
-        <p>Cấu hình hệ thống và API Keys</p>
+        <p>Cấu hình hệ thống, biến môi trường và hiển thị giao diện</p>
     </div>
 
     <div class="content-grid triple">
         <div class="card">
-            <div class="card-header"><span class="card-title">API Configuration</span></div>
+            <div class="card-header"><span class="card-title">Runtime & Appearance</span></div>
             <div class="card-body">
                 <div class="form-group">
                     <label>API Base URL</label>
-                    <input type="text" class="form-input" id="cfg-api-url" value="http://localhost:8000/api/v1">
-                </div>
-                <button class="btn btn-primary w-full mt-12">Lưu cấu hình</button>
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="card-header"><span class="card-title">Label Studio Integration</span></div>
-            <div class="card-body">
-                <div class="form-group">
-                    <label>Label Studio API Key</label>
-                    <input type="password" class="form-input" id="cfg-ls-api-key" placeholder="Nhập API Key...">
+                    <input type="text" class="form-input" id="cfg-api-url" placeholder="http://localhost:8081/api">
                 </div>
                 <div class="form-group">
-                    <label>Project ID</label>
-                    <input type="text" class="form-input" id="cfg-ls-project" value="1">
+                    <label>Environment</label>
+                    <input type="text" class="form-input" data-env-key="ENVIRONMENT" placeholder="development">
                 </div>
-                <button class="btn btn-primary w-full mt-12">Kiểm tra kết nối</button>
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="card-header"><span class="card-title">Appearance</span></div>
-            <div class="card-body">
                 <div class="form-group">
                     <label>Theme</label>
-                    <select class="form-input">
-                        <option>Dark (Default)</option>
-                        <option>Light</option>
-                        <option>OLED Black</option>
+                    <select class="form-input" id="cfg-theme">
+                        <option value="dark">Dark (Default)</option>
+                        <option value="light">Light</option>
+                        <option value="oled-black">OLED Black</option>
                     </select>
                 </div>
                 <div class="form-group">
                     <label>Animations</label>
-                    <select class="form-input">
-                        <option>Smooth</option>
-                        <option>Fast</option>
-                        <option>Off</option>
+                    <select class="form-input" id="cfg-animations">
+                        <option value="smooth">Smooth</option>
+                        <option value="fast">Fast</option>
+                        <option value="off">Off</option>
                     </select>
+                </div>
+                <button class="btn btn-primary w-full mt-12" id="btn-settings-save"><i class="fa-solid fa-floppy-disk"></i> Lưu cấu hình Settings</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header"><span class="card-title">Infrastructure (Main DB / VPS / Legacy DB)</span></div>
+            <div class="card-body">
+                <div class="form-group">
+                    <label>DB_HOST</label>
+                    <input type="text" class="form-input" data-env-key="DB_HOST" placeholder="127.0.0.1">
+                </div>
+                <div class="form-group">
+                    <label>DB_PORT</label>
+                    <input type="text" class="form-input" data-env-key="DB_PORT" placeholder="5432">
+                </div>
+                <div class="form-group">
+                    <label>DB_USER</label>
+                    <input type="text" class="form-input" data-env-key="DB_USER">
+                </div>
+                <div class="form-group">
+                    <label>DB_PASS</label>
+                    <input type="password" class="form-input" data-env-key="DB_PASS" autocomplete="new-password">
+                </div>
+                <div class="form-group">
+                    <label>DB_NAME</label>
+                    <input type="text" class="form-input" data-env-key="DB_NAME">
+                </div>
+                <div class="form-group">
+                    <label>VPS_IP</label>
+                    <input type="text" class="form-input" data-env-key="VPS_IP">
+                </div>
+                <div class="form-group">
+                    <label>VPS_USER</label>
+                    <input type="text" class="form-input" data-env-key="VPS_USER">
+                </div>
+                <div class="form-group">
+                    <label>OLD_DB_HOST</label>
+                    <input type="text" class="form-input" data-env-key="OLD_DB_HOST">
+                </div>
+                <div class="form-group">
+                    <label>OLD_DB_PORT</label>
+                    <input type="text" class="form-input" data-env-key="OLD_DB_PORT">
+                </div>
+                <div class="form-group">
+                    <label>OLD_DB_USER</label>
+                    <input type="text" class="form-input" data-env-key="OLD_DB_USER">
+                </div>
+                <div class="form-group">
+                    <label>OLD_DB_PASS</label>
+                    <input type="password" class="form-input" data-env-key="OLD_DB_PASS" autocomplete="new-password">
+                </div>
+                <div class="form-group">
+                    <label>OLD_DB_NAME</label>
+                    <input type="text" class="form-input" data-env-key="OLD_DB_NAME">
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header"><span class="card-title">Label Studio / Logging / Search</span></div>
+            <div class="card-body">
+                <div class="form-group">
+                    <label>LABEL_STUDIO_API_TOKEN</label>
+                    <input type="password" class="form-input" data-env-key="LABEL_STUDIO_API_TOKEN" autocomplete="new-password">
+                </div>
+                <div class="form-group">
+                    <label>LABEL_STUDIO_URL</label>
+                    <input type="text" class="form-input" data-env-key="LABEL_STUDIO_URL" placeholder="https://label.example.vn">
+                </div>
+                <div class="form-group">
+                    <label>LABEL_STUDIO_PROJECT_ID</label>
+                    <input type="text" class="form-input" data-env-key="LABEL_STUDIO_PROJECT_ID">
+                </div>
+                <button class="btn btn-outline w-full mt-12" id="btn-settings-ls-test"><i class="fa-solid fa-vial"></i> Kiểm tra Label Studio</button>
+
+                <div class="form-group mt-12">
+                    <label>KIBANA_LOG_ENABLED</label>
+                    <input type="text" class="form-input" data-env-key="KIBANA_LOG_ENABLED" placeholder="true/false">
+                </div>
+                <div class="form-group">
+                    <label>KIBANA_LOG_HOST</label>
+                    <input type="text" class="form-input" data-env-key="KIBANA_LOG_HOST">
+                </div>
+                <div class="form-group">
+                    <label>KIBANA_LOG_PORT</label>
+                    <input type="text" class="form-input" data-env-key="KIBANA_LOG_PORT">
+                </div>
+                <div class="form-group">
+                    <label>KIBANA_LOG_APP_NAME</label>
+                    <input type="text" class="form-input" data-env-key="KIBANA_LOG_APP_NAME">
+                </div>
+
+                <div class="form-group mt-12">
+                    <label>TYPESENSE_HOST</label>
+                    <input type="text" class="form-input" data-env-key="TYPESENSE_HOST">
+                </div>
+                <div class="form-group">
+                    <label>TYPESENSE_PORT</label>
+                    <input type="text" class="form-input" data-env-key="TYPESENSE_PORT">
+                </div>
+                <div class="form-group">
+                    <label>TYPESENSE_PROTOCOL</label>
+                    <input type="text" class="form-input" data-env-key="TYPESENSE_PROTOCOL" placeholder="http/https">
+                </div>
+                <div class="form-group">
+                    <label>TYPESENSE_API_KEY</label>
+                    <input type="password" class="form-input" data-env-key="TYPESENSE_API_KEY" autocomplete="new-password">
+                </div>
+                <div class="form-group">
+                    <label>TYPESENSE_COLLECTION</label>
+                    <input type="text" class="form-input" data-env-key="TYPESENSE_COLLECTION">
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header"><span class="card-title">SMTP & Redis Cache</span></div>
+            <div class="card-body">
+                <div class="form-group">
+                    <label>SMTP_HOST</label>
+                    <input type="text" class="form-input" data-env-key="SMTP_HOST">
+                </div>
+                <div class="form-group">
+                    <label>SMTP_PORT</label>
+                    <input type="text" class="form-input" data-env-key="SMTP_PORT">
+                </div>
+                <div class="form-group">
+                    <label>SMTP_USER</label>
+                    <input type="text" class="form-input" data-env-key="SMTP_USER">
+                </div>
+                <div class="form-group">
+                    <label>SMTP_PASS</label>
+                    <input type="password" class="form-input" data-env-key="SMTP_PASS" autocomplete="new-password">
+                </div>
+
+                <div class="form-group mt-12">
+                    <label>REDIS_HOST</label>
+                    <input type="text" class="form-input" data-env-key="REDIS_HOST">
+                </div>
+                <div class="form-group">
+                    <label>REDIS_PORT</label>
+                    <input type="text" class="form-input" data-env-key="REDIS_PORT">
+                </div>
+                <div class="form-group">
+                    <label>REDIS_PASSWORD</label>
+                    <input type="password" class="form-input" data-env-key="REDIS_PASSWORD" autocomplete="new-password">
+                </div>
+                <div class="form-group">
+                    <label>REDIS_DB</label>
+                    <input type="text" class="form-input" data-env-key="REDIS_DB">
+                </div>
+                <div class="form-group">
+                    <label>REDIS_CACHE_TTL</label>
+                    <input type="text" class="form-input" data-env-key="REDIS_CACHE_TTL" placeholder="3600">
+                </div>
+                <div class="form-group">
+                    <label>REDIS_ENABLED</label>
+                    <input type="text" class="form-input" data-env-key="REDIS_ENABLED" placeholder="true/false">
+                </div>
                 </div>
             </div>
         </div>

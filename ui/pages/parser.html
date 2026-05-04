@@ -4,6 +4,22 @@
         <h2>Vietnamese Address Intelligence Parser</h2>
         <p>Nền tảng phân tích địa chỉ phục vụ nghiên cứu khoa học và triển khai SaaS</p>
     </div>
+    <!-- ── Model Status Bar ── -->
+    <div class="parser-model-status-bar" id="parser-model-status-bar">
+        <div class="pmsb-inner">
+            <div class="pmsb-left">
+                <div class="pmsb-dot idle" id="pmsb-dot"></div>
+                <span class="pmsb-text" id="pmsb-text">Đang kiểm tra trạng thái model...</span>
+            </div>
+            <div class="pmsb-right">
+                <div class="pmsb-chips" id="pmsb-chips"></div>
+                <button class="pmsb-reload-btn" id="pmsb-reload-btn" type="button" title="Tải lại model AI">
+                    <i class="fa-solid fa-rotate-right"></i> Tải model
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- ── Hero Input Zone ── -->
     <div class="parser-hero mb-20">
         <div class="parser-hero-inner">
