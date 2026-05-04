@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from pydantic import BaseModel
 from sqlalchemy.orm import Session, aliased
 from sqlalchemy import String, and_, or_, text, func
 import os
@@ -20,11 +21,12 @@ from pathlib import Path
 from datetime import datetime, timedelta
 from difflib import SequenceMatcher
 from concurrent.futures import ThreadPoolExecutor
-from app.core.database import SessionLocal, Province, District, Ward, OSMStreet, OSMBuilding, OSMPoi, OSMRawEntity, TrainingDataset, TrainingHistory, BenchmarkModelBaseline, AddressCleansingQueue, WardMapping, seed_training_metadata
-from app.services.auth import verify_password, create_access_token, ALGORITHM, SECRET_KEY
+from app.core.database import SessionLocal, Province, District, Ward, OSMStreet, OSMBuilding, OSMPoi, OSMRawEntity, TrainingDataset, TrainingHistory, BenchmarkModelBaseline, AddressCleansingQueue, WardMapping, AuthUser, engine, seed_training_metadata
+from app.services.auth import verify_password, create_access_token, get_password_hash, ALGORITHM, SECRET_KEY
 from app.services.nso_sync import sync_full_nso, sync_province_nso, sync_logs
 from app.services.nso_api import get_nso_provinces, get_nso_districts, get_nso_wards
 from app.api import schemas
+from app.api.boundary import router as boundary_router
 from typing import List, Optional
 import json
 
@@ -46,6 +48,12 @@ app = FastAPI(
 api_router = APIRouter()
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/login")
+
+
+class RegisterPayload(BaseModel):
+    username: str
+    password: str
+    display_name: str | None = None
 
 # ── Visitor Stats State ──
 class VisitorStats:
@@ -111,6 +119,10 @@ batch_job_state = {
 
 parser_runtime_lock = threading.Lock()
 parser_runtime_bundle = None
+
+
+def _ensure_auth_user_table():
+    AuthUser.__table__.create(bind=engine, checkfirst=True)
 
 
 def _normalize_int_value(value: object, default: int) -> int:
@@ -586,13 +598,15 @@ async def track_visitors(request: Request, call_next):
 app.mount("/ui", StaticFiles(directory="ui"), name="ui")
 app.mount("/pages", StaticFiles(directory="ui/pages"), name="pages")
 
-@app.get("/")
-@app.get("/index.html")
+@app.get("/", tags=["Giao diện người dùng"], summary="Trang chủ")
+@app.get("/index.html", tags=["Giao diện người dùng"], include_in_schema=False)
 def read_root():
+    """Trả về trang Dashboard chính của hệ thống."""
     return FileResponse('ui/index.html')
 
-@app.get("/login.html")
+@app.get("/login.html", tags=["Giao diện người dùng"], summary="Trang đăng nhập")
 def read_login():
+    """Trả về trang đăng nhập hệ thống."""
     return FileResponse('ui/login.html')
 
 @app.get("/style.css")
@@ -630,8 +644,9 @@ def get_db():
     finally:
         db.close()
 
-@api_router.get("/health")
+@api_router.get("/health", tags=["Hệ thống"], summary="Kiểm tra trạng thái hệ thống")
 def health_check():
+    """Trả về trạng thái hoạt động của API và thời gian máy chủ hiện tại."""
     return {"status": "ok", "time": time.time()}
 
 async def get_current_user(token: str = Depends(oauth2_scheme)):
@@ -649,9 +664,12 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
     except Exception:
         raise credentials_exception
 
-@api_router.get("/provinces")
+@api_router.get("/provinces", tags=["Đơn vị hành chính"], summary="Lấy danh sách Tỉnh/Thành phố")
 def get_provinces(version: int = Query(1), db: Session = Depends(get_db)):
-    """Fetch all provinces, filtered by admin version."""
+    """
+    Lấy toàn bộ danh sách tỉnh/thành phố.
+    - **version**: 1 (Dữ liệu cũ), 2 (Dữ liệu mới quy chuẩn).
+    """
     query = db.query(Province).filter(Province.admin_version == version)
     if version == 2:
         query = query.filter(Province.is_deleted == False)
@@ -662,9 +680,14 @@ def get_provinces_by_path(province_id: int, version: Optional[int] = 1, db: Sess
     """Fetch a single province by ID and version."""
     return db.query(Province).filter(Province.province_id == province_id, Province.admin_version == version).first()
 
-@api_router.get("/districts")
+@api_router.get("/districts", tags=["Đơn vị hành chính"], summary="Lấy danh sách Quận/Huyện")
 def get_districts(province_id: Optional[int] = None, district_id: Optional[int] = None, version: int = Query(1), db: Session = Depends(get_db)):
-    """Fetch districts, optionally filtered by province ID, district ID and version."""
+    """
+    Lấy danh sách quận/huyện theo bộ lọc.
+    - **province_id**: Lọc theo mã tỉnh.
+    - **district_id**: Lấy chính xác 1 huyện theo mã.
+    - **version**: 1 hoặc 2.
+    """
     query = db.query(District).filter(District.admin_version == version)
     if version == 2:
         query = query.filter(District.is_deleted == False)
@@ -679,9 +702,14 @@ def get_districts_by_path(province_id: int, version: int = Query(1), db: Session
     """Legacy support for path-based district lookup."""
     return get_districts(province_id=province_id, version=version, db=db)
 
-@api_router.get("/wards")
+@api_router.get("/wards", tags=["Đơn vị hành chính"], summary="Lấy danh sách Phường/Xã")
 def get_wards(district_id: Optional[int] = None, ward_id: Optional[int] = None, version: int = Query(1), db: Session = Depends(get_db)):
-    """Fetch wards, optionally filtered by district ID, ward_id and version."""
+    """
+    Lấy danh sách phường/xã theo bộ lọc.
+    - **district_id**: Lọc theo mã quận/huyện.
+    - **ward_id**: Lấy chính xác 1 xã theo mã.
+    - **version**: 1 hoặc 2.
+    """
     query = db.query(Ward).filter(Ward.admin_version == version)
     if version == 2:
         query = query.filter(Ward.is_deleted == False)
@@ -697,8 +725,14 @@ def get_wards_by_path(district_id: int, version: int = Query(1), db: Session = D
     """Legacy support for path-based ward lookup."""
     return get_wards(district_id=district_id, version=version, db=db)
 
-@api_router.get("/unit-details/{level}/{unit_id}")
+@api_router.get("/unit-details/{level}/{unit_id}", tags=["Đơn vị hành chính"], summary="Lấy chi tiết một đơn vị hành chính")
 def get_unit_details(level: str, unit_id: int, version: Optional[int] = 1, db: Session = Depends(get_db)):
+    """
+    Lấy thông tin chi tiết của một Tỉnh, Huyện hoặc Xã.
+    - **level**: 'province', 'district', hoặc 'ward'.
+    - **unit_id**: Mã định danh của đơn vị.
+    - **version**: Phiên bản dữ liệu (1 hoặc 2).
+    """
     if level == "province":
         query = db.query(Province).filter(Province.province_id == unit_id, Province.admin_version == version)
         if version == 2:
@@ -716,7 +750,7 @@ def get_unit_details(level: str, unit_id: int, version: Optional[int] = 1, db: S
         return query.first()
     return {"error": "Invalid level"}
 
-@api_router.get("/lookup/mapping")
+@api_router.get("/lookup/mapping", tags=["Biến động địa giới"], summary="Tra cứu chuyển đổi ĐVHC (V1 sang V2)")
 def lookup_mapping(
     query: str = None, 
     province_id: int = None,
@@ -726,7 +760,8 @@ def lookup_mapping(
     db: Session = Depends(get_db)
 ):
     """
-    Tra cứu biến động ĐVHC bằng 1 single query (Join) chuẩn theo SQL mapping.
+    Tra cứu lịch sử biến động địa giới hành chính (Chia tách, sáp nhập, đổi tên).
+    Hỗ trợ tìm kiếm theo tên hoặc lọc theo mã đơn vị.
     """
     ProvV1 = aliased(Province)
     ProvV2 = aliased(Province)
@@ -868,16 +903,16 @@ def lookup_mapping(
 
     return enriched_results
 
-@api_router.post("/sync/nso")
+@api_router.post("/sync/nso", tags=["Đồng bộ dữ liệu"], summary="Kích hoạt đồng bộ toàn bộ NSO")
 def trigger_nso_sync(db: Session = Depends(get_db)):
-    """Kích hoạt đồng bộ dữ liệu từ NSO (danhmuchanhchinh.nso.gov.vn)"""
+    """Đồng bộ toàn bộ danh mục Tỉnh/Huyện/Xã từ server NSO (danhmuchanhchinh.nso.gov.vn)."""
     # This should ideally be a background task
     result = sync_full_nso(db)
     return result
 
-@api_router.post("/sync/nso/province")
+@api_router.post("/sync/nso/province", tags=["Đồng bộ dữ liệu"], summary="Đồng bộ một Tỉnh từ NSO")
 async def trigger_nso_province_sync(data: dict, db: Session = Depends(get_db)):
-    """Đồng bộ một tỉnh cụ thể từ NSO (Batch sync)"""
+    """Đồng bộ một tỉnh cụ thể kèm các huyện/xã trực thuộc từ NSO."""
     p_code = data.get("code")
     p_name = data.get("name")
     if not p_code or not p_name:
@@ -886,65 +921,132 @@ async def trigger_nso_province_sync(data: dict, db: Session = Depends(get_db)):
     # Run sync (Ideally background, but for batch we try sync for now)
     return sync_province_nso(db, p_code, p_name)
 
-@api_router.get("/sync/nso/logs")
+@api_router.get("/sync/nso/logs", tags=["Đồng bộ dữ liệu"], summary="Lấy nhật ký đồng bộ")
 def get_sync_logs():
-    """Lấy danh sách log đồng bộ realtime"""
+    """Truy xuất danh sách log đồng bộ thời gian thực."""
     return sync_logs
 
-@api_router.delete("/sync/nso/logs")
+@api_router.delete("/sync/nso/logs", tags=["Đồng bộ dữ liệu"], summary="Xóa nhật ký đồng bộ")
 def clear_sync_logs():
-    """Xóa danh sách log"""
+    """Xóa sạch bộ nhớ tạm chứa log đồng bộ."""
     sync_logs.clear()
     return {"status": "cleared"}
 
 # ── NSO LIVE DATA ENDPOINTS ──
 
-@api_router.get("/nso/provinces", tags=["NSO External"])
+@api_router.get("/nso/provinces", tags=["Dữ liệu NSO (Live)"], summary="Lấy danh sách Tỉnh từ NSO")
 def fetch_nso_provinces(date: str = None):
-    """Lấy danh sách Tỉnh từ NSO (DMDVHC.asmx)"""
+    """Truy vấn trực tiếp danh sách Tỉnh từ Web Service của NSO."""
     try:
         return get_nso_provinces(date)
     except Exception as e:
         raise HTTPException(status_code=502, detail=str(e))
 
-@api_router.get("/nso/districts", tags=["NSO External"])
+@api_router.get("/nso/districts", tags=["Dữ liệu NSO (Live)"], summary="Lấy danh sách Huyện từ NSO")
 def fetch_nso_districts(province_no: str = "", province_name: str = "", date: str = None):
-    """Lấy danh sách Quận/Huyện từ NSO (DMDVHC.asmx)"""
+    """Truy vấn trực tiếp danh sách Quận/Huyện từ Web Service của NSO."""
     try:
         return get_nso_districts(province_no, province_name, date)
     except Exception as e:
         raise HTTPException(status_code=502, detail=str(e))
 
-@api_router.get("/nso/wards", tags=["NSO External"])
+@api_router.get("/nso/wards", tags=["Dữ liệu NSO (Live)"], summary="Lấy danh sách Xã từ NSO")
 def fetch_nso_wards(province_no: str = "", province_name: str = "", district_no: str = "", district_name: str = "", date: str = None):
-    """Lấy danh sách Phường/Xã từ NSO (DMDVHC.asmx)"""
+    """Truy vấn trực tiếp danh sách Phường/Xã từ Web Service của NSO."""
     try:
         return get_nso_wards(province_no, province_name, district_no, district_name, date)
     except Exception as e:
         raise HTTPException(status_code=502, detail=str(e))
 
-@api_router.post("/login")
+@api_router.post("/login", tags=["Xác thực hệ thống"], summary="Đăng nhập hệ thống")
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
-    # Simple hardcoded admin for now (should be in DB later)
+    """
+    Xác thực người dùng và trả về JWT Token.
+    Hỗ trợ cả người dùng trong DB và tài khoản Admin cấu hình qua biến môi trường.
+    """
+    # Support DB-backed users first, then fall back to legacy admin env vars.
     ADMIN_USER = os.getenv("ADMIN_USER", "admin")
     ADMIN_PASS = os.getenv("ADMIN_PASS", "vnai@2026")
+    db = SessionLocal()
     
     logger.info(f"Login attempt for user: {form_data.username}")
-    
-    if form_data.username != ADMIN_USER or form_data.password != ADMIN_PASS:
+    try:
+        try:
+            _ensure_auth_user_table()
+            user = db.query(AuthUser).filter(AuthUser.username == form_data.username, AuthUser.is_active == True).first()
+        except Exception as db_error:
+            logger.warning(f"Auth user lookup skipped due to DB error: {db_error}")
+            user = None
+
+        if user and verify_password(form_data.password, user.password_hash):
+            logger.info(f"Login successful for DB user: {form_data.username}")
+            access_token = create_access_token(data={"sub": form_data.username})
+            return {"access_token": access_token, "token_type": "bearer"}
+
+        if form_data.username == ADMIN_USER and form_data.password == ADMIN_PASS:
+            logger.info(f"Login successful for fallback admin: {form_data.username}")
+            access_token = create_access_token(data={"sub": form_data.username})
+            return {"access_token": access_token, "token_type": "bearer"}
+
         logger.warning(f"Login failed for user: {form_data.username}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
-    logger.info(f"Login successful for user: {form_data.username}")
-    access_token = create_access_token(data={"sub": form_data.username})
-    return {"access_token": access_token, "token_type": "bearer"}
+    finally:
+        db.close()
 
-@api_router.get("/stats")
+
+@api_router.post("/register", tags=["Xác thực hệ thống"], summary="Đăng ký tài khoản mới")
+def register_user(payload: RegisterPayload, db: Session = Depends(get_db)):
+    """Tạo tài khoản người dùng mới trong hệ thống."""
+    _ensure_auth_user_table()
+    admin_user = os.getenv("ADMIN_USER", "admin")
+    username = payload.username.strip()
+    password = payload.password.strip()
+    display_name = (payload.display_name or "").strip() or None
+
+    if len(username) < 3:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Username must be at least 3 characters")
+    if len(password) < 6:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Password must be at least 6 characters")
+    if username == admin_user:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This username is reserved")
+
+    existing_user = db.query(AuthUser).filter(AuthUser.username == username).first()
+    if existing_user:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Username already exists")
+
+    user = AuthUser(
+        username=username,
+        password_hash=get_password_hash(password),
+        display_name=display_name,
+        role="user",
+        is_active=True,
+    )
+    db.add(user)
+    db.commit()
+
+    access_token = create_access_token(data={"sub": username})
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": {
+            "username": username,
+            "display_name": display_name,
+        },
+    }
+
+
+@api_router.post("/logout", tags=["Xác thực hệ thống"], summary="Đăng xuất")
+def logout(current_user: str = Depends(get_current_user)):
+    """Đăng xuất người dùng hiện tại."""
+    return {"message": "Logged out", "user": current_user}
+
+@api_router.get("/stats", tags=["Thống kê hệ thống"], summary="Tổng quan số liệu hệ thống")
 def get_stats(db: Session = Depends(get_db)):
+    """Trả về số lượng bản ghi tổng hợp của tất cả các bảng chính (Admin, OSM, AI) và thống kê khách truy cập."""
     """Returns absolute counts and metadata for all tables. Robust version."""
     def safe_count(query):
         try:
@@ -992,8 +1094,12 @@ def _similarity_ratio(a: Optional[str], b: Optional[str]) -> float:
     return SequenceMatcher(None, na, nb).ratio()
 
 
-@api_router.get("/benchmark/realtime")
+@api_router.get("/benchmark/realtime", tags=["Huấn luyện & Benchmark AI"], summary="Benchmark thời gian thực")
 def get_benchmark_realtime(db: Session = Depends(get_db)):
+    """
+    Tính toán và trả về các chỉ số hiệu năng (F1, Throughput, Cost) thời gian thực của các mô hình AI 
+    dựa trên dữ liệu xử lý gần nhất trong Database.
+    """
     """
     Trả về benchmark real-time cho 3 mô hình từ dữ liệu DB hiện tại.
     Ưu tiên đo theo dữ liệu đã chạy benchmark nếu có cột normalized_*.
@@ -1178,8 +1284,9 @@ def get_benchmark_realtime(db: Session = Depends(get_db)):
     }
 
 
-@api_router.get("/benchmark/baselines")
+@api_router.get("/benchmark/baselines", tags=["Huấn luyện & Benchmark AI"], summary="Lấy thông số cơ sở (Baselines)")
 def get_benchmark_baselines(db: Session = Depends(get_db)):
+    """Trả về các thông số cơ sở (Accuracy, Speed, Cost) của các phiên bản mô hình AI đã lưu trong DB."""
     """Return benchmark baselines stored in the database."""
     seed_training_metadata()
     rows = db.query(BenchmarkModelBaseline).order_by(BenchmarkModelBaseline.id.asc()).all()
@@ -1203,8 +1310,9 @@ def get_benchmark_baselines(db: Session = Depends(get_db)):
     }
 
 
-@api_router.post("/benchmark/trigger")
+@api_router.post("/benchmark/trigger", tags=["Huấn luyện & Benchmark AI"], summary="Kích hoạt tiến trình Benchmark")
 def trigger_benchmark_job(data: dict = None, current_user: str = Depends(get_current_user)):
+    """Kích hoạt một tiến trình đánh giá (Benchmark) mô hình AI chạy ngầm trên server."""
     payload = data or {}
     config_path = payload.get("config_path", "app/ai/config.yaml")
     skip_llm = bool(payload.get("skip_llm", False))
@@ -1244,8 +1352,9 @@ def trigger_benchmark_job(data: dict = None, current_user: str = Depends(get_cur
     }
 
 
-@api_router.get("/training/history")
+@api_router.get("/training/history", tags=["Huấn luyện & Benchmark AI"], summary="Lấy lịch sử huấn luyện")
 def get_training_history(db: Session = Depends(get_db)):
+    """Truy xuất lịch sử các phiên bản mô hình AI đã được huấn luyện."""
     """Return stored training history rows for the dashboard."""
     try:
         seed_training_metadata()
@@ -1302,27 +1411,30 @@ def create_training_history(data: dict = None, current_user: str = Depends(get_c
         db.close()
 
 
-@api_router.get("/benchmark/job")
+@api_router.get("/benchmark/job", tags=["Huấn luyện & Benchmark AI"], summary="Trạng thái tiến trình Benchmark")
 def get_benchmark_job_status(current_user: str = Depends(get_current_user)):
+    """Lấy trạng thái hiện tại (đang chạy, hoàn thành, lỗi) của tiến trình Benchmark."""
     with benchmark_job_lock:
         return {"job": dict(benchmark_job_state)}
 
-@api_router.get("/visitors")
+@api_router.get("/visitors", tags=["Thống kê hệ thống"], summary="Thống kê khách truy cập")
 def get_visitor_stats():
+    """Trả về số lượng truy cập tổng, IP duy nhất và số người đang online."""
     return {
         "total": stats_tracker.total_visits,
         "unique": len(stats_tracker.unique_ips),
         "online": stats_tracker.get_online_count()
     }
 
-@api_router.get("/admin-v2/provinces")
+@api_router.get("/admin-v2/provinces", tags=["Đơn vị hành chính"], summary="Danh sách tỉnh phiên bản v2")
 def list_provinces_v2(db: Session = Depends(get_db)):
-    """List provinces with versioning info."""
+    """Lấy danh sách toàn bộ các tỉnh thành thuộc phiên bản quản lý mới (v2)."""
     provinces = db.query(Province).filter(Province.admin_version == 2).all()
     return provinces
 
-@api_router.get("/osm/summary")
+@api_router.get("/osm/summary", tags=["Dữ liệu OpenStreetMap"], summary="Tổng quan dữ liệu thực địa (OSM)")
 def osm_summary(db: Session = Depends(get_db)):
+    """Trả về số lượng Đường, Nhà và POI đã thu thập được từ OpenStreetMap."""
     return {
         "raw": db.query(OSMRawEntity).count(),
         "streets": db.query(OSMStreet).count(),
@@ -1339,8 +1451,9 @@ def preview_osm_counts(db: Session = Depends(get_db)):
     }
 
 
-@api_router.post("/osm/trigger")
+@api_router.post("/osm/trigger", tags=["Dữ liệu OpenStreetMap"], summary="Kích hoạt thu thập OSM")
 def trigger_osm_job(data: dict = None, current_user: str = Depends(get_current_user)):
+    """Kích hoạt tiến trình thu thập dữ liệu từ Overpass API (OSM) cho các tỉnh thành."""
     payload = data or {}
     limit_provinces = _normalize_int_value(payload.get("limit_provinces"), 63)
     target_total = _normalize_int_value(payload.get("target_total"), 5000000)
@@ -1387,8 +1500,9 @@ def get_osm_job_status(current_user: str = Depends(get_current_user)):
         return {"job": dict(osm_job_state)}
 
 
-@api_router.post("/batch/trigger")
+@api_router.post("/batch/trigger", tags=["Xử lý hàng loạt"], summary="Kích hoạt chuẩn hóa hàng loạt")
 def trigger_batch_job(data: dict = None, current_user: str = Depends(get_current_user)):
+    """Đưa các địa chỉ thô vào hàng đợi để chuẩn hóa tự động bằng AI theo lô lớn."""
     payload = data or {}
     limit = _normalize_int_value(payload.get("batch_size"), 1000)
     method = payload.get("method", "hybrid")
@@ -1440,9 +1554,9 @@ def training_samples(db: Session = Depends(get_db)):
     samples = db.query(TrainingDataset).limit(20).all()
     return samples
 
-@api_router.get("/enrichment/summary")
+@api_router.get("/enrichment/summary", tags=["Đơn vị hành chính"], summary="Thống kê dữ liệu làm giàu (Enrichment)")
 def enrichment_summary(db: Session = Depends(get_db)):
-    """Stats on enriched data."""
+    """Trả về số lượng Tỉnh và Xã đã được bổ sung thông tin chi tiết (Quyết định thành lập, Ghi chú)."""
     enriched_provinces = db.query(Province).filter(Province.decision_number != None).count()
     enriched_wards = db.query(Ward).filter(Ward.decision_number != None).count()
     return {
@@ -1454,8 +1568,9 @@ def enrichment_summary(db: Session = Depends(get_db)):
 
 # ── ADDRESS PARSER RESEARCH ENDPOINTS ──
 
-@api_router.get("/parser/sample")
+@api_router.get("/parser/sample", tags=["AI Address Parser"], summary="Lấy mẫu địa chỉ nghiên cứu")
 def get_parser_sample(db: Session = Depends(get_db)):
+    """Lấy ngẫu nhiên một địa chỉ từ hàng đợi để thử nghiệm phân tích bằng các mô hình AI."""
     """Lấy một mẫu địa chỉ ngẫu nhiên từ queue để nghiên cứu."""
     sample = _get_random_parser_sample(db)
     if not sample:
@@ -1463,8 +1578,12 @@ def get_parser_sample(db: Session = Depends(get_db)):
     return _serialize_parser_sample(sample)
 
 
-@api_router.post("/parser/analyze")
+@api_router.post("/parser/analyze", tags=["AI Address Parser"], summary="Phân tích & So sánh mô hình AI")
 def analyze_parser_address(data: dict, model: Optional[str] = None, db: Session = Depends(get_db)):
+    """
+    Sử dụng đồng thời các mô hình (PhoBERT, mGTE, Qwen) để phân tách và chuẩn hóa địa chỉ.
+    Dùng để so sánh độ chính xác giữa các thuật toán AI khác nhau.
+    """
     """
     Phân tích địa chỉ bằng nhiều mô hình (Research Comparison).
     Hỗ trợ cả phân tích từ ID (trong DB) hoặc text thô.
@@ -1556,8 +1675,9 @@ def _read_explorer_queue(db: Session, limit: int, q: str):
         raise HTTPException(status_code=500, detail=f"Lỗi truy vấn prq.address_cleansing_queue: {str(e)}")
 
 
-@api_router.get("/explorer/queue")
+@api_router.get("/explorer/queue", tags=["Xử lý hàng loạt"], summary="Danh sách hàng đợi chuẩn hóa")
 def get_explorer_queue(db: Session = Depends(get_db), limit: int = 100, q: str = ""):
+    """Lấy danh sách các địa chỉ đang chờ hoặc đã xử lý trong hàng đợi chuẩn hóa."""
     return _read_explorer_queue(db, limit, q)
 
 
@@ -1565,9 +1685,9 @@ def get_explorer_queue(db: Session = Depends(get_db), limit: int = 100, q: str =
 def get_explorer_queue_root(db: Session = Depends(get_db), limit: int = 100, q: str = ""):
     return _read_explorer_queue(db, limit, q)
 
-@api_router.get("/label-studio/tasks")
+@api_router.get("/label-studio/tasks", tags=["AI Address Parser"], summary="Lấy Task từ Label Studio")
 async def get_ls_tasks(current_user: str = Depends(get_current_user)):
-    """Fetch tasks from Label Studio API."""
+    """Truy xuất danh sách các tác vụ gán nhãn dữ liệu từ API của Label Studio."""
     ls_token = os.getenv("LABEL_STUDIO_API_TOKEN")
     ls_url = (os.getenv("LABEL_STUDIO_URL", "https://label.nod.io.vn") or "").strip()
     project_id = os.getenv("LABEL_STUDIO_PROJECT_ID", "1")
@@ -1650,9 +1770,9 @@ def _load_manifest(path: Path) -> dict:
         return json.load(fh)
 
 
-@api_router.get("/evidence/manifest")
+@api_router.get("/evidence/manifest", tags=["Hệ thống"], summary="Lấy danh mục bằng chứng (Evidence)")
 def evidence_manifest():
-    """Return the latest evidence manifest (searches evidence_real then evidence)."""
+    """Trả về danh sách các tệp tin báo cáo, bằng chứng thực nghiệm mới nhất của hệ thống."""
     dirs = _get_evidence_dirs()
     manifest_path = _find_latest_manifest(dirs)
     if manifest_path is None:
@@ -1667,9 +1787,9 @@ def evidence_manifest():
     return manifest
 
 
-@api_router.get("/evidence/file")
+@api_router.get("/evidence/file", tags=["Hệ thống"], summary="Tải tệp tin bằng chứng")
 def evidence_file(key: str):
-    """Stream a file referenced in the latest manifest by key (e.g. 'training_history')."""
+    """Tải xuống một tệp tin cụ thể (báo cáo, JSON, ảnh) dựa trên khóa (key) từ manifest."""
     dirs = _get_evidence_dirs()
     manifest_path = _find_latest_manifest(dirs)
     if manifest_path is None:
@@ -1698,6 +1818,7 @@ def evidence_file(key: str):
 
 
 app.include_router(api_router, prefix="/api") # Match frontend API_BASE
+api_router.include_router(boundary_router, prefix="/boundary")
 app.include_router(api_router_v1) # Support /api/v1/*
 
 if __name__ == "__main__":

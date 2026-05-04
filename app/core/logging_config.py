@@ -18,6 +18,12 @@ def setup_logging():
         handlers=[logging.StreamHandler(sys.stdout)]
     )
     
+    # Silence internal warnings from noisy libraries
+    logging.getLogger('logstash_async').setLevel(logging.CRITICAL)
+    import warnings
+    from urllib3.exceptions import DependencyWarning
+    warnings.filterwarnings("ignore", category=DependencyWarning)
+    
     logger = logging.getLogger("VNAI")
     
     # Add Logstash handler if enabled

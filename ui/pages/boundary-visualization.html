@@ -1,0 +1,199 @@
+<!-- ══════ PAGE: BOUNDARY VISUALIZATION ══════ -->
+<div class="page" id="boundary-visualization">
+    <div class="page-header">
+        <h2>Boundary Visualization</h2>
+        <p>Hiển thị polygon hành chính, xem nhanh các layer theo partner và kiểm tra mismatch địa giới.</p>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="parser-hero-inner">
+                <div class="parser-input-wrap">
+                    <div class="form-group" style="min-width: 160px; margin: 0; flex: 0 0 180px;">
+                        <label class="form-label">Scope</label>
+                        <select id="boundary-scope" class="form-input">
+                            <option value="province">Province</option>
+                            <option value="district">District</option>
+                            <option value="ward">Ward</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="min-width: 150px; margin: 0; flex: 1;">
+                        <label class="form-label">Province ID</label>
+                        <input id="boundary-province-id" class="form-input" type="number" placeholder="19" value="19">
+                    </div>
+                    <div class="form-group" style="min-width: 150px; margin: 0; flex: 1;">
+                        <label class="form-label">District ID</label>
+                        <input id="boundary-district-id" class="form-input" type="number" placeholder="Optional">
+                    </div>
+                    <div class="form-group" style="min-width: 150px; margin: 0; flex: 1;">
+                        <label class="form-label">Ward ID</label>
+                        <input id="boundary-ward-id" class="form-input" type="number" placeholder="Optional">
+                    </div>
+                    <div class="form-group" style="min-width: 140px; margin: 0; flex: 0 0 140px;">
+                        <label class="form-label">Zoom</label>
+                        <input id="boundary-zoom-start" class="form-input" type="number" min="3" max="18" value="11">
+                    </div>
+                    <div class="parser-input-actions" style="align-self: flex-end;">
+                        <button class="parser-btn-run" id="btn-boundary-run" type="button">
+                            <i class="fa-solid fa-map-location-dot"></i>
+                            <span>Tạo bản đồ</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="parser-status-bar">
+                    <div id="boundary-status-dot" class="pstatus-dot idle"></div>
+                    <span id="boundary-status" class="pstatus-text">Sẵn sàng tạo bản đồ ranh giới</span>
+                    <div class="parser-timing" style="display:flex; gap:8px; align-items:center;">
+                        <i class="fa-solid fa-layer-group"></i>
+                        <span><strong id="boundary-ring-count-label">0</strong> rings</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-12 card">
+        <div class="card-header">
+            <span class="card-title"><i class="fa-solid fa-chart-simple mr-8"></i> Thống kê nhanh</span>
+        </div>
+        <div class="card-body">
+            <div class="smart-filter-grid">
+                <div class="pmodel-card" style="min-width: 220px;">
+                    <div class="pmodel-header">
+                        <div class="pmodel-icon" style="--mc:#60a5fa"><i class="fa-solid fa-map"></i></div>
+                        <div class="pmodel-title">
+                            <div class="pmodel-name">Map URL</div>
+                            <div class="pmodel-sub">HTML tĩnh sinh từ API</div>
+                        </div>
+                    </div>
+                    <div class="pmodel-body">
+                        <a id="boundary-map-url" href="#" target="_blank" rel="noreferrer" class="text-accent truncate">Chưa tạo</a>
+                    </div>
+                </div>
+
+                <div class="pmodel-card" style="min-width: 220px;">
+                    <div class="pmodel-header">
+                        <div class="pmodel-icon" style="--mc:#34d399"><i class="fa-solid fa-layer-group"></i></div>
+                        <div class="pmodel-title">
+                            <div class="pmodel-name">Polygon Rings</div>
+                            <div class="pmodel-sub">Tổng số ring được vẽ</div>
+                        </div>
+                    </div>
+                    <div class="pmodel-body">
+                        <div style="font-size: 28px; font-weight: 800;"><span id="boundary-ring-count">0</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-12 card">
+        <div class="card-header">
+            <span class="card-title"><i class="fa-solid fa-earth-asia mr-8"></i> Bản đồ & Console</span>
+        </div>
+        <div class="card-body">
+            <div class="boundary-layout">
+                <div class="boundary-map-panel">
+                    <iframe id="boundary-map-frame" title="Boundary map preview" class="boundary-map-frame" src="about:blank"></iframe>
+                </div>
+                <div class="boundary-log-panel">
+                    <div class="boundary-log-header">
+                        <span><i class="fa-solid fa-terminal mr-8"></i> Realtime Log</span>
+                    </div>
+                    <pre id="boundary-log" class="boundary-log"></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    #boundary-visualization .boundary-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 2fr) minmax(320px, 1fr);
+        gap: 16px;
+        align-items: stretch;
+    }
+
+    #boundary-visualization .boundary-map-panel,
+    #boundary-visualization .boundary-log-panel {
+        min-width: 0;
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-lg);
+        background: var(--bg-app);
+        overflow: hidden;
+    }
+
+    #boundary-visualization .boundary-map-frame {
+        width: 100%;
+        height: 680px;
+        border: 0;
+        display: block;
+        background: #fff;
+    }
+
+    #boundary-visualization .boundary-log-panel {
+        display: flex;
+        flex-direction: column;
+        min-height: 680px;
+    }
+
+    #boundary-visualization .boundary-log-header {
+        padding: 14px 16px;
+        border-bottom: 1px solid var(--border-subtle);
+        color: var(--text-secondary);
+        font-weight: 600;
+        letter-spacing: 0.2px;
+    }
+
+    #boundary-visualization .boundary-log {
+        margin: 0;
+        padding: 16px;
+        flex: 1;
+        overflow: auto;
+        white-space: pre-wrap;
+        word-break: break-word;
+        color: #d1d5db;
+        background: linear-gradient(180deg, rgba(17, 17, 19, 0.8), rgba(10, 10, 11, 0.95));
+        font-size: 12px;
+        line-height: 1.6;
+    }
+
+    #boundary-visualization .pstatus-dot.loading {
+        background: var(--warning);
+        box-shadow: 0 0 0 4px rgba(251, 191, 36, 0.12);
+    }
+
+    #boundary-visualization .pstatus-dot.success {
+        background: var(--success);
+        box-shadow: 0 0 0 4px rgba(52, 211, 153, 0.12);
+    }
+
+    #boundary-visualization .pstatus-dot.danger {
+        background: var(--danger);
+        box-shadow: 0 0 0 4px rgba(248, 113, 113, 0.12);
+    }
+
+    @media (max-width: 1100px) {
+        #boundary-visualization .boundary-layout {
+            grid-template-columns: 1fr;
+        }
+
+        #boundary-visualization .boundary-map-frame,
+        #boundary-visualization .boundary-log-panel {
+            min-height: 520px;
+            height: auto;
+        }
+    }
+
+    @media (max-width: 768px) {
+        #boundary-visualization .boundary-map-frame {
+            height: 420px;
+        }
+
+        #boundary-visualization .boundary-log-panel {
+            min-height: 280px;
+        }
+    }
+</style>

@@ -39,3 +39,9 @@ overpy>=0.6
 
 # ── Logging ──
 python-logstash-async>=3.0.0
+
+# Boundary visualization (from vnai_boundary_visualization)
+folium>=0.14.0
+alphashape>=1.4.0
+shapely>=2.0.1
+pyproj>=3.6.0

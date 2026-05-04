@@ -14,6 +14,7 @@
 - 🤖 **AI-Powered Address Parsing**: Tự động bóc tách các thành phần địa chỉ (Số nhà, Tên đường, Phường/Xã...) bằng các mô hình học sâu tiên tiến (PhoBERT, mGTE, LLM Qwen).
 - 🗺️ **Administrative Mapping 2025**: Hệ thống đầu tiên hỗ trợ đầy đủ các kịch bản sáp nhập và thay đổi đơn vị hành chính theo Nghị quyết Chính phủ 2025 (Admin V2).
 - 📍 **Geospatial Enrichment**: Tích hợp dữ liệu thực địa từ OpenStreetMap (OSM) với hơn 1.35 triệu bản ghi (đường phố, tòa nhà, POI).
+- 🗺️ **Boundary Visualization & Analysis**: Tích hợp công cụ hiển thị và phân tích ranh giới hành chính (maps, polygon expansion, mismatch visualization).
 - 📊 **Performance Benchmarking**: Công cụ so sánh hiệu năng (F1-Score, Throughput, Cost) giữa các dòng mô hình AI khác nhau.
 - 💻 **Real-time Dashboard**: Giao diện quản trị hiện đại (Linear Design System) hỗ trợ Dark Mode và trực quan hóa luồng dữ liệu.
 - 🚀 **High Throughput**: Tối ưu hóa pipeline xử lý, đạt tốc độ ≥ 20 địa chỉ/giây với chi phí vận hành cực thấp so với Cloud API.
@@ -62,7 +63,9 @@ vn-address-intelligence/
 │   ├── api/                # FastAPI Endpoints & Web Server
 │   ├── core/               # Cấu hình hệ thống & Kết nối DB (SQLAlchemy)
 │   ├── services/           # Nghiệp vụ: OSM Fetcher, Data Cleansing
-│   └── main.py             # CLI Entry Point (init_db, seed, fetch_osm)
+│   ├── tools/               # Tiện ích nghiệp vụ dùng chung
+│   │   └── boundary_visualization/  # Boundary map helpers tích hợp từ project phụ
+│   └── main.py              # CLI Entry Point (init_db, seed, fetch_osm)
 ├── ui/                     # Giao diện Frontend (SaaS Dashboard)
 ├── data/                   # Dữ liệu mẫu (Seed CSV), Huấn luyện & Export
 ├── docs/                   # Tài liệu nghiên cứu & Đặc tả hệ thống
@@ -134,6 +137,7 @@ Truy cập giao diện tại: `http://localhost:8081`
 - `POST /api/parser/analyze`: Phân tích địa chỉ thô bằng AI (So sánh 3 model).
 - `GET /api/lookup/mapping`: Tra cứu lịch sử sáp nhập đơn vị hành chính.
 - `POST /api/benchmark/trigger`: Khởi chạy đánh giá hiệu năng mô hình.
+- `GET /api/boundary/map`: Sinh bản đồ polygon hành chính từ CSDL và trả về URL HTML trong `ui/pages/`.
 
 ### Ví dụ CLI:
 ```bash
@@ -142,6 +146,9 @@ python start.py check-db
 
 # Trích xuất báo cáo minh chứng
 python scripts/reporting/export_evidence.py
+
+# Mở trang ranh giới hành chính
+# Sau khi chạy server, vào /ui/index.html rồi chọn "Ranh giới hành chính"
 ```
 
 ---

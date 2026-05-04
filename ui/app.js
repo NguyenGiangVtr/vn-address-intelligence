@@ -8,7 +8,7 @@ const API_BASE = window.location.hostname === "localhost" || window.location.pro
 
 const PAGES = [
   "overview", "parser", "batch", "training", "label-studio",
-  "experiments", "explorer", "osm-enrichment", "lookup",
+  "experiments", "explorer", "osm-enrichment", "lookup", "boundary-visualization",
   "admin-units", "nso-sync", "settings", "evidence"
 ];
 
@@ -28,6 +28,20 @@ if (!localStorage.getItem('vnai_token') && !window.location.pathname.includes('l
 function getAuthHeader() {
   const token = localStorage.getItem('vnai_token');
   return token ? { 'Authorization': `Bearer ${token}` } : {};
+}
+
+async function logoutAndRedirect() {
+  try {
+    await fetch(`${API_BASE}/logout`, {
+      method: 'POST',
+      headers: getAuthHeader(),
+    });
+  } catch (error) {
+    console.warn('Logout request failed, clearing local session anyway.', error);
+  } finally {
+    localStorage.removeItem('vnai_token');
+    window.location.href = 'login.html';
+  }
 }
 
 // NER Labels (mirrors constants.py)
@@ -219,6 +233,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   safeInit("initModelBenchmarkUI", initModelBenchmarkUI);
   safeInit("initEvidenceView", initEvidenceView);
   safeInit("initTrainingHub", initTrainingHub);
+  safeInit("initBoundaryVisualizationUI", initBoundaryVisualizationUI);
+
+  document.getElementById('btn-logout')?.addEventListener('click', async () => {
+    const confirmed = !showConfirm ? true : await showConfirm('Bạn có chắc chắn muốn đăng xuất?');
+    if (confirmed) {
+      await logoutAndRedirect();
+    }
+  });
 
   fetchStats();
   setInterval(fetchStats, 30000);
@@ -2606,6 +2628,119 @@ async function initDataExplorer() {
   document.getElementById('explorer-btn-search')?.addEventListener('click', () => loadData());
 
   loadData();
+}
+
+// ═══════════════════════════════════════════════════════════
+// BOUNDARY VISUALIZATION
+// ═══════════════════════════════════════════════════════════
+function initBoundaryVisualizationUI() {
+  const page = document.getElementById("boundary-visualization");
+  if (!page) return;
+
+  const scopeSelect = document.getElementById("boundary-scope");
+  const provinceInput = document.getElementById("boundary-province-id");
+  const districtInput = document.getElementById("boundary-district-id");
+  const wardInput = document.getElementById("boundary-ward-id");
+  const zoomInput = document.getElementById("boundary-zoom-start");
+  const runBtn = document.getElementById("btn-boundary-run");
+  const frame = document.getElementById("boundary-map-frame");
+  const statusEl = document.getElementById("boundary-status");
+  const statusDot = document.getElementById("boundary-status-dot");
+  const countEl = document.getElementById("boundary-ring-count");
+  const countLabelEl = document.getElementById("boundary-ring-count-label");
+  const urlEl = document.getElementById("boundary-map-url");
+  const logEl = document.getElementById("boundary-log");
+
+  const setStatus = (message, tone = "idle") => {
+    if (statusEl) {
+      statusEl.textContent = message;
+      statusEl.dataset.tone = tone;
+    }
+    if (statusDot) {
+      statusDot.className = `pstatus-dot ${tone}`;
+    }
+  };
+
+  const appendLog = (message) => {
+    if (!logEl) return;
+    const time = new Date().toLocaleTimeString("vi-VN", { hour12: false });
+    const line = `[${time}] ${message}`;
+    logEl.textContent = logEl.textContent ? `${logEl.textContent}\n${line}` : line;
+    logEl.scrollTop = logEl.scrollHeight;
+  };
+
+  const refreshRequiredFields = () => {
+    const scope = scopeSelect?.value || "province";
+    if (provinceInput) provinceInput.required = scope === "province" || scope === "district" || scope === "ward";
+    if (districtInput) districtInput.required = scope === "district" || scope === "ward";
+    if (wardInput) wardInput.required = scope === "ward";
+  };
+
+  const run = async () => {
+    const scope = scopeSelect?.value || "province";
+    const payload = new URLSearchParams();
+    payload.set("scope", scope);
+    payload.set("zoom_start", String(parseInt(zoomInput?.value || "11", 10) || 11));
+
+    if (provinceInput?.value) payload.set("province_id", provinceInput.value.trim());
+    if (districtInput?.value) payload.set("district_id", districtInput.value.trim());
+    if (wardInput?.value) payload.set("ward_id", wardInput.value.trim());
+
+    setStatus("Đang tạo bản đồ ranh giới...", "loading");
+    if (runBtn) {
+      runBtn.disabled = true;
+      runBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>Đang tạo...</span>';
+    }
+
+    try {
+      const response = await fetch(`${API_BASE}/boundary/map?${payload.toString()}`, {
+        headers: getAuthHeader(),
+      });
+
+      if (!response.ok) {
+        const detail = await response.text();
+        throw new Error(detail || `Boundary API failed: ${response.status}`);
+      }
+
+      const result = await response.json();
+      if (frame && result.url) frame.src = result.url;
+      if (urlEl && result.url) {
+        urlEl.href = result.url;
+        urlEl.textContent = result.url;
+      }
+      if (countEl) countEl.textContent = Number(result.rings || 0).toLocaleString("vi-VN");
+      if (countLabelEl) countLabelEl.textContent = Number(result.rings || 0).toLocaleString("vi-VN");
+
+      setStatus("Đã tạo bản đồ thành công", "success");
+      appendLog(`Generated ${result.rings || 0} polygon ring(s) at ${result.url || "unknown url"}`);
+      showToast?.("Tạo bản đồ ranh giới thành công", "success");
+    } catch (error) {
+      console.error(error);
+      setStatus("Tạo bản đồ thất bại", "danger");
+      appendLog(`ERROR: ${error.message}`);
+      showToast?.("Không thể tạo bản đồ ranh giới", "danger");
+    } finally {
+      if (runBtn) {
+        runBtn.disabled = false;
+        runBtn.innerHTML = '<i class="fa-solid fa-map-location-dot"></i><span>Tạo bản đồ</span>';
+      }
+    }
+  };
+
+  scopeSelect?.addEventListener("change", refreshRequiredFields);
+  runBtn?.addEventListener("click", run);
+  [provinceInput, districtInput, wardInput].forEach((input) => {
+    input?.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        run();
+      }
+    });
+  });
+
+  refreshRequiredFields();
+  appendLog("Boundary visualization ready.");
+  setStatus("Sẵn sàng tạo bản đồ ranh giới", "idle");
 }
 
 /**
