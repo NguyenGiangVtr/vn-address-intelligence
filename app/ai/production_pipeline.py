@@ -2,7 +2,8 @@
 production_pipeline.py
 ======================
 Hệ thống làm sạch địa chỉ tối ưu (SOTA).
-Tích hợp: SQL + NER (PhoBERT) + Abbreviation Map + LLM (Qwen3).
+Tích hợp: SQL + NER (PhoBERT) + Abbreviation Map + LLM (Qwen3)
+          + ACS Calculator + Epoch Detector.
 """
 
 import logging
@@ -18,6 +19,8 @@ sys.path.insert(0, str(Path(__file__).parent))
 from db_connector import DBConnector
 from models import SiameseMGTE, LLMQwen3, AddressNER
 from utils.config_loader import load_config_with_env
+from acs_calculator import ACSCalculator
+from epoch_detector import EpochDetector
 
 # ──────────────────────────────────────────────────────────────────────────────
 logging.basicConfig(level=logging.INFO, format="%(asctime)s.%(msecs)03d [%(levelname)s] %(message)s", datefmt="%H:%M:%S")
@@ -52,6 +55,10 @@ def run_pipeline(config_path: str, limit: int = None):
     ner = AddressNER(model_path=ner_model_path)
     
     llm = LLMQwen3(model_name=mod_cfg["llm"]["model_name"], use_quantization=False)
+
+    # ACS Calculator và Epoch Detector (không cần DB session ở pipeline standalone)
+    acs_calc     = ACSCalculator(db_session=None)
+    epoch_detector = EpochDetector(db_session=None)
 
     # 2. Xử lý Dữ liệu ─────────────────────────────────────────────────────────
     # Lấy những bản ghi đang PENDING hoặc chưa có address_standardized
@@ -110,13 +117,36 @@ def run_pipeline(config_path: str, limit: int = None):
             if not isinstance(llm_data, dict):
                 llm_data = {"full_address": str(llm_data)}
 
+            standardized = llm_data.get("full_address") or context_addr
+
+            # E. Epoch Detection
+            epoch_result = epoch_detector.detect(raw_addr)
+
+            # F. ACS Calculation
+            acs = acs_calc.compute(
+                raw_address=raw_addr,
+                standardized_address=standardized,
+                semantic_score=float(llm_score),
+                province_id=row.get("province_id"),
+                district_id=row.get("district_id"),
+                ward_id=row.get("ward_id"),
+                admin_version=2,  # Default Post-2025; epoch detector cập nhật
+            )
+
             batch_results.append({
                 "id": row['id'],
                 "processing_status": "DONE",
                 "processing_method": "HYBRID_V1",
-                "address_standardized": llm_data.get("full_address"),
+                "address_standardized": standardized,
                 "phobert_confidence_score": float(llm_score),
-                "phobert_parsed_components": json.dumps(ner_results)
+                "phobert_parsed_components": json.dumps(ner_results),
+                "acs_score": float(acs.acs_score),
+                "acs_decision": acs.acs_decision,
+                "s_text": float(acs.s_text),
+                "s_sem": float(acs.s_sem),
+                "v_hierarchy": float(acs.v_hierarchy),
+                "v_temporal": float(acs.v_temporal),
+                "address_epoch": epoch_result.epoch,
             })
             
             if len(batch_results) % 50 == 0:
@@ -138,8 +168,10 @@ def run_pipeline(config_path: str, limit: int = None):
         
         # Cập nhật từng cột
         cols_to_update = [
-            "processing_status", "processing_method", "address_standardized", 
-            "phobert_confidence_score", "phobert_parsed_components", "error_message"
+            "processing_status", "processing_method", "address_standardized",
+            "phobert_confidence_score", "phobert_parsed_components", "error_message",
+            "acs_score", "acs_decision", "s_text", "s_sem",
+            "v_hierarchy", "v_temporal", "address_epoch",
         ]
         
         for col in cols_to_update:

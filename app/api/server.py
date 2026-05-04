@@ -23,13 +23,15 @@ from difflib import SequenceMatcher
 from concurrent.futures import ThreadPoolExecutor
 import random
 import string
-from app.core.database import SessionLocal, Province, District, Ward, OSMStreet, OSMBuilding, OSMPoi, OSMRawEntity, TrainingDataset, TrainingHistory, BenchmarkModelBaseline, AddressCleansingQueue, WardMapping, AuthUser, EmailVerification, engine, seed_training_metadata
+from app.core.database import SessionLocal, Province, District, Ward, OSMStreet, OSMBuilding, OSMPoi, OSMRawEntity, TrainingDataset, TrainingHistory, BenchmarkModelBaseline, AddressCleansingQueue, WardMapping, AuthUser, EmailVerification, SyncLog, UnitEdge, engine, seed_training_metadata
+from app.services.scd_sync import get_unit_at_date, get_sync_summary
 from app.services.auth import verify_password, create_access_token, get_password_hash, ALGORITHM, SECRET_KEY
 from app.services.email_service import send_verification_email
 from app.services.nso_sync import sync_full_nso, sync_province_nso, sync_logs
 from app.services.nso_api import get_nso_provinces, get_nso_districts, get_nso_wards
 from app.api import schemas
 from app.api.boundary import router as boundary_router
+from app.api.spatial import router as spatial_router
 from typing import List, Optional
 import json
 
@@ -590,10 +592,49 @@ def _run_parser_research(sample: AddressCleansingQueue, target_model: Optional[s
         else:
             outputs["llm"] = {"status": "Not loaded", "error": bundle["errors"].get("llm")}
 
+    # Compute ACS using the best available semantic score
+    acs_data: dict = {}
+    try:
+        from app.ai.acs_calculator import ACSCalculator
+        from app.ai.epoch_detector import EpochDetector
+
+        best_sem_score = 0.0
+        best_std_addr  = raw_address
+        for key in ("mgte", "phobert", "llm"):
+            out = outputs.get(key, {})
+            if "score" in out and out["score"] > best_sem_score:
+                best_sem_score = out["score"]
+                best_std_addr  = out.get("normalizedAddress", raw_address) or raw_address
+
+        acs_calc   = ACSCalculator(db_session=None)
+        epoch_det  = EpochDetector(db_session=None)
+        epoch_res  = epoch_det.detect(raw_address)
+        admin_ver  = 1 if epoch_res.epoch == "PRE_2025" else 2
+
+        acs_comp = acs_calc.compute(
+            raw_address=raw_address,
+            standardized_address=best_std_addr,
+            semantic_score=best_sem_score,
+            admin_version=admin_ver,
+        )
+        acs_data = {
+            "acs_score":    acs_comp.acs_score,
+            "acs_decision": acs_comp.acs_decision,
+            "s_text":       acs_comp.s_text,
+            "s_sem":        acs_comp.s_sem,
+            "v_hierarchy":  acs_comp.v_hierarchy,
+            "v_temporal":   acs_comp.v_temporal,
+            "address_epoch": epoch_res.epoch,
+            "epoch_confidence": epoch_res.confidence,
+        }
+    except Exception as _acs_err:
+        logger.debug("ACS compute skipped: %s", _acs_err)
+
     return {
         "sample": _serialize_parser_sample(sample),
         "analysis_input": raw_address,
         "outputs": outputs,
+        "acs": acs_data,
         "meta": {
             "corpusSize": len(bundle.get("corpus") or []),
             "evaluatedAt": datetime.utcnow().isoformat() + "Z",
@@ -1993,8 +2034,150 @@ def clear_admin_cache(level: Optional[str] = None):
     return {"status": "cleared", "keys_deleted": n, "level": level or "all"}
 
 
+# ── G1: SCD Type 2 History & Sync Log Endpoints ──────────────────────────────
+
+@api_router.get("/admin-unit/{level}/{unit_id}/history")
+def get_admin_unit_history(
+    level: str,
+    unit_id: int,
+    at: Optional[str] = Query(None, description="ISO date YYYY-MM-DD — trả về trạng thái tại thời điểm đó"),
+    db: Session = Depends(get_db),
+):
+    """
+    Truy vấn lịch sử SCD Type 2 của một đơn vị hành chính.
+
+    - GET /api/admin-unit/ward/770001/history        → Toàn bộ lịch sử
+    - GET /api/admin-unit/ward/770001/history?at=2024-01-01 → Trạng thái tại ngày đó
+    """
+    if level not in ("province", "district", "ward"):
+        raise HTTPException(status_code=400, detail="level phải là: province, district, ward")
+
+    at_dt = None
+    if at:
+        try:
+            at_dt = datetime.strptime(at, "%Y-%m-%d")
+        except ValueError:
+            raise HTTPException(status_code=400, detail="at phải có định dạng YYYY-MM-DD")
+
+    result = get_unit_at_date(db, level, unit_id, at_dt)
+
+    if at_dt:
+        if not result:
+            raise HTTPException(status_code=404, detail=f"Không tìm thấy {level} {unit_id} tại {at}")
+        return {
+            "unit_id": unit_id,
+            "level": level,
+            "at": at,
+            "record": {c.name: getattr(result, c.name) for c in result.__table__.columns},
+        }
+    else:
+        if not result:
+            raise HTTPException(status_code=404, detail=f"Không tìm thấy {level} với id={unit_id}")
+        return {
+            "unit_id": unit_id,
+            "level": level,
+            "total_versions": len(result),
+            "history": [
+                {c.name: getattr(r, c.name) for c in r.__table__.columns}
+                for r in result
+            ],
+        }
+
+
+@api_router.get("/sync-logs")
+def get_sync_logs(
+    run_id: Optional[str] = Query(None, description="UUID của lần chạy đồng bộ"),
+    level: Optional[str] = Query(None, description="province | district | ward"),
+    limit: int = Query(50, ge=1, le=500),
+    db: Session = Depends(get_db),
+):
+    """Lấy danh sách sync log. Có thể lọc theo run_id hoặc level."""
+    q = db.query(SyncLog)
+    if run_id:
+        q = q.filter(SyncLog.run_id == run_id)
+    if level:
+        q = q.filter(SyncLog.level == level)
+    logs = q.order_by(SyncLog.synced_at.desc()).limit(limit).all()
+    return {
+        "total": len(logs),
+        "logs": [
+            {
+                "id": log.id,
+                "sync_source": log.sync_source,
+                "level": log.level,
+                "unit_id": log.unit_id,
+                "change_type": log.change_type,
+                "synced_at": log.synced_at.isoformat() if log.synced_at else None,
+                "run_id": log.run_id,
+                "records_affected": log.records_affected,
+            }
+            for log in logs
+        ],
+    }
+
+
+@api_router.get("/sync-logs/summary/{run_id}")
+def get_sync_log_summary(run_id: str, db: Session = Depends(get_db)):
+    """Tổng hợp kết quả một lần chạy đồng bộ theo run_id."""
+    summary = get_sync_summary(db, run_id)
+    return summary
+
+
+# ── G5: Temporal Address Migration ────────────────────────────────────────────
+
+class MigrateAddressRequest(BaseModel):
+    address: str
+    province_id: Optional[int] = None
+
+
+@api_router.post(
+    "/migrate-address",
+    tags=["AI Address Parser"],
+    summary="Chuyển đổi địa chỉ Pre-2025 → Post-2025",
+)
+def migrate_address(payload: MigrateAddressRequest, db: Session = Depends(get_db)):
+    """
+    Phát hiện địa chỉ Pre-2025 và chuyển đổi sang tên đơn vị hành chính Post-2025.
+
+    - Phát hiện epoch (PRE_2025 / POST_2025 / AMBIGUOUS)
+    - Áp dụng WardMapping để thay tên cũ → tên mới
+    - Trả về địa chỉ đã chuyển đổi kèm metadata
+    """
+    from app.ai.epoch_detector import EpochDetector
+    from app.ai.acs_calculator import ACSCalculator
+
+    detector = EpochDetector(db_session=db)
+    epoch_result = detector.detect(payload.address)
+
+    conversion_result = {"converted_address": payload.address, "mapping_applied": False}
+    if epoch_result.epoch == "PRE_2025":
+        conversion_result = detector.convert_pre_to_post(
+            payload.address, province_id=payload.province_id
+        )
+
+    acs_calc = ACSCalculator(db_session=db)
+    acs_comp = acs_calc.compute(
+        raw_address=payload.address,
+        standardized_address=conversion_result.get("converted_address", payload.address),
+        semantic_score=conversion_result.get("confidence", 0.5),
+        admin_version=2 if epoch_result.epoch != "PRE_2025" else 1,
+    )
+
+    return {
+        "original_address":   payload.address,
+        "epoch":              epoch_result.epoch,
+        "epoch_confidence":   epoch_result.confidence,
+        "converted_address":  conversion_result.get("converted_address"),
+        "mapping_applied":    conversion_result.get("mapping_applied", False),
+        "mappings_used":      conversion_result.get("mappings_used", []),
+        "acs_score":          acs_comp.acs_score,
+        "acs_decision":       acs_comp.acs_decision,
+    }
+
+
 app.include_router(api_router, prefix="/api") # Match frontend API_BASE
 api_router.include_router(boundary_router, prefix="/boundary")
+api_router.include_router(spatial_router)
 app.include_router(api_router_v1) # Support /api/v1/*
 
 if __name__ == "__main__":

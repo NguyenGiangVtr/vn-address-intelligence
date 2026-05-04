@@ -1,7 +1,8 @@
 # TÀI LIỆU THỐNG KÊ TÍNH NĂNG DỰ ÁN VNAI
+
 ## Đã đáp ứng vs. Chưa đáp ứng — Đối chiếu với Dàn ý Luận văn
 
-> **Phiên bản:** 1.1 | **Ngày:** 04/05/2026 (cập nhật: n8n NSO crawler đã hoàn chỉnh)  
+> **Phiên bản:** 1.2 | **Ngày:** 04/05/2026 (cập nhật: G1 GOV-SYNC SCD Type 2 & Alert hoàn chỉnh)  
 > **Luận văn:** Xây dựng Khung Giải pháp Làm giàu và Chuẩn hóa Dữ liệu Địa chỉ Việt Nam  
 > **Repository:** `https://github.com/NguyenGiangVtr/vn-address-intelligence`
 
@@ -20,27 +21,31 @@
 
 ### 1.1 Bảng tổng hợp theo Business Requirement
 
-| BR# | Yêu cầu nghiệp vụ | Trạng thái | Mức độ hoàn thiện |
-|-----|-------------------|------------|-------------------|
-| BR1 | Đồng bộ hành chính tự động từ nguồn Chính phủ | ✅ Tốt | 80% — n8n Browserless crawler có, chạy cron 01:00 AM, SCD Type 2 đầy đủ **chưa có** |
-| BR2 | Chuẩn hóa địa chỉ thô → cấu trúc chuẩn + GSOID | ✅ Cơ bản | 70% — pipeline AI hoạt động, ACS đầy đủ **chưa có** |
-| BR3 | Tra cứu lịch sử hành chính, ánh xạ địa chỉ cũ→mới | ⚠️ Một phần | 50% — `mat.ward_mapping` có, SCD Type 2 đầy đủ **chưa có** |
-| BR4 | Xác định đơn vị hành chính từ tọa độ (Point-in-Polygon) | ⚠️ Một phần | 40% — polygon visualization có, API `/subdivide` **chưa có** |
-| BR5 | Làm giàu dữ liệu từ đa nguồn (OSM, Google, VietMap) | ⚠️ Một phần | 60% — OSM fetcher có, Waterfall strategy **chưa hoàn chỉnh** |
-| BR6 | Nền tảng benchmark liên tục so sánh mô hình AI | ✅ Tốt | 85% — experiment runner + UI benchmark đầy đủ |
+
+| BR# | Yêu cầu nghiệp vụ                                       | Trạng thái   | Mức độ hoàn thiện                                                                                                                     |
+| --- | ------------------------------------------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------- |
+| BR1 | Đồng bộ hành chính tự động từ nguồn Chính phủ           | ✅ Hoàn chỉnh | 95% — n8n Browserless crawler có, cron 01:00 AM, **SCD Type 2 ĐÃ CÓ** (valid_from/valid_to/is_current), Sync Log persist, Email Alert |
+| BR2 | Chuẩn hóa địa chỉ thô → cấu trúc chuẩn + GSOID          | ✅ Cơ bản     | 70% — pipeline AI hoạt động, ACS đầy đủ **chưa có**                                                                                   |
+| BR3 | Tra cứu lịch sử hành chính, ánh xạ địa chỉ cũ→mới       | ✅ Tốt        | 80% — `mat.ward_mapping` có, **SCD Type 2 ĐÃ CÓ**, API `/admin-unit/{level}/{id}/history` hoàn chỉnh                                  |
+| BR4 | Xác định đơn vị hành chính từ tọa độ (Point-in-Polygon) | ⚠️ Một phần  | 40% — polygon visualization có, API `/subdivide` **chưa có**                                                                          |
+| BR5 | Làm giàu dữ liệu từ đa nguồn (OSM, Google, VietMap)     | ⚠️ Một phần  | 60% — OSM fetcher có, Waterfall strategy **chưa hoàn chỉnh**                                                                          |
+| BR6 | Nền tảng benchmark liên tục so sánh mô hình AI          | ✅ Tốt        | 85% — experiment runner + UI benchmark đầy đủ                                                                                         |
+
 
 ### 1.2 Bảng tổng hợp theo Module kiến trúc
 
-| Module | Mô tả luận văn | Thực tế codebase | % Hoàn thành |
-|--------|---------------|-----------------|--------------|
-| **M1** Gov-Sync (n8n) | n8n workflow: SOAP→SCD Type 2→Typesense | **n8n Browserless crawler hoạt động** (cron 01:00 AM, index 0→33 tỉnh, UPDATE `mat.ward`) | 70% |
-| **M2** AI Pipeline | PhoBERT NER → mGTE Siamese → Qwen3 LLM | Cả 3 model có, production pipeline có | 75% |
-| **M2a** ACS Score | Công thức 4 thành phần (text+sem+hier+temporal) | Chỉ confidence score đơn giản | 30% |
-| **M3** Geospatial | Point-in-Polygon, 3 chiến lược hiệu chỉnh polygon | Boundary visualization, chưa có API subdivide | 35% |
-| **M4** Enrichment | Waterfall: Redis→OSM→Google→Typesense | OSM fetcher + basic enrichment | 50% |
-| **Web UI** | explorer, benchmark, admin_units pages | 15+ trang UI hoàn chỉnh | 90% |
-| **REST API** | FastAPI endpoints đầy đủ | 30+ endpoints, thiếu spatial endpoints | 80% |
-| **Database** | 4 schema: mat, osm, ath, prq | Đã tạo đầy đủ, thiếu một số bảng | 70% |
+
+| Module                | Mô tả luận văn                                    | Thực tế codebase                                                                                                            | % Hoàn thành |
+| --------------------- | ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| **M1** Gov-Sync (n8n) | n8n workflow: SOAP→SCD Type 2→Typesense           | **n8n crawler + SCD Type 2 hoàn chỉnh** (cron 01:00 AM, SCD columns, mat.unit_edge, ath.sync_log, Email Alert, API history) | 95%          |
+| **M2** AI Pipeline    | PhoBERT NER → mGTE Siamese → Qwen3 LLM            | Cả 3 model có, production pipeline có                                                                                       | 75%          |
+| **M2a** ACS Score     | Công thức 4 thành phần (text+sem+hier+temporal)   | Chỉ confidence score đơn giản                                                                                               | 30%          |
+| **M3** Geospatial     | Point-in-Polygon, 3 chiến lược hiệu chỉnh polygon | Boundary visualization, chưa có API subdivide                                                                               | 35%          |
+| **M4** Enrichment     | Waterfall: Redis→OSM→Google→Typesense             | OSM fetcher + basic enrichment                                                                                              | 50%          |
+| **Web UI**            | explorer, benchmark, admin_units pages            | 15+ trang UI hoàn chỉnh                                                                                                     | 90%          |
+| **REST API**          | FastAPI endpoints đầy đủ                          | 30+ endpoints, thiếu spatial endpoints                                                                                      | 80%          |
+| **Database**          | 4 schema: mat, osm, ath, prq                      | Đã tạo đầy đủ, thiếu một số bảng                                                                                            | 70%          |
+
 
 ---
 
@@ -53,25 +58,31 @@
 **Trạng thái:** ✅ Hoàn chỉnh
 
 #### Input
+
 - `POST /api/login`: `{username, password}` (OAuth2 form)
 - `POST /api/register/send-code`: `{email}` — gửi code xác thực
 - `POST /api/register`: `{email, code, username, password}`
 
 #### Process
+
 1. `app/services/auth.py`: `bcrypt` hash password → verify
 2. JWT token tạo với `python-jose` (HS256), TTL cấu hình từ `.env`
 3. Email verification: random 6-digit code → SMTP gửi HTML email (`app/services/email_service.py`)
 4. Code lưu bảng `ath.email_verifications` với `expires_at`
 
 #### Output
+
 - JWT access token (JSON response)
 - Redirect về dashboard sau đăng nhập thành công
 
 #### Tables liên quan
-| Schema | Bảng | Vai trò |
-|--------|------|---------|
-| `public` | `auth_users` | Lưu username, email, password_hash, role |
-| `ath` | `email_verifications` | Lưu OTP code + trạng thái xác thực |
+
+
+| Schema   | Bảng                  | Vai trò                                  |
+| -------- | --------------------- | ---------------------------------------- |
+| `public` | `auth_users`          | Lưu username, email, password_hash, role |
+| `ath`    | `email_verifications` | Lưu OTP code + trạng thái xác thực       |
+
 
 ---
 
@@ -80,17 +91,20 @@
 **Trạng thái:** ✅ Hoàn chỉnh
 
 #### Input
+
 - `GET /api/provinces` — danh sách tỉnh (query: `version=1|2`, `search`)
 - `GET /api/districts` — danh sách huyện (query: `province_id`)
 - `GET /api/wards` — danh sách xã/phường (query: `district_id`)
 - `GET /api/unit-details/{level}/{unit_id}` — chi tiết 1 đơn vị
 
 #### Process
+
 1. SQLAlchemy query vào `mat.province`, `mat.district`, `mat.ward`
 2. Hỗ trợ filter theo `admin_version` (v1 = trước sáp nhập, v2 = sau 07/2025)
 3. Join với bảng ánh xạ `mat.ward_mapping` để lấy thông tin sáp nhập
 
 #### Output
+
 ```json
 {
   "province_id": 79,
@@ -102,12 +116,15 @@
 ```
 
 #### Tables liên quan
-| Schema | Bảng | Vai trò |
-|--------|------|---------|
-| `mat` | `province` | Master dữ liệu tỉnh (có `old_id`, `admin_version`) |
-| `mat` | `district` | Master dữ liệu huyện (lịch sử) |
-| `mat` | `ward` | Master dữ liệu xã/phường (có `admin_version`) |
-| `mat` | `ward_mapping` | Ánh xạ đơn vị cũ → mới (`relationship_type`, `effective_date_from`) |
+
+
+| Schema | Bảng           | Vai trò                                                             |
+| ------ | -------------- | ------------------------------------------------------------------- |
+| `mat`  | `province`     | Master dữ liệu tỉnh (có `old_id`, `admin_version`)                  |
+| `mat`  | `district`     | Master dữ liệu huyện (lịch sử)                                      |
+| `mat`  | `ward`         | Master dữ liệu xã/phường (có `admin_version`)                       |
+| `mat`  | `ward_mapping` | Ánh xạ đơn vị cũ → mới (`relationship_type`, `effective_date_from`) |
+
 
 ---
 
@@ -116,6 +133,7 @@
 **Trạng thái:** ✅ Tốt (n8n workflow hoạt động, SCD Type 2 chưa đầy đủ)
 
 #### Input
+
 - **Trigger tự động:** Cron `01:00 AM` hàng ngày (n8n Schedule node)
 - **Nguồn:** `danhmuchanhchinh.nso.gov.vn` — duyệt theo chỉ số (index) tỉnh từ `0` đến `33`
 - `POST /api/sync/nso` — trigger thủ công qua API (Python fallback)
@@ -164,22 +182,28 @@
 ```
 
 Bên cạnh n8n, Python services vẫn duy trì:
+
 1. `app/services/nso_api.py`: HTTP REST client với retry
 2. `app/services/nso_sync.py`: parse response, upsert vào `mat.*`
 3. `app/services/seeders_v3.py`: seeding dữ liệu ban đầu từ file tĩnh
 
 #### Output
+
 - Bảng `mat.ward` được UPDATE các trường: `ward_name_en`, `decision_date`, `population`, `area_km2`, lọc theo `ward_no` và `admin_version = 2`
 - `GET /api/sync/nso/logs`: log buffer trạng thái đồng bộ
 
 #### Tables liên quan
-| Schema | Bảng | Cột được cập nhật | Điều kiện |
-|--------|------|-------------------|-----------|
-| `mat` | `ward` | `ward_name`, `ward_name_en`, `type_name`, `decision_date`, `population`, `area_km2` | `ward_no = :code AND admin_version = 2` |
-| `mat` | `province` | Upsert toàn bộ qua Python fallback | `province_id` conflict |
-| `mat` | `district` | Upsert toàn bộ qua Python fallback | `district_id` conflict |
+
+
+| Schema | Bảng       | Cột được cập nhật                                                                   | Điều kiện                               |
+| ------ | ---------- | ----------------------------------------------------------------------------------- | --------------------------------------- |
+| `mat`  | `ward`     | `ward_name`, `ward_name_en`, `type_name`, `decision_date`, `population`, `area_km2` | `ward_no = :code AND admin_version = 2` |
+| `mat`  | `province` | Upsert toàn bộ qua Python fallback                                                  | `province_id` conflict                  |
+| `mat`  | `district` | Upsert toàn bộ qua Python fallback                                                  | `district_id` conflict                  |
+
 
 #### Khoảng trống còn lại
+
 - ⚠️ **Chưa có SCD Type 2** — UPDATE trực tiếp, không đóng bản ghi lịch sử cũ
 - ⚠️ **Chưa persist sync_log** vào DB (in-memory list, mất khi restart)
 - ⚠️ **Chưa kết nối Cổng DVC SOAP** — chỉ scrape web NSO, không qua API chính thức
@@ -194,20 +218,24 @@ Bên cạnh n8n, Python services vẫn duy trì:
 #### 4a. Tiền xử lý (Preprocessing)
 
 ##### Input
+
 - Chuỗi địa chỉ thô (free-text), ví dụ: `"90/12 ly thuong kiet q.TB HCM"`
 
 ##### Process (`app/ai/utils/address_cleaner.py`)
+
 1. Unicode NFC normalization (xử lý NFD từ iOS/macOS)
 2. Viết tắt expansion: `"Q." → "Quận"`, `"P." → "Phường"`, `"TP." → "Thành phố"` (200+ entry)
 3. Regex chuẩn hóa cấu trúc ngõ/ngách: `"90/12/5"` → `{street: 90, alley: 12, house: 5}`
 4. Tích hợp `vnauto` cho teencode, thiếu dấu
 
 ##### Output
+
 ```python
 {"cleaned": "90/12 Lý Thường Kiệt, Quận Tân Bình, Thành phố Hồ Chí Minh"}
 ```
 
 ##### Tables liên quan
+
 - Không lưu DB — xử lý in-memory
 
 ---
@@ -215,15 +243,18 @@ Bên cạnh n8n, Python services vẫn duy trì:
 #### 4b. PhoBERT NER (Entity Recognition)
 
 ##### Input
+
 - Chuỗi địa chỉ đã tiền xử lý
 
 ##### Process (`app/ai/models/phobert_model.py`)
+
 1. `SentenceTransformer` với backbone PhoBERT (`vinai/phobert-base`)
 2. Optional PyVi word segmentation trước khi encode
 3. Cosine similarity matching với corpus đã build từ `mat.ward/district/province`
 4. Token classification pipeline nếu dùng `models/ner_model.py` (`AddressNER`)
 
 ##### Output
+
 ```json
 {
   "phobert_parsed_components": {
@@ -238,26 +269,32 @@ Bên cạnh n8n, Python services vẫn duy trì:
 ```
 
 ##### Tables liên quan
-| Schema | Bảng | Vai trò |
-|--------|------|---------|
-| `mat` | `province/district/ward` | Corpus để build embedding index |
-| `prq` | `address_cleansing_queue` | Lưu `phobert_parsed_components`, `phobert_confidence_score` |
+
+
+| Schema | Bảng                      | Vai trò                                                     |
+| ------ | ------------------------- | ----------------------------------------------------------- |
+| `mat`  | `province/district/ward`  | Corpus để build embedding index                             |
+| `prq`  | `address_cleansing_queue` | Lưu `phobert_parsed_components`, `phobert_confidence_score` |
+
 
 ---
 
 #### 4c. mGTE Siamese Matching
 
 ##### Input
+
 - Tên đơn vị hành chính trích xuất từ NER
 - Corpus từ `mat.*`
 
 ##### Process (`app/ai/models/siamese_mgte.py`)
+
 1. `SiameseMGTE` encode query + corpus bằng multilingual GTE
 2. Cosine similarity → top-k candidates
 3. FAISS IVFHNSW cho Approximate Nearest Neighbor (thiết kế, chưa tích hợp FAISS thực tế)
 4. Fuzzy Matching bổ sung cho sai chính tả nhẹ
 
 ##### Output
+
 ```json
 {
   "mgte_parsed_components": {...},
@@ -267,26 +304,32 @@ Bên cạnh n8n, Python services vẫn duy trì:
 ```
 
 ##### Tables liên quan
-| Schema | Bảng | Vai trò |
-|--------|------|---------|
-| `prq` | `address_cleansing_queue` | Lưu `mgte_parsed_components`, `mgte_embedding` |
-| `mat` | `ward/district/province` | Source corpus embedding |
+
+
+| Schema | Bảng                      | Vai trò                                        |
+| ------ | ------------------------- | ---------------------------------------------- |
+| `prq`  | `address_cleansing_queue` | Lưu `mgte_parsed_components`, `mgte_embedding` |
+| `mat`  | `ward/district/province`  | Source corpus embedding                        |
+
 
 ---
 
 #### 4d. Qwen3 LLM Refinement
 
 ##### Input
+
 - Địa chỉ phức tạp (confidence thấp < ngưỡng)
 - Few-shot prompt template tiếng Việt
 
 ##### Process (`app/ai/models/llm_model.py`)
+
 1. `LLMQwen3`: HuggingFace CausalLM pipeline (`Qwen/Qwen3-*`)
 2. Structured prompt yêu cầu JSON output theo schema cố định
 3. Constrained decoding (JSON schema enforcement)
 4. Result caching cho pattern lặp lại (thiết kế)
 
 ##### Output
+
 ```json
 {
   "house_number": "90/12",
@@ -299,34 +342,43 @@ Bên cạnh n8n, Python services vẫn duy trì:
 ```
 
 ##### Tables liên quan
-| Schema | Bảng | Vai trò |
-|--------|------|---------|
-| `prq` | `address_cleansing_queue` | Input từ queue, output lưu `address_standardized` |
+
+
+| Schema | Bảng                      | Vai trò                                           |
+| ------ | ------------------------- | ------------------------------------------------- |
+| `prq`  | `address_cleansing_queue` | Input từ queue, output lưu `address_standardized` |
+
 
 ---
 
 #### 4e. Production Pipeline (Batch Processing)
 
 ##### Input
+
 - `POST /api/batch/trigger` — trigger background job
 - Hoặc CLI: `python app/main.py data:generate`
 
 ##### Process (`app/ai/production_pipeline.py`)
+
 1. Đọc records từ `prq.address_cleansing_queue` có `status = 'PENDING'`
 2. Build mGTE corpus từ `mat.*`
 3. NER → mGTE Siamese → quyết định model thắng
 4. Update record với kết quả + `selected_ai_model`
 
 ##### Output
+
 - Records trong `prq.address_cleansing_queue` được update `processing_status = 'COMPLETED'`
 - `GET /api/batch/job` — trạng thái job
 
 ##### Tables liên quan
-| Schema | Bảng | Vai trò |
-|--------|------|---------|
-| `prq` | `address_cleansing_queue` | Read PENDING → Write COMPLETED |
-| `mat` | `province/district/ward` | Corpus source |
-| `ath` | `training_datasets` | Training data management |
+
+
+| Schema | Bảng                      | Vai trò                        |
+| ------ | ------------------------- | ------------------------------ |
+| `prq`  | `address_cleansing_queue` | Read PENDING → Write COMPLETED |
+| `mat`  | `province/district/ward`  | Corpus source                  |
+| `ath`  | `training_datasets`       | Training data management       |
+
 
 ---
 
@@ -335,6 +387,7 @@ Bên cạnh n8n, Python services vẫn duy trì:
 **Trạng thái:** ✅ Hoàn chỉnh
 
 #### Input
+
 ```http
 POST /api/parser/analyze
 {
@@ -344,12 +397,14 @@ POST /api/parser/analyze
 ```
 
 #### Process (`app/api/server.py` — `/parser/analyze` endpoint)
+
 1. Tiền xử lý địa chỉ
 2. Chạy model được chọn (hoặc tất cả nếu `model=all`)
 3. So sánh kết quả các model (multi-model comparison)
 4. Trả về kết quả có structured JSON + confidence score mỗi model
 
 #### Output
+
 ```json
 {
   "input": "90 Ly Thuong Kiet Q.TB HCM",
@@ -363,6 +418,7 @@ POST /api/parser/analyze
 ```
 
 #### Tables liên quan
+
 - Không ghi DB (real-time only), tùy chọn log vào `prq.address_cleansing_queue`
 
 ---
@@ -372,11 +428,13 @@ POST /api/parser/analyze
 **Trạng thái:** ✅ Tốt
 
 #### Input
+
 - `POST /api/benchmark/trigger` — trigger chạy experiment
 - `GET /api/benchmark/realtime` — metrics realtime
 - `GET /api/benchmark/baselines` — lịch sử baseline
 
 #### Process (`app/ai/experiment_runner.py`)
+
 1. Load config từ `app/ai/config.yaml`
 2. Chạy multi-model inference trên test set
 3. Tính F1 Score, Exact Match, Throughput, P95 Latency
@@ -384,6 +442,7 @@ POST /api/parser/analyze
 5. Generate HTML/CSV report (`app/ai/report_generator.py`)
 
 #### Output
+
 ```json
 {
   "phobert": {"f1": 84.2, "throughput": 27.8, "p95_latency": 85, "cost_per_million": 42},
@@ -393,10 +452,13 @@ POST /api/parser/analyze
 ```
 
 #### Tables liên quan
-| Schema | Bảng | Vai trò |
-|--------|------|---------|
-| `ath` | `benchmark_model_baselines` | Lưu F1, throughput, cost/M samples |
-| `ath` | `training_history` | Lịch sử version model và accuracy |
+
+
+| Schema | Bảng                        | Vai trò                            |
+| ------ | --------------------------- | ---------------------------------- |
+| `ath`  | `benchmark_model_baselines` | Lưu F1, throughput, cost/M samples |
+| `ath`  | `training_history`          | Lịch sử version model và accuracy  |
+
 
 ---
 
@@ -405,26 +467,32 @@ POST /api/parser/analyze
 **Trạng thái:** ✅ Cơ bản
 
 #### Input
+
 - `POST /api/osm/trigger` — trigger background job
 - CLI: `python app/main.py osm:fetch --province-id 79`
 
 #### Process (`app/services/osm_fetcher.py`)
+
 1. Gọi Overpass API với bounding box của từng tỉnh
 2. Parse XML response lấy nodes/ways với tags `highway`, `building`, `amenity`
 3. Lưu vào `osm.streets`, `osm.buildings`, `osm.pois`
 
 #### Output
-- Rows trong `osm.*` tables
+
+- Rows trong `osm.`* tables
 - `GET /api/osm/summary` — count by table
 - `GET /api/osm/preview` — sample rows
 
 #### Tables liên quan
-| Schema | Bảng | Vai trò |
-|--------|------|---------|
-| `osm` | `streets` | Tên đường từ OSM |
-| `osm` | `buildings` | Tòa nhà, công trình |
-| `osm` | `pois` | Điểm quan tâm |
-| `osm` | `raw_entities` | Lưu raw OSM tags (JSON) |
+
+
+| Schema | Bảng           | Vai trò                 |
+| ------ | -------------- | ----------------------- |
+| `osm`  | `streets`      | Tên đường từ OSM        |
+| `osm`  | `buildings`    | Tòa nhà, công trình     |
+| `osm`  | `pois`         | Điểm quan tâm           |
+| `osm`  | `raw_entities` | Lưu raw OSM tags (JSON) |
+
 
 ---
 
@@ -433,22 +501,28 @@ POST /api/parser/analyze
 **Trạng thái:** ✅ Cơ bản
 
 #### Input
+
 - `GET /api/boundary/map?province_id=79&district_id=770`
 
 #### Process (`app/api/boundary.py`, `app/tools/boundary_visualization/`)
+
 1. Đọc coordinates từ `mat.area_polygon` (raw SQL, không phải ORM)
 2. Parse nested GeoJSON-like coordinate arrays
 3. Tạo Folium map với polygon layers
 4. Lưu HTML file vào `ui/pages/boundary_map_{id}.html`
 
 #### Output
+
 - Interactive Folium HTML map
 - `GET /pages/boundary_map_{id}.html` — serve file
 
 #### Tables liên quan
-| Schema | Bảng | Vai trò |
-|--------|------|---------|
-| `mat` | `area_polygon` | Geometry polygon data (raw SQL access) |
+
+
+| Schema | Bảng           | Vai trò                                |
+| ------ | -------------- | -------------------------------------- |
+| `mat`  | `area_polygon` | Geometry polygon data (raw SQL access) |
+
 
 ---
 
@@ -457,14 +531,17 @@ POST /api/parser/analyze
 **Trạng thái:** ✅ Hoàn chỉnh
 
 #### Input
+
 - `GET /api/explorer/queue?page=1&limit=50&status=PENDING`
 - `GET /api/parser/sample` — random sample 1 record
 
 #### Process
+
 - SQLAlchemy query `prq.address_cleansing_queue` với filter + pagination
 - Trả về list records kèm AI results
 
 #### Output
+
 ```json
 {
   "total": 15420,
@@ -483,9 +560,12 @@ POST /api/parser/analyze
 ```
 
 #### Tables liên quan
-| Schema | Bảng | Vai trò |
-|--------|------|---------|
-| `prq` | `address_cleansing_queue` | Source data |
+
+
+| Schema | Bảng                      | Vai trò     |
+| ------ | ------------------------- | ----------- |
+| `prq`  | `address_cleansing_queue` | Source data |
+
 
 ---
 
@@ -493,23 +573,25 @@ POST /api/parser/analyze
 
 **Trạng thái:** ✅ Tốt
 
-| Trang | Endpoint | Chức năng |
-|-------|----------|-----------|
-| `overview.html` | `/overview.html` | Dashboard tổng quan KPIs |
-| `training.html` | `/training.html` | Lịch sử training, accuracy chart |
-| `experiments.html` | `/experiments.html` | Benchmark model comparison |
-| `parser.html` | `/parser.html` | Real-time address parser |
-| `explorer.html` | `/explorer.html` | Duyệt queue xử lý |
-| `batch.html` | `/batch.html` | Trigger & monitor batch jobs |
-| `lookup.html` | `/lookup.html` | Tra cứu mapping đơn vị |
-| `admin-units.html` | `/admin-units.html` | Quản lý hành chính |
-| `ward-mapper.html` | `/ward-mapper.html` | Tool ánh xạ phường/xã |
-| `nso-sync.html` | `/nso-sync.html` | Quản lý đồng bộ NSO |
-| `osm-enrichment.html` | `/osm-enrichment.html` | OSM data management |
-| `boundary-visualization.html` | `/boundary-visualization.html` | Polygon map viewer |
-| `evidence.html` | `/evidence.html` | Experiment artifacts |
-| `label-studio.html` | `/label-studio.html` | Annotation interface |
-| `settings.html` | `/settings.html` | Cấu hình hệ thống |
+
+| Trang                         | Endpoint                       | Chức năng                        |
+| ----------------------------- | ------------------------------ | -------------------------------- |
+| `overview.html`               | `/overview.html`               | Dashboard tổng quan KPIs         |
+| `training.html`               | `/training.html`               | Lịch sử training, accuracy chart |
+| `experiments.html`            | `/experiments.html`            | Benchmark model comparison       |
+| `parser.html`                 | `/parser.html`                 | Real-time address parser         |
+| `explorer.html`               | `/explorer.html`               | Duyệt queue xử lý                |
+| `batch.html`                  | `/batch.html`                  | Trigger & monitor batch jobs     |
+| `lookup.html`                 | `/lookup.html`                 | Tra cứu mapping đơn vị           |
+| `admin-units.html`            | `/admin-units.html`            | Quản lý hành chính               |
+| `ward-mapper.html`            | `/ward-mapper.html`            | Tool ánh xạ phường/xã            |
+| `nso-sync.html`               | `/nso-sync.html`               | Quản lý đồng bộ NSO              |
+| `osm-enrichment.html`         | `/osm-enrichment.html`         | OSM data management              |
+| `boundary-visualization.html` | `/boundary-visualization.html` | Polygon map viewer               |
+| `evidence.html`               | `/evidence.html`               | Experiment artifacts             |
+| `label-studio.html`           | `/label-studio.html`           | Annotation interface             |
+| `settings.html`               | `/settings.html`               | Cấu hình hệ thống                |
+
 
 ---
 
@@ -518,23 +600,29 @@ POST /api/parser/analyze
 **Trạng thái:** ✅ Cơ bản
 
 #### Input
+
 - CLI: `python app/main.py data:generate --count 10000`
 
 #### Process (`app/services/synthetic_mixer.py`)
-1. Random chọn province/district/ward từ `mat.*`
+
+1. Random chọn province/district/ward từ `mat.`*
 2. Áp dụng noise patterns: bỏ dấu, viết tắt, đảo thứ tự, typo
 3. Tạo chuỗi địa chỉ + BIO tags tương ứng
 4. Optional: dùng Qwen3 để generate câu phức tạp hơn
 
 #### Output
+
 - JSONL file với format `{"text": "...", "tags": [...]}`
 - Lưu vào `ath.training_datasets`
 
 #### Tables liên quan
-| Schema | Bảng | Vai trò |
-|--------|------|---------|
-| `ath` | `training_datasets` | Lưu raw_text + ner_tags_json |
-| `mat` | `province/district/ward` | Source để sample đơn vị hành chính |
+
+
+| Schema | Bảng                     | Vai trò                            |
+| ------ | ------------------------ | ---------------------------------- |
+| `ath`  | `training_datasets`      | Lưu raw_text + ner_tags_json       |
+| `mat`  | `province/district/ward` | Source để sample đơn vị hành chính |
+
 
 ---
 
@@ -543,13 +631,16 @@ POST /api/parser/analyze
 **Trạng thái:** ✅ Cơ bản
 
 #### Input
+
 - `GET /api/lookup/mapping?ward_name=Phường+12&district_name=Tân+Bình`
 
 #### Process
+
 - Query `mat.ward_mapping` để tìm ánh xạ
 - Kết hợp với `mat.ward` để lấy tên đơn vị mới
 
 #### Output
+
 ```json
 {
   "old": {"ward_id": 770001, "ward_name": "Phường 12", "district": "Tân Bình"},
@@ -560,10 +651,13 @@ POST /api/parser/analyze
 ```
 
 #### Tables liên quan
-| Schema | Bảng | Vai trò |
-|--------|------|---------|
-| `mat` | `ward_mapping` | Ánh xạ old_id → new_id |
-| `mat` | `ward/district/province` | Tên đơn vị hành chính |
+
+
+| Schema | Bảng                     | Vai trò                |
+| ------ | ------------------------ | ---------------------- |
+| `mat`  | `ward_mapping`           | Ánh xạ old_id → new_id |
+| `mat`  | `ward/district/province` | Tên đơn vị hành chính  |
+
 
 ---
 
@@ -670,6 +764,7 @@ def scd_upsert_unit(session, level: str, unit_data: dict, effective_date: dateti
 > **Workflow ID:** `S5smdRYjLEmaaMKp` | **Active:** `true`
 
 Workflow hiện có các nodes sau (đã hoạt động):
+
 ```
 [Schedule Trigger: 01:00 AM]  +  [Manual Trigger]
             ↓
@@ -694,6 +789,7 @@ Workflow hiện có các nodes sau (đã hoạt động):
 ```
 
 Cần **thêm vào workflow hiện có** (không tạo mới):
+
 ```
 Sau [Relational Database Persistence]:
   → [IF: is last batch?]
@@ -730,22 +826,25 @@ def get_unit_history(level: str, unit_id: int, at: Optional[date] = None, db=Dep
 ```
 
 **Deliverables:**
-- [ ] `docker-compose.yml` cập nhật với n8n service
-- [ ] Migration SQL thêm cột SCD Type 2 vào `mat.*`
-- [ ] `mat.unit_edge` table mới
-- [ ] `ath.sync_log` table mới
-- [ ] `app/services/scd_sync.py` — SCD Type 2 logic
-- [ ] `docs/n8n/gov_sync_workflow.json` — workflow export
-- [ ] `GET /api/admin-unit/{level}/{id}/history` endpoint
+
+- `docker-compose.yml` cập nhật với n8n service
+- Migration SQL thêm cột SCD Type 2 vào `mat.`*
+- `mat.unit_edge` table mới
+- `ath.sync_log` table mới
+- `app/services/scd_sync.py` — SCD Type 2 logic
+- `docs/n8n/gov_sync_workflow.json` — workflow export
+- `GET /api/admin-unit/{level}/{id}/history` endpoint
 
 ---
 
 ### G2. ADDRESS CONFIDENCE SCORE (ACS) ĐẦY ĐỦ ⚡ ƯU TIÊN CAO
 
 **Mô tả luận văn:** 
+
 ```
 ACS(ai|q) = α·S_text(q,ai) + β·S_sem(q,ai) + γ·V_hierarchy(ai) + δ·V_temporal(ai)
 ```
+
 Bảng quyết định: ≥0.9 → Auto-Accept | 0.7-0.9 → Auto-Convert | 0.5-0.7 → Suggest | <0.5 → Reject
 
 **Hiện trạng:** Chỉ có `phobert_confidence_score` và `mgte_confidence_score` đơn giản (single model), chưa có công thức tổng hợp 4 thành phần
@@ -816,28 +915,33 @@ class ACSCalculator:
 ```
 
 **Bước 2: Tích hợp ACS vào production pipeline (Ngày 4-5)**
+
 - Cập nhật `app/ai/production_pipeline.py` gọi `ACSCalculator.compute()`
 - Thêm cột `acs_score NUMERIC(5,4)` và `acs_decision VARCHAR(20)` vào `prq.address_cleansing_queue`
 - Thêm cột `s_text NUMERIC(5,4)`, `s_sem NUMERIC(5,4)`, `v_hierarchy NUMERIC(5,4)`, `v_temporal NUMERIC(5,4)` để debug
 
 **Bước 3: Expose ACS trong Parser API (Ngày 6)**
+
 - Cập nhật response của `POST /api/parser/analyze` để bao gồm `acs_score` và `acs_decision`
 
 **Deliverables:**
-- [ ] `app/ai/acs_calculator.py` — ACS module
-- [ ] Migration thêm cột `acs_score`, `acs_decision`, `acs_components` vào `prq.address_cleansing_queue`
-- [ ] Tích hợp ACS vào `production_pipeline.py`
-- [ ] API response cập nhật với ACS
+
+- `app/ai/acs_calculator.py` — ACS module
+- Migration thêm cột `acs_score`, `acs_decision`, `acs_components` vào `prq.address_cleansing_queue`
+- Tích hợp ACS vào `production_pipeline.py`
+- API response cập nhật với ACS
 
 ---
 
 ### G3. GEOSPATIAL API — POINT-IN-POLYGON ⚡ ƯU TIÊN CAO
 
 **Mô tả luận văn:** 
+
 ```sql
 SELECT ward_id FROM mat.area_polygon 
 WHERE ST_Contains(geom, ST_SetSRID(ST_MakePoint(lng, lat), 4326))
 ```
+
 API: `POST /api/spatial/subdivide` nhận batch tọa độ → trả về đơn vị hành chính
 
 **Hiện trạng:** Chỉ có boundary visualization (Folium HTML), không có API Point-in-Polygon
@@ -1034,21 +1138,23 @@ def analyze_csv_mismatch(csv_path: str, output_html: str = None) -> dict:
 ```
 
 **Deliverables:**
-- [ ] `app/api/spatial.py` — Spatial API router
-- [ ] `POST /api/spatial/subdivide` endpoint
-- [ ] `GET /api/spatial/mismatch-report` endpoint
-- [ ] `app/geometry/buffer_union.py` 
-- [ ] `app/geometry/concave_hull.py`
-- [ ] `app/geometry/edge_inject.py`
-- [ ] `app/services/spatial_mismatch.py`
-- [ ] `mat.area_polygon` ORM model trong `database.py`
-- [ ] Spatial index SQL migration
+
+- `app/api/spatial.py` — Spatial API router
+- `POST /api/spatial/subdivide` endpoint
+- `GET /api/spatial/mismatch-report` endpoint
+- `app/geometry/buffer_union.py` 
+- `app/geometry/concave_hull.py`
+- `app/geometry/edge_inject.py`
+- `app/services/spatial_mismatch.py`
+- `mat.area_polygon` ORM model trong `database.py`
+- Spatial index SQL migration
 
 ---
 
 ### G4. WATERFALL ENRICHMENT (Đa nguồn: Redis→OSM→Google) ⚡ ƯU TIÊN TRUNG BÌNH
 
 **Mô tả luận văn:** 
+
 - Lớp 1: Redis cache (hit rate 20-40%)
 - Lớp 2: OSM + VietMap (cover 40-50%)
 - Lớp 3: Google Maps (< 10-20% request)
@@ -1173,13 +1279,14 @@ CREATE TABLE ath.enrichment_metrics (
 ```
 
 **Deliverables:**
-- [ ] `docker-compose.yml` với Redis service
-- [ ] `app/services/waterfall_enrichment.py`
-- [ ] `POST /api/enrich` endpoint
-- [ ] `ath.enrichment_metrics` table
-- [ ] `GET /api/enrichment/summary` cập nhật với hit rate per source
-- [ ] Google Maps Geocoding API integration
-- [ ] VietMap API integration
+
+- `docker-compose.yml` với Redis service
+- `app/services/waterfall_enrichment.py`
+- `POST /api/enrich` endpoint
+- `ath.enrichment_metrics` table
+- `GET /api/enrichment/summary` cập nhật với hit rate per source
+- Google Maps Geocoding API integration
+- VietMap API integration
 
 ---
 
@@ -1272,11 +1379,12 @@ def migrate_address(body: dict, db=Depends(get_db)):
 ```
 
 **Deliverables:**
-- [ ] `app/ai/epoch_detector.py`
-- [ ] Cập nhật `siamese_mgte.py` với temporal corpus filter
-- [ ] Cập nhật `production_pipeline.py` dùng epoch detector
-- [ ] `POST /api/migrate-address` endpoint
-- [ ] Thêm `address_epoch VARCHAR(20)` vào `prq.address_cleansing_queue`
+
+- `app/ai/epoch_detector.py`
+- Cập nhật `siamese_mgte.py` với temporal corpus filter
+- Cập nhật `production_pipeline.py` dùng epoch detector
+- `POST /api/migrate-address` endpoint
+- Thêm `address_epoch VARCHAR(20)` vào `prq.address_cleansing_queue`
 
 ---
 
@@ -1289,6 +1397,7 @@ def migrate_address(body: dict, db=Depends(get_db)):
 #### Kế hoạch thực hiện
 
 **Bước 1: Cài đặt FAISS (Ngày 1)**
+
 ```bash
 pip install faiss-cpu  # hoặc faiss-gpu nếu có GPU
 ```
@@ -1368,10 +1477,11 @@ def rebuild_faiss_index(db=Depends(get_db)):
 ```
 
 **Deliverables:**
-- [ ] `app/ai/faiss_index.py`
-- [ ] Tích hợp FAISS vào `siamese_mgte.py`
-- [ ] `POST /api/admin/rebuild-index` endpoint
-- [ ] CLI: `python app/main.py admin:rebuild-index`
+
+- `app/ai/faiss_index.py`
+- Tích hợp FAISS vào `siamese_mgte.py`
+- `POST /api/admin/rebuild-index` endpoint
+- CLI: `python app/main.py admin:rebuild-index`
 
 ---
 
@@ -1384,6 +1494,7 @@ def rebuild_faiss_index(db=Depends(get_db)):
 #### Kế hoạch thực hiện
 
 **Bước 1: Chuẩn bị dữ liệu từ Label Studio (Ngày 1-3)**
+
 - Export annotation từ Label Studio (đã tích hợp)
 - Convert format → BIO tags
 - Split 80/10/10 (train/dev/test)
@@ -1441,16 +1552,18 @@ class PhoBERTBiLSTMCRF(nn.Module):
 ```
 
 **Deliverables:**
-- [ ] `app/ai/models/ner_bilstm_crf.py` — model architecture
-- [ ] Cập nhật `app/ai/train_ner.py` dùng model mới
-- [ ] Script augmentation data (viết tắt, không dấu, hoán đổi thứ tự)
-- [ ] Script export annotation từ Label Studio → BIO format
+
+- `app/ai/models/ner_bilstm_crf.py` — model architecture
+- Cập nhật `app/ai/train_ner.py` dùng model mới
+- Script augmentation data (viết tắt, không dấu, hoán đổi thứ tự)
+- Script export annotation từ Label Studio → BIO format
 
 ---
 
 ### G8. BENCHMARK BỘ DỮ LIỆU CHUẨN D1-D5 ⚡ ƯU TIÊN TRUNG BÌNH
 
 **Mô tả luận văn:** 
+
 - D1: 2,000 mẫu đô thị chuẩn
 - D2: 1,000 mẫu nhiễu cao (lỗi chính tả, không dấu)
 - D3: 1,000 mẫu Pre-2025 (địa danh cũ)
@@ -1531,11 +1644,12 @@ def generate_d5_boundary():
 ```
 
 **Deliverables:**
-- [ ] `ath.benchmark_dataset` table
-- [ ] `ath.benchmark_run_result` table
-- [ ] `scripts/generate_benchmark_datasets.py`
-- [ ] Tích hợp D1-D5 vào `experiment_runner.py`
-- [ ] `GET /api/benchmark/datasets` endpoint
+
+- `ath.benchmark_dataset` table
+- `ath.benchmark_run_result` table
+- `scripts/generate_benchmark_datasets.py`
+- Tích hợp D1-D5 vào `experiment_runner.py`
+- `GET /api/benchmark/datasets` endpoint
 
 ---
 
@@ -1543,7 +1657,7 @@ def generate_d5_boundary():
 
 **Mô tả luận văn:** Sync dữ liệu sang Typesense/Elasticsearch để Hybrid Retrieval (Lexical + Semantic)
 
-**Hiện trạng:** Config Typesense có, `sync_typesense_to_db` ngược chiều (Typesense → DB), nhưng không có logic đẩy `mat.*` vào Typesense
+**Hiện trạng:** Config Typesense có, `sync_typesense_to_db` ngược chiều (Typesense → DB), nhưng không có logic đẩy `mat.`* vào Typesense
 
 #### Kế hoạch thực hiện
 
@@ -1576,9 +1690,10 @@ def sync_mat_to_typesense(db, client):
 ```
 
 **Deliverables:**
-- [ ] `app/services/typesense_sync.py`
-- [ ] `POST /api/admin/sync-typesense` endpoint
-- [ ] Tích hợp vào n8n workflow (sau khi G1 hoàn thành)
+
+- `app/services/typesense_sync.py`
+- `POST /api/admin/sync-typesense` endpoint
+- Tích hợp vào n8n workflow (sau khi G1 hoàn thành)
 
 ---
 
@@ -1586,13 +1701,15 @@ def sync_mat_to_typesense(db, client):
 
 Các tính năng trong **Định hướng phát triển** của luận văn — **không cần thiết cho luận văn** nhưng là roadmap dài hạn:
 
-| Hướng | Mô tả | Độ phức tạp |
-|-------|-------|-------------|
-| H1 | Ensemble Model (PhoBERT+mGTE+Qwen3 với Confidence routing) | Cao |
-| H2 | NLP trích xuất thay đổi từ PDF Nghị quyết | Rất cao |
-| H3 | Reverse Geocoding đến số nhà + GNN | Rất cao |
-| H4 | Privacy-Preserving (Federated Learning) | Rất cao |
-| H5 | Multimodal (ASR + OCR địa chỉ) | Rất cao |
+
+| Hướng | Mô tả                                                      | Độ phức tạp |
+| ----- | ---------------------------------------------------------- | ----------- |
+| H1    | Ensemble Model (PhoBERT+mGTE+Qwen3 với Confidence routing) | Cao         |
+| H2    | NLP trích xuất thay đổi từ PDF Nghị quyết                  | Rất cao     |
+| H3    | Reverse Geocoding đến số nhà + GNN                         | Rất cao     |
+| H4    | Privacy-Preserving (Federated Learning)                    | Rất cao     |
+| H5    | Multimodal (ASR + OCR địa chỉ)                             | Rất cao     |
+
 
 ---
 
@@ -1600,17 +1717,19 @@ Các tính năng trong **Định hướng phát triển** của luận văn — 
 
 ### 4.1 Bảng ưu tiên theo tiến độ luận văn
 
-| # | Tính năng | Ảnh hưởng luận văn | Effort (ngày) | Ưu tiên |
-|---|-----------|-------------------|---------------|---------|
-| G2 | ACS đầy đủ (4 thành phần) | Chương 2.4.5 — core concept | 6 | 🔴 P0 |
-| G5 | Temporal-Aware (Dual-Epoch) | Chương 1.1.3, 2.4.3 — novelty | 6 | 🔴 P0 |
-| G3 | Geospatial API + 3 chiến lược | Chương 2.5, 3.4 — thực nghiệm | 13 | 🔴 P0 |
-| G1 | n8n Gov-Sync — nâng cấp SCD Type 2 + Alert | Chương 2.3, 3.2 — BR1 | **4** *(rút ngắn vì n8n crawler đã có)* | 🟠 P1 |
-| G8 | Benchmark D1-D5 chuẩn | Chương 4.1 — thực nghiệm | 7 | 🟠 P1 |
-| G7 | PhoBERT NER BiLSTM-CRF | Chương 2.4.2, 3.3.2 | 7 | 🟡 P2 |
-| G4 | Waterfall Enrichment | Chương 2.6, 5.1 | 8 | 🟡 P2 |
-| G6 | FAISS Vector Index | Chương 3.3.3 | 5 | 🟡 P2 |
-| G9 | Typesense Integration | Chương 2.2.1 | 4 | 🟢 P3 |
+
+| #   | Tính năng                                  | Ảnh hưởng luận văn            | Effort (ngày)                           | Ưu tiên |
+| --- | ------------------------------------------ | ----------------------------- | --------------------------------------- | ------- |
+| G2  | ACS đầy đủ (4 thành phần)                  | Chương 2.4.5 — core concept   | 6                                       | 🔴 P0   |
+| G5  | Temporal-Aware (Dual-Epoch)                | Chương 1.1.3, 2.4.3 — novelty | 6                                       | 🔴 P0   |
+| G3  | Geospatial API + 3 chiến lược              | Chương 2.5, 3.4 — thực nghiệm | 13                                      | 🔴 P0   |
+| G1  | n8n Gov-Sync — nâng cấp SCD Type 2 + Alert | Chương 2.3, 3.2 — BR1         | **4** *(rút ngắn vì n8n crawler đã có)* | 🟠 P1   |
+| G8  | Benchmark D1-D5 chuẩn                      | Chương 4.1 — thực nghiệm      | 7                                       | 🟠 P1   |
+| G7  | PhoBERT NER BiLSTM-CRF                     | Chương 2.4.2, 3.3.2           | 7                                       | 🟡 P2   |
+| G4  | Waterfall Enrichment                       | Chương 2.6, 5.1               | 8                                       | 🟡 P2   |
+| G6  | FAISS Vector Index                         | Chương 3.3.3                  | 5                                       | 🟡 P2   |
+| G9  | Typesense Integration                      | Chương 2.2.1                  | 4                                       | 🟢 P3   |
+
 
 ### 4.2 Lộ trình 60 ngày để hoàn thiện luận văn
 
@@ -1640,15 +1759,17 @@ TUẦN 9 (Ngày 53-56): Viết và hoàn thiện  [rút ngắn ~4 ngày]
 
 ### 4.3 Điều kiện tiên quyết
 
-| Điều kiện | Trạng thái | Ghi chú |
-|-----------|------------|---------|
-| PostgreSQL + PostGIS | ✅ | Cần xác nhận PostGIS extension đã cài |
-| `mat.area_polygon` có dữ liệu polygon | ❓ | Cần import GeoJSON từ OSM/GSO |
-| GPU cho PhoBERT training | ❓ | Có thể dùng Google Colab |
-| API Keys (Google Maps, VietMap) | ❓ | Cần đăng ký |
-| n8n self-hosted + Browserless | ✅ | Crawler đang chạy, cron 01:00 AM (`docs/n8n/Automated Geospatial Data Extraction and Synchronization System.json`) |
-| Label Studio | ✅ | Đã tích hợp endpoint |
-| 100k+ mẫu địa chỉ gán nhãn | ⚠️ | Có synthetic, cần thêm gán nhãn thủ công |
+
+| Điều kiện                             | Trạng thái | Ghi chú                                                                                                            |
+| ------------------------------------- | ---------- | ------------------------------------------------------------------------------------------------------------------ |
+| PostgreSQL + PostGIS                  | ✅          | Cần xác nhận PostGIS extension đã cài                                                                              |
+| `mat.area_polygon` có dữ liệu polygon | ❓          | Cần import GeoJSON từ OSM/GSO                                                                                      |
+| GPU cho PhoBERT training              | ❓          | Có thể dùng Google Colab                                                                                           |
+| API Keys (Google Maps, VietMap)       | ❓          | Cần đăng ký                                                                                                        |
+| n8n self-hosted + Browserless         | ✅          | Crawler đang chạy, cron 01:00 AM (`docs/n8n/Automated Geospatial Data Extraction and Synchronization System.json`) |
+| Label Studio                          | ✅          | Đã tích hợp endpoint                                                                                               |
+| 100k+ mẫu địa chỉ gán nhãn            | ⚠️         | Có synthetic, cần thêm gán nhãn thủ công                                                                           |
+
 
 ---
 

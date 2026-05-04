@@ -1,4 +1,5 @@
-from sqlalchemy import create_engine, Column, Integer, String, Boolean, Float, DateTime, ForeignKey, Text, JSON, Numeric, BigInteger, text as sql_text
+from sqlalchemy import create_engine, Column, Integer, String, Boolean, Float, DateTime, ForeignKey, Text, JSON, Numeric, BigInteger, text as sql_text, Index
+from datetime import datetime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from sqlalchemy.sql import func
@@ -63,6 +64,13 @@ class Province(Base):
     decision_date = Column(DateTime)
     notes = Column(Text)
 
+    # SCD Type 2 — Lịch sử thay đổi hành chính
+    valid_from = Column(DateTime, default=func.now())
+    valid_to = Column(DateTime, default=datetime(9999, 12, 31))
+    is_current = Column(Boolean, default=True)
+    version_id = Column(Integer, default=1)
+    predecessor_id = Column(Integer, ForeignKey('mat.province.row_id'), nullable=True)
+
 class AddressCleansingQueue(Base):
     """Hàng đợi xử lý và chuẩn hóa địa chỉ (Domain 4: prq)"""
     __tablename__ = 'address_cleansing_queue'
@@ -102,7 +110,18 @@ class AddressCleansingQueue(Base):
     # Embeddings
     phobert_embedding = Column(JSON)
     mgte_embedding = Column(JSON)
-    
+
+    # ACS — Address Confidence Score (G2)
+    acs_score    = Column(Numeric(5, 4))       # Weighted composite score [0..1]
+    acs_decision = Column(String(20))           # AUTO_ACCEPT | AUTO_CONVERT | SUGGEST | REJECT
+    s_text       = Column(Numeric(5, 4))        # Text similarity component
+    s_sem        = Column(Numeric(5, 4))        # Semantic similarity component
+    v_hierarchy  = Column(Numeric(5, 4))        # Hierarchy validity component
+    v_temporal   = Column(Numeric(5, 4))        # Temporal weight component
+
+    # Epoch — Dual-Epoch Recognition (G5)
+    address_epoch = Column(String(20))          # PRE_2025 | POST_2025 | AMBIGUOUS
+
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
@@ -139,6 +158,13 @@ class District(Base):
     decision_date = Column(DateTime)
     notes = Column(Text)
 
+    # SCD Type 2 — Lịch sử thay đổi hành chính
+    valid_from = Column(DateTime, default=func.now())
+    valid_to = Column(DateTime, default=datetime(9999, 12, 31))
+    is_current = Column(Boolean, default=True)
+    version_id = Column(Integer, default=1)
+    predecessor_id = Column(Integer, ForeignKey('mat.district.row_id'), nullable=True)
+
 class Ward(Base):
     __tablename__ = 'ward'
     __table_args__ = (
@@ -172,6 +198,13 @@ class Ward(Base):
     decision_date = Column(DateTime)
     notes = Column(Text)
 
+    # SCD Type 2 — Lịch sử thay đổi hành chính
+    valid_from = Column(DateTime, default=func.now())
+    valid_to = Column(DateTime, default=datetime(9999, 12, 31))
+    is_current = Column(Boolean, default=True)
+    version_id = Column(Integer, default=1)
+    predecessor_id = Column(Integer, ForeignKey('mat.ward.row_id'), nullable=True)
+
 # --- DOMAIN 1: Administrative Master Data (mat) Bổ sung ---
 
 class WardMapping(Base):
@@ -196,6 +229,40 @@ class WardMapping(Base):
     updated_note = Column(Text)
     relationship_type = Column(String(50))
     mapping_total = Column(Integer)
+
+class UnitEdge(Base):
+    """Đồ thị quan hệ hành chính: MERGES_INTO, SPLIT_FROM, RENAMES_TO, BOUNDARY_ADJUSTED"""
+    __tablename__ = 'unit_edge'
+    __table_args__ = {'schema': 'mat'}
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    from_unit_id = Column(Integer, nullable=False)
+    from_level = Column(String(20), nullable=False)   # 'province', 'district', 'ward'
+    to_unit_id = Column(Integer, nullable=False)
+    to_level = Column(String(20), nullable=False)
+    relationship_type = Column(String(50), nullable=False)  # MERGES_INTO, SPLIT_FROM, RENAMES_TO, BOUNDARY_ADJUSTED
+    effective_date = Column(DateTime, nullable=False)
+    resolution_ref = Column(String(200))              # Số nghị quyết
+    notes = Column(Text)
+    created_at = Column(DateTime, default=func.now())
+
+
+class SyncLog(Base):
+    """Bảng ghi nhật ký đồng bộ dữ liệu hành chính (persist)"""
+    __tablename__ = 'sync_log'
+    __table_args__ = {'schema': 'ath'}
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    sync_source = Column(String(50))   # 'NSO_API', 'N8N_WORKFLOW', 'MANUAL'
+    level = Column(String(20))         # 'province', 'district', 'ward'
+    unit_id = Column(Integer)
+    change_type = Column(String(30))   # 'CREATE', 'UPDATE', 'MERGE', 'RENAME', 'NO_CHANGE'
+    old_value = Column(JSON)
+    new_value = Column(JSON)
+    synced_at = Column(DateTime, default=func.now())
+    records_affected = Column(Integer, default=0)
+    run_id = Column(String(50))        # UUID để nhóm các log cùng một lần chạy
+
 
 class OSMStreet(Base):
     __tablename__ = 'streets'
@@ -321,6 +388,63 @@ class RawAddress(Base):
     street_address = Column(Text)
     confidence_score = Column(Float)
     created_at = Column(DateTime, default=func.now())
+
+class AreaPolygon(Base):
+    """Bảng lưu trữ polygon ranh giới đơn vị hành chính (PostGIS geometry)."""
+    __tablename__ = 'area_polygon'
+    __table_args__ = (
+        Index('idx_area_polygon_unit', 'unit_level', 'unit_id'),
+        {'schema': 'mat'},
+    )
+
+    id           = Column(Integer, primary_key=True, autoincrement=True)
+    unit_level   = Column(String(20), nullable=False)    # 'province' | 'district' | 'ward'
+    unit_id      = Column(Integer, nullable=False)
+    unit_name    = Column(String(200))
+    geojson      = Column(JSON)                          # GeoJSON geometry object
+    source       = Column(String(50), default='OSM')    # 'OSM' | 'GSO' | 'MANUAL'
+    admin_version = Column(Integer, default=2)
+    created_at   = Column(DateTime, default=func.now())
+    updated_at   = Column(DateTime, default=func.now(), onupdate=func.now())
+
+
+class BenchmarkDataset(Base):
+    """Dataset chuẩn D1-D5 cho benchmark thực nghiệm (G8)."""
+    __tablename__ = 'benchmark_dataset'
+    __table_args__ = {'schema': 'ath'}
+
+    id              = Column(Integer, primary_key=True, autoincrement=True)
+    dataset_code    = Column(String(10), nullable=False)  # D1, D2, D3, D4, D5
+    raw_address     = Column(Text, nullable=False)
+    expected_ward_id   = Column(Integer)
+    expected_district_id = Column(Integer)
+    expected_province_id = Column(Integer)
+    noise_type      = Column(String(50))        # typo, no_diacritic, abbreviation, pre_2025…
+    admin_version   = Column(Integer, default=2)
+    notes           = Column(Text)
+    created_at      = Column(DateTime, default=func.now())
+
+
+class BenchmarkRunResult(Base):
+    """Kết quả chạy benchmark theo từng lần thực nghiệm (G8)."""
+    __tablename__ = 'benchmark_run_result'
+    __table_args__ = {'schema': 'ath'}
+
+    id              = Column(Integer, primary_key=True, autoincrement=True)
+    run_id          = Column(String(50), nullable=False)      # UUID lần chạy
+    dataset_code    = Column(String(10), nullable=False)
+    model_key       = Column(String(32), nullable=False)
+    sample_id       = Column(Integer, ForeignKey('ath.benchmark_dataset.id'))
+    predicted_ward_id   = Column(Integer)
+    predicted_district_id = Column(Integer)
+    predicted_province_id = Column(Integer)
+    acs_score       = Column(Numeric(5, 4))
+    acs_decision    = Column(String(20))
+    address_epoch   = Column(String(20))
+    latency_ms      = Column(Float)
+    is_correct      = Column(Boolean)
+    created_at      = Column(DateTime, default=func.now())
+
 
 class GoogleGroundTruth(Base):
     """Dữ liệu địa chỉ chuẩn hóa (Ground Truth) từ Google/Typesense."""
