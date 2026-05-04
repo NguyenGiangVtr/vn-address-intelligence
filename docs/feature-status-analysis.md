@@ -1,7 +1,7 @@
 # TÀI LIỆU THỐNG KÊ TÍNH NĂNG DỰ ÁN VNAI
 ## Đã đáp ứng vs. Chưa đáp ứng — Đối chiếu với Dàn ý Luận văn
 
-> **Phiên bản:** 1.0 | **Ngày:** 04/05/2026  
+> **Phiên bản:** 1.1 | **Ngày:** 04/05/2026 (cập nhật: n8n NSO crawler đã hoàn chỉnh)  
 > **Luận văn:** Xây dựng Khung Giải pháp Làm giàu và Chuẩn hóa Dữ liệu Địa chỉ Việt Nam  
 > **Repository:** `https://github.com/NguyenGiangVtr/vn-address-intelligence`
 
@@ -22,7 +22,7 @@
 
 | BR# | Yêu cầu nghiệp vụ | Trạng thái | Mức độ hoàn thiện |
 |-----|-------------------|------------|-------------------|
-| BR1 | Đồng bộ hành chính tự động từ nguồn Chính phủ | ⚠️ Một phần | 55% — NSO API client có, n8n workflow **chưa có** |
+| BR1 | Đồng bộ hành chính tự động từ nguồn Chính phủ | ✅ Tốt | 80% — n8n Browserless crawler có, chạy cron 01:00 AM, SCD Type 2 đầy đủ **chưa có** |
 | BR2 | Chuẩn hóa địa chỉ thô → cấu trúc chuẩn + GSOID | ✅ Cơ bản | 70% — pipeline AI hoạt động, ACS đầy đủ **chưa có** |
 | BR3 | Tra cứu lịch sử hành chính, ánh xạ địa chỉ cũ→mới | ⚠️ Một phần | 50% — `mat.ward_mapping` có, SCD Type 2 đầy đủ **chưa có** |
 | BR4 | Xác định đơn vị hành chính từ tọa độ (Point-in-Polygon) | ⚠️ Một phần | 40% — polygon visualization có, API `/subdivide` **chưa có** |
@@ -33,7 +33,7 @@
 
 | Module | Mô tả luận văn | Thực tế codebase | % Hoàn thành |
 |--------|---------------|-----------------|--------------|
-| **M1** Gov-Sync (n8n) | n8n workflow: SOAP→SCD Type 2→Typesense | NSO HTTP client + manual sync script | 40% |
+| **M1** Gov-Sync (n8n) | n8n workflow: SOAP→SCD Type 2→Typesense | **n8n Browserless crawler hoạt động** (cron 01:00 AM, index 0→33 tỉnh, UPDATE `mat.ward`) | 70% |
 | **M2** AI Pipeline | PhoBERT NER → mGTE Siamese → Qwen3 LLM | Cả 3 model có, production pipeline có | 75% |
 | **M2a** ACS Score | Công thức 4 thành phần (text+sem+hier+temporal) | Chỉ confidence score đơn giản | 30% |
 | **M3** Geospatial | Point-in-Polygon, 3 chiến lược hiệu chỉnh polygon | Boundary visualization, chưa có API subdivide | 35% |
@@ -111,37 +111,79 @@
 
 ---
 
-### F3. ĐỒNG BỘ DỮ LIỆU TỪ NGUỒN NSO (NSO Sync)
+### F3. ĐỒNG BỘ DỮ LIỆU TỪ NGUỒN NSO (NSO Sync — n8n Browserless Crawler)
 
-**Trạng thái:** ⚠️ Một phần (HTTP Client có, n8n workflow thiếu)
+**Trạng thái:** ✅ Tốt (n8n workflow hoạt động, SCD Type 2 chưa đầy đủ)
 
 #### Input
-- `POST /api/sync/nso` — trigger đồng bộ toàn bộ
-- `POST /api/sync/nso/province` — đồng bộ 1 tỉnh
-- `GET /api/nso/provinces|districts|wards` — live proxy tới NSO API
+- **Trigger tự động:** Cron `01:00 AM` hàng ngày (n8n Schedule node)
+- **Nguồn:** `danhmuchanhchinh.nso.gov.vn` — duyệt theo chỉ số (index) tỉnh từ `0` đến `33`
+- `POST /api/sync/nso` — trigger thủ công qua API (Python fallback)
+- `POST /api/sync/nso/province` — đồng bộ thủ công 1 tỉnh cụ thể
 
-#### Process
-1. `app/services/nso_api.py`: gọi HTTP REST endpoint của NSO với retry
-2. `app/services/nso_sync.py`: parse JSON response, upsert vào `mat.*`
-3. In-memory `sync_logs` list lưu kết quả mỗi lần chạy (chưa persist vào DB)
-4. `app/services/seeders_v3.py`: seeding dữ liệu hành chính ban đầu từ file tĩnh
+> **Workflow file:** `docs/n8n/Automated Geospatial Data Extraction and Synchronization System.json`  
+> **Workflow ID:** `S5smdRYjLEmaaMKp` | **Active:** `true` | **Cron:** `01:00 AM daily`
+
+#### Process (n8n Workflow — các nodes thực tế)
+
+```
+[Schedule Trigger: 01:00 AM]  +  [Manual Trigger: Execute workflow]
+              ↓
+[Global Parameter Configuration]
+  • browserlessUrl = http://browserless:3000
+  • token = e1ec2096...
+  • filePath = /home/node/.n8n/danhmuc_hanhchinh.json
+              ↓
+[Cache/Storage Sanitization]
+  ← fs.unlinkSync(filePath) — xóa JSON tạm từ phiên cũ
+              ↓
+[Index Range Generation]
+  ← Sinh 34 items: [{index: 0}, {index: 1}, ..., {index: 33}]
+              ↓
+[Iteration Controller] ← SplitInBatches
+              ↓
+[Web Scraper / Data Extraction Service]
+  ← POST browserless /function với Puppeteer script:
+    • Mở danhmuchanhchinh.nso.gov.vn
+    • Click hàng tỉnh theo index
+    • Lặp qua từng đơn vị cấp dưới (childCount rows)
+    • Extract: ma, ten, tenAnh, cap, ngayQuyetDinh,
+               ngayHieuLuc, danSo, dienTich, ghiChu
+              ↓
+[Data Normalization & Transformation]
+  ← Đọc JSON file tạm → concat dữ liệu tỉnh mới → ghi lại file
+              ↓
+[Relational Database Persistence] ← PostgreSQL node
+  UPDATE mat.ward SET
+    province_no, ward_name, ward_name_en, type_name,
+    decision_date, effective_date, population, area_km2, notes,
+    updated_date = NOW()
+  WHERE ward_no = :ma AND admin_version = 2
+              ↓
+  [loop back → Iteration Controller]
+```
+
+Bên cạnh n8n, Python services vẫn duy trì:
+1. `app/services/nso_api.py`: HTTP REST client với retry
+2. `app/services/nso_sync.py`: parse response, upsert vào `mat.*`
+3. `app/services/seeders_v3.py`: seeding dữ liệu ban đầu từ file tĩnh
 
 #### Output
-- Dữ liệu được cập nhật trong `mat.province`, `mat.district`, `mat.ward`
-- `GET /api/sync/nso/logs`: log buffer (in-memory, mất khi restart)
+- Bảng `mat.ward` được UPDATE các trường: `ward_name_en`, `decision_date`, `population`, `area_km2`, lọc theo `ward_no` và `admin_version = 2`
+- `GET /api/sync/nso/logs`: log buffer trạng thái đồng bộ
 
 #### Tables liên quan
-| Schema | Bảng | Vai trò |
-|--------|------|---------|
-| `mat` | `province` | Target upsert (conflict on `province_id`) |
-| `mat` | `district` | Target upsert |
-| `mat` | `ward` | Target upsert |
+| Schema | Bảng | Cột được cập nhật | Điều kiện |
+|--------|------|-------------------|-----------|
+| `mat` | `ward` | `ward_name`, `ward_name_en`, `type_name`, `decision_date`, `population`, `area_km2` | `ward_no = :code AND admin_version = 2` |
+| `mat` | `province` | Upsert toàn bộ qua Python fallback | `province_id` conflict |
+| `mat` | `district` | Upsert toàn bộ qua Python fallback | `district_id` conflict |
 
-#### Khoảng trống hiện tại
-- ❌ **Không có n8n workflow** — toàn bộ là code Python thủ công
-- ❌ **Không có SOAP API** — chỉ REST HTTP, thiếu kết nối Cổng DVC SOAP
-- ❌ **Không persist sync_log** vào `ath.sync_log` (dùng in-memory list)
-- ❌ **Không có SCD Type 2 logic** — upsert thô không đóng bản ghi cũ
+#### Khoảng trống còn lại
+- ⚠️ **Chưa có SCD Type 2** — UPDATE trực tiếp, không đóng bản ghi lịch sử cũ
+- ⚠️ **Chưa persist sync_log** vào DB (in-memory list, mất khi restart)
+- ⚠️ **Chưa kết nối Cổng DVC SOAP** — chỉ scrape web NSO, không qua API chính thức
+- ⚠️ **Chưa sync Typesense** sau khi cập nhật DB
 
 ---
 
@@ -529,32 +571,17 @@ POST /api/parser/analyze
 
 ---
 
-### G1. n8n GOV-SYNC WORKFLOW ⚡ ƯU TIÊN CAO
+### G1. n8n GOV-SYNC — NÂNG CẤP SCD TYPE 2 & ALERT ⚡ ƯU TIÊN CAO
 
 **Mô tả luận văn:** Workflow n8n tự động: Trigger → SOAP/REST Gov API → XML/JSON Parser → SCD Type 2 → PostgreSQL → Typesense Upsert → Alert
 
-**Hiện trạng:** Chưa có n8n, chưa có SOAP client, SCD Type 2 chưa hoàn chỉnh
+**Hiện trạng (đã có):** n8n Browserless crawler đang chạy cron 01:00 AM, scrape `danhmuchanhchinh.nso.gov.vn`, UPDATE `mat.ward` theo `ward_no` + `admin_version=2`
 
-#### Kế hoạch thực hiện
+**Phần còn thiếu:** SCD Type 2 history tracking, Typesense upsert sau sync, Alert notification, persist sync_log
 
-**Bước 1: Cài đặt và cấu hình n8n (Ngày 1-2)**
+#### Kế hoạch thực hiện (chỉ bổ sung phần còn thiếu)
 
-```yaml
-# docker-compose.yml — thêm service n8n
-services:
-  n8n:
-    image: n8nio/n8n:latest
-    ports:
-      - "5678:5678"
-    environment:
-      - DB_TYPE=postgresdb
-      - DB_POSTGRESDB_HOST=postgres
-      - DB_POSTGRESDB_DATABASE=n8n
-    volumes:
-      - n8n_data:/home/node/.n8n
-```
-
-**Bước 2: Tạo SCD Type 2 tables còn thiếu (Ngày 3)**
+**Bước 1: Tạo SCD Type 2 tables còn thiếu (Ngày 1)**
 
 ```sql
 -- Thêm cột SCD Type 2 vào mat.province (migration)
@@ -637,18 +664,42 @@ def scd_upsert_unit(session, level: str, unit_data: dict, effective_date: dateti
     session.add(new_record)
 ```
 
-**Bước 4: Tạo n8n workflow JSON (Ngày 6-8)**
+**Bước 4: Nâng cấp n8n workflow hiện có (Ngày 6-8)**
 
-Workflow cần tạo file `docs/n8n/gov_sync_workflow.json`:
+> **File hiện tại:** `docs/n8n/Automated Geospatial Data Extraction and Synchronization System.json`  
+> **Workflow ID:** `S5smdRYjLEmaaMKp` | **Active:** `true`
+
+Workflow hiện có các nodes sau (đã hoạt động):
 ```
-Nodes:
-1. Schedule Trigger (cron: "0 2 * * *" — 2AM daily)
-2. HTTP Request → NSO API provinces list  
-3. Code Node → SCD Type 2 diff logic
-4. PostgreSQL Node → UPSERT mat.province/district/ward
-5. HTTP Request → Typesense Upsert
-6. IF Node → có thay đổi?
-7. Email/Slack Notification → alert admin
+[Schedule Trigger: 01:00 AM]  +  [Manual Trigger]
+            ↓
+[Global Parameter Configuration]  ← Cấu hình browserlessUrl, token, filePath
+            ↓
+[Cache/Storage Sanitization]  ← Xóa /home/node/.n8n/danhmuc_hanhchinh.json
+            ↓
+[Index Range Generation]  ← Tạo 34 items (index 0→33)
+            ↓
+[Iteration Controller]  ← SplitInBatches loop
+            ↓
+[Web Scraper / Data Extraction Service]  ← Browserless POST /function
+   (scrape danhmuchanhchinh.nso.gov.vn: ma, ten, tenAnh, cap,
+    ngayQuyetDinh, ngayHieuLuc, danSo, dienTich, ghiChu)
+            ↓
+[Data Normalization & Transformation]  ← Append vào JSON file tạm
+            ↓
+[Relational Database Persistence]  ← UPDATE mat.ward
+   WHERE ward_no = :ma AND admin_version = 2
+            ↓
+[loop back → Iteration Controller]
+```
+
+Cần **thêm vào workflow hiện có** (không tạo mới):
+```
+Sau [Relational Database Persistence]:
+  → [IF: is last batch?]
+      → YES: [Sync Log Insert] → ath.sync_log
+             [Notification Node] → Email/Slack alert
+      → NO:  loop back → [Iteration Controller]
 ```
 
 **Bước 5: API lịch sử đơn vị (Ngày 9-10)**
@@ -1554,7 +1605,7 @@ Các tính năng trong **Định hướng phát triển** của luận văn — 
 | G2 | ACS đầy đủ (4 thành phần) | Chương 2.4.5 — core concept | 6 | 🔴 P0 |
 | G5 | Temporal-Aware (Dual-Epoch) | Chương 1.1.3, 2.4.3 — novelty | 6 | 🔴 P0 |
 | G3 | Geospatial API + 3 chiến lược | Chương 2.5, 3.4 — thực nghiệm | 13 | 🔴 P0 |
-| G1 | n8n Gov-Sync + SCD Type 2 | Chương 2.3, 3.2 — BR1 | 10 | 🟠 P1 |
+| G1 | n8n Gov-Sync — nâng cấp SCD Type 2 + Alert | Chương 2.3, 3.2 — BR1 | **4** *(rút ngắn vì n8n crawler đã có)* | 🟠 P1 |
 | G8 | Benchmark D1-D5 chuẩn | Chương 4.1 — thực nghiệm | 7 | 🟠 P1 |
 | G7 | PhoBERT NER BiLSTM-CRF | Chương 2.4.2, 3.3.2 | 7 | 🟡 P2 |
 | G4 | Waterfall Enrichment | Chương 2.6, 5.1 | 8 | 🟡 P2 |
@@ -1571,10 +1622,10 @@ TUẦN 1-2 (Ngày 1-14): P0 — Core Missing Features
 
 TUẦN 3-4 (Ngày 15-28): P0 + P1
 ├── G3b: 3 chiến lược hiệu chỉnh polygon (11 ngày còn lại)
-└── G1a: SCD Type 2 tables + Python logic (5 ngày)
+└── G1: Nâng cấp n8n SCD Type 2 + Alert + sync_log persist (4 ngày)
+    [Tiết kiệm ~6 ngày so với kế hoạch cũ vì n8n crawler đã có]
 
 TUẦN 5-6 (Ngày 29-42): P1 + P2
-├── G1b: n8n workflow setup (5 ngày còn lại)
 ├── G8: Benchmark D1-D5 generation (7 ngày)
 └── G6: FAISS Index (5 ngày)
 
@@ -1583,7 +1634,7 @@ TUẦN 7-8 (Ngày 43-56): P2 + Thực nghiệm
 ├── G4: Waterfall Enrichment (8 ngày)
 └── Chạy benchmark D1-D5 đầy đủ, thu thập kết quả
 
-TUẦN 9 (Ngày 57-60): Viết và hoàn thiện
+TUẦN 9 (Ngày 53-56): Viết và hoàn thiện  [rút ngắn ~4 ngày]
 └── Thu thập kết quả thực nghiệm, hoàn thiện Chương 4
 ```
 
@@ -1595,7 +1646,7 @@ TUẦN 9 (Ngày 57-60): Viết và hoàn thiện
 | `mat.area_polygon` có dữ liệu polygon | ❓ | Cần import GeoJSON từ OSM/GSO |
 | GPU cho PhoBERT training | ❓ | Có thể dùng Google Colab |
 | API Keys (Google Maps, VietMap) | ❓ | Cần đăng ký |
-| n8n self-hosted | ❌ | Cần cài qua Docker |
+| n8n self-hosted + Browserless | ✅ | Crawler đang chạy, cron 01:00 AM (`docs/n8n/Automated Geospatial Data Extraction and Synchronization System.json`) |
 | Label Studio | ✅ | Đã tích hợp endpoint |
 | 100k+ mẫu địa chỉ gán nhãn | ⚠️ | Có synthetic, cần thêm gán nhãn thủ công |
 

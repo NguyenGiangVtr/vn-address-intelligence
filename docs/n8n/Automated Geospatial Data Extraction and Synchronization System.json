@@ -1,0 +1,273 @@
+{
+  "name": "Automated Geospatial Data Extraction and Synchronization System",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        544,
+        -144
+      ],
+      "id": "2529580a-501d-4df4-93b5-df28fcab8a97",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 1
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        544,
+        -336
+      ],
+      "id": "99fa3963-b4ef-4842-b219-ada32ca41930",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "jsCode": "var browserlessUrl = 'http://browserless:3000'\nvar token = 'e1ec20966edd43c4d76a07dfae5105358200336d0a33131aaf8775d75e6be96e'\nvar param = {\n  content: `${browserlessUrl}/content?token=${token}`,\n  function: `${browserlessUrl}/function?token=${token}`,\n  filePath: `/home/node/.n8n/danhmuc_hanhchinh.json`\n}\nreturn param"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        768,
+        -240
+      ],
+      "id": "44f56eb8-d82e-4603-ab57-4d5615376de9",
+      "name": "Global Parameter Configuration"
+    },
+    {
+      "parameters": {
+        "jsCode": "const fs = require('fs');\n\nconst filePath = $input.first().json.filePath;\n\nif (fs.existsSync(filePath)) {\n  fs.unlinkSync(filePath);\n}\n\nreturn [{ json: { message: 'Đã xóa file cũ, sẵn sàng chạy mới' } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        992,
+        -240
+      ],
+      "id": "29b71293-44ad-48e4-bc95-04c2680106c5",
+      "name": "Cache/Storage Sanitization"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = [];\nfor (let i = 0; i < 34; i++) {\n  items.push({ json: { index: i } });\n}\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1216,
+        -240
+      ],
+      "id": "9c730ae6-947e-4ecb-9171-ea96b96694f1",
+      "name": "Index Range Generation"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1440,
+        -240
+      ],
+      "id": "5bbe1357-c634-4734-b500-efcf4be0e1c7",
+      "name": "Iteration Controller"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Global Parameter Configuration').item.json.function }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"code\": \"export default async function({ page, context }) { const wait = (ms) => new Promise(r => setTimeout(r, ms)); const results = []; const index = context.index; await page.goto(\\\"https://danhmuchanhchinh.nso.gov.vn/\\\"); await wait(3000); const parentInfo = await page.evaluate((idx) => { const row = document.querySelector(\\\"[id$=grid1N_DXDataRow\\\" + idx + \\\"]\\\"); if (!row) return null; const cells = row.querySelectorAll(\\\"td.dxgv\\\"); return { ma: cells[1] ? cells[1].innerText.trim() : \\\"\\\", ten: cells[2] ? cells[2].innerText.trim() : \\\"\\\" }; }, index); await page.click(\\\"[id$=grid1N_DXDataRow\\\" + index + \\\"] img\\\"); await wait(2000); const childCount = await page.$$eval(\\\"[id*=grid12N_DXDataRow]\\\", rows => rows.length); for (let j = 0; j < childCount; j++) { await page.click(\\\"[id*=grid12N_DXDataRow\\\" + j + \\\"]\\\"); await wait(800); const detail = await page.evaluate(() => { const get = (s) => { const el = document.querySelector(\\\"[id$=\\\" + s + \\\"]\\\"); return el ? (el.value || el.innerText || \\\"\\\").trim() : \\\"\\\"; }; return { ma: get(\\\"txtMA_I\\\"), ten: get(\\\"txtTENVN_I\\\"), tenAnh: get(\\\"txtTENENG_I\\\"), cap: get(\\\"txtCAP_I\\\"), ngayQuyetDinh: get(\\\"txtNGAYTL_I\\\"), ngayHieuLuc: get(\\\"txtNGAYHL_I\\\"), danSo: get(\\\"txtDANSO_I\\\"), dienTich: get(\\\"txtDIENTICH_I\\\"), ghiChu: get(\\\"txtVITRI_I\\\") }; }); results.push({ tinh_ma: parentInfo ? parentInfo.ma : \\\"\\\", tinh_ten: parentInfo ? parentInfo.ten : \\\"\\\", ...detail }); } return { total: results.length, data: results }; }\",\n  \"context\": { \"index\": {{ $json.index }} }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1664,
+        -320
+      ],
+      "id": "540b9935-2463-4ae0-bbd4-099b92a08621",
+      "name": "Web Scraper / Data Extraction Service"
+    },
+    {
+      "parameters": {
+        "jsCode": "const fs = require('fs');\n\nconst filePath = $('Global Parameter Configuration').first().json.filePath;\n\n// Đọc data cũ nếu có\nlet allData = [];\nif (fs.existsSync(filePath)) {\n  try {\n    allData = JSON.parse(fs.readFileSync(filePath, 'utf8'));\n  } catch(e) {\n    allData = [];\n  }\n}\n\n// Thêm data tỉnh hiện tại\nconst newData = $input.all()[0].json.data || [];\nallData = allData.concat(newData);\n\n// Ghi lại file\nfs.writeFileSync(filePath, JSON.stringify(allData, null, 2), 'utf8');\n\n// Trả về để loop tiếp tục\nreturn newData.map(row => ({ json: row }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1888,
+        -320
+      ],
+      "id": "ac192955-885c-4242-8196-7ca4e67e452d",
+      "name": "Data Normalization & Transformation"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE mat.ward \nSET province_no = '{{ ($json.tinh_ma || '').replace(/'/g, \"''\") }}',\n    ward_name = '{{ ($json.ten || '').replace(/'/g, \"''\") }}', \n    ward_name_en = '{{ ($json.tenAnh || '').replace(/'/g, \"''\") }}', \n    type_name = '{{ ($json.cap || '').replace(/'/g, \"''\") }}', \n    decision_date = {{ $json.ngayQuyetDinh ? \"to_timestamp('\" + $json.ngayQuyetDinh + \"', 'DD/MM/YYYY')\" : \"NULL\" }}, \n    effective_date = {{ $json.ngayHieuLuc ? \"to_timestamp('\" + $json.ngayHieuLuc + \"', 'DD/MM/YYYY')\" : \"NULL\" }}, \n    population = {{ $json.danSo || 'NULL' }}, \n    area_km2 = {{ $json.dienTich || 'NULL' }}, \n    notes = '{{ ($json.ghiChu || '').replace(/'/g, \"''\") }}',\n    updated_date = NOW()\nWHERE ward_no = '{{ ($json.ma || '').replace(/'/g, \"''\") }}' \n  and admin_version = 2;",
+        "options": {
+          "queryReplacement": "="
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2112,
+        -240
+      ],
+      "id": "3c99bc68-8cff-416c-a548-cd7b74d45af3",
+      "name": "Relational Database Persistence",
+      "credentials": {
+        "postgres": {
+          "id": "LRKk6njjORtBRuLy",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "Chú thích Quy trình (Workflow Documentation)\n1. Mục tiêu: Tự động hóa việc trích xuất dữ liệu từ trang `danhmuchanhchinh.nso.gov.vn` và cập nhật vào bảng `mat.ward` trong PostgreSQL.\n\n2. Cấu hình kỹ thuật:\n\n• Công nghệ: n8n, Browserless (Puppeteer/Playwright), PostgreSQL.\n\n• Cơ chế: Quét dữ liệu theo chỉ số (Index) từ 0 đến 33 để lấy thông tin các tỉnh/thành phố.\n\n• Dữ liệu trích xuất: Mã đơn vị, Tên Việt Nam, Tên tiếng Anh, Cấp hành chính, Ngày quyết định/hiệu lực, Dân số và Diện tích.\n\n3. Lưu ý vận hành:\n\n• Tần suất: Chạy tự động vào lúc 01:00 AM hàng ngày.\n\n• Xử lý dữ liệu: Hệ thống tự động làm sạch file tạm `.json` trước mỗi phiên chạy để tránh xung đột dữ liệu cũ.\n\n• SQL: Sử dụng lệnh `UPDATE` dựa trên `ward_no` và `admin_version = 2`.\n",
+        "height": 320,
+        "width": 944,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        560,
+        -720
+      ],
+      "id": "937f3b6c-d974-48af-b41b-1984ecc13430",
+      "name": "Sticky Note"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Global Parameter Configuration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Global Parameter Configuration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Global Parameter Configuration": {
+      "main": [
+        [
+          {
+            "node": "Cache/Storage Sanitization",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cache/Storage Sanitization": {
+      "main": [
+        [
+          {
+            "node": "Index Range Generation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Index Range Generation": {
+      "main": [
+        [
+          {
+            "node": "Iteration Controller",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Iteration Controller": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Web Scraper / Data Extraction Service",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Web Scraper / Data Extraction Service": {
+      "main": [
+        [
+          {
+            "node": "Data Normalization & Transformation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Data Normalization & Transformation": {
+      "main": [
+        [
+          {
+            "node": "Relational Database Persistence",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Relational Database Persistence": {
+      "main": [
+        [
+          {
+            "node": "Iteration Controller",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "5ee238be-145c-456d-819b-3da285ff4459",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "835d30f021059c0329a56eccd78dc51092378ffd909c9b9a36a06502c65c16f2"
+  },
+  "id": "S5smdRYjLEmaaMKp",
+  "tags": []
+}
