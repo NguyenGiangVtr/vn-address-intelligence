@@ -7,6 +7,11 @@ from app.core.config import Config
 # Engine and Session setup
 engine = create_engine(Config.SQLALCHEMY_DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+# Old Engine setup for mapping purposes
+old_engine = create_engine(Config.OLD_SQLALCHEMY_DATABASE_URL) if Config.OLD_SQLALCHEMY_DATABASE_URL else None
+OldSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=old_engine) if old_engine else None
+
 Base = declarative_base()
 
 def init_db_schemas():
@@ -39,6 +44,7 @@ class Province(Base):
     updated_date = Column(DateTime, default=func.now(), nullable=False, onupdate=func.now())
     is_deleted = Column(Boolean, default=False, nullable=False)
     province_name_en = Column(String(200))
+    old_id = Column(Integer) # Lưu ID từ DB cũ để tra cứu
     served_radius = Column(Float)
     north_pole_lat = Column(Float)
     north_pole_lng = Column(Float)
@@ -120,6 +126,7 @@ class District(Base):
     updated_date = Column(DateTime, default=func.now(), onupdate=func.now())
     is_deleted = Column(Boolean, default=False)
     district_name_en = Column(String(200))
+    old_id = Column(Integer) # Lưu ID từ DB cũ để tra cứu
     sfdc_id = Column(String(100))
     is_active = Column(Boolean)
     type_name_en = Column(String(128))
@@ -153,6 +160,7 @@ class Ward(Base):
     updated_date = Column(DateTime, default=func.now(), onupdate=func.now())
     is_deleted = Column(Boolean, default=False)
     ward_name_en = Column(String(200))
+    old_id = Column(Integer) # Lưu ID từ DB cũ để tra cứu
     is_active = Column(Boolean)
     type_name_en = Column(String(128))
     
@@ -311,6 +319,7 @@ class GoogleGroundTruth(Base):
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
 
+
 def create_all_tables():
     init_db_schemas()
     Base.metadata.create_all(bind=engine)
@@ -399,10 +408,22 @@ def sync_typesense_to_db(province_id: int = None, limit: int = None):
     
     session = SessionLocal()
     try:
+        # 0. Load Mapping Table into memory for fast lookup
+        print("Loading Admin Unit Mapping for ID transformation...")
+        # Sắp xếp theo admin_version tăng dần để version cao hơn sẽ ghi đè trong dictionary
+        mappings = session.query(AdminUnitMapping).order_by(AdminUnitMapping.admin_version.asc()).all()
+        # Tạo dictionary để lookup: (level, old_id) -> new_id
+        map_dict = {(m.level, m.old_id): m.new_id for m in mappings}
+        
+        def get_new_id(level, old_id):
+            if old_id is None: return None
+            return map_dict.get((level, old_id), old_id) # Fallback về chính nó nếu không tìm thấy mapping
+
         while True:
             # Tính toán limit cho batch hiện tại
+            # Nếu không thể filter ở server, chúng ta phải lấy batch mặc định (250) để lọc locally
             current_limit = batch_size
-            if limit and (total_processed + batch_size > limit):
+            if limit and (total_processed + batch_size > limit) and not filter_by:
                 current_limit = limit - total_processed
             
             if current_limit <= 0:
@@ -410,13 +431,28 @@ def sync_typesense_to_db(province_id: int = None, limit: int = None):
 
             params = {
                 "q": "*",
-                "filter_by": filter_by,
-                "per_page": current_limit,
+                "per_page": batch_size, # Luôn lấy full batch để tối ưu throughput khi lọc local
                 "page": (offset // batch_size) + 1
             }
+            
+            # Thêm filter_by nếu có thể
+            if filter_by:
+                params["filter_by"] = filter_by
 
             response = requests.get(base_url, headers=headers, params=params)
-            if response.status_code != 200:
+            
+            # Xử lý lỗi "non-indexed field" bằng cách fallback về lấy toàn bộ và lọc local
+            if response.status_code == 400 and "non-indexed field" in response.text:
+                if filter_by:
+                    print(f"Warning: Field 'province_id' is not indexed for filtering. Falling back to local filtering...")
+                    filter_by = None # Tắt filter ở server
+                    offset = 0 # Reset để lấy từ đầu
+                    total_processed = 0
+                    continue
+                else:
+                    print(f"Error calling Typesense: {response.text}")
+                    break
+            elif response.status_code != 200:
                 print(f"Error calling Typesense: {response.text}")
                 break
             
@@ -430,21 +466,31 @@ def sync_typesense_to_db(province_id: int = None, limit: int = None):
             for hit in hits:
                 doc = hit["document"]
                 
+                # Lọc local dựa trên OLD province_id (vì typesense đang lưu OLD ID)
+                doc_old_province_id = doc.get("province_id")
+                if province_id is not None and doc_old_province_id != province_id:
+                    continue
+
+                # Kiểm tra giới hạn số lượng nếu lọc local
+                if limit and total_processed >= limit:
+                    break
+                
                 # Trích xuất location [lat, lon]
                 location = doc.get("location", [None, None])
                 lat = location[0] if len(location) > 0 else None
                 lon = location[1] if len(location) > 1 else None
                 
+                # Thực hiện Mapping từ OLD ID -> NEW ID
                 record = {
                     "id": int(doc.get("id")),
                     "address": doc.get("address"),
                     "old_address": doc.get("old_address"),
-                    "ward_id": doc.get("ward_id"),
-                    "district_id": doc.get("district_id"),
-                    "province_id": doc.get("province_id"),
-                    "old_ward_id": doc.get("old_ward_id"),
-                    "old_district_id": doc.get("old_district_id"),
-                    "old_province_id": doc.get("old_province_id"),
+                    "province_id": get_new_id(1, doc.get("province_id")),
+                    "district_id": get_new_id(2, doc.get("district_id")),
+                    "ward_id": get_new_id(3, doc.get("ward_id")),
+                    "old_province_id": get_new_id(1, doc.get("old_province_id")),
+                    "old_district_id": get_new_id(2, doc.get("old_district_id")),
+                    "old_ward_id": get_new_id(3, doc.get("old_ward_id")),
                     "old_address_eng": doc.get("old_address_eng"),
                     "address_eng": doc.get("address_eng"),
                     "latitude": lat,
@@ -452,6 +498,7 @@ def sync_typesense_to_db(province_id: int = None, limit: int = None):
                     "popular": doc.get("popular", 0)
                 }
                 db_records.append(record)
+                total_processed += 1
             
             # 4. Upsert (Merge) vào database
             if db_records:
@@ -465,10 +512,9 @@ def sync_typesense_to_db(province_id: int = None, limit: int = None):
                 session.execute(stmt)
                 session.commit()
             
-            total_processed += len(hits)
-            offset += len(hits)
+            offset += len(hits) # Offset dựa trên số lượng hit thực tế từ server
             
-            print(f"Processed {total_processed} records...")
+            print(f"Processed {total_processed} records (Server scanned: {offset})...")
             
             if limit and total_processed >= limit:
                 break

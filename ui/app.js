@@ -9,7 +9,7 @@ const API_BASE = window.location.hostname === "localhost" || window.location.pro
 const PAGES = [
   "overview", "parser", "batch", "training", "label-studio",
   "experiments", "explorer", "osm-enrichment", "lookup",
-  "admin-units", "nso-sync", "settings"
+  "admin-units", "nso-sync", "settings", "evidence"
 ];
 
 const {
@@ -217,6 +217,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   safeInit("initMappingV3", initMappingV3);
   safeInit("initIntelligenceChart", initIntelligenceChart);
   safeInit("initModelBenchmarkUI", initModelBenchmarkUI);
+  safeInit("initEvidenceView", initEvidenceView);
   safeInit("initTrainingHub", initTrainingHub);
 
   fetchStats();
@@ -2759,3 +2760,129 @@ async function deleteAdminUnit(level, id, name) {
 window.showDetails = showDetails;
 window.deleteAdminUnit = deleteAdminUnit;
 window.loadTrainingHistoryFromDB = loadTrainingHistoryFromDB;
+
+async function initEvidenceView() {
+  const page = document.getElementById('evidence');
+  if (!page) return;
+
+  const refreshButton = page.querySelector('#evidence-refresh');
+  const fileList = page.querySelector('#evidence-file-list');
+  const iframe = page.querySelector('#evidence-iframe');
+  const csvPreview = page.querySelector('#evidence-csv-preview');
+  const meta = page.querySelector('#evidence-meta');
+
+  async function loadManifest() {
+    fileList.innerHTML = '<li class="text-tertiary p-12">Đang tải manifest...</li>';
+    csvPreview.innerHTML = '';
+    iframe.src = 'about:blank';
+    iframe.style.display = 'none';
+    csvPreview.style.display = 'none';
+
+    const response = await fetch(`${API_BASE}/evidence/manifest`, { headers: getAuthHeader() });
+    if (!response.ok) {
+      throw new Error(`Manifest API failed: ${response.status}`);
+    }
+
+    const manifest = await response.json();
+    const files = manifest.files || {};
+    const entries = Object.entries(files);
+
+    if (meta) {
+      meta.textContent = manifest.generatedAt
+        ? `Generated at ${manifest.generatedAt}`
+        : 'Generated at unknown time';
+    }
+
+    if (!entries.length) {
+      fileList.innerHTML = '<li class="text-tertiary p-12">Manifest không có tệp nào</li>';
+      return;
+    }
+
+    fileList.innerHTML = entries.map(([key, value]) => `
+      <li class="evidence-file-row" data-key="${key}">
+        <div class="evidence-file-main">
+          <div class="evidence-file-key">${key}</div>
+          <div class="evidence-file-path">${value}</div>
+        </div>
+        <div class="evidence-file-actions">
+          <button type="button" class="btn btn-sm btn-ghost evidence-view-btn" data-key="${key}">Xem</button>
+          <a class="btn btn-sm btn-primary" href="/api/evidence/file?key=${encodeURIComponent(key)}" target="_blank" rel="noopener">Mở</a>
+        </div>
+      </li>
+    `).join('');
+
+    fileList.querySelectorAll('.evidence-view-btn').forEach((button) => {
+      button.addEventListener('click', () => openEvidenceFile(button.dataset.key, files));
+    });
+  }
+
+  async function openEvidenceFile(key, files) {
+    const filePath = files[key] || '';
+    const ext = filePath.split('.').pop().toLowerCase();
+    const url = `${API_BASE}/evidence/file?key=${encodeURIComponent(key)}`;
+
+    if (ext === 'html' || ext === 'htm') {
+      iframe.src = url;
+      iframe.style.display = 'block';
+      csvPreview.style.display = 'none';
+      return;
+    }
+
+    const response = await fetch(url, { headers: getAuthHeader() });
+    if (!response.ok) {
+      throw new Error(`Preview API failed: ${response.status}`);
+    }
+
+    const text = await response.text();
+    const lines = text.split(/\r?\n/).filter(Boolean).slice(0, 25);
+    if (!lines.length) {
+      csvPreview.innerHTML = '<div class="p-12 text-tertiary">Tệp rỗng</div>';
+      csvPreview.style.display = 'block';
+      iframe.style.display = 'none';
+      return;
+    }
+
+    const rows = lines.map((line) => line.split(','));
+    const headers = rows[0] || [];
+    const bodyRows = rows.slice(1);
+    const tableHtml = `
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>${headers.map((cell) => `<th>${escapeHtml(cell)}</th>`).join('')}</tr>
+          </thead>
+          <tbody>
+            ${bodyRows.map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(cell)}</td>`).join('')}</tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+
+    csvPreview.innerHTML = tableHtml;
+    csvPreview.style.display = 'block';
+    iframe.style.display = 'none';
+  }
+
+  function escapeHtml(value) {
+    return String(value)
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#39;');
+  }
+
+  refreshButton.addEventListener('click', async () => {
+    try {
+      await loadManifest();
+    } catch (error) {
+      fileList.innerHTML = `<li class="text-danger p-12">Không tải được manifest: ${escapeHtml(error.message)}</li>`;
+    }
+  });
+
+  try {
+    await loadManifest();
+  } catch (error) {
+    fileList.innerHTML = `<li class="text-danger p-12">Không tải được manifest: ${escapeHtml(error.message)}</li>`;
+  }
+}

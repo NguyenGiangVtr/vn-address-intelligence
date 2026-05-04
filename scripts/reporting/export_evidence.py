@@ -1,93 +1,36 @@
-import os
-import pandas as pd
-from sqlalchemy import create_engine, text
-import json
-from dotenv import load_dotenv
-import urllib.parse
+"""Legacy export wrapper that now emits the real evidence package.
 
-# Load .env from root
-load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
+This script used to export the old fake evidence bundle into `evidence/`.
+It now delegates to `app.ai.generate_evidence.EvidenceGenerator` and writes
+into `reports/evidence_real` by default.
+"""
 
-# Connection string from environment
-DB_HOST = os.getenv("DB_HOST")
-DB_PORT = os.getenv("DB_PORT", "5432")
-DB_USER = os.getenv("DB_USER")
-DB_PASS = os.getenv("DB_PASS")
-DB_NAME = os.getenv("DB_NAME")
+from __future__ import annotations
 
-encoded_pass = urllib.parse.quote_plus(DB_PASS or "")
-DB_URL = f"postgresql://{DB_USER}:{encoded_pass}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
-engine = create_engine(DB_URL)
+import argparse
+from pathlib import Path
+import sys
 
-OUTPUT_DIR = "evidence"
-os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-def export_enriched_provinces():
-    print("Exporting Enriched Provinces...")
-    query = "SELECT province_id, province_name, province_no, decision_number, decision_date, notes FROM mat.province WHERE admin_version = 2"
-    df = pd.read_sql(query, engine)
-    df.to_csv(f"{OUTPUT_DIR}/enriched_provinces_2025.csv", index=False, encoding='utf-8-sig')
-    print(f"Saved to {OUTPUT_DIR}/enriched_provinces_2025.csv")
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
-def export_ward_mapping_samples():
-    print("Exporting Ward Mapping Samples...")
-    # This table might be empty if seeding hasn't run, but let's try to get what we have
-    query = """
-        SELECT m.ward_mapping_id, 
-               w1.ward_name as old_ward, 
-               w2.ward_name as new_ward, 
-               m.relationship_type, 
-               m.updated_note
-        FROM mat.ward_mapping m
-        LEFT JOIN mat.ward w1 ON m.ward_id_old = w1.ward_id
-        LEFT JOIN mat.ward w2 ON m.ward_id_new = w2.ward_id
-        LIMIT 100
-    """
-    try:
-        df = pd.read_sql(query, engine)
-        if df.empty:
-            # Fallback to a simple ward list if mapping is not fully populated
-            query = "SELECT ward_id, ward_name, district_id FROM mat.ward LIMIT 100"
-            df = pd.read_sql(query, engine)
-            df.to_csv(f"{OUTPUT_DIR}/administrative_units_sample.csv", index=False, encoding='utf-8-sig')
-        else:
-            df.to_csv(f"{OUTPUT_DIR}/ward_mapping_2025_samples.csv", index=False, encoding='utf-8-sig')
-            print(f"Saved to {OUTPUT_DIR}/ward_mapping_2025_samples.csv")
-    except Exception as e:
-        print(f"Error exporting mapping: {e}")
+from app.ai.generate_evidence import EvidenceGenerator  # noqa: E402
 
-def export_training_data_samples():
-    print("Exporting Training Data Samples...")
-    query = "SELECT raw_text, ner_tags_json FROM ath.training_datasets LIMIT 500"
-    df = pd.read_sql(query, engine)
-    df.to_csv(f"{OUTPUT_DIR}/ner_training_samples_bio.csv", index=False, encoding='utf-8-sig')
-    print(f"Saved to {OUTPUT_DIR}/ner_training_samples_bio.csv")
 
-def export_database_stats_report():
-    print("Generating Database Stats Report...")
-    stats = []
-    tables = [
-        ("mat.province", "Provinces"),
-        ("mat.district", "Districts"),
-        ("mat.ward", "Wards"),
-        ("osm.raw_entities", "OSM Raw Entities"),
-        ("osm.streets", "OSM Streets"),
-        ("ath.training_datasets", "Training Samples"),
-        ("prq.address_cleansing_queue", "Processing Queue")
-    ]
-    
-    with engine.connect() as conn:
-        for table, desc in tables:
-            count = conn.execute(text(f"SELECT COUNT(*) FROM {table}")).scalar()
-            stats.append({"Table": table, "Description": desc, "Count": count})
-            
-    df = pd.DataFrame(stats)
-    df.to_csv(f"{OUTPUT_DIR}/database_volume_report.csv", index=False, encoding='utf-8-sig')
-    print(f"Saved to {OUTPUT_DIR}/database_volume_report.csv")
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Export the real evidence package")
+    parser.add_argument("--output", default="reports/evidence_real", help="Output directory for the real evidence package")
+    args = parser.parse_args()
+
+    generator = EvidenceGenerator(output_dir=args.output)
+    output_files = generator.build()
+
+    print("Real evidence package generated:")
+    for name, path in output_files.items():
+        print(f"- {name}: {path}")
+
 
 if __name__ == "__main__":
-    export_enriched_provinces()
-    export_ward_mapping_samples()
-    export_training_data_samples()
-    export_database_stats_report()
-    print("\n--- All evidence files have been exported to the 'evidence/' directory ---")
+    main()

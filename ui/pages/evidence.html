@@ -1,0 +1,43 @@
+<!-- ══════ PAGE: EVIDENCE REPORT ══════ -->
+<div class="page full-height-page" id="evidence">
+    <div class="page-header">
+        <div>
+            <h2>Evidence Report</h2>
+            <p>Manifest-driven report viewer cho bộ evidence thật trong <code>reports/evidence_real</code></p>
+        </div>
+        <div class="page-actions">
+            <button class="btn btn-sm btn-ghost" id="evidence-refresh">
+                <i class="fa-solid fa-rotate"></i> Làm mới
+            </button>
+        </div>
+    </div>
+
+    <div class="text-tertiary" id="evidence-meta" style="margin-top: 6px; font-size: 12px;">
+        Đang tải manifest...
+    </div>
+
+    <div class="card mt-12">
+        <div class="card-body">
+            <div style="display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 12px; align-items: start;">
+                <div class="card" style="margin-bottom: 0;">
+                    <div class="card-header">
+                        <span class="card-title">Tệp trong manifest</span>
+                    </div>
+                    <div class="card-body" style="padding-top: 12px;">
+                        <ul id="evidence-file-list" style="list-style: none; display: grid; gap: 10px; margin: 0;"></ul>
+                    </div>
+                </div>
+
+                <div class="card" style="margin-bottom: 0;">
+                    <div class="card-header">
+                        <span class="card-title">Xem trực tiếp</span>
+                    </div>
+                    <div class="card-body" style="display: grid; gap: 12px;">
+                        <iframe id="evidence-iframe" title="Evidence report preview" style="width: 100%; height: 640px; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); background: var(--bg-app); display: none;"></iframe>
+                        <div id="evidence-csv-preview" style="display: none;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

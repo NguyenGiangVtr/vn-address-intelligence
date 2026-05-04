@@ -191,6 +191,37 @@ _TYPE_PREFIXES = [
     ("??c khu",   "Đặc khu"),
 ]
 
+def remove_vietnamese_marks(s, strip_prefix=True):
+    if not s: return ""
+    s = str(s).lower().strip()
+    
+    # 1. Chuyển đổi các ký tự có dấu thành không dấu
+    unicode_map = {
+        'a': 'àáạảãâầấậẩẫăằắặẳẵ',
+        'e': 'èéẹẻẽêềếệểễ',
+        'i': 'ìíịỉĩỳýỵỷỹ',
+        'o': 'òóọỏõôồốộổỗơờớợởỡ',
+        'u': 'ùúụủũưừứựửữ',
+        'd': 'đ',
+    }
+    for char, accented_chars in unicode_map.items():
+        for accented_char in accented_chars:
+            s = s.replace(accented_char, char)
+            
+    if strip_prefix:
+        # 2. Xóa các tiền tố hành chính phổ biến (chỉ xóa khi ở đầu và có phân cách)
+        prefixes = [
+            'thanh pho', 'tp', 'tinh', 'quan', 'huyen', 
+            'thi xa', 'tx', 'phuong', 'xa', 'thi tran', 'tt'
+        ]
+        for p in prefixes:
+            s = re.sub(rf'^{p}[\.\s]+', '', s)
+        
+    # 3. Xóa mọi ký tự đặc biệt và dấu cách còn lại
+    s = re.sub(r'[^a-z0-9]', '', s)
+    return s
+
+
 def _extract_type(name: str | None) -> str:
     """Đoán type_name từ prefix tên đơn vị (cp850-decoded strings)."""
     if not name:
@@ -286,25 +317,26 @@ def seed_provinces_v1(df: pd.DataFrame):
 
     records = [
         {
-            "province_id":   int(r.prov_code_old),
-            "province_no":   str(r.prov_code_old).zfill(2),
-            "province_name": r.prov_name_old,
-            "type_name":     _extract_type(r.prov_name_old),
-            "admin_version": 1,
-            "is_deleted":    False,
-            "is_default":    True,
-            "country_id":    0,
-            "created_user":  0,
-            "updated_user":  0,
-            "created_date":  NOW,
-            "updated_date":  NOW,
+            "province_id":      int(r.prov_code_old),
+            "province_no":      str(r.prov_code_old).zfill(2),
+            "province_name":    r.prov_name_old,
+            "province_name_en": remove_vietnamese_marks(r.prov_name_old),
+            "type_name":        _extract_type(r.prov_name_old),
+            "admin_version":    1,
+            "is_deleted":       False,
+            "is_default":       True,
+            "country_id":       0,
+            "created_user":     0,
+            "updated_user":     0,
+            "created_date":     NOW,
+            "updated_date":     NOW,
         }
         for r in provinces.itertuples()
     ]
 
     _upsert_batch(
         records, "mat.province", "province_id, admin_version",
-        ["province_no", "province_name", "type_name",
+        ["province_no", "province_name", "province_name_en", "type_name",
          "is_deleted", "is_default", "country_id", "updated_user",
          "created_date", "updated_date"],
     )
@@ -324,18 +356,20 @@ def seed_districts_v1(df: pd.DataFrame):
 
     records = [
         {
-            "district_id":   int(r.dist_code_old),
-            "district_no":   str(r.dist_code_old).zfill(3),
-            "district_name": r.dist_name_old,
-            "type_name":     _extract_type(r.dist_name_old),
-            "province_id":   int(r.prov_code_old),
-            "admin_version": 1,
-            "is_deleted":    False,
-            "is_default":    True,
-            "created_user":  0,
-            "updated_user":  0,
-            "created_date":  NOW,
-            "updated_date":  NOW,
+            "district_id":      int(r.dist_code_old),
+            "district_no":      str(r.dist_code_old).zfill(3),
+            "district_name":    r.dist_name_old,
+            "district_name_en": remove_vietnamese_marks(r.dist_name_old),
+            "type_name":        _extract_type(r.dist_name_old),
+            "type_name_en":     remove_vietnamese_marks(_extract_type(r.dist_name_old), strip_prefix=False),
+            "province_id":      int(r.prov_code_old),
+            "admin_version":    1,
+            "is_deleted":       False,
+            "is_default":       True,
+            "created_user":     0,
+            "updated_user":     0,
+            "created_date":     NOW,
+            "updated_date":     NOW,
         }
         for r in districts.itertuples()
         if r.dist_code_old and r.dist_name_old
@@ -343,7 +377,7 @@ def seed_districts_v1(df: pd.DataFrame):
 
     _upsert_batch(
         records, "mat.district", "district_id, admin_version",
-        ["district_no", "district_name", "type_name", "province_id",
+        ["district_no", "district_name", "district_name_en", "type_name", "type_name_en", "province_id",
          "is_deleted", "is_default", "updated_user",
          "created_date", "updated_date"],
     )
@@ -364,26 +398,28 @@ def seed_wards_v1(df: pd.DataFrame):
 
     records = [
         {
-            "ward_id":       int(r.ward_int_old),
-            "ward_no":       str(int(r.ward_int_old)).zfill(5),
-            "ward_name":     r.ward_name_old,
-            "type_name":     _extract_type(r.ward_name_old),
-            "district_id":   int(r.dist_code_old) if r.dist_code_old and not pd.isna(r.dist_code_old) else 0,
-            "province_no":   str(int(r.prov_code_old)).zfill(2) if r.prov_code_old and not pd.isna(r.prov_code_old) else None,
-            "admin_version": 1,
-            "is_deleted":    False,
-            "is_default":    True,
-            "created_user":  0,
-            "updated_user":  0,
-            "created_date":  NOW,
-            "updated_date":  NOW,
+            "ward_id":          int(r.ward_int_old),
+            "ward_no":          str(int(r.ward_int_old)).zfill(5),
+            "ward_name":        r.ward_name_old,
+            "ward_name_en":     remove_vietnamese_marks(r.ward_name_old),
+            "type_name":        _extract_type(r.ward_name_old),
+            "type_name_en":     remove_vietnamese_marks(_extract_type(r.ward_name_old), strip_prefix=False),
+            "district_id":      int(r.dist_code_old) if r.dist_code_old and not pd.isna(r.dist_code_old) else 0,
+            "province_no":      str(int(r.prov_code_old)).zfill(2) if r.prov_code_old and not pd.isna(r.prov_code_old) else None,
+            "admin_version":    1,
+            "is_deleted":       False,
+            "is_default":       True,
+            "created_user":     0,
+            "updated_user":     0,
+            "created_date":     NOW,
+            "updated_date":     NOW,
         }
         for r in ward_old.itertuples()
     ]
 
     _upsert_batch(
         records, "mat.ward", "ward_id, admin_version",
-        ["ward_no", "ward_name", "type_name", "district_id", "province_no",
+        ["ward_no", "ward_name", "ward_name_en", "type_name", "type_name_en", "district_id", "province_no",
          "is_deleted", "is_default", "updated_user",
          "created_date", "updated_date"],
     )
@@ -435,18 +471,19 @@ def seed_provinces_v2(df: pd.DataFrame):
 
     records = [
         {
-            "province_id":   int(r.prov_code_new),
-            "province_no":   str(r.prov_code_new).zfill(2),
-            "province_name": r.prov_name_new,
-            "type_name":     r.type_name,
-            "admin_version": 2,
-            "is_deleted":    False,
-            "is_default":    True,
-            "country_id":    0,
-            "created_user":  0,
-            "updated_user":  0,
-            "created_date":  NOW,
-            "updated_date":  NOW,
+            "province_id":      int(r.prov_code_new),
+            "province_no":      str(r.prov_code_new).zfill(2),
+            "province_name":    r.prov_name_new,
+            "province_name_en": remove_vietnamese_marks(r.prov_name_new),
+            "type_name":        r.type_name,
+            "admin_version":    2,
+            "is_deleted":       False,
+            "is_default":       True,
+            "country_id":       0,
+            "created_user":     0,
+            "updated_user":     0,
+            "created_date":     NOW,
+            "updated_date":     NOW,
         }
         for r in provinces.itertuples()
         if r.prov_code_new and r.prov_name_new
@@ -454,7 +491,7 @@ def seed_provinces_v2(df: pd.DataFrame):
 
     _upsert_batch(
         records, "mat.province", "province_id, admin_version",
-        ["province_no", "province_name", "type_name",
+        ["province_no", "province_name", "province_name_en", "type_name",
          "is_deleted", "is_default", "country_id", "updated_user",
          "created_date", "updated_date"],
     )
@@ -481,18 +518,20 @@ def seed_districts_v2(df: pd.DataFrame):
 
     records = [
         {
-            "district_id":   int(r.prov_code_new),
-            "district_no":   str(int(r.prov_code_new)).zfill(3),
-            "district_name": r.prov_name_new,
-            "type_name":     _extract_type(r.prov_name_new),
-            "province_id":   int(r.prov_code_new),
-            "admin_version": 2,
-            "is_deleted":    False,
-            "is_default":    True,
-            "created_user":  0,
-            "updated_user":  0,
-            "created_date":  NOW,
-            "updated_date":  NOW,
+            "district_id":      int(r.prov_code_new),
+            "district_no":      str(int(r.prov_code_new)).zfill(3),
+            "district_name":    r.prov_name_new,
+            "district_name_en": remove_vietnamese_marks(r.prov_name_new),
+            "type_name":        _extract_type(r.prov_name_new),
+            "type_name_en":     remove_vietnamese_marks(_extract_type(r.prov_name_new), strip_prefix=False),
+            "province_id":      int(r.prov_code_new),
+            "admin_version":    2,
+            "is_deleted":       False,
+            "is_default":       True,
+            "created_user":     0,
+            "updated_user":     0,
+            "created_date":     NOW,
+            "updated_date":     NOW,
         }
         for r in provinces.itertuples()
         if r.prov_code_new and r.prov_name_new
@@ -500,7 +539,7 @@ def seed_districts_v2(df: pd.DataFrame):
 
     _upsert_batch(
         records, "mat.district", "district_id, admin_version",
-        ["district_no", "district_name", "type_name", "province_id",
+        ["district_no", "district_name", "district_name_en", "type_name", "type_name_en", "province_id",
          "is_deleted", "is_default", "updated_user",
          "created_date", "updated_date"],
     )
@@ -525,26 +564,28 @@ def seed_wards_v2(df: pd.DataFrame):
 
     records = [
         {
-            "ward_id":       int(r.ward_int_new),
-            "ward_no":       str(int(r.ward_int_new)).zfill(5),
-            "ward_name":     r.ward_name_new,
-            "type_name":     _extract_type(r.ward_name_new),
-            "district_id":   int(r.prov_code_new) if r.prov_code_new and not pd.isna(r.prov_code_new) else 0,
-            "province_no":   str(int(r.prov_code_new)).zfill(2) if r.prov_code_new and not pd.isna(r.prov_code_new) else None,
-            "admin_version": 2,
-            "is_deleted":    False,
-            "is_default":    True,
-            "created_user":  0,
-            "updated_user":  0,
-            "created_date":  NOW,
-            "updated_date":  NOW,
+            "ward_id":          int(r.ward_int_new),
+            "ward_no":          str(int(r.ward_int_new)).zfill(5),
+            "ward_name":        r.ward_name_new,
+            "ward_name_en":     remove_vietnamese_marks(r.ward_name_new),
+            "type_name":        _extract_type(r.ward_name_new),
+            "type_name_en":     remove_vietnamese_marks(_extract_type(r.ward_name_new), strip_prefix=False),
+            "district_id":      int(r.prov_code_new) if r.prov_code_new and not pd.isna(r.prov_code_new) else 0,
+            "province_no":      str(int(r.prov_code_new)).zfill(2) if r.prov_code_new and not pd.isna(r.prov_code_new) else None,
+            "admin_version":    2,
+            "is_deleted":       False,
+            "is_default":       True,
+            "created_user":     0,
+            "updated_user":     0,
+            "created_date":     NOW,
+            "updated_date":     NOW,
         }
         for r in ward_district.itertuples()
     ]
 
     _upsert_batch(
         records, "mat.ward", "ward_id, admin_version",
-        ["ward_no", "ward_name", "type_name", "district_id", "province_no",
+        ["ward_no", "ward_name", "ward_name_en", "type_name", "type_name_en", "district_id", "province_no",
          "is_deleted", "is_default", "updated_user",
          "created_date", "updated_date"],
     )
@@ -678,7 +719,7 @@ def run_seed_v3(file_path: str):
     """
     logger.info("=" * 60)
     logger.info("SeederV3: Starting full import from %s", file_path)
-    logger.info("Quy trình: v1 (province/district/ward) → mark_deleted → v2 → ward_mapping")
+    logger.info("Quy trình: v1 (province/district/ward) → v2 → ward_mapping")
     logger.info("=" * 60)
 
     # Load & parse
@@ -689,10 +730,7 @@ def run_seed_v3(file_path: str):
     seed_districts_v1(df)
     seed_wards_v1(df)
 
-    # Bước 2: Mark v1 là deleted (sau khi đã có data v1 trong DB)
-    mark_old_data_deleted()
-
-    # Bước 3: Seed toàn bộ data v2 (admin_version=2)
+    # Bước 2: Seed toàn bộ data v2 (admin_version=2)
     seed_provinces_v2(df)
     seed_districts_v2(df)
     seed_wards_v2(df)

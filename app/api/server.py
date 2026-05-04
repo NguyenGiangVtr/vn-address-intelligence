@@ -26,6 +26,7 @@ from app.services.nso_sync import sync_full_nso, sync_province_nso, sync_logs
 from app.services.nso_api import get_nso_provinces, get_nso_districts, get_nso_wards
 from app.api import schemas
 from typing import List, Optional
+import json
 
 from app.core.logging_config import setup_logging
 from app.core.config import Config  # noqa: F401 - import to trigger load_dotenv from .env
@@ -1626,6 +1627,76 @@ async def get_ls_tasks(current_user: str = Depends(get_current_user)):
 # Register API router
 api_router_v1 = APIRouter(prefix="/api/v1")
 api_router_v1.include_router(api_router)
+
+# ── Evidence manifest endpoints ──
+def _get_evidence_dirs():
+    project_root = Path(__file__).resolve().parents[2]
+    return [project_root / "reports" / "evidence_real", project_root / "reports" / "evidence"]
+
+def _find_latest_manifest(dirs: list[Path]) -> Optional[Path]:
+    for d in dirs:
+        try:
+            if not d.exists():
+                continue
+            manifests = sorted(d.glob("evidence_manifest_*.json"), reverse=True)
+            if manifests:
+                return manifests[0]
+        except Exception:
+            continue
+    return None
+
+def _load_manifest(path: Path) -> dict:
+    with open(path, "r", encoding="utf-8") as fh:
+        return json.load(fh)
+
+
+@api_router.get("/evidence/manifest")
+def evidence_manifest():
+    """Return the latest evidence manifest (searches evidence_real then evidence)."""
+    dirs = _get_evidence_dirs()
+    manifest_path = _find_latest_manifest(dirs)
+    if manifest_path is None:
+        raise HTTPException(status_code=404, detail="No evidence manifest found")
+
+    manifest = _load_manifest(manifest_path)
+    files = manifest.get("files", {}) or {}
+    # Build API file URLs (relative to /api/evidence/file)
+    file_urls = {k: f"/api/evidence/file?key={k}" for k in files.keys()}
+    manifest["file_urls"] = file_urls
+    manifest["_manifest_path"] = str(manifest_path)
+    return manifest
+
+
+@api_router.get("/evidence/file")
+def evidence_file(key: str):
+    """Stream a file referenced in the latest manifest by key (e.g. 'training_history')."""
+    dirs = _get_evidence_dirs()
+    manifest_path = _find_latest_manifest(dirs)
+    if manifest_path is None:
+        raise HTTPException(status_code=404, detail="No evidence manifest found")
+
+    manifest = _load_manifest(manifest_path)
+    files = manifest.get("files", {}) or {}
+    if key not in files:
+        raise HTTPException(status_code=404, detail=f"File key not found in manifest: {key}")
+
+    manifest_dir = manifest_path.parent
+    rel_path = Path(files[key])
+    # Ensure we resolve inside the manifest directory
+    file_path = (manifest_dir / rel_path).resolve()
+    try:
+        # Prevent serving files outside the manifest directory
+        if not str(file_path).startswith(str(manifest_dir.resolve())):
+            raise HTTPException(status_code=403, detail="Access to requested file is forbidden")
+    except Exception:
+        raise HTTPException(status_code=403, detail="Access to requested file is forbidden")
+
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Requested file does not exist")
+
+    return FileResponse(str(file_path), filename=file_path.name)
+
+
 app.include_router(api_router, prefix="/api") # Match frontend API_BASE
 app.include_router(api_router_v1) # Support /api/v1/*
 

@@ -10,7 +10,7 @@ Nguồn dữ liệu:
 4. `evidence/ward_mapping_2025_samples.csv` cho sample mapping thật đã lưu sẵn
 
 Cách chạy:
-    python app/ai/generate_evidence.py --output reports/evidence
+    python app/ai/generate_evidence.py --output reports/evidence_real
 """
 
 from __future__ import annotations
@@ -98,7 +98,7 @@ def _write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
 
 
 class EvidenceGenerator:
-    def __init__(self, output_dir: str = "reports/evidence") -> None:
+    def __init__(self, output_dir: str = "reports/evidence_real") -> None:
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -528,7 +528,7 @@ th {{ background: #e8eefc; }}
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Generate real evidence files from DB-backed logs")
-    parser.add_argument("--output", default="reports/evidence", help="Output directory")
+    parser.add_argument("--output", default="reports/evidence_real", help="Output directory")
     args = parser.parse_args()
 
     generator = EvidenceGenerator(output_dir=args.output)
