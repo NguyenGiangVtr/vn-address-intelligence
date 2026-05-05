@@ -1369,6 +1369,11 @@ function setupNavigation() {
         if (_parserStatusPollTimer) clearTimeout(_parserStatusPollTimer);
         _pollParserModelStatus();
       }
+
+      // Initialize label registry when navigating to label-registry page
+      if (targetId === "label-registry") {
+        populateLabelRegistry();
+      }
     });
   });
 
@@ -1378,6 +1383,15 @@ function setupNavigation() {
   document.querySelectorAll(".workflow-step.clickable").forEach(step => {
     step.addEventListener("click", () => {
       const targetPage = step.getAttribute("data-goto");
+      const navItem = document.querySelector(`.nav-item[data-page="${targetPage}"]`);
+      if (navItem) navItem.click();
+    });
+  });
+
+  // Parser footer action buttons click to navigate
+  document.querySelectorAll(".parser-footer-action[data-goto]").forEach(button => {
+    button.addEventListener("click", () => {
+      const targetPage = button.getAttribute("data-goto");
       const navItem = document.querySelector(`.nav-item[data-page="${targetPage}"]`);
       if (navItem) navItem.click();
     });
@@ -1463,6 +1477,12 @@ function renderOverviewChart(stats) {
 function populateLabelRegistry() {
   const tbody = document.getElementById("label-registry-body");
   if (!tbody) return;
+
+  // Update label count
+  const labelCountEl = document.getElementById("label-count");
+  if (labelCountEl) {
+    labelCountEl.textContent = NER_LABELS.length;
+  }
 
   tbody.innerHTML = NER_LABELS.map(l => `
     <tr>
@@ -1639,6 +1659,249 @@ function setupParserTool() {
 
   // Poll model status on page open
   _pollParserModelStatus();
+
+  // Setup enhanced footer functionality
+  _setupParserFooterActions();
+}
+
+function _setupParserFooterActions() {
+  // Export Result button
+  const btnExport = document.getElementById("btn-export-result");
+  if (btnExport) {
+    btnExport.addEventListener("click", () => {
+      const resultsData = _collectParserResults();
+      if (resultsData) {
+        _exportParserResults(resultsData);
+      } else {
+        if (showToast) showToast("Chưa có kết quả để xuất", "warning");
+      }
+    });
+  }
+
+  // Copy JSON button
+  const btnCopyJson = document.getElementById("btn-copy-json");
+  if (btnCopyJson) {
+    btnCopyJson.addEventListener("click", () => {
+      const resultsData = _collectParserResults();
+      if (resultsData) {
+        navigator.clipboard.writeText(JSON.stringify(resultsData, null, 2)).then(() => {
+          if (showToast) showToast("Đã copy JSON vào clipboard", "success");
+        });
+      } else {
+        if (showToast) showToast("Chưa có kết quả để copy", "warning");
+      }
+    });
+  }
+
+  // Help & Guide button
+  const btnHelp = document.getElementById("btn-parser-help");
+  if (btnHelp) {
+    btnHelp.addEventListener("click", () => {
+      _showParserHelpModal();
+    });
+  }
+
+  // Performance toggle
+  const performancePanel = document.getElementById("parser-performance-panel");
+  const performanceToggle = document.getElementById("performance-toggle");
+  const performanceHeader = document.querySelector(".performance-header");
+  
+  if (performanceToggle && performanceHeader) {
+    performanceHeader.addEventListener("click", () => {
+      const metrics = document.getElementById("performance-metrics");
+      const isVisible = metrics && metrics.style.display !== "none";
+      
+      if (metrics) {
+        metrics.style.display = isVisible ? "none" : "grid";
+      }
+      
+      const icon = performanceToggle.querySelector("i");
+      if (icon) {
+        icon.className = isVisible ? "fa-solid fa-chevron-down" : "fa-solid fa-chevron-up";
+      }
+    });
+  }
+}
+
+function _collectParserResults() {
+  const inputEl = document.getElementById("parser-input");
+  if (!inputEl || !inputEl.value.trim()) return null;
+
+  const results = {
+    timestamp: new Date().toISOString(),
+    input_address: inputEl.value.trim(),
+    sample_id: inputEl.dataset.sampleId || null,
+    models: {}
+  };
+
+  // Collect results from each model card
+  ["prelabeler", "phobert", "mgte", "llm"].forEach(modelName => {
+    const resultEl = document.getElementById(`presult-${modelName}`);
+    const statsEl = document.getElementById(`pstats-${modelName}`);
+    
+    if (resultEl) {
+      results.models[modelName] = {
+        html_output: resultEl.innerHTML,
+        stats: statsEl ? statsEl.innerHTML : null
+      };
+    }
+  });
+
+  return results;
+}
+
+function _exportParserResults(data) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `vnai-parser-result-${new Date().toISOString().slice(0, 19).replace(/:/g, "-")}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  
+  if (showToast) showToast("Đã xuất kết quả thành công", "success");
+}
+
+function _showParserHelpModal() {
+  const modalHtml = `
+    <div class="modal-overlay" id="parser-help-modal">
+      <div class="modal-content" style="max-width: 600px;">
+        <div class="modal-header">
+          <h3><i class="fa-solid fa-question-circle"></i> Hướng dẫn Parser</h3>
+          <button class="modal-close" onclick="document.getElementById('parser-help-modal').remove()">
+            <i class="fa-solid fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="help-section">
+            <h4><i class="fa-solid fa-play"></i> Cách sử dụng</h4>
+            <ol>
+              <li>Nhập địa chỉ Việt Nam vào ô input</li>
+              <li>Nhấn "Phân tích" hoặc phím Enter</li>
+              <li>Xem kết quả từ 4 mô hình AI khác nhau</li>
+              <li>So sánh hiệu suất và độ chính xác</li>
+            </ol>
+          </div>
+          
+          <div class="help-section">
+            <h4><i class="fa-solid fa-lightbulb"></i> Mẹo sử dụng</h4>
+            <ul>
+              <li>Sử dụng nút <i class="fa-solid fa-shuffle"></i> để thử mẫu ngẫu nhiên</li>
+              <li>Nút <i class="fa-solid fa-database"></i> lấy mẫu từ cơ sở dữ liệu</li>
+              <li>Hover vào entities để xem thông tin nhãn</li>
+              <li>Click "Labels Registry" để xem tất cả nhãn NER</li>
+            </ul>
+          </div>
+          
+          <div class="help-section">
+            <h4><i class="fa-solid fa-brain"></i> Các mô hình</h4>
+            <ul>
+              <li><strong>PreLabeler:</strong> Trích xuất thực thể cơ bản</li>
+              <li><strong>PhoBERT:</strong> Mô hình BERT tiếng Việt</li>
+              <li><strong>mGTE:</strong> Embedding đa ngôn ngữ</li>
+              <li><strong>Qwen 2.5:</strong> Large Language Model</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+}
+
+function updateParserPerformanceMetrics(data) {
+  // Update performance metrics when parser results are available
+  if (data.timing) {
+    const timeEl = document.getElementById("metric-processing-time");
+    if (timeEl) timeEl.textContent = `${data.timing}ms`;
+  }
+  
+  if (data.entities_count !== undefined) {
+    const countEl = document.getElementById("metric-entities-count");
+    if (countEl) countEl.textContent = data.entities_count.toString();
+  }
+  
+  if (data.confidence) {
+    const confEl = document.getElementById("metric-confidence");
+    if (confEl) confEl.textContent = `${data.confidence.toFixed(1)}%`;
+  }
+  
+  if (data.best_model) {
+    const modelEl = document.getElementById("metric-best-model");
+    if (modelEl) modelEl.textContent = data.best_model;
+  }
+  
+  // Show performance panel after first analysis
+  const perfPanel = document.getElementById("parser-performance-panel");
+  if (perfPanel) perfPanel.style.display = "block";
+}
+
+function _updatePerformanceMetrics(totalMs, inputText) {
+  // Processing time
+  const timeEl = document.getElementById("metric-processing-time");
+  if (timeEl) {
+    const timeFmt = totalMs >= 1000 
+      ? `${(totalMs / 1000).toFixed(2)}s`
+      : `${totalMs}ms`;
+    timeEl.textContent = timeFmt;
+  }
+  
+  // Count entities from all models
+  let totalEntities = 0;
+  let totalConfidence = 0;
+  let confidenceCount = 0;
+  let bestModel = "N/A";
+  let bestScore = 0;
+  
+  ["prelabeler", "phobert", "mgte", "llm"].forEach(modelName => {
+    const resultEl = document.getElementById(`presult-${modelName}`);
+    if (resultEl && !resultEl.querySelector('.pmodel-not-loaded')) {
+      // Count entities (spans with ner-entity class)
+      const entities = resultEl.querySelectorAll('.ner-entity');
+      totalEntities += entities.length;
+      
+      // Try to extract confidence from stats or result content
+      const statsEl = document.getElementById(`pstats-${modelName}`);
+      if (statsEl) {
+        const confMatch = statsEl.textContent.match(/(\d+(?:\.\d+)?)%/);
+        if (confMatch) {
+          const conf = parseFloat(confMatch[1]);
+          totalConfidence += conf;
+          confidenceCount++;
+          if (conf > bestScore) {
+            bestScore = conf;
+            bestModel = modelName.charAt(0).toUpperCase() + modelName.slice(1);
+          }
+        }
+      }
+    }
+  });
+  
+  // Update entities count
+  const entitiesEl = document.getElementById("metric-entities-count");
+  if (entitiesEl) entitiesEl.textContent = totalEntities.toString();
+  
+  // Update average confidence
+  const confEl = document.getElementById("metric-confidence");
+  if (confEl) {
+    if (confidenceCount > 0) {
+      const avgConf = totalConfidence / confidenceCount;
+      confEl.textContent = `${avgConf.toFixed(1)}%`;
+    } else {
+      confEl.textContent = "N/A";
+    }
+  }
+  
+  // Update best model
+  const modelEl = document.getElementById("metric-best-model");
+  if (modelEl) modelEl.textContent = bestModel;
+  
+  // Show performance panel after first analysis
+  const perfPanel = document.getElementById("parser-performance-panel");
+  if (perfPanel) perfPanel.style.display = "block";
 }
 
 function _buildParserNERLegend() {
@@ -1791,6 +2054,9 @@ async function runParser() {
     if (lastMeta) _updateParserMeta(lastMeta);
     // Render comparison summary
     _renderParserCompareSummary();
+    
+    // Update performance metrics
+    _updatePerformanceMetrics(totalMs, text);
   } catch (err) {
     _setParserStatus("error", "Đã xảy ra lỗi trong quá trình phân tích");
   } finally {

@@ -1,0 +1,74 @@
+<!-- ══════ PAGE: LABEL REGISTRY ══════ -->
+<div class="page" id="label-registry">
+    <div class="page-header">
+        <h2><i class="fa-solid fa-tags"></i> Label Registry</h2>
+        <p>Danh sách đầy đủ các nhãn NER (Named Entity Recognition) được sử dụng trong hệ thống phân tích địa chỉ</p>
+    </div>
+
+    <!-- ── Label Registry Table ── -->
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fa-solid fa-list"></i> Nhãn NER</h3>
+            <div class="card-subtitle">
+                Tổng cộng: <span id="label-count"></span> nhãn được sử dụng trong pipeline phân tích
+            </div>
+        </div>
+        
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th width="80">Mã nhãn</th>
+                            <th>Mô tả</th>
+                            <th width="120">Màu sắc</th>
+                            <th width="80">Phím tắt</th>
+                            <th>Ví dụ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="label-registry-body">
+                        <!-- Content will be populated by populateLabelRegistry() -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Usage Instructions ── -->
+    <div class="card mt-16">
+        <div class="card-header">
+            <h3><i class="fa-solid fa-info-circle"></i> Hướng dẫn sử dụng</h3>
+        </div>
+        
+        <div class="card-body">
+            <div class="grid grid-2 gap-16">
+                <div>
+                    <h4><i class="fa-solid fa-wand-magic-sparkles"></i> Trong Parser</h4>
+                    <ul class="text-sm">
+                        <li>Các nhãn NER được tự động nhận diện và tô màu trong kết quả phân tích</li>
+                        <li>Mỗi thực thể được highlight với màu sắc tương ứng</li>
+                        <li>Hover vào thực thể để xem thông tin nhãn chi tiết</li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <h4><i class="fa-solid fa-keyboard"></i> Phím tắt</h4>
+                    <ul class="text-sm">
+                        <li>Sử dụng phím tắt (0-9) khi đang trong chế độ labeling</li>
+                        <li>Phím tắt giúp tăng tốc quá trình gán nhãn thủ công</li>
+                        <li>Kết hợp với Label Studio để huấn luyện model</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="alert alert-info mt-16">
+                <i class="fa-solid fa-lightbulb"></i>
+                <div>
+                    <strong>Lưu ý:</strong> 
+                    Danh sách nhãn này đồng bộ với constants.py trong backend. 
+                    Mọi thay đổi cần được cập nhật ở cả frontend và backend để đảm bảo tính nhất quán.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
