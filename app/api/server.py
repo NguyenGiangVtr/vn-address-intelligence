@@ -602,18 +602,18 @@ def _run_parser_research(sample: AddressCleansingQueue, target_model: Optional[s
     province_name = sample.province_name
 
     def _build_llm_candidates() -> List[str]:
+        import numpy as np
         corpus = bundle.get("corpus") or []
         mgte = bundle.get("mgte")
-        if not corpus or not mgte or not getattr(mgte, "_corpus_emb", None):
+        corpus_emb = getattr(mgte, "_corpus_emb", None)
+        if not corpus or mgte is None or corpus_emb is None or corpus_emb.shape[0] == 0:
             return []
-
-        import numpy as np
         try:
             q_emb = mgte.model.encode([raw_address], normalize_embeddings=True, convert_to_numpy=True)[0]
-            scores = mgte._corpus_emb @ q_emb
+            scores = corpus_emb @ q_emb
             top_idx = np.argsort(scores)[::-1][:5]
             return [corpus[int(i)] for i in top_idx]
-        except:
+        except Exception:
             return []
 
     outputs = {}
@@ -668,13 +668,21 @@ def _run_parser_research(sample: AddressCleansingQueue, target_model: Optional[s
             try:
                 candidates = _build_llm_candidates()
                 norm, score, lat = bundle["llm"].normalize(raw_address, candidates)
+                # Ensure norm is always a plain str — guard against numpy/tensor leakage
+                if isinstance(norm, str):
+                    norm_str = norm
+                elif isinstance(norm, dict):
+                    norm_str = str(norm.get("full_address") or raw_address)
+                else:
+                    norm_str = str(norm)
                 outputs["llm"] = {
                     "mode": "qwen2.5_llm",
-                    "normalizedAddress": norm if isinstance(norm, str) else norm.get("full_address") if isinstance(norm, dict) else str(norm),
-                    "score": round(score, 4),
-                    "latencyMs": round(lat, 2),
+                    "normalizedAddress": norm_str,
+                    "score": round(float(score), 4),
+                    "latencyMs": round(float(lat), 2),
                 }
             except Exception as e:
+                logger.error(f"LLM normalize error: {traceback.format_exc()}")
                 outputs["llm"] = {"error": str(e)}
         else:
             outputs["llm"] = {"status": "Not loaded", "error": bundle["errors"].get("llm")}

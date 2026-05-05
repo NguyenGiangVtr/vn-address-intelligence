@@ -49,6 +49,31 @@ function applyVisualSettings(settings) {
 let API_BASE = normalizeApiBase(loadUISettings().apiBaseUrl);
 applyVisualSettings(loadUISettings());
 
+function getApiBaseCandidates() {
+  const candidates = [API_BASE, normalizeApiBase(loadUISettings().apiBaseUrl), DEFAULT_API_BASE];
+
+  if (window.location.origin && window.location.origin !== 'null') {
+    candidates.push(`${window.location.origin}/api`);
+  }
+
+  return [...new Set(candidates.filter(Boolean).map((value) => normalizeApiBase(value)))];
+}
+
+async function fetchWithApiFallback(path, options = {}) {
+  const suffix = path.startsWith('/') ? path : `/${path}`;
+  let lastError = null;
+
+  for (const base of getApiBaseCandidates()) {
+    try {
+      return await fetch(`${base}${suffix}`, options);
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError || new Error(`Unable to reach API for ${suffix}`);
+}
+
 const PAGES = [
   "overview", "parser", "batch", "training", "label-studio",
   "experiments", "explorer", "osm-enrichment", "lookup", "boundary-visualization",
@@ -1721,8 +1746,11 @@ async function runParser() {
     await Promise.all(models.map(fetchModel));
 
     const totalMs = Date.now() - startTs;
-    _setParserStatus("done", `Hoàn thành — tổng ${totalMs}ms`);
-    if (timingEl && timingVal) { timingVal.textContent = `${totalMs}ms`; timingEl.style.display = "flex"; }
+    const totalMsFmt = totalMs >= 1000
+      ? `${(totalMs / 1000).toFixed(2)}s`
+      : `${totalMs.toLocaleString("vi-VN")}ms`;
+    _setParserStatus("done", "Hoàn thành — 4/4 model");
+    if (timingEl && timingVal) { timingVal.textContent = totalMsFmt; timingEl.style.display = "flex"; }
 
     // Update meta footer
     if (lastMeta) _updateParserMeta(lastMeta);
@@ -1738,10 +1766,30 @@ async function runParser() {
 
 // Model task metadata for contextual display
 const _MODEL_TASK_META = {
-  prelabeler: { task: "NER",         icon: "fa-tags",           taskLabel: "Trích xuất thực thể",     outputType: "entities" },
-  phobert:    { task: "Retrieval",   icon: "fa-magnifying-glass", taskLabel: "Chuẩn hóa ngữ nghĩa",   outputType: "normalized" },
-  mgte:       { task: "Embedding",   icon: "fa-layer-group",    taskLabel: "Embedding đa ngôn ngữ",  outputType: "normalized" },
-  llm:        { task: "LLM",         icon: "fa-brain",          taskLabel: "Suy luận ngôn ngữ",      outputType: "normalized" },
+  prelabeler: {
+    task: "NER", icon: "fa-tags",
+    taskLabel: "Trích xuất thực thể",
+    outputType: "entities",
+    outputDesc: null,
+  },
+  phobert: {
+    task: "Retrieval", icon: "fa-magnifying-glass",
+    taskLabel: "Corpus Retrieval · PhoBERT",
+    outputType: "normalized",
+    outputDesc: "Địa chỉ khớp nhất trong corpus (cosine similarity)",
+  },
+  mgte: {
+    task: "Retrieval", icon: "fa-layer-group",
+    taskLabel: "Corpus Retrieval · mGTE",
+    outputType: "normalized",
+    outputDesc: "Địa chỉ khớp nhất trong corpus (cosine similarity)",
+  },
+  llm: {
+    task: "LLM", icon: "fa-brain",
+    taskLabel: "Suy luận · Qwen LLM",
+    outputType: "normalized",
+    outputDesc: "Địa chỉ được suy luận từ RAG candidates",
+  },
 };
 
 function _renderModelCard(model, out, latencyMs) {
@@ -1780,11 +1828,28 @@ function _renderModelCard(model, out, latencyMs) {
 
       // Task type badge
       if (taskMeta.taskLabel) {
-        html += `<div class="pmodel-task-badge"><i class="fa-solid ${taskMeta.icon || 'fa-circle'}"></i> ${taskMeta.taskLabel}</div>`;
+        const descAttr = taskMeta.outputDesc ? ` title="${taskMeta.outputDesc}"` : "";
+        html += `<div class="pmodel-task-badge"${descAttr}><i class="fa-solid ${taskMeta.icon || 'fa-circle'}"></i> ${taskMeta.taskLabel}</div>`;
       }
 
       if (normalized) {
-        html += `<span class="pmodel-normalized">${escapeHtml(normalized)}</span>`;
+        // For retrieval models show the score inline next to the result so users
+        // understand this is the closest corpus match, not an extracted value.
+        const score = typeof out?.score === "number" ? out.score : null;
+        const isRetrieval = taskMeta.task === "Retrieval";
+        if (isRetrieval && score !== null) {
+          const pct = (score * 100).toFixed(1);
+          const scoreColor = score >= 0.85 ? "var(--success)" : score >= 0.6 ? "var(--warning)" : "var(--danger)";
+          html += `<div class="pmodel-retrieval-result">
+            <span class="pmodel-normalized" title="Địa chỉ khớp nhất trong corpus — không phải trích xuất từ input">${escapeHtml(normalized)}</span>
+            <span class="pmodel-retrieval-score" style="color:${scoreColor}" title="Độ tương đồng cosine với địa chỉ input">${pct}% match</span>
+          </div>`;
+          if (score < 0.75) {
+            html += `<span class="pmodel-retrieval-warn"><i class="fa-solid fa-triangle-exclamation"></i> Khớp thấp — corpus có thể chưa có địa chỉ này</span>`;
+          }
+        } else {
+          html += `<span class="pmodel-normalized">${escapeHtml(normalized)}</span>`;
+        }
       }
       if (entities.length > 0) {
         const chips = entities.slice(0, 10).map(e => {
@@ -1796,7 +1861,6 @@ function _renderModelCard(model, out, latencyMs) {
         html += `<div class="pmodel-entities">${chips}</div>`;
       }
       if (!normalized && entities.length === 0 && !out.error) {
-        // Only truly empty result
         html += `<span style="color:var(--text-tertiary);font-size:11px">Không tìm thấy kết quả phù hợp</span>`;
       }
       resultEl.innerHTML = html;
@@ -2243,7 +2307,7 @@ async function fetchStats(options = {}) {
   try {
     if (manual) setDashboardRefreshState(true);
 
-    const response = await fetch(`${API_BASE}/stats`, {
+    const response = await fetchWithApiFallback('/stats', {
       headers: getAuthHeader()
     });
 

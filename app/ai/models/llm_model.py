@@ -138,16 +138,26 @@ class LLMQwen3:
             candidates=self._build_candidate_str(candidates),
         )
         try:
-            inputs = self.tokenizer(prompt, return_tensors="pt", max_length=2048, truncation=True).to(
-                next(self.model.parameters()).device
+            device = next(self.model.parameters()).device
+            encoded = self.tokenizer(
+                prompt,
+                return_tensors="pt",
+                max_length=2048,
+                truncation=True,
             )
+            input_ids = encoded["input_ids"].to(device)
+            attention_mask = encoded.get("attention_mask")
+            if attention_mask is not None:
+                attention_mask = attention_mask.to(device)
+
             with torch.no_grad():
                 out = self.model.generate(
-                    **inputs,
+                    input_ids=input_ids,
+                    attention_mask=attention_mask,
                     max_new_tokens=self.max_new_tokens,
                     temperature=self.temperature,
                     top_p=0.95,
-                    do_sample=True,
+                    do_sample=self.temperature > 0,
                 )
             response = self.tokenizer.decode(out[0], skip_special_tokens=True)
 
@@ -157,12 +167,12 @@ class LLMQwen3:
             if json_match:
                 try:
                     data = json.loads(json_match.group())
-                    addr = data.get("full_address") or "null"
-                    # Gán data vào chính kết quả trả về để pipeline có thể dùng
-                    return data, 0.95
-                except:
+                    full_address = data.get("full_address") or ""
+                    if full_address:
+                        return full_address, 0.95
+                except Exception:
                     pass
-            
+
             # Nếu không parse được JSON, dùng rule-based fallback
             return self._rule_fallback(query, candidates)
 

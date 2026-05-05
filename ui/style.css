@@ -3992,6 +3992,35 @@ select.form-input {
   margin-bottom: 6px;
 }
 
+/* Retrieval result row: address + score side by side */
+.pmodel-retrieval-result {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+.pmodel-retrieval-result .pmodel-normalized {
+  margin-bottom: 0;
+  flex: 1;
+  min-width: 0;
+}
+.pmodel-retrieval-score {
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.pmodel-retrieval-warn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  color: var(--warning);
+  margin-top: 3px;
+}
+
 /* Not-loaded / error state inside card */
 .pmodel-not-loaded {
   display: flex;
@@ -4098,6 +4127,12 @@ select.form-input {
 }
 
 /* Shimmer loading */
+.pmodel-idle-hint {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+
 .pmodel-shimmer {
   height: 10px;
   border-radius: 4px;
