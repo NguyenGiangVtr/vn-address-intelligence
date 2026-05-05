@@ -133,96 +133,35 @@
             </div>
         </div>
     </div>
-
-    <!-- ── Enhanced Footer Section ── -->
-    <div class="parser-footer-section">
-        <!-- Meta Information Card -->
+    <!-- ── Compact Footer ── -->
+    <div class="parser-footer-row">
         <div class="parser-meta-card" id="parser-meta">
-            <div class="parser-meta-header">
-                <i class="fa-solid fa-microchip parser-meta-icon"></i>
-                <div class="parser-meta-content">
-                    <span class="parser-meta-title">Vietnamese Address Intelligence</span>
-                    <span class="parser-meta-text">Pipeline NER đa mô hình cho nghiên cứu khoa học và triển khai SaaS</span>
+            <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+                <div style="display:flex;align-items:center;gap:6px">
+                    <i class="fa-solid fa-database" style="color:var(--info);font-size:13px"></i>
+                    <span class="text-secondary" style="font-size:12px"><strong>Đang tải...</strong> địa chỉ trong corpus</span>
                 </div>
-            </div>
-            <div class="parser-meta-stats" id="parser-meta-stats">
-                <div class="meta-stat-item">
-                    <span class="meta-stat-label">Models</span>
-                    <span class="meta-stat-value">4</span>
+                <div style="width:4px;height:4px;border-radius:50%;background:var(--border-default);"></div>
+                <div style="display:flex;align-items:center;gap:6px">
+                    <i class="fa-solid fa-chart-line" style="color:var(--success);font-size:13px"></i>
+                    <span style="font-size:12px;color:var(--text-secondary)">ACS <strong style="color:var(--warning)">79.8%</strong> · AUTO_CONVERT</span>
                 </div>
-                <div class="meta-stat-item">
-                    <span class="meta-stat-label">NER Labels</span>
-                    <span class="meta-stat-value">10</span>
-                </div>
-                <div class="meta-stat-item">
-                    <span class="meta-stat-label">Accuracy</span>
-                    <span class="meta-stat-value">95.2%</span>
+                <div style="width:4px;height:4px;border-radius:50%;background:var(--border-default);"></div>
+                <div style="display:flex;align-items:center;gap:6px">
+                    <i class="fa-solid fa-code-commit" style="color:var(--text-tertiary);font-size:13px"></i>
+                    <span style="font-size:12px;color:var(--text-tertiary)">Epoch: PRE_2025</span>
                 </div>
             </div>
         </div>
-
-        <!-- Quick Actions Panel -->
-        <div class="parser-quick-actions">
-            <div class="quick-actions-header">
-                <i class="fa-solid fa-bolt"></i>
-                <span>Thao tác nhanh</span>
-            </div>
-            <div class="quick-actions-grid">
-                <button class="quick-action-btn" data-goto="label-registry" title="Xem danh sách nhãn NER đầy đủ">
-                    <i class="fa-solid fa-tags"></i>
-                    <span>Labels Registry</span>
-                </button>
-                <button class="quick-action-btn" data-goto="batch" title="Xử lý nhiều địa chỉ cùng lúc">
-                    <i class="fa-solid fa-layer-group"></i>
-                    <span>Batch Process</span>
-                </button>
-                <button class="quick-action-btn" data-goto="experiments" title="So sánh hiệu suất các mô hình">
-                    <i class="fa-solid fa-flask-vial"></i>
-                    <span>Model Compare</span>
-                </button>
-                <button class="quick-action-btn" id="btn-export-result" title="Xuất kết quả phân tích">
-                    <i class="fa-solid fa-download"></i>
-                    <span>Export Result</span>
-                </button>
-                <button class="quick-action-btn" id="btn-copy-json" title="Copy kết quả dạng JSON">
-                    <i class="fa-solid fa-copy"></i>
-                    <span>Copy JSON</span>
-                </button>
-                <button class="quick-action-btn" id="btn-parser-help" title="Hướng dẫn sử dụng parser">
-                    <i class="fa-solid fa-question-circle"></i>
-                    <span>Help & Guide</span>
-                </button>
-            </div>
-        </div>
-
-        <!-- Performance Metrics -->
-        <div class="parser-performance-panel" id="parser-performance-panel" style="display:none">
-            <div class="performance-header">
-                <i class="fa-solid fa-chart-line"></i>
-                <span>Hiệu suất</span>
-                <button class="performance-toggle" id="performance-toggle">
-                    <i class="fa-solid fa-chevron-up"></i>
-                </button>
-            </div>
-            <div class="performance-metrics" id="performance-metrics">
-                <div class="metric-item">
-                    <div class="metric-label">Thời gian xử lý</div>
-                    <div class="metric-value" id="metric-processing-time">-</div>
-                </div>
-                <div class="metric-item">
-                    <div class="metric-label">Entities phát hiện</div>
-                    <div class="metric-value" id="metric-entities-count">-</div>
-                </div>
-                <div class="metric-item">
-                    <div class="metric-label">Độ tin cậy trung bình</div>
-                    <div class="metric-value" id="metric-confidence">-</div>
-                </div>
-                <div class="metric-item">
-                    <div class="metric-label">Model tốt nhất</div>
-                    <div class="metric-value" id="metric-best-model">-</div>
-                </div>
-            </div>
+        
+        <div class="quick-actions-grid">
+            <button class="quick-action-btn" data-goto="label-registry" title="Danh sách nhãn NER"><i class="fa-solid fa-tags"></i> <span>Nhãn NER</span></button>
+            <button class="quick-action-btn" data-goto="batch" title="Xử lý hàng loạt"><i class="fa-solid fa-layer-group"></i> <span>Hàng loạt</span></button>
+            <button class="quick-action-btn" data-goto="experiments" title="So sánh mô hình"><i class="fa-solid fa-flask-vial"></i> <span>So sánh</span></button>
+            <div class="quick-actions-divider"></div>
+            <button class="quick-action-btn icon-only" id="btn-export-result" title="Xuất kết quả"><i class="fa-solid fa-download"></i></button>
+            <button class="quick-action-btn icon-only" id="btn-copy-json" title="Copy JSON"><i class="fa-solid fa-copy"></i></button>
+            <button class="quick-action-btn icon-only" id="btn-parser-help" title="Trợ giúp"><i class="fa-solid fa-question-circle"></i></button>
         </div>
     </div>
-
 </div>

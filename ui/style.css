@@ -4259,25 +4259,24 @@ select.form-input {
 /* ── Footer Row ── */
 .parser-footer-row {
   display: flex;
-  align-items: stretch;
+  align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 10px 0 4px;
-  margin-top: 10px;
+  gap: 16px;
+  margin-top: 16px;
   flex-shrink: 0;
+  flex-wrap: wrap;
 }
 
 .parser-meta-card {
-  flex: 1;
   display: flex;
   align-items: center;
   gap: 10px;
   min-width: 0;
-  padding: 12px;
+  padding: 8px 16px;
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  min-height: 44px;
+  border-radius: 20px;
+  min-height: 38px;
 }
 
 .parser-meta-icon {
@@ -4355,13 +4354,7 @@ select.form-input {
     justify-content: center;
     height: 42px;
   }
-
-  .parser-footer-row {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 10px;
-  }
-
+  
   .parser-footer-action {
     width: 100%;
     justify-content: center;
@@ -4371,27 +4364,6 @@ select.form-input {
 /* ═══════════════════════════════════════════════════════════ */
 /* PARSER FOOTER REDESIGN */
 /* ═══════════════════════════════════════════════════════════ */
-
-.parser-footer-section {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  margin-top: 20px;
-  padding-top: 16px;
-  border-top: 1px solid var(--border-subtle);
-}
-
-/* Enhanced Meta Card */
-.parser-meta-card {
-  background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-app) 100%);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
 .parser-meta-header {
   display: flex;
   align-items: center;
@@ -4478,9 +4450,17 @@ select.form-input {
 }
 
 .quick-actions-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  display: flex;
+  align-items: center;
   gap: 8px;
+  flex-shrink: 0;
+}
+
+.quick-actions-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--border-subtle);
+  margin: 0 4px;
 }
 
 .quick-action-btn {
@@ -4488,17 +4468,23 @@ select.form-input {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 10px 12px;
+  padding: 0 14px;
   background: var(--bg-app);
   border: 1px solid var(--border-default);
-  border-radius: var(--radius-md);
+  border-radius: 18px;
   font-size: 11px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--text-secondary);
   text-decoration: none;
   cursor: pointer;
   transition: all 0.2s ease;
-  min-height: 38px;
+  min-height: 36px;
+}
+
+.quick-action-btn.icon-only {
+  width: 36px;
+  padding: 0;
+  border-radius: 50%;
 }
 
 .quick-action-btn:hover {
@@ -4624,8 +4610,9 @@ select.form-input {
   }
   
   .quick-actions-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: center;
+    width: 100%;
   }
   
   .quick-action-btn {
@@ -4652,7 +4639,8 @@ select.form-input {
   }
   
   .quick-actions-grid {
-    grid-template-columns: 1fr;
+    flex-wrap: wrap;
+    justify-content: center;
   }
 }
 

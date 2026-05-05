@@ -252,6 +252,19 @@ class UnitEdge(Base):
     created_at = Column(DateTime, default=func.now())
 
 
+class AdminUnitMapping(Base):
+    """Bảng ánh xạ ID từ database cũ sang database mới cho đơn vị hành chính"""
+    __tablename__ = 'admin_unit_mapping'
+    __table_args__ = {'schema': 'mat'}
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    level = Column(Integer, nullable=False)        # 1=province, 2=district, 3=ward
+    old_id = Column(Integer, nullable=False)       # ID trong database cũ
+    new_id = Column(Integer, nullable=False)       # ID trong database mới
+    admin_version = Column(Integer, default=1)     # Version của đơn vị hành chính
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+
 class SyncLog(Base):
     """Bảng ghi nhật ký đồng bộ dữ liệu hành chính (persist)"""
     __tablename__ = 'sync_log'
@@ -451,8 +464,55 @@ class BenchmarkRunResult(Base):
     created_at      = Column(DateTime, default=func.now())
 
 
+class GroundTruth(Base):
+    """Dữ liệu địa chỉ chuẩn hóa (Ground Truth) từ Google/Typesense - di chuyển sang schema prq để xử lý linh hoạt hơn."""
+    __tablename__ = 'ground_truth'
+    __table_args__ = (
+        Index('idx_ground_truth_province', 'province_id'),
+        Index('idx_ground_truth_district', 'district_id'), 
+        Index('idx_ground_truth_ward', 'ward_id'),
+        Index('idx_ground_truth_location', 'latitude', 'longitude'),
+        {'schema': 'prq'}
+    )
+    
+    id = Column(BigInteger, primary_key=True)
+    address = Column(Text, nullable=False)
+    old_address = Column(Text)
+    
+    # Current administrative IDs (after mapping)
+    ward_id = Column(Integer)
+    district_id = Column(Integer)
+    province_id = Column(Integer)
+    
+    # Original IDs from Typesense/old database
+    old_ward_id = Column(Integer)
+    old_district_id = Column(Integer)
+    old_province_id = Column(Integer)
+    
+    # Multilingual support
+    old_address_eng = Column(Text)
+    address_eng = Column(Text)
+    
+    # Geolocation
+    latitude = Column(Float)
+    longitude = Column(Float)
+    
+    # Popularity/usage metrics
+    popular = Column(Integer, default=0)
+    
+    # Processing metadata
+    source_system = Column(String(50), default='TYPESENSE')  # TYPESENSE, GOOGLE, MANUAL
+    data_quality_score = Column(Float)                       # 0-1 score for data quality
+    is_validated = Column(Boolean, default=False)           # Human validation status
+    validation_notes = Column(Text)                         # Notes from validation
+    
+    # Timestamps
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+
+# Keep old class for backward compatibility during migration
 class GoogleGroundTruth(Base):
-    """Dữ liệu địa chỉ chuẩn hóa (Ground Truth) từ Google/Typesense."""
+    """Legacy: Dữ liệu địa chỉ chuẩn hóa (Ground Truth) từ Google/Typesense - DEPRECATED, use prq.GroundTruth instead."""
     __tablename__ = 'google_ground_truth'
     __table_args__ = {'schema': 'mat'}
     
@@ -654,13 +714,18 @@ def sync_typesense_to_db(province_id: int = None, limit: int = None):
                 db_records.append(record)
                 total_processed += 1
             
-            # 4. Upsert (Merge) vào database
+            # 4. Upsert (Merge) vào database (sử dụng bảng mới prq.ground_truth)
             if db_records:
-                stmt = insert(GoogleGroundTruth).values(db_records)
+                # Thêm metadata cho bảng mới
+                for record in db_records:
+                    record['source_system'] = 'TYPESENSE'
+                    record['is_validated'] = False
+                    
+                stmt = insert(GroundTruth).values(db_records)
                 stmt = stmt.on_conflict_do_update(
                     index_elements=['id'],
                     set_={
-                        k: v for k, v in record.items() if k != 'id'
+                        k: v for k, v in db_records[0].items() if k != 'id'
                     }
                 )
                 session.execute(stmt)

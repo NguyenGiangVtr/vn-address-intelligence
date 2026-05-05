@@ -457,12 +457,31 @@ def _serialize_parser_sample(sample: Union[AddressCleansingQueue, SimpleNamespac
 def _load_parser_corpus(db: Session) -> List[str]:
     """
     Load corpus với priority hierarchy:
-    1. prq.address_clean_corpus (new clean corpus)
-    2. prq.address_cleansing_queue.address_standardized (legacy)
-    3. Administrative hierarchy (fallback)
+    1. prq.ground_truth (new ground truth data)
+    2. prq.address_clean_corpus (clean corpus)
+    3. prq.address_cleansing_queue.address_standardized (legacy)
+    4. Administrative hierarchy (fallback)
     """
     try:
-        # Try loading from clean corpus table first
+        # Try loading from ground truth service first
+        from app.services.ground_truth_service import GroundTruthService
+        
+        gt_service = GroundTruthService(db)
+        corpus = gt_service.get_corpus_addresses(
+            limit=100000,
+            min_quality_score=0.7,
+            source_systems=['TYPESENSE', 'GOOGLE']
+        )
+        
+        if len(corpus) > 100:  # Sufficient corpus size
+            logger.info("Using ground truth corpus with %d addresses", len(corpus))
+            return corpus
+            
+    except Exception as e:
+        logger.warning("Failed to load from ground truth service: %s", e)
+    
+    try:
+        # Try loading from clean corpus table
         from sqlalchemy import text
         
         clean_corpus_query = text("""
@@ -473,7 +492,7 @@ def _load_parser_corpus(db: Session) -> List[str]:
               AND quality_score >= 0.7
               AND LENGTH(standardized_address) > 5
             ORDER BY quality_score DESC, usage_count DESC
-            LIMIT 5000
+            LIMIT 100000
         """)
         
         clean_corpus_result = db.execute(clean_corpus_query).fetchall()
@@ -493,7 +512,7 @@ def _load_parser_corpus(db: Session) -> List[str]:
             .filter(AddressCleansingQueue.address_standardized.isnot(None))
             .filter(func.length(AddressCleansingQueue.address_standardized) > 10)
             .distinct()
-            .limit(5000)
+            .limit(100000)
             .all()
         )
         corpus = [row[0] for row in standardized_rows if row and row[0]]
@@ -512,7 +531,7 @@ def _load_parser_corpus(db: Session) -> List[str]:
             .join(District, and_(Ward.district_id == District.district_id, Ward.admin_version == District.admin_version))
             .join(Province, and_(District.province_id == Province.province_id, District.admin_version == Province.admin_version))
             .filter(Ward.is_deleted == False, District.is_deleted == False, Province.is_deleted == False)
-            .limit(5000)
+            .limit(100000)
             .all()
         )
         corpus = [f"{ward}, {district}, {province}" for ward, district, province in hierarchy_rows if ward and district and province]

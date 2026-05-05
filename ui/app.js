@@ -1682,7 +1682,7 @@ function populateLabelRegistry() {
   const cardView = document.getElementById("labels-card-view");
   const searchInput = document.getElementById("label-search");
   const labelCountEl = document.getElementById("label-count");
-  
+
   if (!tbody && !cardView) return;
 
   // Update label count
@@ -1738,7 +1738,7 @@ function populateLabelRegistry() {
   if (searchInput) {
     searchInput.addEventListener('input', (e) => {
       const query = e.target.value.toLowerCase();
-      
+
       // Filter table rows
       if (tbody) {
         const rows = tbody.querySelectorAll('tr');
@@ -1747,7 +1747,7 @@ function populateLabelRegistry() {
           row.style.display = text.includes(query) ? '' : 'none';
         });
       }
-      
+
       // Filter card view
       if (cardView) {
         const cards = cardView.querySelectorAll('.label-card');
@@ -1763,7 +1763,7 @@ function populateLabelRegistry() {
           }
         });
       }
-      
+
       // Update count of visible labels
       const visibleCount = Array.from(tbody ? tbody.querySelectorAll('tr') : cardView.querySelectorAll('.label-card'))
         .filter(el => el.style.display !== 'none').length;
@@ -1822,7 +1822,7 @@ function _updateParserModelStatusBar(status) {
   if (text) {
     const currentModelText = status.currentModel ? ` (đang nạp ${status.currentModel.toUpperCase()})` : "";
     const progressText = status.progress ? ` ${Math.round(status.progress)}%` : "";
-    
+
     const statusLabels = {
       idle: "Model AI chưa được nạp — nhấn Tải model để bắt đầu",
       loading: `Đang nạp model AI vào bộ nhớ...${currentModelText}${progressText} (${status.loadedModels?.length || 0}/3 hoàn thành)`,
@@ -1865,19 +1865,19 @@ async function _pollParserModelStatus() {
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-    
-    const res = await fetch(`${API_BASE}/parser/status`, { 
+
+    const res = await fetch(`${API_BASE}/parser/status`, {
       headers: getAuthHeader(),
-      signal: controller.signal 
+      signal: controller.signal
     });
-    
+
     clearTimeout(timeoutId);
-    
+
     if (!res.ok) {
       console.warn(`Parser status returned ${res.status}: ${res.statusText}`);
       return;
     }
-    
+
     const data = await res.json();
     _updateParserModelStatusBar(data);
 
@@ -1893,7 +1893,7 @@ async function _pollParserModelStatus() {
     } else {
       console.error("Failed to poll parser status:", error);
     }
-    
+
     // Show error state in UI
     const text = document.getElementById("pmsb-text");
     const dot = document.getElementById("pmsb-dot");
@@ -1903,7 +1903,7 @@ async function _pollParserModelStatus() {
     if (dot) {
       dot.className = "pmsb-dot error";
     }
-    
+
     // Retry after delay
     _parserStatusPollTimer = setTimeout(_pollParserModelStatus, 5000);
   }
@@ -2621,17 +2621,20 @@ function _updateParserMeta(meta) {
   if (!el) return;
   const parts = [];
   if (meta.corpusSize) {
-    parts.push(`<i class="fa-solid fa-database" style="color:var(--text-tertiary);font-size:11px"></i><span class="text-tertiary" style="font-size:12px"><strong>${meta.corpusSize.toLocaleString()}</strong> địa chỉ trong corpus</span>`);
+    parts.push(`<div style="display:flex;align-items:center;gap:6px"><i class="fa-solid fa-database" style="color:var(--info);font-size:13px"></i><span class="text-secondary" style="font-size:12px"><strong>${meta.corpusSize.toLocaleString()}</strong> địa chỉ trong corpus</span></div>`);
   }
   if (meta._acs) {
     const acs = meta._acs;
     const scoreColor = acs.acs_score >= 0.8 ? "var(--success)" : acs.acs_score >= 0.5 ? "var(--warning)" : "var(--danger)";
-    parts.push(`<span style="font-size:11px;color:var(--text-secondary)">ACS <strong style="color:${scoreColor}">${(acs.acs_score * 100).toFixed(1)}%</strong> · ${acs.acs_decision || ""}</span>`);
+    parts.push(`<div style="display:flex;align-items:center;gap:6px"><i class="fa-solid fa-chart-line" style="color:var(--success);font-size:13px"></i><span style="font-size:12px;color:var(--text-secondary)">ACS <strong style="color:${scoreColor}">${(acs.acs_score * 100).toFixed(1)}%</strong>${acs.acs_decision ? ` · ${acs.acs_decision}` : ""}</span></div>`);
     if (acs.address_epoch) {
-      parts.push(`<span style="font-size:11px;color:var(--text-tertiary)">Epoch: ${acs.address_epoch}</span>`);
+      parts.push(`<div style="display:flex;align-items:center;gap:6px"><i class="fa-solid fa-code-commit" style="color:var(--text-tertiary);font-size:13px"></i><span style="font-size:12px;color:var(--text-tertiary)">Epoch: ${acs.address_epoch}</span></div>`);
     }
   }
-  if (parts.length) el.innerHTML = parts.join('<span style="color:var(--border-default);margin:0 6px">·</span>');
+  const divider = `<div style="width:4px;height:4px;border-radius:50%;background:var(--border-default);"></div>`;
+  if (parts.length) {
+    el.innerHTML = `<div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">${parts.join(divider)}</div>`;
+  }
 }
 
 function renderNERHighlight(entities) {

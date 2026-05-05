@@ -1,0 +1,82 @@
+database:
+  host: "${DB_HOST}"
+  port: "${DB_PORT}"
+  dbname: "${DB_NAME}"
+  user: "${DB_USER}"
+  password: "${DB_PASS}"
+  schema: "prq"                                # schema chứa bảng xử lý chính
+  table_name: "address_cleansing_queue"
+  id_column: "id"                              # cột Primary Key (mặc định 'id')
+  input_column: "raw_address"                  # cột địa chỉ thô đầu vào
+  ground_truth_column: ""                      # để trống nếu không có ground truth
+  limit: 1000                                  # số dòng lấy để thực nghiệm (null = tất cả)
+  db_batch_size: 100                           # số dòng mỗi lần commit kết quả về DB
+
+models:
+  phobert:
+    enabled: true
+    model_name: "vinai/phobert-base"
+    result_column: "normalized_phobert"
+    max_seq_length: 256
+    batch_size: 32
+    device: "auto"                              # auto | cuda | cpu
+
+  siamese_mgte:
+    enabled: true
+    model_name: "Alibaba-NLP/gte-multilingual-base"
+    result_column: "normalized_mgte"
+    batch_size: 32
+    device: "auto"
+
+  llm:
+    enabled: true
+    model_name: "Qwen/Qwen2.5-1.5B-Instruct"  # Nhẹ hơn, tốc độ nhanh hơn
+    result_column: "normalized_llm"
+    use_quantization: true                      # Bật quantization để tiết kiệm RAM
+    max_new_tokens: 128                         # Giảm tokens để tăng tốc
+    temperature: 0.3
+    device: "auto"
+
+experiment:
+  # Cấu hình mới sử dụng Ground Truth service
+  use_ground_truth_service: true                # Sử dụng GroundTruthService thay vì query trực tiếp
+  ground_truth_config:
+    min_quality_score: 0.7                     # Score chất lượng tối thiểu
+    source_systems: ["TYPESENSE", "GOOGLE"]    # Các source system ưu tiên
+    include_unvalidated: false                 # Chỉ lấy data đã validate
+    validate_admin_units: true                 # Validate với ward/district/province
+  
+  # Legacy config (fallback)
+  standard_addresses_schema: "prq"               
+  standard_addresses_table: "ground_truth"      # Sử dụng bảng ground truth mới
+  standard_addresses_column: "address"          # Cột address trong bảng ground truth
+  corpus_limit: 10000                           # Tăng corpus size để training tốt hơn
+  
+  output_report_path: "reports/experiment_report.html"
+  save_csv: true
+  csv_path: "reports/experiment_results.csv"
+  log_level: "INFO"
+
+# Cấu hình benchmark sử dụng Ground Truth
+benchmark:
+  use_ground_truth_for_evaluation: true
+  ground_truth_evaluation_config:
+    province_filter: null                       # null = tất cả provinces
+    min_quality_score: 0.8                     # Chỉ dùng data chất lượng cao cho benchmark
+    source_systems: ["GOOGLE"]                 # Ưu tiên Google data cho benchmark
+    sample_size: 1000                          # Số sample để benchmark
+  
+  # Dataset chuẩn để so sánh
+  benchmark_datasets: ["D1", "D2", "D3", "D4", "D5"]
+  
+  # Thông số performance baseline
+  expected_performance:
+    phobert:
+      min_f1: 0.80
+      max_latency_ms: 100
+    mgte:
+      min_f1: 0.78
+      max_latency_ms: 120
+    llm:
+      min_f1: 0.85
+      max_latency_ms: 500
