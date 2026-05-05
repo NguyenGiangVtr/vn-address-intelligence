@@ -5,10 +5,11 @@
         <p>Cấu hình hệ thống, biến môi trường và hiển thị giao diện</p>
     </div>
 
-    <div class="content-grid triple">
-        <div class="card">
-            <div class="card-header"><span class="card-title">Runtime & Appearance</span></div>
-            <div class="card-body">
+    <!-- ── Primary: Runtime & Appearance ── -->
+    <div class="card mt-12">
+        <div class="card-header"><span class="card-title"><i class="fa-solid fa-sliders" style="margin-right: 8px; opacity: 0.7;"></i>Runtime & Appearance</span></div>
+        <div class="card-body">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
                 <div class="form-group">
                     <label>API Base URL</label>
                     <input type="text" class="form-input" id="cfg-api-url" placeholder="http://localhost:8081/api">
@@ -33,67 +34,91 @@
                         <option value="off">Off</option>
                     </select>
                 </div>
-                <button class="btn btn-primary w-full mt-12" id="btn-settings-save"><i class="fa-solid fa-floppy-disk"></i> Lưu cấu hình Settings</button>
             </div>
+            <button class="btn btn-primary w-full mt-12" id="btn-settings-save"><i class="fa-solid fa-floppy-disk"></i> Lưu cấu hình Settings</button>
         </div>
+    </div>
 
-        <div class="card">
-            <div class="card-header"><span class="card-title">Infrastructure (Main DB / VPS / Legacy DB)</span></div>
-            <div class="card-body">
-                <div class="form-group">
-                    <label>DB_HOST</label>
-                    <input type="text" class="form-input" data-env-key="DB_HOST" placeholder="127.0.0.1">
-                </div>
-                <div class="form-group">
-                    <label>DB_PORT</label>
-                    <input type="text" class="form-input" data-env-key="DB_PORT" placeholder="5432">
-                </div>
-                <div class="form-group">
-                    <label>DB_USER</label>
-                    <input type="text" class="form-input" data-env-key="DB_USER">
-                </div>
-                <div class="form-group">
-                    <label>DB_PASS</label>
-                    <input type="password" class="form-input" data-env-key="DB_PASS" autocomplete="new-password">
-                </div>
-                <div class="form-group">
-                    <label>DB_NAME</label>
-                    <input type="text" class="form-input" data-env-key="DB_NAME">
-                </div>
-                <div class="form-group">
-                    <label>VPS_IP</label>
-                    <input type="text" class="form-input" data-env-key="VPS_IP">
-                </div>
-                <div class="form-group">
-                    <label>VPS_USER</label>
-                    <input type="text" class="form-input" data-env-key="VPS_USER">
-                </div>
-                <div class="form-group">
-                    <label>OLD_DB_HOST</label>
-                    <input type="text" class="form-input" data-env-key="OLD_DB_HOST">
-                </div>
-                <div class="form-group">
-                    <label>OLD_DB_PORT</label>
-                    <input type="text" class="form-input" data-env-key="OLD_DB_PORT">
-                </div>
-                <div class="form-group">
-                    <label>OLD_DB_USER</label>
-                    <input type="text" class="form-input" data-env-key="OLD_DB_USER">
-                </div>
-                <div class="form-group">
-                    <label>OLD_DB_PASS</label>
-                    <input type="password" class="form-input" data-env-key="OLD_DB_PASS" autocomplete="new-password">
-                </div>
-                <div class="form-group">
-                    <label>OLD_DB_NAME</label>
-                    <input type="text" class="form-input" data-env-key="OLD_DB_NAME">
+    <!-- ── Collapsible Tools Sections ── -->
+    <div class="settings-accordion mt-12">
+        <!-- Database Tool -->
+        <details class="accordion-item" open>
+            <summary class="accordion-header">
+                <i class="fa-solid fa-database"></i>
+                <span>Database Configuration (Main / Legacy)</span>
+                <i class="fa-solid fa-chevron-down accordion-chevron"></i>
+            </summary>
+            <div class="accordion-body">
+                <div class="accordion-grid">
+                    <div>
+                        <h4 style="margin-bottom: 12px; font-size: 12px; text-transform: uppercase; color: var(--text-secondary);">Main Database</h4>
+                        <div class="form-group">
+                            <label>DB_HOST</label>
+                            <input type="text" class="form-input" data-env-key="DB_HOST" placeholder="127.0.0.1">
+                        </div>
+                        <div class="form-group">
+                            <label>DB_PORT</label>
+                            <input type="text" class="form-input" data-env-key="DB_PORT" placeholder="5432">
+                        </div>
+                        <div class="form-group">
+                            <label>DB_USER</label>
+                            <input type="text" class="form-input" data-env-key="DB_USER">
+                        </div>
+                        <div class="form-group">
+                            <label>DB_PASS</label>
+                            <input type="password" class="form-input" data-env-key="DB_PASS" autocomplete="new-password">
+                        </div>
+                        <div class="form-group">
+                            <label>DB_NAME</label>
+                            <input type="text" class="form-input" data-env-key="DB_NAME">
+                        </div>
+                    </div>
+                    <div>
+                        <h4 style="margin-bottom: 12px; font-size: 12px; text-transform: uppercase; color: var(--text-secondary);">Legacy Database</h4>
+                        <div class="form-group">
+                            <label>OLD_DB_HOST</label>
+                            <input type="text" class="form-input" data-env-key="OLD_DB_HOST">
+                        </div>
+                        <div class="form-group">
+                            <label>OLD_DB_PORT</label>
+                            <input type="text" class="form-input" data-env-key="OLD_DB_PORT">
+                        </div>
+                        <div class="form-group">
+                            <label>OLD_DB_USER</label>
+                            <input type="text" class="form-input" data-env-key="OLD_DB_USER">
+                        </div>
+                        <div class="form-group">
+                            <label>OLD_DB_PASS</label>
+                            <input type="password" class="form-input" data-env-key="OLD_DB_PASS" autocomplete="new-password">
+                        </div>
+                        <div class="form-group">
+                            <label>OLD_DB_NAME</label>
+                            <input type="text" class="form-input" data-env-key="OLD_DB_NAME">
+                        </div>
+                    </div>
+                    <div>
+                        <h4 style="margin-bottom: 12px; font-size: 12px; text-transform: uppercase; color: var(--text-secondary);">VPS / Infrastructure</h4>
+                        <div class="form-group">
+                            <label>VPS_IP</label>
+                            <input type="text" class="form-input" data-env-key="VPS_IP">
+                        </div>
+                        <div class="form-group">
+                            <label>VPS_USER</label>
+                            <input type="text" class="form-input" data-env-key="VPS_USER">
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
+        </details>
 
-        <div class="card">
-            <div class="card-header"><span class="card-title">Label Studio / Logging / Search</span></div>
-            <div class="card-body">
+        <!-- Label Studio Tool -->
+        <details class="accordion-item">
+            <summary class="accordion-header">
+                <i class="fa-solid fa-tags"></i>
+                <span>Label Studio Integration</span>
+                <i class="fa-solid fa-chevron-down accordion-chevron"></i>
+            </summary>
+            <div class="accordion-body">
                 <div class="form-group">
                     <label>LABEL_STUDIO_API_TOKEN</label>
                     <input type="password" class="form-input" data-env-key="LABEL_STUDIO_API_TOKEN" autocomplete="new-password">
@@ -106,9 +131,19 @@
                     <label>LABEL_STUDIO_PROJECT_ID</label>
                     <input type="text" class="form-input" data-env-key="LABEL_STUDIO_PROJECT_ID">
                 </div>
-                <button class="btn btn-outline w-full mt-12" id="btn-settings-ls-test"><i class="fa-solid fa-vial"></i> Kiểm tra Label Studio</button>
+                <button class="btn btn-outline w-full" id="btn-settings-ls-test" style="margin-top: 8px;"><i class="fa-solid fa-vial"></i> Kiểm tra Label Studio</button>
+            </div>
+        </details>
 
-                <div class="form-group mt-12">
+        <!-- Logging Tool -->
+        <details class="accordion-item">
+            <summary class="accordion-header">
+                <i class="fa-solid fa-bars-staggered"></i>
+                <span>Logging & Monitoring (Kibana)</span>
+                <i class="fa-solid fa-chevron-down accordion-chevron"></i>
+            </summary>
+            <div class="accordion-body">
+                <div class="form-group">
                     <label>KIBANA_LOG_ENABLED</label>
                     <input type="text" class="form-input" data-env-key="KIBANA_LOG_ENABLED" placeholder="true/false">
                 </div>
@@ -124,8 +159,18 @@
                     <label>KIBANA_LOG_APP_NAME</label>
                     <input type="text" class="form-input" data-env-key="KIBANA_LOG_APP_NAME">
                 </div>
+            </div>
+        </details>
 
-                <div class="form-group mt-12">
+        <!-- Search Tool -->
+        <details class="accordion-item">
+            <summary class="accordion-header">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <span>Search Engine (Typesense)</span>
+                <i class="fa-solid fa-chevron-down accordion-chevron"></i>
+            </summary>
+            <div class="accordion-body">
+                <div class="form-group">
                     <label>TYPESENSE_HOST</label>
                     <input type="text" class="form-input" data-env-key="TYPESENSE_HOST">
                 </div>
@@ -146,54 +191,65 @@
                     <input type="text" class="form-input" data-env-key="TYPESENSE_COLLECTION">
                 </div>
             </div>
-        </div>
+        </details>
 
-        <div class="card">
-            <div class="card-header"><span class="card-title">SMTP & Redis Cache</span></div>
-            <div class="card-body">
-                <div class="form-group">
-                    <label>SMTP_HOST</label>
-                    <input type="text" class="form-input" data-env-key="SMTP_HOST">
-                </div>
-                <div class="form-group">
-                    <label>SMTP_PORT</label>
-                    <input type="text" class="form-input" data-env-key="SMTP_PORT">
-                </div>
-                <div class="form-group">
-                    <label>SMTP_USER</label>
-                    <input type="text" class="form-input" data-env-key="SMTP_USER">
-                </div>
-                <div class="form-group">
-                    <label>SMTP_PASS</label>
-                    <input type="password" class="form-input" data-env-key="SMTP_PASS" autocomplete="new-password">
-                </div>
-
-                <div class="form-group mt-12">
-                    <label>REDIS_HOST</label>
-                    <input type="text" class="form-input" data-env-key="REDIS_HOST">
-                </div>
-                <div class="form-group">
-                    <label>REDIS_PORT</label>
-                    <input type="text" class="form-input" data-env-key="REDIS_PORT">
-                </div>
-                <div class="form-group">
-                    <label>REDIS_PASSWORD</label>
-                    <input type="password" class="form-input" data-env-key="REDIS_PASSWORD" autocomplete="new-password">
-                </div>
-                <div class="form-group">
-                    <label>REDIS_DB</label>
-                    <input type="text" class="form-input" data-env-key="REDIS_DB">
-                </div>
-                <div class="form-group">
-                    <label>REDIS_CACHE_TTL</label>
-                    <input type="text" class="form-input" data-env-key="REDIS_CACHE_TTL" placeholder="3600">
-                </div>
-                <div class="form-group">
-                    <label>REDIS_ENABLED</label>
-                    <input type="text" class="form-input" data-env-key="REDIS_ENABLED" placeholder="true/false">
-                </div>
+        <!-- Email & Cache Tool -->
+        <details class="accordion-item">
+            <summary class="accordion-header">
+                <i class="fa-solid fa-envelope"></i>
+                <span>Email & Cache (SMTP / Redis)</span>
+                <i class="fa-solid fa-chevron-down accordion-chevron"></i>
+            </summary>
+            <div class="accordion-body">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                    <div>
+                        <h4 style="margin-bottom: 12px; font-size: 12px; text-transform: uppercase; color: var(--text-secondary);">SMTP Configuration</h4>
+                        <div class="form-group">
+                            <label>SMTP_HOST</label>
+                            <input type="text" class="form-input" data-env-key="SMTP_HOST">
+                        </div>
+                        <div class="form-group">
+                            <label>SMTP_PORT</label>
+                            <input type="text" class="form-input" data-env-key="SMTP_PORT">
+                        </div>
+                        <div class="form-group">
+                            <label>SMTP_USER</label>
+                            <input type="text" class="form-input" data-env-key="SMTP_USER">
+                        </div>
+                        <div class="form-group">
+                            <label>SMTP_PASS</label>
+                            <input type="password" class="form-input" data-env-key="SMTP_PASS" autocomplete="new-password">
+                        </div>
+                    </div>
+                    <div>
+                        <h4 style="margin-bottom: 12px; font-size: 12px; text-transform: uppercase; color: var(--text-secondary);">Redis Cache</h4>
+                        <div class="form-group">
+                            <label>REDIS_HOST</label>
+                            <input type="text" class="form-input" data-env-key="REDIS_HOST">
+                        </div>
+                        <div class="form-group">
+                            <label>REDIS_PORT</label>
+                            <input type="text" class="form-input" data-env-key="REDIS_PORT">
+                        </div>
+                        <div class="form-group">
+                            <label>REDIS_PASSWORD</label>
+                            <input type="password" class="form-input" data-env-key="REDIS_PASSWORD" autocomplete="new-password">
+                        </div>
+                        <div class="form-group">
+                            <label>REDIS_DB</label>
+                            <input type="text" class="form-input" data-env-key="REDIS_DB">
+                        </div>
+                        <div class="form-group">
+                            <label>REDIS_CACHE_TTL</label>
+                            <input type="text" class="form-input" data-env-key="REDIS_CACHE_TTL" placeholder="3600">
+                        </div>
+                        <div class="form-group">
+                            <label>REDIS_ENABLED</label>
+                            <input type="text" class="form-input" data-env-key="REDIS_ENABLED" placeholder="true/false">
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
+        </details>
     </div>
 </div>

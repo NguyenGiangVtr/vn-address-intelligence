@@ -1,2 +1,2 @@
-# Backward-compatible wrapper. Canonical script: scripts/deployment/deploy.ps1
-& "$PSScriptRoot\deployment\deploy.ps1" @args
+# Backward-compatible wrapper. Canonical script: scripts/release/deploy.ps1
+& "$PSScriptRoot\release\deploy.ps1" @args

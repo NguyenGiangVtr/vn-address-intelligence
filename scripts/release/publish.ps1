@@ -1,8 +1,12 @@
 # --------------------------------------------------------------
 # Publish Script for VN Address Intelligence
 # Tao mot thu muc 'publish' sach de upload len VPS
-# Usage: .\scripts\release\publish.ps1
+# Usage: .\scripts\release\publish.ps1 [-CleanupAfter]
 # --------------------------------------------------------------
+
+param(
+    [switch]$CleanupAfter  # Xóa folder publish sau khi hoàn thành (bảo mật)
+)
 
 $ErrorActionPreference = "Stop"
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
@@ -35,7 +39,14 @@ Copy-Item -Path "ui\login.html" -Destination "$PublishDir\ui" # Explicit copy
 Copy-Item -Path "scripts\deployment\vnai-vps-setup.sh" -Destination "$PublishDir\scripts"
 Copy-Item -Path "requirements.txt" -Destination "$PublishDir"
 Copy-Item -Path "start.py" -Destination "$PublishDir"
-Copy-Item -Path ".env.example" -Destination "$PublishDir"
+# Copy actual .env file for production
+if (Test-Path ".env") {
+    Copy-Item -Path ".env" -Destination "$PublishDir"
+    Write-Host "  ✅ Copied .env file" -ForegroundColor Green
+} else {
+    Copy-Item -Path ".env.example" -Destination "$PublishDir"
+    Write-Warning "  ⚠️  .env not found, using .env.example"
+}
 
 # Copy seed data only
 if (Test-Path "data\seed") {
@@ -50,4 +61,15 @@ Write-Host "  Vi tri: $PWD\$PublishDir"
 Write-Host "  "
 Write-Host "  Ban co the nen thu muc 'publish' lai va upload len VPS,"
 Write-Host "  hoac dung MobaXterm keo tha noi dung trong 'publish' vao /opt/vnai/"
+
+# Optional cleanup for security
+if ($CleanupAfter) {
+    Write-Host "  "
+    Write-Host "  [SECURITY] Auto-cleanup enabled. Folder will be deleted in 30 seconds..."
+    Write-Host "  Press Ctrl+C to cancel cleanup."
+    Start-Sleep -Seconds 30
+    Remove-Item -Path $PublishDir -Recurse -Force
+    Write-Host "  ✅ Publish folder cleaned up for security." -ForegroundColor Yellow
+}
+
 Write-Host "--------------------------------------------------------------" -ForegroundColor Green
