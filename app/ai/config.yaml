@@ -30,10 +30,10 @@ models:
 
   llm:
     enabled: true
-    model_name: "Qwen/Qwen3-4B"
+    model_name: "Qwen/Qwen2.5-1.5B-Instruct"  # Nhẹ hơn, tốc độ nhanh hơn
     result_column: "normalized_llm"
-    use_quantization: false
-    max_new_tokens: 256
+    use_quantization: true                      # Bật quantization để tiết kiệm RAM
+    max_new_tokens: 128                         # Giảm tokens để tăng tốc
     temperature: 0.3
     device: "auto"
 
@@ -41,7 +41,7 @@ experiment:
   standard_addresses_schema: "prq"               # schema của bảng địa chỉ chuẩn
   standard_addresses_table: "address_cleansing_queue"
   standard_addresses_column: "raw_address"
-  corpus_limit: 5000                             # giới hạn corpus để thực nghiệm
+  corpus_limit: 1000                             # Giảm corpus để tăng tốc loading
   output_report_path: "reports/experiment_report.html"
   save_csv: true
   csv_path: "reports/experiment_results.csv"

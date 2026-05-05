@@ -1,74 +1,150 @@
 <!-- ══════ PAGE: LABEL REGISTRY ══════ -->
-<div class="page" id="label-registry">
+<div class="page full-height-page" id="label-registry">
+    <!-- BLOCK 1: Header + Search -->
     <div class="page-header">
         <h2><i class="fa-solid fa-tags"></i> Label Registry</h2>
-        <p>Danh sách đầy đủ các nhãn NER (Named Entity Recognition) được sử dụng trong hệ thống phân tích địa chỉ</p>
+        <p>Danh sách đầy đủ các nhãn NER được sử dụng trong hệ thống phân tích địa chỉ</p>
     </div>
 
-    <!-- ── Label Registry Table ── -->
-    <div class="card">
-        <div class="card-header">
-            <h3><i class="fa-solid fa-list"></i> Nhãn NER</h3>
-            <div class="card-subtitle">
-                Tổng cộng: <span id="label-count"></span> nhãn được sử dụng trong pipeline phân tích
+    <!-- BLOCK 2: Search & Stats -->
+    <div class="card mb-20">
+        <div class="card-body" style="padding: 16px 20px;">
+            <div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: center;">
+                <!-- Search -->
+                <div style="flex: 1; min-width: 200px;">
+                    <div class="input-group" style="position: relative;">
+                        <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-tertiary); pointer-events: none;"></i>
+                        <input 
+                            type="text" 
+                            id="label-search" 
+                            class="form-input" 
+                            placeholder="Tìm kiếm nhãn..." 
+                            style="padding-left: 36px;"
+                        >
+                    </div>
+                </div>
+                
+                <!-- Stats -->
+                <div style="display: flex; gap: 12px;">
+                    <div style="padding: 8px 16px; background: var(--bg-muted); border-radius: 6px; font-size: 12px; color: var(--text-secondary);">
+                        <strong id="label-count" style="color: var(--text-primary);">0</strong> nhãn
+                    </div>
+                </div>
             </div>
         </div>
+    </div>
+
+    <!-- BLOCK 3: Labels Grid (Desktop) + Cards (Mobile) -->
+    <div class="card" style="flex: 1; min-height: 0; display: flex; flex-direction: column;">
+        <div class="card-header" style="border-bottom: 1px solid var(--border);">
+            <span class="card-title">Nhãn NER Khả dụng</span>
+        </div>
         
-        <div class="card-body p-0">
-            <div class="table-responsive">
+        <div class="card-body" style="flex: 1; min-height: 0; overflow-y: auto; padding: 16px 20px;">
+            <!-- Desktop Table View -->
+            <div class="table-responsive" id="labels-table-view" style="display: none;">
                 <table class="table table-hover">
                     <thead>
                         <tr>
-                            <th width="80">Mã nhãn</th>
+                            <th width="100">Nhãn</th>
                             <th>Mô tả</th>
-                            <th width="120">Màu sắc</th>
-                            <th width="80">Phím tắt</th>
+                            <th width="120">Kiểu</th>
+                            <th width="100">Phím tắt</th>
                             <th>Ví dụ</th>
                         </tr>
                     </thead>
                     <tbody id="label-registry-body">
-                        <!-- Content will be populated by populateLabelRegistry() -->
+                        <!-- Populated by JS -->
                     </tbody>
                 </table>
+            </div>
+            
+            <!-- Mobile Card View -->
+            <div id="labels-card-view" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px;">
+                <!-- Populated by JS -->
             </div>
         </div>
     </div>
 
-    <!-- ── Usage Instructions ── -->
-    <div class="card mt-16">
+    <!-- BLOCK 4: Instructions -->
+    <div class="card mt-12" style="display: none;">
         <div class="card-header">
             <h3><i class="fa-solid fa-info-circle"></i> Hướng dẫn sử dụng</h3>
         </div>
         
         <div class="card-body">
-            <div class="grid grid-2 gap-16">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
                 <div>
-                    <h4><i class="fa-solid fa-wand-magic-sparkles"></i> Trong Parser</h4>
-                    <ul class="text-sm">
-                        <li>Các nhãn NER được tự động nhận diện và tô màu trong kết quả phân tích</li>
-                        <li>Mỗi thực thể được highlight với màu sắc tương ứng</li>
-                        <li>Hover vào thực thể để xem thông tin nhãn chi tiết</li>
+                    <h4 style="font-size: 14px; font-weight: 600; margin-bottom: 8px;">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> Trong Parser
+                    </h4>
+                    <ul style="font-size: 13px; line-height: 1.6; color: var(--text-secondary);">
+                        <li>Các nhãn NER được tự động nhận diện và tô màu</li>
+                        <li>Mỗi thực thể được highlight với màu tương ứng</li>
+                        <li>Hover vào thực thể để xem thông tin chi tiết</li>
                     </ul>
                 </div>
                 
                 <div>
-                    <h4><i class="fa-solid fa-keyboard"></i> Phím tắt</h4>
-                    <ul class="text-sm">
-                        <li>Sử dụng phím tắt (0-9) khi đang trong chế độ labeling</li>
-                        <li>Phím tắt giúp tăng tốc quá trình gán nhãn thủ công</li>
-                        <li>Kết hợp với Label Studio để huấn luyện model</li>
+                    <h4 style="font-size: 14px; font-weight: 600; margin-bottom: 8px;">
+                        <i class="fa-solid fa-keyboard"></i> Phím tắt
+                    </h4>
+                    <ul style="font-size: 13px; line-height: 1.6; color: var(--text-secondary);">
+                        <li>Sử dụng phím tắt (0-9) trong chế độ labeling</li>
+                        <li>Tăng tốc quá trình gán nhãn thủ công</li>
+                        <li>Kết hợp Label Studio để huấn luyện model</li>
                     </ul>
                 </div>
             </div>
             
-            <div class="alert alert-info mt-16">
-                <i class="fa-solid fa-lightbulb"></i>
-                <div>
-                    <strong>Lưu ý:</strong> 
-                    Danh sách nhãn này đồng bộ với constants.py trong backend. 
-                    Mọi thay đổi cần được cập nhật ở cả frontend và backend để đảm bảo tính nhất quán.
-                </div>
+            <div style="margin-top: 16px; padding: 12px; background: var(--accent-light, rgba(59, 130, 246, 0.1)); border-left: 3px solid var(--accent); border-radius: 4px; font-size: 12px; color: var(--text-secondary);">
+                <strong style="color: var(--accent);">💡 Lưu ý:</strong> Danh sách nhãn đồng bộ với constants.py. Mọi thay đổi cần cập nhật ở cả frontend và backend.
             </div>
         </div>
     </div>
 </div>
+
+<style>
+    /* Smooth transitions */
+    .label-card {
+        transition: all 0.2s ease-in-out;
+        cursor: pointer;
+    }
+    
+    .label-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    
+    .label-badge {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 600;
+        transition: all 0.2s ease-in-out;
+    }
+    
+    .label-badge:hover {
+        filter: brightness(0.9);
+    }
+    
+    /* Table responsive styles */
+    @media (max-width: 768px) {
+        #labels-table-view {
+            display: none !important;
+        }
+        #labels-card-view {
+            display: grid !important;
+        }
+    }
+    
+    @media (min-width: 769px) {
+        #labels-table-view {
+            display: block !important;
+        }
+        #labels-card-view {
+            display: none !important;
+        }
+    }
+</style>

@@ -10,6 +10,7 @@ import logging
 import argparse
 import sys
 import json
+import traceback
 from pathlib import Path
 from datetime import datetime
 
@@ -47,6 +48,7 @@ def run_pipeline(config_path: str, limit: int = None):
     retriever = SiameseMGTE(model_name=mod_cfg["siamese_mgte"]["model_name"])
     
     # Load corpus từ bảng address_clean_corpus với fallback
+    corpus_loaded = False
     try:
         logger.info("Loading corpus from prq.address_clean_corpus...")
         corpus_addresses, corpus_metadata = db.load_clean_corpus_with_metadata(
@@ -59,13 +61,30 @@ def run_pipeline(config_path: str, limit: int = None):
         if len(corpus_addresses) > 0:
             logger.info("Using clean corpus with %d addresses", len(corpus_addresses))
             retriever.encode_corpus_with_metadata(corpus_addresses, corpus_metadata)
+            corpus_loaded = True
         else:
             logger.warning("Clean corpus empty, falling back to hierarchical corpus")
-            retriever.encode_corpus(db.load_hierarchical_corpus())
             
     except Exception as e:
-        logger.warning("Failed to load clean corpus (%s), falling back to hierarchical corpus", e)
-        retriever.encode_corpus(db.load_hierarchical_corpus())
+        logger.warning("Failed to load clean corpus (%s), will try fallback", e)
+    
+    # Fallback: load hierarchical corpus if needed
+    if not corpus_loaded:
+        try:
+            hierarchical_corpus = db.load_hierarchical_corpus()
+            if not hierarchical_corpus or len(hierarchical_corpus) == 0:
+                logger.error("Hierarchical corpus is also empty. Pipeline cannot proceed.")
+                raise ValueError("No corpus available after trying all sources.")
+            logger.info("Using hierarchical corpus with %d addresses", len(hierarchical_corpus))
+            retriever.encode_corpus(hierarchical_corpus)
+            corpus_loaded = True
+        except Exception as e:
+            logger.error("Critical: Failed to load any corpus: %s", e)
+            raise RuntimeError("Cannot initialize pipeline without corpus data.") from e
+    
+    if not corpus_loaded:
+        logger.error("Critical: Corpus was not loaded successfully")
+        raise RuntimeError("Pipeline initialization failed: corpus not loaded.")
     
     # Load NER Model (Đã Fine-tuned hoặc dùng Regex fallback)
     ner_path = "models/phobert-ner-vn"
@@ -172,10 +191,30 @@ def run_pipeline(config_path: str, limit: int = None):
             if len(batch_results) % 50 == 0:
                 logger.info(f" Progress: {len(batch_results):,}/{len(rows):,}")
                 
+        except IndexError as e:
+            row_id = row.get("id")
+            row_id_display = f"{row_id:,}" if isinstance(row_id, int) else str(row_id)
+            error_context = traceback.format_exc()
+            logger.error(
+                f"IndexError processing row {row_id_display}: {e}\n"
+                f"This may indicate corrupt embeddings or invalid corpus state.\n"
+                f"Stack trace:\n{error_context}"
+            )
+            batch_results.append({
+                "id": row['id'],
+                "processing_status": "ERROR",
+                "error_message": f"IndexError: {str(e)}"
+            })
+            
         except Exception as e:
             row_id = row.get("id")
             row_id_display = f"{row_id:,}" if isinstance(row_id, int) else str(row_id)
-            logger.error(f"Error processing row {row_id_display}: {e}")
+            error_context = traceback.format_exc()
+            logger.error(
+                f"Error processing row {row_id_display}: {e}\n"
+                f"Type: {type(e).__name__}\n"
+                f"Stack trace:\n{error_context}"
+            )
             batch_results.append({
                 "id": row['id'],
                 "processing_status": "ERROR",

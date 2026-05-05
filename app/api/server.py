@@ -556,40 +556,54 @@ def _build_parser_runtime_bundle() -> dict:
 
     # Load PhoBERT
     try:
+        logger.info("Loading PhoBERT model...")
+        parser_loading_state["currentModel"] = "phobert"
         phobert = PhoBERTSiamese(model_name="vinai/phobert-base", device="auto")
         if bundle["corpus"]:
+            logger.info(f"Encoding corpus with PhoBERT ({len(bundle['corpus'])} addresses)...")
             phobert.encode_corpus(bundle["corpus"])
         bundle["phobert"] = phobert
         parser_loading_state["loadedModels"].append("phobert")
+        parser_loading_state["currentModel"] = None
         logger.info("PhoBERT model loaded successfully")
     except Exception as e:
         logger.error(f"Failed to load PhoBERT: {e}")
         bundle["errors"]["phobert"] = str(e)
         parser_loading_state["errors"]["phobert"] = str(e)
+        parser_loading_state["currentModel"] = None
 
     # Load mGTE
     try:
+        logger.info("Loading mGTE model...")
+        parser_loading_state["currentModel"] = "mgte"
         mgte = SiameseMGTE(model_name="Alibaba-NLP/gte-multilingual-base", device="auto")
         if bundle["corpus"]:
+            logger.info(f"Encoding corpus with mGTE ({len(bundle['corpus'])} addresses)...")
             mgte.encode_corpus(bundle["corpus"])
         bundle["mgte"] = mgte
         parser_loading_state["loadedModels"].append("mgte")
+        parser_loading_state["currentModel"] = None
         logger.info("mGTE model loaded successfully")
     except Exception as e:
         logger.error(f"Failed to load mGTE: {e}")
         bundle["errors"]["mgte"] = str(e)
         parser_loading_state["errors"]["mgte"] = str(e)
+        parser_loading_state["currentModel"] = None
 
-    # Load LLM (Qwen2.5-1.5B-Instruct is small and fast)
+    # Load LLM (Qwen2.5-1.5B-Instruct with quantization for speed)
     try:
-        llm = LLMQwen3(model_name="Qwen/Qwen2.5-1.5B-Instruct", use_quantization=False, device="auto")
+        logger.info("Loading LLM model (this may take 2-3 minutes)...")
+        parser_loading_state["currentModel"] = "llm"
+        llm = LLMQwen3(model_name="Qwen/Qwen2.5-1.5B-Instruct", use_quantization=True, device="auto")
         bundle["llm"] = llm
         parser_loading_state["loadedModels"].append("llm")
+        parser_loading_state["currentModel"] = None
         logger.info("LLM Qwen model loaded successfully")
     except Exception as e:
         logger.error(f"Failed to load LLM: {e}")
         bundle["errors"]["llm"] = str(e)
         parser_loading_state["errors"]["llm"] = str(e)
+        parser_loading_state["currentModel"] = None
 
     has_errors = bool(bundle["errors"])
     parser_loading_state.update({
@@ -2162,12 +2176,20 @@ def get_parser_status():
         loaded = parser_loading_state.get("loadedModels", [])
         # prelabeler is always available (rule-based)
         available = list(loaded) + ["prelabeler"]
+        current_model = parser_loading_state.get("currentModel")
+        
+        # Calculate progress percentage
+        total_models = 3  # phobert, mgte, llm
+        progress = (len(loaded) / total_models * 100) if loaded else 0
+        
         return {
             "status": parser_loading_state["status"],
             "startedAt": parser_loading_state.get("startedAt"),
             "finishedAt": parser_loading_state.get("finishedAt"),
             "loadedModels": loaded,
             "availableModels": list(set(available)),
+            "currentModel": current_model,
+            "progress": progress,
             "errors": parser_loading_state.get("errors", {}),
             "corpusSize": len(parser_runtime_bundle.get("corpus", [])) if parser_runtime_bundle else 0,
         }

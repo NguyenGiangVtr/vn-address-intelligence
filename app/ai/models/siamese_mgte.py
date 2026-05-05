@@ -51,6 +51,9 @@ class SiameseMGTE:
     # ------------------------------------------------------------------
     def encode_corpus(self, addresses: List[str]):
         """Pre-compute corpus embeddings (chạy 1 lần)."""
+        if not addresses:
+            raise ValueError("Cannot encode an empty corpus. Provide at least one address.")
+        
         logger.info(" Encoding %d corpus addresses (mGTE)...", len(addresses))
         self._corpus     = addresses
         self._corpus_emb = self.model.encode(
@@ -60,6 +63,25 @@ class SiameseMGTE:
             show_progress_bar=True,
             convert_to_numpy=True,
         )
+        
+        # Validate embeddings shape
+        if self._corpus_emb.shape[0] != len(addresses):
+            raise ValueError(
+                f"Embeddings shape mismatch: got {self._corpus_emb.shape[0]} embeddings "
+                f"but expected {len(addresses)} for the corpus."
+            )
+        
+        if self._corpus_emb.ndim != 2:
+            raise ValueError(f"Embeddings must be 2D array, got shape: {self._corpus_emb.shape}")
+        
+        # Check for NaN or inf in embeddings
+        if np.any(np.isnan(self._corpus_emb)) or np.any(np.isinf(self._corpus_emb)):
+            nan_count = np.sum(np.isnan(self._corpus_emb))
+            inf_count = np.sum(np.isinf(self._corpus_emb))
+            logger.warning("Embeddings contain NaN (%d) or Inf (%d) values", nan_count, inf_count)
+            # Replace NaN/Inf with zeros (safe fallback)
+            self._corpus_emb = np.nan_to_num(self._corpus_emb, nan=0.0, posinf=0.0, neginf=0.0)
+        
         logger.info(" mGTE corpus encoded. Shape: %s", self._corpus_emb.shape)
 
     # ------------------------------------------------------------------
@@ -69,12 +91,34 @@ class SiameseMGTE:
         -------
         (best_address, cosine_score, latency_ms)
         """
-        assert self._corpus_emb is not None, "Gọi encode_corpus() trước."
+        if self._corpus_emb is None:
+            raise RuntimeError(
+                "Corpus embeddings not initialized. Call encode_corpus() with addresses first."
+            )
+        
+        if self._corpus_emb.size == 0:
+            raise ValueError("Corpus embeddings are empty. Call encode_corpus() with non-empty addresses.")
+        
+        if len(self._corpus) == 0:
+            raise ValueError("Corpus addresses list is empty.")
+        
+        if self._corpus_emb.shape[0] != len(self._corpus):
+            raise ValueError(
+                f"Corpus data integrity check failed: {self._corpus_emb.shape[0]} embeddings "
+                f"but {len(self._corpus)} addresses. This indicates data corruption."
+            )
+        
         t0 = time.time()
 
         q_emb  = self.model.encode([query], normalize_embeddings=True, convert_to_numpy=True)[0]
         scores = self._corpus_emb @ q_emb
         idx    = int(np.argmax(scores))
+        
+        # Validate index
+        if idx < 0 or idx >= len(self._corpus):
+            raise IndexError(
+                f"Computed index {idx} is out of bounds for corpus of size {len(self._corpus)}"
+            )
 
         latency_ms = (time.time() - t0) * 1000
         return self._corpus[idx], float(scores[idx]), latency_ms
@@ -110,6 +154,20 @@ class SiameseMGTE:
         phương thức này sẽ lọc theo epoch trước khi tính cosine similarity.
         """
         assert self._corpus_emb is not None, "Gọi encode_corpus() trước."
+        
+        # Validate corpus embeddings integrity
+        if self._corpus_emb.size == 0:
+            raise ValueError("Corpus embeddings are empty. Call encode_corpus() with non-empty addresses.")
+        
+        if len(self._corpus) == 0:
+            raise ValueError("Corpus addresses list is empty. Call encode_corpus() with non-empty addresses.")
+        
+        if self._corpus_emb.shape[0] != len(self._corpus):
+            raise ValueError(
+                f"Corpus embeddings ({self._corpus_emb.shape[0]}) and addresses ({len(self._corpus)}) "
+                f"have mismatched lengths. This indicates a data corruption issue."
+            )
+        
         t0 = time.time()
 
         # Xác định indices cần dùng (lọc theo epoch nếu có metadata)
@@ -121,11 +179,26 @@ class SiameseMGTE:
             ]
             if not valid_indices:
                 # Fallback về toàn bộ corpus nếu không có entry phù hợp
+                logger.warning(
+                    "No corpus entries matched epoch_filter=%s, admin_version_filter=%s. Using full corpus.",
+                    epoch_filter, admin_version_filter
+                )
                 valid_indices = list(range(len(self._corpus)))
         else:
             valid_indices = list(range(len(self._corpus)))
 
-        filtered_emb    = self._corpus_emb[valid_indices]
+        # Convert to NumPy array for proper fancy indexing
+        valid_indices_arr = np.array(valid_indices, dtype=np.int64)
+        
+        # Validate indices before using them
+        if np.any(valid_indices_arr < 0) or np.any(valid_indices_arr >= len(self._corpus)):
+            raise IndexError(
+                f"Invalid indices generated: min={valid_indices_arr.min()}, max={valid_indices_arr.max()}, "
+                f"corpus_size={len(self._corpus)}"
+            )
+        
+        # Apply fancy indexing with NumPy array
+        filtered_emb    = self._corpus_emb[valid_indices_arr]
         filtered_corpus = [self._corpus[i] for i in valid_indices]
 
         q_emb  = self.model.encode([query], normalize_embeddings=True, convert_to_numpy=True)[0]

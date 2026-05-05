@@ -82,6 +82,9 @@ class PhoBERTSiamese:
     # ------------------------------------------------------------------
     def encode_corpus(self, addresses: List[str]):
         """Pre-compute embeddings cho toàn bộ corpus (chạy 1 lần)."""
+        if not addresses:
+            raise ValueError("Cannot encode an empty corpus. Provide at least one address.")
+        
         logger.info(" Encoding %d corpus addresses (PhoBERT)...", len(addresses))
         segmented = [_segment(a) for a in addresses]
         self._corpus = addresses  # giữ original để trả kết quả
@@ -92,6 +95,25 @@ class PhoBERTSiamese:
             show_progress_bar=True,
             convert_to_numpy=True,
         )
+        
+        # Validate embeddings shape
+        if self._corpus_emb.shape[0] != len(addresses):
+            raise ValueError(
+                f"Embeddings shape mismatch: got {self._corpus_emb.shape[0]} embeddings "
+                f"but expected {len(addresses)} for the corpus."
+            )
+        
+        if self._corpus_emb.ndim != 2:
+            raise ValueError(f"Embeddings must be 2D array, got shape: {self._corpus_emb.shape}")
+        
+        # Check for NaN or inf in embeddings
+        if np.any(np.isnan(self._corpus_emb)) or np.any(np.isinf(self._corpus_emb)):
+            nan_count = np.sum(np.isnan(self._corpus_emb))
+            inf_count = np.sum(np.isinf(self._corpus_emb))
+            logger.warning("Embeddings contain NaN (%d) or Inf (%d) values", nan_count, inf_count)
+            # Replace NaN/Inf with zeros (safe fallback)
+            self._corpus_emb = np.nan_to_num(self._corpus_emb, nan=0.0, posinf=0.0, neginf=0.0)
+        
         logger.info(" Corpus encoded. Shape: %s", self._corpus_emb.shape)
 
     # ------------------------------------------------------------------
@@ -103,7 +125,23 @@ class PhoBERTSiamese:
         -------
         (best_address, cosine_score, latency_ms)
         """
-        assert self._corpus_emb is not None, "Gọi encode_corpus() trước."
+        if self._corpus_emb is None:
+            raise RuntimeError(
+                "Corpus embeddings not initialized. Call encode_corpus() with addresses first."
+            )
+        
+        if self._corpus_emb.size == 0:
+            raise ValueError("Corpus embeddings are empty. Call encode_corpus() with non-empty addresses.")
+        
+        if len(self._corpus) == 0:
+            raise ValueError("Corpus addresses list is empty.")
+        
+        if self._corpus_emb.shape[0] != len(self._corpus):
+            raise ValueError(
+                f"Corpus data integrity check failed: {self._corpus_emb.shape[0]} embeddings "
+                f"but {len(self._corpus)} addresses. This indicates data corruption."
+            )
+        
         t0 = time.time()
 
         q_emb  = self.model.encode(
@@ -113,6 +151,12 @@ class PhoBERTSiamese:
         )[0]
         scores = self._corpus_emb @ q_emb          # cosine (do normalized)
         idx    = int(np.argmax(scores))
+        
+        # Validate index
+        if idx < 0 or idx >= len(self._corpus):
+            raise IndexError(
+                f"Computed index {idx} is out of bounds for corpus of size {len(self._corpus)}"
+            )
 
         latency_ms = (time.time() - t0) * 1000
         return self._corpus[idx], float(scores[idx]), latency_ms

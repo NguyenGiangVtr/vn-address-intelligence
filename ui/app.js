@@ -77,7 +77,7 @@ async function fetchWithApiFallback(path, options = {}) {
 const PAGES = [
   "overview", "parser", "batch", "training", "label-studio",
   "experiments", "explorer", "osm-enrichment", "lookup", "boundary-visualization",
-  "admin-units", "nso-sync", "settings", "evidence"
+  "admin-units", "nso-sync", "settings", "evidence", "label-registry"
 ];
 
 const {
@@ -140,7 +140,7 @@ const PAGE_META = {
     keywords: 'parser, phân tích địa chỉ, NER, PhoBERT, mGTE, Qwen, AI model'
   },
   'batch': {
-    title: 'Xử lý hàng loạt - Vietnamese Address Intelligence', 
+    title: 'Xử lý hàng loạt - Vietnamese Address Intelligence',
     description: 'Xử lý và phân tích nhiều địa chỉ cùng lúc với khả năng batch processing hiệu quả',
     keywords: 'batch processing, xử lý hàng loạt, bulk address parsing'
   },
@@ -216,11 +216,11 @@ function updatePageMeta(pageId) {
 
   // Update title
   document.title = meta.title;
-  
+
   // Update or create meta tags
   updateMetaTag('description', meta.description);
   updateMetaTag('keywords', meta.keywords);
-  
+
   // Update canonical URL
   let canonical = document.querySelector('link[rel="canonical"]');
   if (!canonical) {
@@ -231,13 +231,13 @@ function updatePageMeta(pageId) {
   const baseUrl = window.location.origin + window.location.pathname;
   const canonicalUrl = pageId === 'overview' ? baseUrl : `${baseUrl}#/${pageId}`;
   canonical.href = canonicalUrl;
-  
+
   // Update Open Graph tags for social sharing
   updateMetaTag('og:title', meta.title, 'property');
   updateMetaTag('og:description', meta.description, 'property');
   updateMetaTag('og:url', canonicalUrl, 'property');
   updateMetaTag('og:type', 'website', 'property');
-  
+
   // Update Twitter Card tags
   updateMetaTag('twitter:card', 'summary_large_image', 'name');
   updateMetaTag('twitter:title', meta.title, 'name');
@@ -261,7 +261,7 @@ function getPageFromURL() {
     return 'overview';
   }
   const pageId = hash.substring(2); // Remove '#/'
-  
+
   // Validate if page exists
   const pageEl = document.getElementById(pageId);
   return pageEl ? pageId : 'overview';
@@ -275,39 +275,39 @@ function navigateToPage(pageId, shouldUpdateURL = true) {
     document.querySelectorAll('.nav-item').forEach(item => {
       item.classList.remove('active');
     });
-    
+
     // Add active to target
     navItem.classList.add('active');
-    
+
     // Switch pages
     document.querySelectorAll('.page').forEach(page => {
       page.classList.toggle('active', page.id === pageId);
     });
-    
+
     // Update title
     const titleEl = document.getElementById('page-title');
     if (titleEl) {
       const spanEl = navItem.querySelector('span');
       titleEl.textContent = (spanEl ? spanEl.textContent : navItem.textContent).trim();
     }
-    
+
     // Open parent group if needed
     const group = PAGE_GROUP_MAP[pageId];
     if (group) openNavGroup(group);
-    
+
     // Page-specific initialization
     initializePageSpecific(pageId);
-    
+
     // Update URL and meta
     if (shouldUpdateURL) {
       updateURL(pageId);
     }
-    
+
     // UI adjustments
     window.scrollTo({ top: 0, behavior: 'smooth' });
     const contentEl = document.getElementById('page-content');
     if (contentEl) contentEl.scrollTo({ top: 0, behavior: 'smooth' });
-    
+
     closeMobileMenu();
     setTimeout(adjustActivePageHeight, 350);
   }
@@ -333,7 +333,7 @@ function initRouting() {
     const pageId = getPageFromURL();
     navigateToPage(pageId, false); // Don't update URL since we're responding to URL change
   });
-  
+
   // Handle initial page load routing
   const initialPageId = getPageFromURL();
   if (initialPageId !== 'overview') {
@@ -342,7 +342,7 @@ function initRouting() {
     // Set initial meta for overview page
     updatePageMeta('overview');
   }
-  
+
   // Handle hash changes (for compatibility)
   window.addEventListener('hashchange', () => {
     const pageId = getPageFromURL();
@@ -1431,21 +1431,21 @@ async function initOSMEnrichmentUI() {
 
 /** Map each data-page value → its parent group id */
 const PAGE_GROUP_MAP = {
-  'nso-sync':               'gov-sync',
-  'admin-units':            'gov-sync',
-  'parser':                 'address-processing',
-  'batch':                  'address-processing',
-  'explorer':               'address-processing',
-  'lookup':                 'spatial',
+  'nso-sync': 'gov-sync',
+  'admin-units': 'gov-sync',
+  'parser': 'address-processing',
+  'batch': 'address-processing',
+  'explorer': 'address-processing',
+  'lookup': 'spatial',
   'boundary-visualization': 'spatial',
-  'osm-enrichment':         'enrichment',
-  'label-studio':           'ai-bench',
-  'training':               'ai-bench',
-  'experiments':            'ai-bench',
+  'osm-enrichment': 'enrichment',
+  'label-studio': 'ai-bench',
+  'training': 'ai-bench',
+  'experiments': 'ai-bench',
 };
 
 function openNavGroup(groupId) {
-  const btn   = document.querySelector(`.nav-group-toggle[data-group="${groupId}"]`);
+  const btn = document.querySelector(`.nav-group-toggle[data-group="${groupId}"]`);
   const panel = document.getElementById(`group-${groupId}`);
   if (!btn || !panel) return;
   btn.classList.add('open');
@@ -1453,7 +1453,7 @@ function openNavGroup(groupId) {
 }
 
 function closeNavGroup(groupId) {
-  const btn   = document.querySelector(`.nav-group-toggle[data-group="${groupId}"]`);
+  const btn = document.querySelector(`.nav-group-toggle[data-group="${groupId}"]`);
   const panel = document.getElementById(`group-${groupId}`);
   if (!btn || !panel) return;
   btn.classList.remove('open');
@@ -1464,7 +1464,7 @@ function setupNavGroupToggles() {
   document.querySelectorAll('.nav-group-toggle').forEach(btn => {
     btn.addEventListener('click', () => {
       const groupId = btn.getAttribute('data-group');
-      const isOpen  = btn.classList.contains('open');
+      const isOpen = btn.classList.contains('open');
       if (isOpen) {
         closeNavGroup(groupId);
       } else {
@@ -1524,10 +1524,10 @@ function setupNavigation() {
     toggle.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
-      
+
       const isActive = sidebar.classList.contains("mobile-active");
       console.log("🔄 Toggle clicked, isActive:", isActive);
-      
+
       if (isActive) {
         console.log("🔒 Closing mobile menu");
         closeMobileMenu();
@@ -1563,7 +1563,7 @@ function setupNavigation() {
   const ensureBodyScrollEnabled = () => {
     const isMobile = window.innerWidth <= 768;
     const sidebarActive = sidebar && sidebar.classList.contains('mobile-active');
-    
+
     if (isMobile && !sidebarActive) {
       document.body.classList.remove("no-scroll");
       console.log("📱 Ensured body scroll is enabled on mobile");
@@ -1679,23 +1679,112 @@ function renderOverviewChart(stats) {
 // ═══════════════════════════════════════════════════════════
 function populateLabelRegistry() {
   const tbody = document.getElementById("label-registry-body");
-  if (!tbody) return;
+  const cardView = document.getElementById("labels-card-view");
+  const searchInput = document.getElementById("label-search");
+  const labelCountEl = document.getElementById("label-count");
+  
+  if (!tbody && !cardView) return;
 
   // Update label count
-  const labelCountEl = document.getElementById("label-count");
   if (labelCountEl) {
     labelCountEl.textContent = NER_LABELS.length;
   }
 
-  tbody.innerHTML = NER_LABELS.map(l => `
-    <tr>
-      <td><span class="badge" style="background:${l.color}22;color:${l.color}">${l.value}</span></td>
-      <td>${l.text}</td>
-      <td><div style="width:14px;height:14px;border-radius:3px;background:${l.color};display:inline-block;vertical-align:middle"></div> <span class="text-mono">${l.color}</span></td>
-      <td><kbd style="background:var(--bg-app);padding:2px 8px;border-radius:4px;font-size:12px;border:1px solid var(--border-default)">${l.hotkey}</kbd></td>
-      <td class="text-mono" style="font-size:12px">${l.example}</td>
-    </tr>
-  `).join("");
+  // Render table view (desktop)
+  if (tbody) {
+    tbody.innerHTML = NER_LABELS.map(l => `
+      <tr>
+        <td><span class="label-badge" style="background:${l.color}22;color:${l.color}">${l.value}</span></td>
+        <td><strong style="color:var(--text-primary)">${l.text}</strong><br><span style="font-size:12px;color:var(--text-tertiary)">${l.example}</span></td>
+        <td><div style="display:flex;align-items:center;gap:6px"><div style="width:16px;height:16px;border-radius:3px;background:${l.color};border:1px solid rgba(0,0,0,0.1)"></div> <span class="text-mono" style="font-size:11px">${l.color}</span></div></td>
+        <td><kbd style="background:var(--bg-muted);padding:4px 8px;border-radius:4px;font-size:11px;border:1px solid var(--border);cursor:default">${l.hotkey}</kbd></td>
+        <td><span style="padding:2px 6px;background:var(--accent-light, rgba(59, 130, 246, 0.1));border-radius:3px;font-size:11px;color:var(--accent)">${l.example}</span></td>
+      </tr>
+    `).join("");
+  }
+
+  // Render card view (mobile)
+  if (cardView) {
+    cardView.innerHTML = NER_LABELS.map(l => `
+      <div class="label-card" style="
+        padding: 14px; 
+        border: 1px solid var(--border); 
+        border-radius: 8px; 
+        background: var(--bg-app);
+        border-left: 4px solid ${l.color};
+      ">
+        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
+          <div>
+            <span class="label-badge" style="background:${l.color}22;color:${l.color};font-size:12px;padding:2px 6px">${l.value}</span>
+          </div>
+          <kbd style="background:${l.color}22;color:${l.color};padding:3px 6px;border-radius:3px;font-size:10px;border:1px solid ${l.color}33;cursor:default;font-weight:600">${l.hotkey}</kbd>
+        </div>
+        
+        <h4 style="margin:0 0 6px 0;font-size:13px;color:var(--text-primary);font-weight:600">${l.text}</h4>
+        
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
+          <div style="width:12px;height:12px;border-radius:2px;background:${l.color}"></div>
+          <span style="font-size:10px;color:var(--text-tertiary);font-family:monospace">${l.color}</span>
+        </div>
+        
+        <div style="padding:8px;background:var(--bg-muted);border-radius:4px;font-size:11px;color:var(--text-secondary);font-style:italic">
+          "${l.example}"
+        </div>
+      </div>
+    `).join("");
+  }
+
+  // Setup search functionality
+  if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+      const query = e.target.value.toLowerCase();
+      
+      // Filter table rows
+      if (tbody) {
+        const rows = tbody.querySelectorAll('tr');
+        rows.forEach(row => {
+          const text = row.textContent.toLowerCase();
+          row.style.display = text.includes(query) ? '' : 'none';
+        });
+      }
+      
+      // Filter card view
+      if (cardView) {
+        const cards = cardView.querySelectorAll('.label-card');
+        cards.forEach(card => {
+          const text = card.textContent.toLowerCase();
+          card.style.display = text.includes(query) ? '' : 'none';
+          // Add smooth animation
+          if (text.includes(query)) {
+            card.style.animation = 'none';
+            setTimeout(() => {
+              card.style.animation = 'fadeIn 0.3s ease-in-out';
+            }, 10);
+          }
+        });
+      }
+      
+      // Update count of visible labels
+      const visibleCount = Array.from(tbody ? tbody.querySelectorAll('tr') : cardView.querySelectorAll('.label-card'))
+        .filter(el => el.style.display !== 'none').length;
+      if (labelCountEl) {
+        labelCountEl.textContent = visibleCount;
+      }
+    });
+  }
+}
+
+// Add animation keyframes
+if (!document.getElementById('label-registry-styles')) {
+  const style = document.createElement('style');
+  style.id = 'label-registry-styles';
+  style.textContent = `
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  `;
+  document.head.appendChild(style);
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1731,9 +1820,12 @@ function _updateParserModelStatusBar(status) {
 
   // Update text
   if (text) {
+    const currentModelText = status.currentModel ? ` (đang nạp ${status.currentModel.toUpperCase()})` : "";
+    const progressText = status.progress ? ` ${Math.round(status.progress)}%` : "";
+    
     const statusLabels = {
       idle: "Model AI chưa được nạp — nhấn Tải model để bắt đầu",
-      loading: `Đang nạp model AI vào bộ nhớ... (${status.loadedModels?.length || 0}/3 hoàn thành)`,
+      loading: `Đang nạp model AI vào bộ nhớ...${currentModelText}${progressText} (${status.loadedModels?.length || 0}/3 hoàn thành)`,
       ready: `Model sẵn sàng — ${status.loadedModels?.length || 0}/3 model AI đã nạp${status.corpusSize ? `, ${status.corpusSize.toLocaleString()} địa chỉ corpus` : ""}`,
       error: "Một số model không thể nạp — xem chi tiết bên dưới",
     };
@@ -1771,19 +1863,49 @@ function _updateParserModelStatusBar(status) {
 
 async function _pollParserModelStatus() {
   try {
-    const res = await fetch(`${API_BASE}/parser/status`, { headers: getAuthHeader() });
-    if (!res.ok) return;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    
+    const res = await fetch(`${API_BASE}/parser/status`, { 
+      headers: getAuthHeader(),
+      signal: controller.signal 
+    });
+    
+    clearTimeout(timeoutId);
+    
+    if (!res.ok) {
+      console.warn(`Parser status returned ${res.status}: ${res.statusText}`);
+      return;
+    }
+    
     const data = await res.json();
     _updateParserModelStatusBar(data);
 
-    // Keep polling while loading
+    // Keep polling while loading - faster polling for better UX
     if (data.status === "loading") {
-      _parserStatusPollTimer = setTimeout(_pollParserModelStatus, 3000);
+      _parserStatusPollTimer = setTimeout(_pollParserModelStatus, 2000); // Poll every 2 seconds
     } else {
       _parserStatusPollTimer = null;
     }
-  } catch (_) {
-    // Silently ignore — server might be starting up
+  } catch (error) {
+    if (error.name === 'AbortError') {
+      console.warn("Parser status request timed out");
+    } else {
+      console.error("Failed to poll parser status:", error);
+    }
+    
+    // Show error state in UI
+    const text = document.getElementById("pmsb-text");
+    const dot = document.getElementById("pmsb-dot");
+    if (text) {
+      text.textContent = "Không thể kết nối đến server — kiểm tra API server";
+    }
+    if (dot) {
+      dot.className = "pmsb-dot error";
+    }
+    
+    // Retry after delay
+    _parserStatusPollTimer = setTimeout(_pollParserModelStatus, 5000);
   }
 }
 
@@ -1908,16 +2030,16 @@ function _setupParserFooterActions() {
   const performancePanel = document.getElementById("parser-performance-panel");
   const performanceToggle = document.getElementById("performance-toggle");
   const performanceHeader = document.querySelector(".performance-header");
-  
+
   if (performanceToggle && performanceHeader) {
     performanceHeader.addEventListener("click", () => {
       const metrics = document.getElementById("performance-metrics");
       const isVisible = metrics && metrics.style.display !== "none";
-      
+
       if (metrics) {
         metrics.style.display = isVisible ? "none" : "grid";
       }
-      
+
       const icon = performanceToggle.querySelector("i");
       if (icon) {
         icon.className = isVisible ? "fa-solid fa-chevron-down" : "fa-solid fa-chevron-up";
@@ -1941,7 +2063,7 @@ function _collectParserResults() {
   ["prelabeler", "phobert", "mgte", "llm"].forEach(modelName => {
     const resultEl = document.getElementById(`presult-${modelName}`);
     const statsEl = document.getElementById(`pstats-${modelName}`);
-    
+
     if (resultEl) {
       results.models[modelName] = {
         html_output: resultEl.innerHTML,
@@ -1963,7 +2085,7 @@ function _exportParserResults(data) {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
-  
+
   if (showToast) showToast("Đã xuất kết quả thành công", "success");
 }
 
@@ -2011,7 +2133,7 @@ function _showParserHelpModal() {
       </div>
     </div>
   `;
-  
+
   document.body.insertAdjacentHTML('beforeend', modalHtml);
 }
 
@@ -2021,22 +2143,22 @@ function updateParserPerformanceMetrics(data) {
     const timeEl = document.getElementById("metric-processing-time");
     if (timeEl) timeEl.textContent = `${data.timing}ms`;
   }
-  
+
   if (data.entities_count !== undefined) {
     const countEl = document.getElementById("metric-entities-count");
     if (countEl) countEl.textContent = data.entities_count.toString();
   }
-  
+
   if (data.confidence) {
     const confEl = document.getElementById("metric-confidence");
     if (confEl) confEl.textContent = `${data.confidence.toFixed(1)}%`;
   }
-  
+
   if (data.best_model) {
     const modelEl = document.getElementById("metric-best-model");
     if (modelEl) modelEl.textContent = data.best_model;
   }
-  
+
   // Show performance panel after first analysis
   const perfPanel = document.getElementById("parser-performance-panel");
   if (perfPanel) perfPanel.style.display = "block";
@@ -2046,26 +2168,26 @@ function _updatePerformanceMetrics(totalMs, inputText) {
   // Processing time
   const timeEl = document.getElementById("metric-processing-time");
   if (timeEl) {
-    const timeFmt = totalMs >= 1000 
+    const timeFmt = totalMs >= 1000
       ? `${(totalMs / 1000).toFixed(2)}s`
       : `${totalMs}ms`;
     timeEl.textContent = timeFmt;
   }
-  
+
   // Count entities from all models
   let totalEntities = 0;
   let totalConfidence = 0;
   let confidenceCount = 0;
   let bestModel = "N/A";
   let bestScore = 0;
-  
+
   ["prelabeler", "phobert", "mgte", "llm"].forEach(modelName => {
     const resultEl = document.getElementById(`presult-${modelName}`);
     if (resultEl && !resultEl.querySelector('.pmodel-not-loaded')) {
       // Count entities (spans with ner-entity class)
       const entities = resultEl.querySelectorAll('.ner-entity');
       totalEntities += entities.length;
-      
+
       // Try to extract confidence from stats or result content
       const statsEl = document.getElementById(`pstats-${modelName}`);
       if (statsEl) {
@@ -2082,11 +2204,11 @@ function _updatePerformanceMetrics(totalMs, inputText) {
       }
     }
   });
-  
+
   // Update entities count
   const entitiesEl = document.getElementById("metric-entities-count");
   if (entitiesEl) entitiesEl.textContent = totalEntities.toString();
-  
+
   // Update average confidence
   const confEl = document.getElementById("metric-confidence");
   if (confEl) {
@@ -2097,11 +2219,11 @@ function _updatePerformanceMetrics(totalMs, inputText) {
       confEl.textContent = "N/A";
     }
   }
-  
+
   // Update best model
   const modelEl = document.getElementById("metric-best-model");
   if (modelEl) modelEl.textContent = bestModel;
-  
+
   // Show performance panel after first analysis
   const perfPanel = document.getElementById("parser-performance-panel");
   if (perfPanel) perfPanel.style.display = "block";
@@ -2211,7 +2333,7 @@ async function runParser() {
           const errBody = await res.json();
           const note = errBody?.detail?.note || errBody?.detail?.error || errBody?.detail;
           if (note && typeof note === "string") errDetail = note;
-        } catch (_) {}
+        } catch (_) { }
         throw new Error(errDetail);
       }
       const data = await res.json();
@@ -2257,7 +2379,7 @@ async function runParser() {
     if (lastMeta) _updateParserMeta(lastMeta);
     // Render comparison summary
     _renderParserCompareSummary();
-    
+
     // Update performance metrics
     _updatePerformanceMetrics(totalMs, text);
   } catch (err) {
@@ -2315,16 +2437,16 @@ function _renderModelCard(model, out, latencyMs) {
       resultEl.innerHTML = `<span style="color:var(--text-tertiary);font-size:11px">Không có kết quả</span>`;
     } else if (out.error && !out.normalizedAddress && !Array.isArray(out.result)) {
       const isNotLoaded = (out.status === "Not loaded");
-      const isTimeout   = (out.status === "timeout");
+      const isTimeout = (out.status === "timeout");
       const errMsg = out.error || "Model chưa được nạp";
-      const icon    = isTimeout ? "fa-clock" : "fa-circle-exclamation";
-      const color   = isTimeout ? "var(--text-secondary)" : "var(--warning)";
-      const label   = isNotLoaded ? "Model chưa được nạp vào bộ nhớ"
-                    : isTimeout   ? "LLM timeout — model chạy quá chậm trên hardware hiện tại"
-                    : escapeHtml(errMsg);
-      const hint    = isNotLoaded ? "Nhấn nút Tải model ở trên để nạp AI"
-                    : isTimeout   ? "Kết quả rule-based fallback sẽ được dùng thay thế"
-                    : "";
+      const icon = isTimeout ? "fa-clock" : "fa-circle-exclamation";
+      const color = isTimeout ? "var(--text-secondary)" : "var(--warning)";
+      const label = isNotLoaded ? "Model chưa được nạp vào bộ nhớ"
+        : isTimeout ? "LLM timeout — model chạy quá chậm trên hardware hiện tại"
+          : escapeHtml(errMsg);
+      const hint = isNotLoaded ? "Nhấn nút Tải model ở trên để nạp AI"
+        : isTimeout ? "Kết quả rule-based fallback sẽ được dùng thay thế"
+          : "";
       resultEl.innerHTML = `<div class="pmodel-not-loaded">
         <i class="fa-solid ${icon}" style="color:${color}"></i>
         <span style="color:${color};font-size:11px">${label}</span>
@@ -2394,31 +2516,31 @@ function _renderModelCard(model, out, latencyMs) {
 }
 
 function _renderModelCardError(model, label, errMsg) {
-  const card     = document.getElementById(`pcard-${model}`);
+  const card = document.getElementById(`pcard-${model}`);
   const resultEl = document.getElementById(`presult-${model}`);
-  const badgeEl  = document.getElementById(`pbadge-${model}`);
+  const badgeEl = document.getElementById(`pbadge-${model}`);
   if (card) card.classList.add("is-error");
 
-  const is524     = /524/.test(errMsg);
+  const is524 = /524/.test(errMsg);
   const isTimeout = /timeout|timed?\s*out/i.test(errMsg);
   const isNetwork = /fetch|network|failed to fetch/i.test(errMsg);
 
   let mainMsg, hintMsg, icon, color;
   if (is524 || isTimeout) {
-    icon    = "fa-clock";
-    color   = "var(--text-secondary)";
+    icon = "fa-clock";
+    color = "var(--text-secondary)";
     mainMsg = "LLM timeout — server mất quá lâu để phản hồi";
     hintMsg = "Model đang chạy trên CPU; kết quả sẽ trả về qua fallback rule-based";
     if (badgeEl) badgeEl.innerHTML = `<span class="pmodel-badge-done" style="background:#f59e0b22;color:#f59e0b">SLOW</span>`;
   } else if (isNetwork) {
-    icon    = "fa-plug-circle-xmark";
-    color   = "var(--danger)";
+    icon = "fa-plug-circle-xmark";
+    color = "var(--danger)";
     mainMsg = "Không thể kết nối đến server";
     hintMsg = "Kiểm tra kết nối mạng hoặc trạng thái server";
     if (badgeEl) badgeEl.innerHTML = `<span class="pmodel-badge-done error">ERR</span>`;
   } else {
-    icon    = "fa-triangle-exclamation";
-    color   = "var(--danger)";
+    icon = "fa-triangle-exclamation";
+    color = "var(--danger)";
     mainMsg = "Lỗi xử lý model";
     hintMsg = errMsg || "";
     if (badgeEl) badgeEl.innerHTML = `<span class="pmodel-badge-done error">ERR</span>`;
@@ -3121,6 +3243,8 @@ async function initNSOSyncTool() {
     prefix: 'nso',
     title: 'Tra cứu danh mục NSO / GSO',
     showVersion: false,
+    showDistrict: false,
+    showWard: false,
     searchPlaceholder: 'Tìm nhanh mã hoặc tên đơn vị NSO...',
     buttonText: 'Tìm kiếm'
   });
@@ -3599,24 +3723,24 @@ function getAdminCurrentLevel(state) {
   if (dInput && dInput.value && activeState.districts[dInput.value]) return 'ward';
   // If a province is selected, we show districts of that province
   if (pInput && pInput.value && activeState.provinces[pInput.value]) return 'district';
-  
+
   return 'province';
 }
 
 function formatDateTime(dateInput) {
-    if (!dateInput) return '-';
+  if (!dateInput) return '-';
 
-    const d = new Date(dateInput);
+  const d = new Date(dateInput);
 
-    const yyyy = d.getFullYear();
-    const MM = String(d.getMonth() + 1).padStart(2, '0');
-    const dd = String(d.getDate()).padStart(2, '0');
+  const yyyy = d.getFullYear();
+  const MM = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
 
-    const HH = String(d.getHours()).padStart(2, '0');
-    const mm = String(d.getMinutes()).padStart(2, '0');
-    const ss = String(d.getSeconds()).padStart(2, '0');
+  const HH = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  const ss = String(d.getSeconds()).padStart(2, '0');
 
-    return `${yyyy}-${MM}-${dd} ${HH}:${mm}:${ss}`;
+  return `${yyyy}-${MM}-${dd} ${HH}:${mm}:${ss}`;
 }
 
 async function loadAdminData(state) {
@@ -3699,9 +3823,9 @@ async function loadAdminData(state) {
         <td><span class="badge badge-outline">${item.type_name || '-'}</span></td>
         <td class="text-right">
           ${ADMIN_CRUD_ENABLED
-            ? `<button class="btn btn-icon btn-sm" onclick="editAdminUnit('${level}', ${item[`${level}_id`]})" title="Sửa"><i class="fa-solid fa-pen-to-square"></i></button>
+        ? `<button class="btn btn-icon btn-sm" onclick="editAdminUnit('${level}', ${item[`${level}_id`]})" title="Sửa"><i class="fa-solid fa-pen-to-square"></i></button>
                <button class="btn btn-icon btn-sm text-danger" onclick="deleteAdminUnit('${level}', ${item[`${level}_id`]}, '${item[`${level}_name`]}')" title="Xóa"><i class="fa-solid fa-trash"></i></button>`
-            : `<span class="text-tertiary text-xs">Read-only</span>`}
+        : `<span class="text-tertiary text-xs">Read-only</span>`}
         </td>
       </tr>
     `).join('');
@@ -3737,7 +3861,7 @@ async function initDataExplorer() {
     const activeState = state || explorerState;
     const tbody = document.getElementById("explorer-body");
     const sBtn = document.getElementById("explorer-btn-search");
-    if (!tbody || !activeState.provinces) return;
+    if (!tbody) return;
 
     if (sBtn) sBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
     try {
@@ -3996,7 +4120,7 @@ async function initLabelStudioIntegration() {
   const btnRefresh = document.getElementById('btn-ls-refresh');
   const btnTest = document.getElementById('btn-ls-test');
   const btnSync = document.getElementById('btn-ls-sync');
-  
+
   if (btnRefresh) {
     btnRefresh.addEventListener('click', fetchLabelStudioTasks);
   }

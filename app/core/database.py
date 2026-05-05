@@ -112,16 +112,20 @@ class AddressCleansingQueue(Base):
     phobert_embedding = Column(JSON)
     mgte_embedding = Column(JSON)
 
-    # ACS — Address Confidence Score (G2)
-    acs_score    = Column(Numeric(5, 4))       # Weighted composite score [0..1]
-    acs_decision = Column(String(20))           # AUTO_ACCEPT | AUTO_CONVERT | SUGGEST | REJECT
-    s_text       = Column(Numeric(5, 4))        # Text similarity component
-    s_sem        = Column(Numeric(5, 4))        # Semantic similarity component
-    v_hierarchy  = Column(Numeric(5, 4))        # Hierarchy validity component
-    v_temporal   = Column(Numeric(5, 4))        # Temporal weight component
+    # ACS — Address Confidence Score (G2) - COMMENTED OUT: Columns don't exist in DB yet
+    # acs_score    = Column(Numeric(5, 4))       # Weighted composite score [0..1]
+    # acs_decision = Column(String(20))           # AUTO_ACCEPT | AUTO_CONVERT | SUGGEST | REJECT
+    # s_text       = Column(Numeric(5, 4))        # Text similarity component
+    # s_sem        = Column(Numeric(5, 4))        # Semantic similarity component
+    # v_hierarchy  = Column(Numeric(5, 4))        # Hierarchy validity component
+    # v_temporal   = Column(Numeric(5, 4))        # Temporal weight component
 
-    # Epoch — Dual-Epoch Recognition (G5)
-    address_epoch = Column(String(20))          # PRE_2025 | POST_2025 | AMBIGUOUS
+    # Epoch — Dual-Epoch Recognition (G5) - COMMENTED OUT: Column doesn't exist in DB yet
+    # address_epoch = Column(String(20))          # PRE_2025 | POST_2025 | AMBIGUOUS
+
+    # Additional columns that exist in DB (found during debug)
+    normalized_phobert = Column(Text)
+    normalized_mgte = Column(Text)
 
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
