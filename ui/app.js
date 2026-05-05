@@ -1276,17 +1276,37 @@ function setupNavigation() {
   const toggle = document.getElementById("menu-toggle");
 
   const closeMobileMenu = () => {
-    sidebar.classList.remove("mobile-active");
-    overlay.classList.remove("mobile-active");
+    if (sidebar) sidebar.classList.remove("mobile-active");
+    if (overlay) overlay.classList.remove("mobile-active");
     document.body.classList.remove("no-scroll");
+    console.log("🔓 Mobile menu closed, body scroll restored");
   };
 
-  if (toggle) {
-    toggle.addEventListener("click", () => {
-      const isActive = sidebar.classList.toggle("mobile-active");
-      overlay.classList.toggle("mobile-active");
-      document.body.classList.toggle("no-scroll", isActive);
+  if (toggle && sidebar) {
+    console.log("✅ Menu toggle and sidebar found, adding event listener");
+    toggle.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      const isActive = sidebar.classList.contains("mobile-active");
+      console.log("🔄 Toggle clicked, isActive:", isActive);
+      
+      if (isActive) {
+        console.log("🔒 Closing mobile menu");
+        closeMobileMenu();
+      } else {
+        console.log("🔓 Opening mobile menu");
+        sidebar.classList.add("mobile-active");
+        if (overlay) overlay.classList.add("mobile-active");
+        document.body.classList.add("no-scroll");
+        console.log("✅ Classes added:", {
+          sidebarClasses: sidebar.className,
+          bodyClasses: document.body.className
+        });
+      }
     });
+  } else {
+    console.error("❌ Menu toggle or sidebar not found!", { toggle, sidebar });
   }
 
   if (overlay) overlay.addEventListener("click", closeMobileMenu);
@@ -1301,6 +1321,21 @@ function setupNavigation() {
   document.querySelectorAll('.nav-group-toggle[data-group]').forEach(btn => {
     openNavGroup(btn.getAttribute('data-group'));
   });
+
+  // Ensure body scroll is enabled by default (fix mobile scroll issues)
+  const ensureBodyScrollEnabled = () => {
+    const isMobile = window.innerWidth <= 768;
+    const sidebarActive = sidebar && sidebar.classList.contains('mobile-active');
+    
+    if (isMobile && !sidebarActive) {
+      document.body.classList.remove("no-scroll");
+      console.log("📱 Ensured body scroll is enabled on mobile");
+    }
+  };
+
+  // Call on load and resize
+  ensureBodyScrollEnabled();
+  window.addEventListener('resize', ensureBodyScrollEnabled);
 
   navItems.forEach(item => {
     item.addEventListener("click", (e) => {
@@ -2614,7 +2649,7 @@ async function initNSOSyncTool() {
     title: 'Tra cứu danh mục NSO / GSO',
     showVersion: false,
     searchPlaceholder: 'Tìm nhanh mã hoặc tên đơn vị NSO...',
-    buttonText: 'Lọc dữ liệu'
+    buttonText: 'Tìm kiếm'
   });
 
   nsoState = await VNAIControls.initSmartFilter('nso', {
@@ -3249,7 +3284,7 @@ async function initDataExplorer() {
       console.error(err);
       tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--danger);">Lỗi tải dữ liệu</td></tr>`;
     } finally {
-      if (sBtn) sBtn.innerHTML = 'Tìm';
+      if (sBtn) sBtn.innerHTML = 'Tìm kiếm';
       adjustActivePageHeight();
     }
   };
