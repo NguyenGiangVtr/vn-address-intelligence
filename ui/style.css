@@ -1365,7 +1365,6 @@ tbody tr:hover td {
   justify-content: center;
   margin-left: 8px;
   min-width: 32px;
-  padding: 2px 8px;
   border-radius: 999px;
   background: var(--bg-surface);
   border: 1px solid var(--border-default);

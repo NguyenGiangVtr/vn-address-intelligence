@@ -1,0 +1,28 @@
+{
+  "name": "vn-address-intelligence",
+  "version": "1.0.0",
+  "description": "Vietnamese Address Intelligence SaaS Platform",
+  "main": "ui/app.js",
+  "scripts": {
+    "build": "node build-version.js",
+    "publish": "powershell -ExecutionPolicy Bypass -File .\\publish.ps1",
+    "publish-clean": "powershell -ExecutionPolicy Bypass -File .\\publish.ps1 -CleanupAfter",
+    "version-only": "powershell -ExecutionPolicy Bypass -File .\\publish.ps1 -VersionOnly",
+    "dev": "npm run build && echo 'Development build ready'",
+    "version-check": "type version-info.json"
+  },
+  "keywords": [
+    "vietnamese",
+    "address", 
+    "intelligence",
+    "ai",
+    "nlp",
+    "ner"
+  ],
+  "author": "VN Address Intelligence Team",
+  "license": "MIT",
+  "devDependencies": {},
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

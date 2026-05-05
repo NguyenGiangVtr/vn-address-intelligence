@@ -1,0 +1,27 @@
+{
+  "version": "202605051716",
+  "timestamp": "2026-05-05T10:16:03.157Z",
+  "files_updated": [
+    "ui\\index.html",
+    "ui\\login.html",
+    "ui\\pages\\admin-units.html",
+    "ui\\pages\\batch.html",
+    "ui\\pages\\boundary-visualization.html",
+    "ui\\pages\\boundary_map_province_20260504_150325.html",
+    "ui\\pages\\boundary_map_province_20260504_154256.html",
+    "ui\\pages\\boundary_map_province_20260504_172337.html",
+    "ui\\pages\\evidence.html",
+    "ui\\pages\\experiments.html",
+    "ui\\pages\\explorer.html",
+    "ui\\pages\\label-studio.html",
+    "ui\\pages\\lookup.html",
+    "ui\\pages\\nso-sync.html",
+    "ui\\pages\\osm-enrichment.html",
+    "ui\\pages\\overview.html",
+    "ui\\pages\\parser.html",
+    "ui\\pages\\parser.test.html",
+    "ui\\pages\\settings.html",
+    "ui\\pages\\training.html",
+    "ui\\pages\\ward-mapper.html"
+  ]
+}
