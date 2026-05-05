@@ -1207,6 +1207,40 @@ function setupNavGroupToggles() {
   });
 }
 
+// ── Sidebar Collapse ──
+const SIDEBAR_COLLAPSED_KEY = 'vnai_sidebar_collapsed';
+
+function setSidebarCollapsed(collapsed) {
+  const sidebar = document.querySelector('.sidebar');
+  if (!sidebar) return;
+  sidebar.classList.toggle('collapsed', collapsed);
+  localStorage.setItem(SIDEBAR_COLLAPSED_KEY, collapsed ? '1' : '0');
+
+  // Add data-tooltip to nav items & group toggles for collapsed tooltip
+  document.querySelectorAll('.nav-item[data-page]').forEach(item => {
+    const span = item.querySelector('span');
+    if (span) item.setAttribute('data-tooltip', span.textContent.trim());
+  });
+  document.querySelectorAll('.nav-group-toggle[data-group]').forEach(btn => {
+    const label = btn.querySelector('.nav-group-label');
+    if (label) btn.setAttribute('data-tooltip', label.textContent.trim());
+  });
+}
+
+function setupSidebarCollapse() {
+  const btn = document.getElementById('sidebar-collapse-btn');
+  if (!btn) return;
+
+  // Restore persisted state
+  const persisted = localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1';
+  if (persisted) setSidebarCollapsed(true);
+
+  btn.addEventListener('click', () => {
+    const sidebar = document.querySelector('.sidebar');
+    setSidebarCollapsed(!sidebar.classList.contains('collapsed'));
+  });
+}
+
 function setupNavigation() {
   const navItems = document.querySelectorAll(".nav-item");
   const pages = document.querySelectorAll(".page");
@@ -1234,6 +1268,9 @@ function setupNavigation() {
 
   // Setup collapsible group buttons
   setupNavGroupToggles();
+
+  // Setup sidebar collapse toggle
+  setupSidebarCollapse();
 
   // Auto-open all groups by default
   document.querySelectorAll('.nav-group-toggle[data-group]').forEach(btn => {
