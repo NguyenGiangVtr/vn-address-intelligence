@@ -987,7 +987,7 @@ describe("runParser() — pipeline tích hợp (mock fetch)", () => {
     document.getElementById("parser-input").value = "test";
     mockFetch();
     await runParser();
-    assertContains(document.getElementById("btn-parse").innerHTML, "Phân tích địa chỉ");
+    assertContains(document.getElementById("btn-parse").innerHTML, "Phân tích");
   });
   it("status text = 'Hoàn thành' sau khi 4 model xong", async () => {
     document.getElementById("parser-input").value = "test";

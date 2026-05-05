@@ -266,7 +266,7 @@ def get_mismatch_report(
 
     except Exception as exc:
         logger.error("Mismatch report error: %s", exc)
-        raise HTTPException(status_code=500, detail=f"Lỗi truy vấn spatial: {exc}")
+        raise HTTPException(status_code=500, detail=f"Lỗi tìm kiếm spatial: {exc}")
 
 
 @router.get(

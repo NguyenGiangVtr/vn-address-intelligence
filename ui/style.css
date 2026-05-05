@@ -3466,7 +3466,6 @@ select.form-input {
   border: none;
   outline: none;
   color: var(--text-primary);
-  font-size: 15px;
   font-weight: 400;
   letter-spacing: -0.2px;
   padding: 8px 0;
@@ -4256,7 +4255,7 @@ select.form-input {
     grid-template-columns: repeat(1, 1fr);
   }
   .parser-input-wrap{
-    min-height: 70px;
+    min-height: 90px;
   }
 }
 

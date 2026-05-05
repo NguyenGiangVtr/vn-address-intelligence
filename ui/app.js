@@ -1760,7 +1760,7 @@ async function runParser() {
     _setParserStatus("error", "Đã xảy ra lỗi trong quá trình phân tích");
   } finally {
     if (heroInner) heroInner.classList.remove("is-running");
-    if (btnParse) { btnParse.disabled = false; btnParse.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i><span>Phân tích địa chỉ</span>'; }
+    if (btnParse) { btnParse.disabled = false; btnParse.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i><span>Phân tích</span>'; }
   }
 }
 
@@ -2554,7 +2554,7 @@ async function triggerMappingSearch(state) {
   // Allow search if either an ID is selected OR a query text is provided
   if (!pId && !dId && !wId && !qText) return;
 
-  tbody.innerHTML = '<tr><td colspan="5" class="text-center" style="padding:60px"><i class="fa-solid fa-circle-notch fa-spin fa-2x text-accent"></i><div class="mt-12 text-tertiary">Đang truy vấn dữ liệu mapping...</div></td></tr>';
+  tbody.innerHTML = '<tr><td colspan="5" class="text-center" style="padding:60px"><i class="fa-solid fa-circle-notch fa-spin fa-2x text-accent"></i><div class="mt-12 text-tertiary">Đang tìm kiếm dữ liệu mapping...</div></td></tr>';
 
   try {
     const res = await fetch(url, { headers: getAuthHeader() });
@@ -3199,10 +3199,10 @@ let explorerState = {
 async function initDataExplorer() {
   VNAIControls.renderSmartFilter('explorer-filter-container', {
     prefix: 'explorer',
-    title: 'Truy vấn hàng đợi xử lý địa chỉ',
+    title: 'Tìm kiếm hàng đợi xử lý địa chỉ',
     showVersion: false,
     searchPlaceholder: 'Tìm kiếm địa chỉ, tỉnh thành, trạng thái...',
-    buttonText: 'Truy vấn'
+    buttonText: 'Tìm kiếm'
   });
 
   const loadData = async (state) => {
@@ -3249,7 +3249,7 @@ async function initDataExplorer() {
       console.error(err);
       tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--danger);">Lỗi tải dữ liệu</td></tr>`;
     } finally {
-      if (sBtn) sBtn.innerHTML = 'Truy vấn';
+      if (sBtn) sBtn.innerHTML = 'Tìm';
       adjustActivePageHeight();
     }
   };
