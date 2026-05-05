@@ -4271,19 +4271,19 @@ select.form-input {
 .parser-meta-card {
   flex: 1;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 10px;
   min-width: 0;
-  padding: 10px 12px;
+  padding: 12px;
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
+  min-height: 44px;
 }
 
 .parser-meta-icon {
   color: var(--info);
-  font-size: 12px;
-  margin-top: 3px;
+  font-size: 14px;
   flex-shrink: 0;
 }
 
@@ -4313,6 +4313,8 @@ select.form-input {
   white-space: nowrap;
   border: 1px solid var(--border-default);
   background: var(--bg-app);
+  min-width: 100px;
+  max-width: 140px;
 }
 
 /* Responsive: collapse to 2-col on narrow screens */
