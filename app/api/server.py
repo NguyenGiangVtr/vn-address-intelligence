@@ -455,29 +455,73 @@ def _serialize_parser_sample(sample: Union[AddressCleansingQueue, SimpleNamespac
 
 
 def _load_parser_corpus(db: Session) -> List[str]:
-    corpus: List[str] = []
+    """
+    Load corpus với priority hierarchy:
+    1. prq.address_clean_corpus (new clean corpus)
+    2. prq.address_cleansing_queue.address_standardized (legacy)
+    3. Administrative hierarchy (fallback)
+    """
+    try:
+        # Try loading from clean corpus table first
+        from sqlalchemy import text
+        
+        clean_corpus_query = text("""
+            SELECT standardized_address 
+            FROM prq.address_clean_corpus
+            WHERE is_active = true 
+              AND admin_epoch = '2025'
+              AND quality_score >= 0.7
+              AND LENGTH(standardized_address) > 5
+            ORDER BY quality_score DESC, usage_count DESC
+            LIMIT 5000
+        """)
+        
+        clean_corpus_result = db.execute(clean_corpus_query).fetchall()
+        if clean_corpus_result:
+            corpus = [row[0] for row in clean_corpus_result if row[0]]
+            if len(corpus) > 100:  # Sufficient corpus size
+                logger.info("Using clean corpus with %d addresses", len(corpus))
+                return corpus
+                
+    except Exception as e:
+        logger.warning("Failed to load from address_clean_corpus: %s", e)
+    
+    # Fallback to legacy queue standardized addresses
+    try:
+        standardized_rows = (
+            db.query(AddressCleansingQueue.address_standardized)
+            .filter(AddressCleansingQueue.address_standardized.isnot(None))
+            .filter(func.length(AddressCleansingQueue.address_standardized) > 10)
+            .distinct()
+            .limit(5000)
+            .all()
+        )
+        corpus = [row[0] for row in standardized_rows if row and row[0]]
 
-    standardized_rows = (
-        db.query(AddressCleansingQueue.address_standardized)
-        .filter(AddressCleansingQueue.address_standardized.isnot(None))
-        .distinct()
-        .limit(5000)
-        .all()
-    )
-    corpus = [row[0] for row in standardized_rows if row and row[0]]
+        if len(corpus) > 50:  # Minimum viable corpus
+            logger.info("Using queue standardized corpus with %d addresses", len(corpus))
+            return corpus
+            
+    except Exception as e:
+        logger.warning("Failed to load from queue standardized: %s", e)
 
-    if corpus:
+    # Final fallback to administrative hierarchy
+    try:
+        hierarchy_rows = (
+            db.query(Ward.ward_name, District.district_name, Province.province_name)
+            .join(District, and_(Ward.district_id == District.district_id, Ward.admin_version == District.admin_version))
+            .join(Province, and_(District.province_id == Province.province_id, District.admin_version == Province.admin_version))
+            .filter(Ward.is_deleted == False, District.is_deleted == False, Province.is_deleted == False)
+            .limit(5000)
+            .all()
+        )
+        corpus = [f"{ward}, {district}, {province}" for ward, district, province in hierarchy_rows if ward and district and province]
+        logger.info("Using administrative hierarchy corpus with %d addresses", len(corpus))
         return corpus
-
-    hierarchy_rows = (
-        db.query(Ward.ward_name, District.district_name, Province.province_name)
-        .join(District, and_(Ward.district_id == District.district_id, Ward.admin_version == District.admin_version))
-        .join(Province, and_(District.province_id == Province.province_id, District.admin_version == Province.admin_version))
-        .filter(Ward.is_deleted == False, District.is_deleted == False, Province.is_deleted == False)
-        .limit(5000)
-        .all()
-    )
-    return [f"{ward}, {district}, {province}" for ward, district, province in hierarchy_rows if ward and district and province]
+        
+    except Exception as e:
+        logger.error("Failed to load any corpus: %s", e)
+        return []
 
 
 def _build_parser_runtime_bundle() -> dict:
@@ -1370,7 +1414,7 @@ def clear_sync_logs():
 
 @api_router.get("/nso/provinces", tags=["Dữ liệu NSO (Live)"], summary="Lấy danh sách Tỉnh từ NSO")
 def fetch_nso_provinces(date: str = None):
-    """Truy vấn trực tiếp danh sách Tỉnh từ Web Service của NSO."""
+    """Tìm kiếm trực tiếp danh sách Tỉnh từ Web Service của NSO."""
     try:
         return get_nso_provinces(date)
     except Exception as e:
@@ -1378,7 +1422,7 @@ def fetch_nso_provinces(date: str = None):
 
 @api_router.get("/nso/districts", tags=["Dữ liệu NSO (Live)"], summary="Lấy danh sách Huyện từ NSO")
 def fetch_nso_districts(province_no: str = "", province_name: str = "", date: str = None):
-    """Truy vấn trực tiếp danh sách Quận/Huyện từ Web Service của NSO."""
+    """Tìm kiếm trực tiếp danh sách Quận/Huyện từ Web Service của NSO."""
     try:
         return get_nso_districts(province_no, province_name, date)
     except Exception as e:
@@ -1386,7 +1430,7 @@ def fetch_nso_districts(province_no: str = "", province_name: str = "", date: st
 
 @api_router.get("/nso/wards", tags=["Dữ liệu NSO (Live)"], summary="Lấy danh sách Xã từ NSO")
 def fetch_nso_wards(province_no: str = "", province_name: str = "", district_no: str = "", district_name: str = "", date: str = None):
-    """Truy vấn trực tiếp danh sách Phường/Xã từ Web Service của NSO."""
+    """Tìm kiếm trực tiếp danh sách Phường/Xã từ Web Service của NSO."""
     try:
         return get_nso_wards(province_no, province_name, district_no, district_name, date)
     except Exception as e:
@@ -2257,7 +2301,7 @@ def _read_explorer_queue(db: Session, limit: int, q: str):
         ]
     except Exception as e:
         logger.warning(f"Explorer queue fetch error: {e}")
-        raise HTTPException(status_code=500, detail=f"Lỗi truy vấn prq.address_cleansing_queue: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Lỗi Tìm kiếm prq.address_cleansing_queue: {str(e)}")
 
 
 @api_router.get("/explorer/queue", tags=["Xử lý hàng loạt"], summary="Danh sách hàng đợi chuẩn hóa")
@@ -2591,7 +2635,7 @@ def get_admin_unit_history(
     db: Session = Depends(get_db),
 ):
     """
-    Truy vấn lịch sử SCD Type 2 của một đơn vị hành chính.
+    Tìm kiếm lịch sử SCD Type 2 của một đơn vị hành chính.
 
     - GET /api/admin-unit/ward/770001/history        → Toàn bộ lịch sử
     - GET /api/admin-unit/ward/770001/history?at=2024-01-01 → Trạng thái tại ngày đó

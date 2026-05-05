@@ -31,7 +31,7 @@
     list.innerHTML = rows.map((item) => {
       const label = item[labelKey];
       const id = item[idKey];
-      if (label != null && id != null) stateMap[label] = id;
+      if (label != null && id != null) stateMap[label] = item;
       return `<option value="${escapeHtml(String(label || ''))}" data-id="${id}"></option>`;
     }).join('');
 

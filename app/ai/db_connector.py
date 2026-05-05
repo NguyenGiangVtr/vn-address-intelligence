@@ -243,10 +243,22 @@ class DBConnector:
         """
         query = """
             SELECT 
-                w.ward_name || ', ' || d.district_name || ', ' || p.province_name as full_address
+                CASE 
+                    WHEN w.admin_version = 2 THEN
+                        -- Version 2: ward + province only (cleaned names)
+                        REPLACE(w.ward_name, w.type_name || ' ', '') || ', ' ||
+                        REPLACE(p.province_name, p.type_name || ' ', '')
+                    ELSE
+                        -- Version 1: ward + district + province (cleaned names)
+                        REPLACE(w.ward_name, w.type_name || ' ', '') || ', ' ||
+                        REPLACE(d.district_name, d.type_name || ' ', '') || ', ' ||
+                        REPLACE(p.province_name, p.type_name || ' ', '')
+                END as full_address
             FROM mat.ward w
-            JOIN mat.district d ON w.district_id = d.district_id
-            JOIN mat.province p ON d.province_id = p.province_id
+            JOIN mat.district d ON w.district_id = d.district_id 
+                AND d.admin_version = w.admin_version
+            JOIN mat.province p ON d.province_id = p.province_id 
+                AND p.admin_version = d.admin_version
             WHERE w.is_deleted = false 
               AND d.is_deleted = false 
               AND p.is_deleted = false
@@ -262,8 +274,198 @@ class DBConnector:
             val = r['full_address'] if isinstance(r, dict) else r[0]
             addresses.append(val)
             
-        logger.info(" Đã tạo danh mục chuẩn với %d địa chỉ (Xã, Huyện, Tỉnh).", len(addresses))
+        logger.info(" Đã tạo danh mục chuẩn với %d địa chỉ (cleaned names, version-aware).", len(addresses))
         return addresses
+
+    def load_clean_corpus(
+        self,
+        admin_epoch: str = "2025",
+        source_types: Optional[List[str]] = None,
+        min_quality_score: float = 0.5,
+        limit: Optional[int] = None,
+        active_only: bool = True
+    ) -> List[str]:
+        """
+        Load corpus từ bảng prq.address_clean_corpus với filtering options.
+        
+        Args:
+            admin_epoch: Kỳ cải cách hành chính (default: "2025")
+            source_types: Danh sách source types cần load (None = all)
+            min_quality_score: Điểm chất lượng tối thiểu 
+            limit: Giới hạn số lượng records
+            active_only: Chỉ load records đang active
+            
+        Returns:
+            List[str]: Danh sách standardized addresses
+        """
+        conditions = ["admin_epoch = %s"]
+        params = [admin_epoch]
+        
+        if active_only:
+            conditions.append("is_active = true")
+            
+        if source_types:
+            placeholders = ",".join(["%s"] * len(source_types))
+            conditions.append(f"source_type IN ({placeholders})")
+            params.extend(source_types)
+            
+        if min_quality_score > 0:
+            conditions.append("quality_score >= %s")
+            params.append(min_quality_score)
+        
+        # Standardized address not null and not empty
+        conditions.append("standardized_address IS NOT NULL")
+        conditions.append("LENGTH(standardized_address) > 5")
+        
+        where_clause = " AND ".join(conditions)
+        
+        query = f"""
+            SELECT standardized_address 
+            FROM prq.address_clean_corpus
+            WHERE {where_clause}
+            ORDER BY quality_score DESC, usage_count DESC
+        """
+        
+        if limit:
+            query += f" LIMIT {limit}"
+            
+        with self.cursor() as cur:
+            cur.execute(query, params)
+            rows = cur.fetchall()
+            
+        addresses = []
+        for r in rows:
+            val = r['standardized_address'] if isinstance(r, dict) else r[0]
+            if val:
+                addresses.append(val)
+        
+        logger.info(
+            " Đã đọc %d địa chỉ từ address_clean_corpus (epoch=%s, min_quality=%.2f)",
+            len(addresses), admin_epoch, min_quality_score
+        )
+        return addresses
+
+    def load_clean_corpus_with_metadata(
+        self,
+        admin_epoch: str = "2025",
+        source_types: Optional[List[str]] = None,
+        min_quality_score: float = 0.5,
+        limit: Optional[int] = None
+    ) -> tuple[List[str], List[dict]]:
+        """
+        Load corpus kèm metadata cho temporal-aware matching.
+        
+        Returns:
+            tuple: (addresses, metadata_list)
+                - addresses: List[str] - standardized addresses
+                - metadata_list: List[dict] - metadata cho từng address
+        """
+        conditions = ["admin_epoch = %s", "is_active = true"]
+        params = [admin_epoch]
+        
+        if source_types:
+            placeholders = ",".join(["%s"] * len(source_types))
+            conditions.append(f"source_type IN ({placeholders})")
+            params.extend(source_types)
+            
+        if min_quality_score > 0:
+            conditions.append("quality_score >= %s")
+            params.append(min_quality_score)
+            
+        conditions.append("standardized_address IS NOT NULL")
+        conditions.append("LENGTH(standardized_address) > 5")
+        
+        where_clause = " AND ".join(conditions)
+        
+        query = f"""
+            SELECT 
+                id,
+                standardized_address,
+                source_type, 
+                quality_score,
+                admin_epoch,
+                admin_version,
+                province_id,
+                district_id,
+                ward_id,
+                effective_date
+            FROM prq.address_clean_corpus
+            WHERE {where_clause}
+            ORDER BY quality_score DESC, usage_count DESC
+        """
+        
+        if limit:
+            query += f" LIMIT {limit}"
+            
+        with self.cursor() as cur:
+            cur.execute(query, params)
+            rows = cur.fetchall()
+            
+        addresses = []
+        metadata_list = []
+        
+        for r in rows:
+            if isinstance(r, dict):
+                addr = r['standardized_address']
+                meta = {
+                    'id': r['id'],
+                    'source_type': r['source_type'],
+                    'quality_score': float(r['quality_score']) if r['quality_score'] else 0.0,
+                    'admin_epoch': r['admin_epoch'],
+                    'admin_version': r['admin_version'],
+                    'province_id': r['province_id'],
+                    'district_id': r['district_id'], 
+                    'ward_id': r['ward_id'],
+                    'effective_date': r['effective_date'].isoformat() if r['effective_date'] else None
+                }
+            else:
+                # Fallback for tuple cursor
+                addr = r[1]
+                meta = {
+                    'id': r[0],
+                    'source_type': r[2],
+                    'quality_score': float(r[3]) if r[3] else 0.0,
+                    'admin_epoch': r[4],
+                    'admin_version': r[5],
+                    'province_id': r[6],
+                    'district_id': r[7],
+                    'ward_id': r[8],
+                    'effective_date': r[9].isoformat() if r[9] else None
+                }
+                
+            if addr:
+                addresses.append(addr)
+                metadata_list.append(meta)
+        
+        logger.info(
+            " Đã đọc %d địa chỉ kèm metadata từ address_clean_corpus (epoch=%s)",
+            len(addresses), admin_epoch
+        )
+        return addresses, metadata_list
+
+    def update_corpus_usage_stats(self, corpus_ids: List[int]):
+        """
+        Cập nhật usage statistics cho corpus entries được sử dụng trong retrieval.
+        
+        Args:
+            corpus_ids: List ID của corpus entries được retrieve
+        """
+        if not corpus_ids:
+            return
+            
+        placeholders = ",".join(["%s"] * len(corpus_ids))
+        query = f"""
+            UPDATE prq.address_clean_corpus 
+            SET usage_count = usage_count + 1,
+                last_used_at = CURRENT_TIMESTAMP
+            WHERE id IN ({placeholders})
+        """
+        
+        with self.cursor() as cur:
+            cur.execute(query, corpus_ids)
+            affected = cur.rowcount
+            
+        logger.debug(" Cập nhật usage stats cho %d corpus entries", affected)
 
     # ──────────────────────────────────────────────────────────────────────
     # Write — batch commit

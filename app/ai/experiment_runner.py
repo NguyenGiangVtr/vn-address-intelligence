@@ -195,12 +195,35 @@ def main(config_path: str, skip_llm: bool = False):
     has_gt  = _has_ground_truth(df)
     queries = df["raw_address"].fillna("").tolist()
 
-    corpus = db.load_standard_addresses(
-        table=exp_cfg["standard_addresses_table"],
-        col=exp_cfg["standard_addresses_column"],
-        schema=exp_cfg.get("standard_addresses_schema", ""),
-        limit=exp_cfg.get("corpus_limit"),
-    )
+    # Load corpus với priority: address_clean_corpus > standard_addresses > hierarchical
+    try:
+        logger.info("Attempting to load corpus from address_clean_corpus...")
+        corpus = db.load_clean_corpus(
+            admin_epoch="2025",
+            source_types=["ADMINISTRATIVE", "QUEUE_STANDARDIZED"],
+            min_quality_score=0.6,
+            limit=exp_cfg.get("corpus_limit")
+        )
+        if len(corpus) > 0:
+            logger.info("Using clean corpus with %d addresses", len(corpus))
+        else:
+            raise ValueError("Clean corpus is empty")
+    except Exception as e:
+        logger.warning("Failed to load clean corpus (%s), trying standard addresses", e)
+        try:
+            corpus = db.load_standard_addresses(
+                table=exp_cfg["standard_addresses_table"],
+                col=exp_cfg["standard_addresses_column"],
+                schema=exp_cfg.get("standard_addresses_schema", ""),
+                limit=exp_cfg.get("corpus_limit"),
+            )
+            logger.info("Using standard addresses corpus with %d addresses", len(corpus))
+        except Exception as e2:
+            logger.warning("Failed to load standard addresses (%s), using hierarchical", e2)
+            corpus = db.load_hierarchical_corpus()
+            if exp_cfg.get("corpus_limit"):
+                corpus = corpus[:exp_cfg["corpus_limit"]]
+            logger.info("Using hierarchical corpus with %d addresses", len(corpus))
 
     logger.info("Queries: %d | Corpus: %d | Ground-truth: %s",
                 len(queries), len(corpus), has_gt)

@@ -1330,7 +1330,8 @@ async function previewOSMCountsFromUI() {
 async function runOSMJobFromUI() {
   try {
     const pInput = document.getElementById('osm-province-input');
-    const pId = osmState.provinces[pInput?.value];
+    const pVal = osmState.provinces[pInput?.value];
+    const pId = pVal && typeof pVal === 'object' ? (pVal.province_id || pVal.MaTinh) : pVal;
 
     let limitProvinces = 63;
     let provinceId = null;
@@ -2382,11 +2383,11 @@ function _renderModelCard(model, out, latencyMs) {
     const score = typeof out?.score === "number" ? out.score : null;
     const count = Array.isArray(out?.result) ? out.result.length : (typeof out?.entityCount === "number" ? out.entityCount : null);
     const modelLatency = typeof out?.latencyMs === "number" ? out.latencyMs : null;
-    let chips = `<span class="pstat-chip latency"><i class="fa-solid fa-stopwatch"></i>${latencyMs}ms</span>`;
+    let chips = `<span class="pstat-chip latency" title="Thời gian xử lý tổng"><i class="fa-solid fa-stopwatch"></i>${latencyMs.toLocaleString('vi-VN')}ms</span>`;
     if (modelLatency !== null && modelLatency !== latencyMs) {
-      chips += `<span class="pstat-chip latency" title="Thời gian xử lý model"><i class="fa-solid fa-microchip"></i>${modelLatency.toFixed(0)}ms</span>`;
+      chips += `<span class="pstat-chip latency" title="Thời gian xử lý model"><i class="fa-solid fa-microchip"></i>${modelLatency.toFixed(0).toLocaleString('vi-VN')}ms</span>`;
     }
-    if (count !== null) chips += `<span class="pstat-chip count"><i class="fa-solid fa-tags"></i>${count} entities</span>`;
+    if (count !== null) chips += `<span class="pstat-chip count"><i class="fa-solid fa-tags"></i>${count.toLocaleString('vi-VN')} entities</span>`;
     if (score !== null) chips += `<span class="pstat-chip conf" title="Độ tương đồng ngữ nghĩa"><i class="fa-solid fa-chart-line"></i>${(score * 100).toFixed(1)}%</span>`;
     statsEl.innerHTML = chips;
   }
@@ -3039,9 +3040,13 @@ async function triggerMappingSearch(state) {
   if (!activeState.provinces || !qInput) return;
 
   const qText = qInput.value;
-  const pId = activeState.provinces[pInput.value];
-  const dId = activeState.districts[dInput.value];
-  const wId = activeState.wards[wInput.value];
+  const pVal = activeState.provinces[pInput.value];
+  const dVal = activeState.districts[dInput.value];
+  const wVal = activeState.wards[wInput.value];
+
+  const pId = typeof pVal === 'object' ? (pVal.province_id || pVal.MaTinh) : pVal;
+  const dId = typeof dVal === 'object' ? (dVal.district_id || dVal.MaHuyen) : dVal;
+  const wId = typeof wVal === 'object' ? (wVal.ward_id || wVal.MaXa) : wVal;
 
   const tbody = document.getElementById('mapping-results-table');
   const version = document.getElementById('mapping-version-select')?.value || activeState.version;
@@ -3155,7 +3160,7 @@ async function initNSOSyncTool() {
 async function loadNSOProvinces() {
   const tbody = document.getElementById('nso-table-body');
   if (!tbody) return;
-  tbody.innerHTML = '<tr><td colspan="4" class="text-center p-40"><i class="fa-solid fa-spinner fa-spin fa-2x text-accent"></i></td></tr>';
+  tbody.innerHTML = '<tr><td colspan="5" class="text-center p-40"><i class="fa-solid fa-spinner fa-spin fa-2x text-accent"></i></td></tr>';
 
   try {
     const res = await fetch(`${API_BASE}/nso/provinces`, { headers: getAuthHeader() });
@@ -3164,14 +3169,14 @@ async function loadNSOProvinces() {
     renderNSOTemplateDatalist('nso-list-provinces', data, 'TenTinh', 'MaTinh', nsoState.provinces);
     renderNSOTable(data);
   } catch (e) {
-    tbody.innerHTML = '<tr><td colspan="4" class="text-center text-danger p-20">Lỗi tải danh mục Tỉnh từ NSO</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger p-20">Lỗi tải danh mục Tỉnh từ NSO</td></tr>';
   }
 }
 
 async function loadNSODistricts(pCode, pName) {
   const tbody = document.getElementById('nso-table-body');
   if (!tbody) return;
-  tbody.innerHTML = '<tr><td colspan="4" class="text-center p-40"><i class="fa-solid fa-spinner fa-spin fa-2x text-accent"></i></td></tr>';
+  tbody.innerHTML = '<tr><td colspan="5" class="text-center p-40"><i class="fa-solid fa-spinner fa-spin fa-2x text-accent"></i></td></tr>';
 
   try {
     const res = await fetch(`${API_BASE}/nso/districts?province_no=${pCode}&province_name=${encodeURIComponent(pName)}`, { headers: getAuthHeader() });
@@ -3180,14 +3185,14 @@ async function loadNSODistricts(pCode, pName) {
     renderNSOTemplateDatalist('nso-list-districts', data, 'TenHuyen', 'MaHuyen', nsoState.districts);
     renderNSOTable(data);
   } catch (e) {
-    tbody.innerHTML = '<tr><td colspan="4" class="text-center text-danger p-20">Lỗi tải danh mục Huyện từ NSO</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger p-20">Lỗi tải danh mục Huyện từ NSO</td></tr>';
   }
 }
 
 async function loadNSOWards(pCode, pName, dCode, dName) {
   const tbody = document.getElementById('nso-table-body');
   if (!tbody) return;
-  tbody.innerHTML = '<tr><td colspan="4" class="text-center p-40"><i class="fa-solid fa-spinner fa-spin fa-2x text-accent"></i></td></tr>';
+  tbody.innerHTML = '<tr><td colspan="5" class="text-center p-40"><i class="fa-solid fa-spinner fa-spin fa-2x text-accent"></i></td></tr>';
 
   try {
     const res = await fetch(`${API_BASE}/nso/wards?province_no=${pCode}&province_name=${encodeURIComponent(pName)}&district_no=${dCode}&district_name=${encodeURIComponent(dName)}`, { headers: getAuthHeader() });
@@ -3196,7 +3201,7 @@ async function loadNSOWards(pCode, pName, dCode, dName) {
     renderNSOTemplateDatalist('nso-list-wards', data, 'TenXa', 'MaXa', nsoState.wards);
     renderNSOTable(data);
   } catch (e) {
-    tbody.innerHTML = '<tr><td colspan="4" class="text-center text-danger p-20">Lỗi tải danh mục Xã từ NSO</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger p-20">Lỗi tải danh mục Xã từ NSO</td></tr>';
   }
 }
 
@@ -3233,7 +3238,7 @@ function renderNSOTable(data) {
   countEl.textContent = `${filtered.length.toLocaleString()} bản ghi`;
 
   if (filtered.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="4" class="text-center p-20 text-tertiary">Không tìm thấy dữ liệu phù hợp.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" class="text-center p-20 text-tertiary">Không tìm thấy dữ liệu phù hợp.</td></tr>';
     return;
   }
 
@@ -3247,6 +3252,7 @@ function renderNSOTable(data) {
         <td><span class="text-mono">${code}</span></td>
         <td><strong>${name}</strong></td>
         <td><span class="badge info">${type}</span></td>
+        <td id="nso-status-${code}"><span class="badge" style="background:var(--bg-tertiary); color:var(--text-secondary)">Chưa đồng bộ</span></td>
         <td class="text-right">
           <button class="btn btn-xs btn-accent" onclick="syncSingleNSOUnit('${code}', '${name}')">
             <i class="fa-solid fa-sync"></i> Sync
@@ -3261,6 +3267,11 @@ async function syncSingleNSOUnit(code, name) {
   updateSyncStatus('SYNCING', 'var(--warning)');
   showToast(`🚀 Bắt đầu đồng bộ: ${name}...`);
 
+  const statusEl = document.getElementById(`nso-status-${code}`);
+  if (statusEl) {
+    statusEl.innerHTML = `<span class="badge warning"><i class="fa-solid fa-spinner fa-spin mr-4"></i>Đang đồng bộ</span>`;
+  }
+
   try {
     const res = await fetch(`${API_BASE}/sync/nso/province`, {
       method: 'POST',
@@ -3270,11 +3281,20 @@ async function syncSingleNSOUnit(code, name) {
     const result = await res.json();
     if (result.status === 'success') {
       showToast(`✅ Hoàn thành: ${name}`);
+      if (statusEl) {
+        statusEl.innerHTML = `<span class="badge success"><i class="fa-solid fa-check mr-4"></i>Thành công</span>`;
+      }
     } else {
       showToast(`❌ Lỗi: ${result.message}`, 'danger');
+      if (statusEl) {
+        statusEl.innerHTML = `<span class="badge danger"><i class="fa-solid fa-triangle-exclamation mr-4"></i>Lỗi</span>`;
+      }
     }
   } catch (e) {
     showToast(`❌ Lỗi kết nối khi đồng bộ ${name}`, 'danger');
+    if (statusEl) {
+      statusEl.innerHTML = `<span class="badge danger"><i class="fa-solid fa-wifi mr-4"></i>Lỗi kết nối</span>`;
+    }
   } finally {
     updateSyncStatus('IDLE', '#8b949e');
   }
@@ -3414,7 +3434,8 @@ async function renderExtraFields(item = null) {
     // For ward, filter districts by current selected province if possible
     if (level === 'ward') {
       const pInput = document.getElementById('admin-province-input');
-      const filterProvId = pInput && pInput.value ? adminState.provinces[pInput.value] : null;
+      const filterProvIdObj = pInput && pInput.value ? adminState.provinces[pInput.value] : null;
+      const filterProvId = filterProvIdObj && typeof filterProvIdObj === 'object' ? filterProvIdObj.province_id : filterProvIdObj;
       if (filterProvId) url += `&province_id=${filterProvId}`;
     }
 
@@ -3608,9 +3629,13 @@ async function loadAdminData(state) {
   const dInput = document.getElementById('admin-district-input');
   const wInput = document.getElementById('admin-ward-input');
 
-  const provinceId = pInput && pInput.value ? activeState.provinces[pInput.value] : null;
-  const districtId = dInput && dInput.value ? activeState.districts[dInput.value] : null;
-  const wardId = wInput && wInput.value ? activeState.wards[wInput.value] : null;
+  const pVal = pInput && pInput.value ? activeState.provinces[pInput.value] : null;
+  const dVal = dInput && dInput.value ? activeState.districts[dInput.value] : null;
+  const wVal = wInput && wInput.value ? activeState.wards[wInput.value] : null;
+
+  const provinceId = pVal && typeof pVal === 'object' ? pVal.province_id : pVal;
+  const districtId = dVal && typeof dVal === 'object' ? dVal.district_id : dVal;
+  const wardId = wVal && typeof wVal === 'object' ? wVal.ward_id : wVal;
 
   const searchInput = document.getElementById('admin-search-input');
   const q = searchInput ? searchInput.value.toLowerCase() : '';
@@ -3717,8 +3742,10 @@ async function initDataExplorer() {
     if (sBtn) sBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
     try {
       const q = document.getElementById("explorer-search-input")?.value.trim() || "";
-      const pId = activeState.provinces[document.getElementById('explorer-province-input')?.value] || "";
-      const dId = activeState.districts[document.getElementById('explorer-district-input')?.value] || "";
+      const pVal = activeState.provinces[document.getElementById('explorer-province-input')?.value];
+      const pId = pVal ? (typeof pVal === 'object' ? pVal.province_id : pVal) : "";
+      const dVal = activeState.districts[document.getElementById('explorer-district-input')?.value];
+      const dId = dVal ? (typeof dVal === 'object' ? dVal.district_id : dVal) : "";
       const wId = activeState.wards[document.getElementById('explorer-ward-input')?.value] || "";
 
       let url = `${API_BASE}/explorer/queue?limit=100&q=${encodeURIComponent(q)}`;

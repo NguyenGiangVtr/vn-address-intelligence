@@ -45,7 +45,27 @@ def run_pipeline(config_path: str, limit: int = None):
     # 1. Khởi tạo các mô hình ──────────────────────────────────────────────────
     logger.info("Initializing models...")
     retriever = SiameseMGTE(model_name=mod_cfg["siamese_mgte"]["model_name"])
-    retriever.encode_corpus(db.load_hierarchical_corpus())
+    
+    # Load corpus từ bảng address_clean_corpus với fallback
+    try:
+        logger.info("Loading corpus from prq.address_clean_corpus...")
+        corpus_addresses, corpus_metadata = db.load_clean_corpus_with_metadata(
+            admin_epoch="2025",
+            source_types=["ADMINISTRATIVE", "QUEUE_STANDARDIZED"],
+            min_quality_score=0.7,
+            limit=50000  # Giới hạn để tránh memory issues
+        )
+        
+        if len(corpus_addresses) > 0:
+            logger.info("Using clean corpus with %d addresses", len(corpus_addresses))
+            retriever.encode_corpus_with_metadata(corpus_addresses, corpus_metadata)
+        else:
+            logger.warning("Clean corpus empty, falling back to hierarchical corpus")
+            retriever.encode_corpus(db.load_hierarchical_corpus())
+            
+    except Exception as e:
+        logger.warning("Failed to load clean corpus (%s), falling back to hierarchical corpus", e)
+        retriever.encode_corpus(db.load_hierarchical_corpus())
     
     # Load NER Model (Đã Fine-tuned hoặc dùng Regex fallback)
     ner_path = "models/phobert-ner-vn"

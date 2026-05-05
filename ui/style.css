@@ -4629,13 +4629,8 @@ select.form-input {
   }
   
   .quick-action-btn {
-    font-size: 10px;
     padding: 8px 10px;
     min-height: 34px;
-  }
-  
-  .quick-action-btn span {
-    display: none;
   }
   
   .performance-metrics {
