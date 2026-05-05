@@ -112,6 +112,244 @@ async function logoutAndRedirect() {
   }
 }
 
+// ═══════════════════════════════════════════════════════════
+// MOBILE MENU HELPER
+// ═══════════════════════════════════════════════════════════
+function closeMobileMenu() {
+  const sidebar = document.querySelector('.sidebar');
+  const overlay = document.getElementById('sidebar-overlay');
+  if (sidebar) sidebar.classList.remove("mobile-active");
+  if (overlay) overlay.classList.remove("mobile-active");
+  document.body.classList.remove("no-scroll");
+}
+
+// ═══════════════════════════════════════════════════════════
+// URL ROUTING & SEO
+// ═══════════════════════════════════════════════════════════
+
+// Page metadata for SEO
+const PAGE_META = {
+  'overview': {
+    title: 'Tổng quan - Vietnamese Address Intelligence',
+    description: 'Nền tảng phân tích địa chỉ Việt Nam sử dụng AI và Machine Learning cho nghiên cứu khoa học và triển khai SaaS',
+    keywords: 'địa chỉ việt nam, AI, machine learning, NER, phân tích địa chỉ'
+  },
+  'parser': {
+    title: 'Phân tích địa chỉ - Vietnamese Address Intelligence',
+    description: 'Công cụ phân tích địa chỉ Việt Nam bằng 4 mô hình AI: PreLabeler, PhoBERT, mGTE và Qwen LLM',
+    keywords: 'parser, phân tích địa chỉ, NER, PhoBERT, mGTE, Qwen, AI model'
+  },
+  'batch': {
+    title: 'Xử lý hàng loạt - Vietnamese Address Intelligence', 
+    description: 'Xử lý và phân tích nhiều địa chỉ cùng lúc với khả năng batch processing hiệu quả',
+    keywords: 'batch processing, xử lý hàng loạt, bulk address parsing'
+  },
+  'explorer': {
+    title: 'Khám phá hàng đợi - Vietnamese Address Intelligence',
+    description: 'Khám phá và quản lý hàng đợi xử lý địa chỉ, theo dõi tiến trình phân tích',
+    keywords: 'queue explorer, hàng đợi, job queue'
+  },
+  'lookup': {
+    title: 'Chuyển đổi ĐVHC - Vietnamese Address Intelligence',
+    description: 'Công cụ chuyển đổi và tra cứu đơn vị hành chính Việt Nam',
+    keywords: 'đvhc, đơn vị hành chính, lookup, administrative units'
+  },
+  'boundary-visualization': {
+    title: 'Ranh giới hành chính - Vietnamese Address Intelligence',
+    description: 'Trực quan hóa ranh giới hành chính Việt Nam trên bản đồ tương tác',
+    keywords: 'ranh giới, boundary, bản đồ, visualization, administrative boundary'
+  },
+  'osm-enrichment': {
+    title: 'Làm giàu OSM - Vietnamese Address Intelligence',
+    description: 'Làm giàu dữ liệu địa chỉ từ OpenStreetMap để cải thiện độ chính xác',
+    keywords: 'OSM, OpenStreetMap, data enrichment, làm giàu dữ liệu'
+  },
+  'label-studio': {
+    title: 'Nhãn dữ liệu - Vietnamese Address Intelligence',
+    description: 'Công cụ gán nhãn dữ liệu để huấn luyện và cải thiện mô hình AI',
+    keywords: 'label studio, gán nhãn, data labeling, machine learning'
+  },
+  'training': {
+    title: 'Huấn luyện mô hình - Vietnamese Address Intelligence',
+    description: 'Huấn luyện và tối ưu hóa các mô hình AI cho phân tích địa chỉ Việt Nam',
+    keywords: 'training, huấn luyện mô hình, AI training, model optimization'
+  },
+  'experiments': {
+    title: 'So sánh mô hình - Vietnamese Address Intelligence',
+    description: 'So sánh hiệu suất và độ chính xác của các mô hình AI khác nhau',
+    keywords: 'model comparison, so sánh mô hình, benchmarking, evaluation'
+  },
+  'label-registry': {
+    title: 'Danh sách nhãn NER - Vietnamese Address Intelligence',
+    description: 'Danh sách đầy đủ các nhãn Named Entity Recognition được sử dụng trong hệ thống',
+    keywords: 'NER labels, nhãn NER, named entity recognition, label registry'
+  },
+  'nso-sync': {
+    title: 'Đồng bộ NSO/Gov - Vietnamese Address Intelligence',
+    description: 'Đồng bộ dữ liệu từ Tổng cục Thống kê và các cơ quan chính phủ',
+    keywords: 'NSO sync, government data, đồng bộ dữ liệu chính phủ'
+  },
+  'admin-units': {
+    title: 'Quản lý ĐVHC - Vietnamese Address Intelligence',
+    description: 'Quản lý danh sách và thông tin đơn vị hành chính Việt Nam',
+    keywords: 'admin units, đvhc, quản lý đơn vị hành chính'
+  },
+  'settings': {
+    title: 'Cài đặt - Vietnamese Address Intelligence',
+    description: 'Cấu hình và tùy chỉnh hệ thống Vietnamese Address Intelligence',
+    keywords: 'settings, cài đặt, configuration, preferences'
+  }
+};
+
+// URL Routing functions
+function updateURL(pageId, pushState = true) {
+  const newURL = pageId === 'overview' ? '#/' : `#/${pageId}`;
+  if (pushState && window.location.hash !== newURL) {
+    window.history.pushState({ page: pageId }, '', newURL);
+  }
+  updatePageMeta(pageId);
+}
+
+function updatePageMeta(pageId) {
+  const meta = PAGE_META[pageId];
+  if (!meta) return;
+
+  // Update title
+  document.title = meta.title;
+  
+  // Update or create meta tags
+  updateMetaTag('description', meta.description);
+  updateMetaTag('keywords', meta.keywords);
+  
+  // Update canonical URL
+  let canonical = document.querySelector('link[rel="canonical"]');
+  if (!canonical) {
+    canonical = document.createElement('link');
+    canonical.rel = 'canonical';
+    document.head.appendChild(canonical);
+  }
+  const baseUrl = window.location.origin + window.location.pathname;
+  const canonicalUrl = pageId === 'overview' ? baseUrl : `${baseUrl}#/${pageId}`;
+  canonical.href = canonicalUrl;
+  
+  // Update Open Graph tags for social sharing
+  updateMetaTag('og:title', meta.title, 'property');
+  updateMetaTag('og:description', meta.description, 'property');
+  updateMetaTag('og:url', canonicalUrl, 'property');
+  updateMetaTag('og:type', 'website', 'property');
+  
+  // Update Twitter Card tags
+  updateMetaTag('twitter:card', 'summary_large_image', 'name');
+  updateMetaTag('twitter:title', meta.title, 'name');
+  updateMetaTag('twitter:description', meta.description, 'name');
+  updateMetaTag('twitter:url', canonicalUrl, 'name');
+}
+
+function updateMetaTag(name, content, attribute = 'name') {
+  let meta = document.querySelector(`meta[${attribute}="${name}"]`);
+  if (!meta) {
+    meta = document.createElement('meta');
+    meta.setAttribute(attribute, name);
+    document.head.appendChild(meta);
+  }
+  meta.setAttribute('content', content);
+}
+
+function getPageFromURL() {
+  const hash = window.location.hash;
+  if (!hash || hash === '#/' || hash === '#') {
+    return 'overview';
+  }
+  const pageId = hash.substring(2); // Remove '#/'
+  
+  // Validate if page exists
+  const pageEl = document.getElementById(pageId);
+  return pageEl ? pageId : 'overview';
+}
+
+function navigateToPage(pageId, shouldUpdateURL = true) {
+  // Find the nav item and trigger click
+  const navItem = document.querySelector(`.nav-item[data-page="${pageId}"]`);
+  if (navItem) {
+    // Remove active from all nav items
+    document.querySelectorAll('.nav-item').forEach(item => {
+      item.classList.remove('active');
+    });
+    
+    // Add active to target
+    navItem.classList.add('active');
+    
+    // Switch pages
+    document.querySelectorAll('.page').forEach(page => {
+      page.classList.toggle('active', page.id === pageId);
+    });
+    
+    // Update title
+    const titleEl = document.getElementById('page-title');
+    if (titleEl) {
+      const spanEl = navItem.querySelector('span');
+      titleEl.textContent = (spanEl ? spanEl.textContent : navItem.textContent).trim();
+    }
+    
+    // Open parent group if needed
+    const group = PAGE_GROUP_MAP[pageId];
+    if (group) openNavGroup(group);
+    
+    // Page-specific initialization
+    initializePageSpecific(pageId);
+    
+    // Update URL and meta
+    if (shouldUpdateURL) {
+      updateURL(pageId);
+    }
+    
+    // UI adjustments
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    const contentEl = document.getElementById('page-content');
+    if (contentEl) contentEl.scrollTo({ top: 0, behavior: 'smooth' });
+    
+    closeMobileMenu();
+    setTimeout(adjustActivePageHeight, 350);
+  }
+}
+
+function initializePageSpecific(pageId) {
+  // Page-specific initialization logic
+  switch (pageId) {
+    case 'parser':
+      if (_parserStatusPollTimer) clearTimeout(_parserStatusPollTimer);
+      _pollParserModelStatus();
+      break;
+    case 'label-registry':
+      populateLabelRegistry();
+      break;
+    // Add more page-specific initialization as needed
+  }
+}
+
+function initRouting() {
+  // Handle browser back/forward buttons
+  window.addEventListener('popstate', (event) => {
+    const pageId = getPageFromURL();
+    navigateToPage(pageId, false); // Don't update URL since we're responding to URL change
+  });
+  
+  // Handle initial page load routing
+  const initialPageId = getPageFromURL();
+  if (initialPageId !== 'overview') {
+    navigateToPage(initialPageId, false); // Don't update URL, it's already correct
+  } else {
+    // Set initial meta for overview page
+    updatePageMeta('overview');
+  }
+  
+  // Handle hash changes (for compatibility)
+  window.addEventListener('hashchange', () => {
+    const pageId = getPageFromURL();
+    navigateToPage(pageId, false);
+  });
+}
+
 // NER Labels (mirrors constants.py)
 const NER_LABELS = [
   { value: "PCD", text: "Plus Code", color: "#f032e6", hotkey: "0", example: "7P28QR4F+2M" },
@@ -310,6 +548,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       await logoutAndRedirect();
     }
   });
+
+  // Initialize URL routing
+  safeInit("initRouting", initRouting);
 
   fetchStats();
   setInterval(fetchStats, 30000);
@@ -1275,12 +1516,7 @@ function setupNavigation() {
   const overlay = document.getElementById("sidebar-overlay");
   const toggle = document.getElementById("menu-toggle");
 
-  const closeMobileMenu = () => {
-    if (sidebar) sidebar.classList.remove("mobile-active");
-    if (overlay) overlay.classList.remove("mobile-active");
-    document.body.classList.remove("no-scroll");
-    console.log("🔓 Mobile menu closed, body scroll restored");
-  };
+  // Using global closeMobileMenu function
 
   if (toggle && sidebar) {
     console.log("✅ Menu toggle and sidebar found, adding event listener");
@@ -1340,40 +1576,8 @@ function setupNavigation() {
   navItems.forEach(item => {
     item.addEventListener("click", (e) => {
       e.preventDefault();
-      navItems.forEach(i => i.classList.remove("active"));
-      item.classList.add("active");
-
       const targetId = item.getAttribute("data-page");
-      pages.forEach(p => p.classList.toggle("active", p.id === targetId));
-
-      // Use span text if available, else full text
-      const spanEl = item.querySelector('span');
-      titleEl.textContent = (spanEl ? spanEl.textContent : item.textContent).trim();
-
-      // Open parent group if navigating to a sub-item
-      const group = PAGE_GROUP_MAP[targetId];
-      if (group) openNavGroup(group);
-
-      // UX: Scroll to top when page changes
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      const contentEl = document.getElementById('page-content');
-      if (contentEl) contentEl.scrollTo({ top: 0, behavior: 'smooth' });
-
-      closeMobileMenu(); // Close sidebar on mobile after selection
-
-      // Calculate layout height after page transition
-      setTimeout(adjustActivePageHeight, 350);
-
-      // Refresh parser model status when navigating to parser page
-      if (targetId === "parser") {
-        if (_parserStatusPollTimer) clearTimeout(_parserStatusPollTimer);
-        _pollParserModelStatus();
-      }
-
-      // Initialize label registry when navigating to label-registry page
-      if (targetId === "label-registry") {
-        populateLabelRegistry();
-      }
+      navigateToPage(targetId, true);
     });
   });
 
@@ -1383,8 +1587,7 @@ function setupNavigation() {
   document.querySelectorAll(".workflow-step.clickable").forEach(step => {
     step.addEventListener("click", () => {
       const targetPage = step.getAttribute("data-goto");
-      const navItem = document.querySelector(`.nav-item[data-page="${targetPage}"]`);
-      if (navItem) navItem.click();
+      navigateToPage(targetPage, true);
     });
   });
 
@@ -1392,8 +1595,7 @@ function setupNavigation() {
   document.querySelectorAll(".parser-footer-action[data-goto]").forEach(button => {
     button.addEventListener("click", () => {
       const targetPage = button.getAttribute("data-goto");
-      const navItem = document.querySelector(`.nav-item[data-page="${targetPage}"]`);
-      if (navItem) navItem.click();
+      navigateToPage(targetPage, true);
     });
   });
 }

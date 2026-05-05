@@ -1,7 +1,15 @@
 # AI Training Workflow Summary (Code-Truth)
 
-## 1. Muc tieu tai lieu
-Tai lieu nay tong hop quy trinh trainning/experiment/inference trong thu muc app/ai theo hanh vi code thuc te (khong theo mo ta ke hoach du kien).
+## 1. Mục tiêu tài liệu
+Tài liệu này là **TÀI LIỆU CỔ** - dùng cho tham khảo.
+
+**VUI LÒNG THAM KHẢO PHIÊN BẢN MỚI:**
+- **[00-TRAINING-PIPELINE-OVERVIEW.md](00-TRAINING-PIPELINE-OVERVIEW.md)** - Tổng hợp toàn bộ quy trình (IPO, thứ tự, kiểm chứng)
+- **[01-NER_Entities.md](01-NER_Entities.md)** - PhoBERT NER (Input, Process, Output, DB, UI/UX, Metrics, Validation)
+- **[02-PreLabeler.md](02-PreLabeler.md)** - Hybrid auto-labeling
+- **[03-PhoBERT_Siamese.md](03-PhoBERT_Siamese.md)** - Dense retriever (Vietnamese)
+- **[04-mGTE_Siamese.md](04-mGTE_Siamese.md)** - Multilingual baseline
+- **[05-Qwen_LLM.md](05-Qwen_LLM.md)** - LLM normalization
 
 ## 2. End-to-end workflow (thuc te)
 
