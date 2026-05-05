@@ -662,27 +662,42 @@ def _run_parser_research(sample: AddressCleansingQueue, target_model: Optional[s
         else:
             outputs["mgte"] = {"status": "Not loaded", "error": bundle["errors"].get("mgte")}
 
-    # 4. LLM
+    # 4. LLM — run in thread with hard timeout to avoid Cloudflare 524
+    _LLM_TIMEOUT_SEC = 55  # Cloudflare kills at 100s; give plenty of margin
     if not target_model or target_model == "llm":
         if bundle.get("llm"):
             try:
                 candidates = _build_llm_candidates()
-                norm, score, lat = bundle["llm"].normalize(raw_address, candidates)
-                # Ensure norm is always a plain str — guard against numpy/tensor leakage
-                if isinstance(norm, str):
-                    norm_str = norm
-                elif isinstance(norm, dict):
-                    norm_str = str(norm.get("full_address") or raw_address)
-                else:
-                    norm_str = str(norm)
-                outputs["llm"] = {
-                    "mode": "qwen2.5_llm",
-                    "normalizedAddress": norm_str,
-                    "score": round(float(score), 4),
-                    "latencyMs": round(float(lat), 2),
-                }
+                llm_instance = bundle["llm"]
+
+                def _llm_task():
+                    return llm_instance.normalize(raw_address, candidates)
+
+                with ThreadPoolExecutor(max_workers=1) as _ex:
+                    _future = _ex.submit(_llm_task)
+                    try:
+                        norm, score, lat = _future.result(timeout=_LLM_TIMEOUT_SEC)
+                        if isinstance(norm, str):
+                            norm_str = norm
+                        elif isinstance(norm, dict):
+                            norm_str = str(norm.get("full_address") or raw_address)
+                        else:
+                            norm_str = str(norm)
+                        outputs["llm"] = {
+                            "mode": "qwen2.5_llm",
+                            "normalizedAddress": norm_str,
+                            "score": round(float(score), 4),
+                            "latencyMs": round(float(lat), 2),
+                        }
+                    except TimeoutError:
+                        logger.warning(f"LLM timed out after {_LLM_TIMEOUT_SEC}s for: {raw_address[:60]}")
+                        outputs["llm"] = {
+                            "error": f"LLM timeout sau {_LLM_TIMEOUT_SEC}s — model quá chậm trên hardware hiện tại",
+                            "status": "timeout",
+                        }
             except Exception as e:
-                logger.error(f"LLM normalize error: {traceback.format_exc()}")
+                tb = traceback.format_exc()
+                logger.error(f"LLM normalize error:\n{tb}")
                 outputs["llm"] = {"error": str(e)}
         else:
             outputs["llm"] = {"status": "Not loaded", "error": bundle["errors"].get("llm")}
@@ -2495,7 +2510,8 @@ def evidence_manifest():
     dirs = _get_evidence_dirs()
     manifest_path = _find_latest_manifest(dirs)
     if manifest_path is None:
-        raise HTTPException(status_code=404, detail="No evidence manifest found")
+        # Return empty manifest instead of 404 to avoid browser console noise
+        return {"files": {}, "file_urls": {}, "generatedAt": None, "_empty": True}
 
     manifest = _load_manifest(manifest_path)
     files = manifest.get("files", {}) or {}

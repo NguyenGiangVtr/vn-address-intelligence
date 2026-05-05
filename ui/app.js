@@ -1810,13 +1810,21 @@ function _renderModelCard(model, out, latencyMs) {
     if (!out) {
       resultEl.innerHTML = `<span style="color:var(--text-tertiary);font-size:11px">Không có kết quả</span>`;
     } else if (out.error && !out.normalizedAddress && !Array.isArray(out.result)) {
-      // Model loaded but errored, or not loaded at all
-      const errMsg = out.error || "Model chưa được nạp";
       const isNotLoaded = (out.status === "Not loaded");
+      const isTimeout   = (out.status === "timeout");
+      const errMsg = out.error || "Model chưa được nạp";
+      const icon    = isTimeout ? "fa-clock" : "fa-circle-exclamation";
+      const color   = isTimeout ? "var(--text-secondary)" : "var(--warning)";
+      const label   = isNotLoaded ? "Model chưa được nạp vào bộ nhớ"
+                    : isTimeout   ? "LLM timeout — model chạy quá chậm trên hardware hiện tại"
+                    : escapeHtml(errMsg);
+      const hint    = isNotLoaded ? "Nhấn nút Tải model ở trên để nạp AI"
+                    : isTimeout   ? "Kết quả rule-based fallback sẽ được dùng thay thế"
+                    : "";
       resultEl.innerHTML = `<div class="pmodel-not-loaded">
-        <i class="fa-solid fa-circle-exclamation" style="color:var(--warning)"></i>
-        <span style="color:var(--warning);font-size:11px">${isNotLoaded ? "Model chưa được nạp vào bộ nhớ" : escapeHtml(errMsg)}</span>
-        <span style="display:block;color:var(--text-tertiary);font-size:10px;margin-top:2px">Khởi động lại server để nạp model AI</span>
+        <i class="fa-solid ${icon}" style="color:${color}"></i>
+        <span style="color:${color};font-size:11px">${label}</span>
+        ${hint ? `<span style="display:block;color:var(--text-tertiary);font-size:10px;margin-top:2px">${hint}</span>` : ""}
       </div>`;
     } else {
       const normalized = out.normalizedAddress || "";
@@ -1886,10 +1894,37 @@ function _renderModelCardError(model, label, errMsg) {
   const resultEl = document.getElementById(`presult-${model}`);
   const badgeEl  = document.getElementById(`pbadge-${model}`);
   if (card) card.classList.add("is-error");
-  if (badgeEl) badgeEl.innerHTML = `<span class="pmodel-badge-done error">ERR</span>`;
-  const detail = errMsg ? `<span style="display:block;color:var(--text-tertiary);font-size:10px;margin-top:3px">${escapeHtml(errMsg)}</span>` : "";
+
+  const is524     = /524/.test(errMsg);
+  const isTimeout = /timeout|timed?\s*out/i.test(errMsg);
+  const isNetwork = /fetch|network|failed to fetch/i.test(errMsg);
+
+  let mainMsg, hintMsg, icon, color;
+  if (is524 || isTimeout) {
+    icon    = "fa-clock";
+    color   = "var(--text-secondary)";
+    mainMsg = "LLM timeout — server mất quá lâu để phản hồi";
+    hintMsg = "Model đang chạy trên CPU; kết quả sẽ trả về qua fallback rule-based";
+    if (badgeEl) badgeEl.innerHTML = `<span class="pmodel-badge-done" style="background:#f59e0b22;color:#f59e0b">SLOW</span>`;
+  } else if (isNetwork) {
+    icon    = "fa-plug-circle-xmark";
+    color   = "var(--danger)";
+    mainMsg = "Không thể kết nối đến server";
+    hintMsg = "Kiểm tra kết nối mạng hoặc trạng thái server";
+    if (badgeEl) badgeEl.innerHTML = `<span class="pmodel-badge-done error">ERR</span>`;
+  } else {
+    icon    = "fa-triangle-exclamation";
+    color   = "var(--danger)";
+    mainMsg = "Lỗi xử lý model";
+    hintMsg = errMsg || "";
+    if (badgeEl) badgeEl.innerHTML = `<span class="pmodel-badge-done error">ERR</span>`;
+  }
+
+  const detail = hintMsg
+    ? `<span style="display:block;color:var(--text-tertiary);font-size:10px;margin-top:3px">${escapeHtml(hintMsg)}</span>`
+    : "";
   if (resultEl) resultEl.innerHTML = `<div style="display:flex;flex-direction:column;gap:2px">
-    <span style="color:var(--danger);font-size:11px"><i class="fa-solid fa-triangle-exclamation"></i> Không thể kết nối model</span>
+    <span style="color:${color};font-size:11px"><i class="fa-solid ${icon}"></i> ${mainMsg}</span>
     ${detail}
   </div>`;
 }
@@ -3595,11 +3630,14 @@ async function initEvidenceView() {
     if (meta) {
       meta.textContent = manifest.generatedAt
         ? `Generated at ${manifest.generatedAt}`
-        : 'Generated at unknown time';
+        : '';
     }
 
-    if (!entries.length) {
-      fileList.innerHTML = '<li class="text-tertiary p-12">Manifest không có tệp nào</li>';
+    if (manifest._empty || !entries.length) {
+      fileList.innerHTML = `<li style="padding:16px;color:var(--text-tertiary);font-size:12px">
+        <i class="fa-solid fa-flask" style="margin-right:6px"></i>
+        Chưa có evidence — chạy Benchmark để tạo báo cáo thực nghiệm
+      </li>`;
       return;
     }
 

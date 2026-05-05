@@ -52,12 +52,14 @@ class LLMQwen3:
         model_name: str = "Qwen/Qwen3-4B",
         use_quantization: bool = True,
         max_new_tokens: int = 256,
-        temperature: float = 0.3,
+        temperature: float = 0.0,
         device: str = "auto",
     ):
         self.model_name     = model_name
         self.max_new_tokens = max_new_tokens
-        self.temperature    = temperature
+        # Address normalization is deterministic — greedy decode (temperature=0)
+        # avoids the "truth value of array" error from stochastic sampling ops
+        self.temperature    = 0.0
         self.device         = "cuda" if (device == "auto" and torch.cuda.is_available()) else ("cpu" if device == "auto" else device)
 
         logger.info(" Loading Qwen3 LLM: %s ...", model_name)
@@ -151,14 +153,20 @@ class LLMQwen3:
                 attention_mask = attention_mask.to(device)
 
             with torch.no_grad():
-                out = self.model.generate(
+                gen_kwargs: dict = dict(
                     input_ids=input_ids,
                     attention_mask=attention_mask,
                     max_new_tokens=self.max_new_tokens,
-                    temperature=self.temperature,
-                    top_p=0.95,
-                    do_sample=self.temperature > 0,
                 )
+                if self.temperature > 0:
+                    gen_kwargs["do_sample"] = True
+                    gen_kwargs["temperature"] = self.temperature
+                    gen_kwargs["top_p"] = 0.95
+                else:
+                    # Greedy decode — deterministic, no sampling ops that
+                    # can trigger "truth value of array" in older transformers
+                    gen_kwargs["do_sample"] = False
+                out = self.model.generate(**gen_kwargs)
             response = self.tokenizer.decode(out[0], skip_special_tokens=True)
 
             # Trích xuất JSON từ phản hồi
@@ -177,7 +185,8 @@ class LLMQwen3:
             return self._rule_fallback(query, candidates)
 
         except Exception as exc:
-            logger.warning("️ LLM inference lỗi: %s", exc)
+            import traceback as _tb
+            logger.error("LLM inference error:\n%s", _tb.format_exc())
             return self._rule_fallback(query, candidates)
 
     # ------------------------------------------------------------------
