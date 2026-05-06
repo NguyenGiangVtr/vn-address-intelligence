@@ -31,6 +31,7 @@ from datetime import datetime
 from sqlalchemy import text as sql_text
 from typing import Dict, List, Optional
 from app.core.database import engine
+from app.services.admin_name_normalize import clean_admin_unit_name
 
 logger = logging.getLogger("SeederV3")
 
@@ -320,9 +321,9 @@ def seed_provinces_v1(df: pd.DataFrame):
         {
             "province_id":      int(r.prov_code_old),
             "province_no":      str(r.prov_code_old).zfill(2),
-            "province_name":    r.prov_name_old,
-            "province_name_en": remove_vietnamese_marks(r.prov_name_old),
-            "type_name":        _extract_type(r.prov_name_old),
+            "type_name":        (tn := _extract_type(r.prov_name_old)),
+            "province_name":    (pn := clean_admin_unit_name(r.prov_name_old, tn)),
+            "province_name_en": remove_vietnamese_marks(pn),
             "admin_version":    1,
             "is_deleted":       False,
             "is_default":       True,
@@ -359,10 +360,10 @@ def seed_districts_v1(df: pd.DataFrame):
         {
             "district_id":      int(r.dist_code_old),
             "district_no":      str(r.dist_code_old).zfill(3),
-            "district_name":    r.dist_name_old,
-            "district_name_en": remove_vietnamese_marks(r.dist_name_old),
-            "type_name":        _extract_type(r.dist_name_old),
-            "type_name_en":     remove_vietnamese_marks(_extract_type(r.dist_name_old), strip_prefix=False),
+            "type_name":        (tn := _extract_type(r.dist_name_old)),
+            "type_name_en":     remove_vietnamese_marks(tn, strip_prefix=False),
+            "district_name":    (dn := clean_admin_unit_name(r.dist_name_old, tn)),
+            "district_name_en": remove_vietnamese_marks(dn),
             "province_id":      int(r.prov_code_old),
             "admin_version":    1,
             "is_deleted":       False,
@@ -401,10 +402,10 @@ def seed_wards_v1(df: pd.DataFrame):
         {
             "ward_id":          int(r.ward_int_old),
             "ward_no":          str(int(r.ward_int_old)).zfill(5),
-            "ward_name":        r.ward_name_old,
-            "ward_name_en":     remove_vietnamese_marks(r.ward_name_old),
-            "type_name":        _extract_type(r.ward_name_old),
-            "type_name_en":     remove_vietnamese_marks(_extract_type(r.ward_name_old), strip_prefix=False),
+            "type_name":        (tn := _extract_type(r.ward_name_old)),
+            "type_name_en":     remove_vietnamese_marks(tn, strip_prefix=False),
+            "ward_name":        (wn := clean_admin_unit_name(r.ward_name_old, tn)),
+            "ward_name_en":     remove_vietnamese_marks(wn),
             "district_id":      int(r.dist_code_old) if r.dist_code_old and not pd.isna(r.dist_code_old) else 0,
             "province_no":      str(int(r.prov_code_old)).zfill(2) if r.prov_code_old and not pd.isna(r.prov_code_old) else None,
             "admin_version":    1,
@@ -474,9 +475,9 @@ def seed_provinces_v2(df: pd.DataFrame):
         {
             "province_id":      int(r.prov_code_new),
             "province_no":      str(r.prov_code_new).zfill(2),
-            "province_name":    r.prov_name_new,
-            "province_name_en": remove_vietnamese_marks(r.prov_name_new),
             "type_name":        r.type_name,
+            "province_name":    (pn := clean_admin_unit_name(r.prov_name_new, r.type_name)),
+            "province_name_en": remove_vietnamese_marks(pn),
             "admin_version":    2,
             "is_deleted":       False,
             "is_default":       True,
@@ -521,10 +522,10 @@ def seed_districts_v2(df: pd.DataFrame):
         {
             "district_id":      int(r.prov_code_new),
             "district_no":      str(int(r.prov_code_new)).zfill(3),
-            "district_name":    r.prov_name_new,
-            "district_name_en": remove_vietnamese_marks(r.prov_name_new),
-            "type_name":        _extract_type(r.prov_name_new),
-            "type_name_en":     remove_vietnamese_marks(_extract_type(r.prov_name_new), strip_prefix=False),
+            "type_name":        (tn := _extract_type(r.prov_name_new)),
+            "type_name_en":     remove_vietnamese_marks(tn, strip_prefix=False),
+            "district_name":    (dn := clean_admin_unit_name(r.prov_name_new, tn)),
+            "district_name_en": remove_vietnamese_marks(dn),
             "province_id":      int(r.prov_code_new),
             "admin_version":    2,
             "is_deleted":       False,
@@ -567,10 +568,10 @@ def seed_wards_v2(df: pd.DataFrame):
         {
             "ward_id":          int(r.ward_int_new),
             "ward_no":          str(int(r.ward_int_new)).zfill(5),
-            "ward_name":        r.ward_name_new,
-            "ward_name_en":     remove_vietnamese_marks(r.ward_name_new),
-            "type_name":        _extract_type(r.ward_name_new),
-            "type_name_en":     remove_vietnamese_marks(_extract_type(r.ward_name_new), strip_prefix=False),
+            "type_name":        (tn := _extract_type(r.ward_name_new)),
+            "type_name_en":     remove_vietnamese_marks(tn, strip_prefix=False),
+            "ward_name":        (wn := clean_admin_unit_name(r.ward_name_new, tn)),
+            "ward_name_en":     remove_vietnamese_marks(wn),
             "district_id":      int(r.prov_code_new) if r.prov_code_new and not pd.isna(r.prov_code_new) else 0,
             "province_no":      str(int(r.prov_code_new)).zfill(2) if r.prov_code_new and not pd.isna(r.prov_code_new) else None,
             "admin_version":    2,

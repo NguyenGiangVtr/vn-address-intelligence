@@ -20,6 +20,7 @@ from app.services.seeders_v2 import seed_admin_v2, seed_ward_mapping, check_v2_s
 from app.services.seeders_v3 import run_seed_v3, check_v3_stats
 from app.services.enrichment import enrich_provinces, enrich_wards, check_enrichment_stats
 from app.services.admin_mapping import run_admin_mapping
+from app.services.admin_name_normalize import clean_mat_names_in_db
 from app.core.logging_config import setup_logging
 
 @click.group()
@@ -52,6 +53,24 @@ def admin_map():
     click.echo("--- Starting Admin ID Mapping ---")
     run_admin_mapping()
     click.echo("OK: Mapping completed.")
+
+@cli.command('admin:clean-names')
+@click.option('--dry-run', is_flag=True, help='Count rows only; no DB writes.')
+def admin_clean_names(dry_run):
+    """Apply clean_admin_unit_name to mat.province, mat.district, mat.ward."""
+    label = "dry-run" if dry_run else "update"
+    click.echo(f"--- admin:clean-names ({label}) ---")
+    db = SessionLocal()
+    try:
+        stats = clean_mat_names_in_db(db, dry_run=dry_run)
+    finally:
+        db.close()
+    for k, v in stats.items():
+        click.echo(f"  {k}: {v:,} row(s)")
+    if dry_run:
+        click.echo("OK: dry-run (no writes).")
+    else:
+        click.echo("OK: committed updates to mat.province, mat.district, mat.ward.")
 
 @cli.command('admin:stats')
 def admin_stats():

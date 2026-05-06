@@ -351,7 +351,7 @@ class DBConnector:
         source_types: Optional[List[str]] = None,
         min_quality_score: float = 0.5,
         limit: Optional[int] = None
-    ) -> tuple[List[str], List[dict]]:
+    ) -> Tuple[List[str], List[dict]]:
         """
         Load corpus kèm metadata cho temporal-aware matching.
         

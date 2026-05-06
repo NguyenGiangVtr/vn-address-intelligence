@@ -14,6 +14,7 @@ import logging
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from app.core.database import engine, SessionLocal, Province, District, Ward, AddressCleansingQueue, OSMStreet, OSMBuilding, OSMPoi, OSMRawEntity, TrainingDataset
+from app.services.admin_name_normalize import clean_admin_unit_name
 from pathlib import Path
 import json
 
@@ -32,21 +33,33 @@ def seed_master_data(data_dir: str):
         f = data_path / "province.csv"
         if f.exists():
             df = pd.read_csv(f).where(pd.notnull(pd.read_csv(f)), None)
-            session.bulk_save_objects([Province(**row) for row in df.to_dict(orient="records")])
+            rows = []
+            for row in df.to_dict(orient="records"):
+                row["province_name"] = clean_admin_unit_name(row.get("province_name"), row.get("type_name"))
+                rows.append(Province(**row))
+            session.bulk_save_objects(rows)
             logger.info(f"OK: Seeded {len(df)} provinces.")
 
         # Seed District
         f = data_path / "district.csv"
         if f.exists():
             df = pd.read_csv(f).where(pd.notnull(pd.read_csv(f)), None)
-            session.bulk_save_objects([District(**row) for row in df.to_dict(orient="records")])
+            rows = []
+            for row in df.to_dict(orient="records"):
+                row["district_name"] = clean_admin_unit_name(row.get("district_name"), row.get("type_name"))
+                rows.append(District(**row))
+            session.bulk_save_objects(rows)
             logger.info(f"OK: Seeded {len(df)} districts.")
 
         # Seed Ward
         f = data_path / "ward.csv"
         if f.exists():
             df = pd.read_csv(f).where(pd.notnull(pd.read_csv(f)), None)
-            session.bulk_save_objects([Ward(**row) for row in df.to_dict(orient="records")])
+            rows = []
+            for row in df.to_dict(orient="records"):
+                row["ward_name"] = clean_admin_unit_name(row.get("ward_name"), row.get("type_name"))
+                rows.append(Ward(**row))
+            session.bulk_save_objects(rows)
             logger.info(f"OK: Seeded {len(df)} wards.")
 
         session.commit()

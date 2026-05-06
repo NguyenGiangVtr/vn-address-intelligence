@@ -357,18 +357,43 @@ def export_data(config_path: str, output_file: str, limit: int = 5000):
     # Tải danh sách tên đường từ OSM để hỗ trợ Pre-labeling
     known_streets = load_osm_streets(db)
     
-    # Query sử dụng Master Data Join để lấy thông tin chuẩn
+    # Query: join mat.* qua cột lineage `old_id` — acq.old_*_id khớp mat.old_id (không join ward_id/province_id trực tiếp).
+    # Ưu tiên admin_version=2 (sau sáp nhập), sau đó v1; tên denormalized trên acq làm fallback.
     query = f"""
         SELECT 
             acq.id, 
             acq.raw_address,
-            w.ward_name,
-            d.district_name,
-            p.province_name
+            COALESCE(w2.ward_name, w1.ward_name, acq.ward_name) AS ward_name,
+            COALESCE(d2.district_name, d1.district_name, acq.district_name) AS district_name,
+            COALESCE(p2.province_name, p1.province_name, acq.province_name) AS province_name,
+            CASE 
+                WHEN w2.ward_id IS NOT NULL THEN 2
+                WHEN w1.ward_id IS NOT NULL THEN 1
+                ELSE NULL 
+            END AS ward_admin_version,
+            CASE 
+                WHEN d2.district_id IS NOT NULL THEN 2
+                WHEN d1.district_id IS NOT NULL THEN 1
+                ELSE NULL 
+            END AS district_admin_version,
+            CASE 
+                WHEN p2.province_id IS NOT NULL THEN 2
+                WHEN p1.province_id IS NOT NULL THEN 1
+                ELSE NULL 
+            END AS province_admin_version
         FROM prq.address_cleansing_queue acq
-        LEFT JOIN mat.ward w ON acq.ward_id = w.ward_id
-        LEFT JOIN mat.district d ON acq.district_id = d.district_id
-        LEFT JOIN mat.province p ON acq.province_id = p.province_id
+        LEFT JOIN mat.ward w2
+            ON acq.old_ward_id = w2.old_id AND w2.admin_version = 2 AND w2.is_deleted = FALSE
+        LEFT JOIN mat.district d2
+            ON acq.old_district_id = d2.old_id AND d2.admin_version = 2 AND d2.is_deleted = FALSE
+        LEFT JOIN mat.province p2
+            ON acq.old_province_id = p2.old_id AND p2.admin_version = 2 AND p2.is_deleted = FALSE
+        LEFT JOIN mat.ward w1
+            ON acq.old_ward_id = w1.old_id AND w1.admin_version = 1 AND w2.ward_id IS NULL
+        LEFT JOIN mat.district d1
+            ON acq.old_district_id = d1.old_id AND d1.admin_version = 1 AND d2.district_id IS NULL
+        LEFT JOIN mat.province p1
+            ON acq.old_province_id = p1.old_id AND p1.admin_version = 1 AND p2.province_id IS NULL
         WHERE acq.raw_address IS NOT NULL 
         ORDER BY random() LIMIT {limit}
     """
@@ -377,6 +402,32 @@ def export_data(config_path: str, output_file: str, limit: int = 5000):
         cur.execute(query)
         rows = cur.fetchall()
     db.disconnect()
+
+    # Log admin_version usage statistics
+    if rows:
+        admin_stats = {"v1": {"province": 0, "district": 0, "ward": 0}, 
+                      "v2": {"province": 0, "district": 0, "ward": 0}}
+        
+        for r in rows:
+            if r.get("province_admin_version") == 1:
+                admin_stats["v1"]["province"] += 1
+            elif r.get("province_admin_version") == 2:
+                admin_stats["v2"]["province"] += 1
+                
+            if r.get("district_admin_version") == 1:
+                admin_stats["v1"]["district"] += 1
+            elif r.get("district_admin_version") == 2:
+                admin_stats["v2"]["district"] += 1
+                
+            if r.get("ward_admin_version") == 1:
+                admin_stats["v1"]["ward"] += 1
+            elif r.get("ward_admin_version") == 2:
+                admin_stats["v2"]["ward"] += 1
+        
+        logger.info(f"Admin version usage in {len(rows)} records:")
+        logger.info(f"  Province - v1: {admin_stats['v1']['province']}, v2: {admin_stats['v2']['province']}")
+        logger.info(f"  District - v1: {admin_stats['v1']['district']}, v2: {admin_stats['v2']['district']}")
+        logger.info(f"  Ward     - v1: {admin_stats['v1']['ward']}, v2: {admin_stats['v2']['ward']}")
 
     annotation_data = []
     for r in rows:
@@ -397,7 +448,12 @@ def export_data(config_path: str, output_file: str, limit: int = 5000):
                 "text": raw_text,
                 "meta": {
                     "db_id": r["id"],
-                    "context": f"{r['ward_name']}, {r['district_name']}, {r['province_name']}"
+                    "context": f"{r['ward_name']}, {r['district_name']}, {r['province_name']}",
+                    "admin_versions": {
+                        "province": r.get("province_admin_version"),
+                        "district": r.get("district_admin_version"), 
+                        "ward": r.get("ward_admin_version")
+                    }
                 }
             },
             "predictions": [{

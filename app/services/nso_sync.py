@@ -13,9 +13,11 @@ db = SessionLocal()
 import requests
 import xml.etree.ElementTree as ET
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 from app.core.database import Province, District, Ward
 from datetime import datetime
 from app.services.nso_api import get_nso_provinces, get_nso_districts, get_nso_wards
+from app.services.admin_name_normalize import clean_admin_unit_name
 
 # Global log store for real-time reporting
 sync_logs = []
@@ -42,24 +44,25 @@ def sync_province_nso(db: Session, p_no_str: str, p_name: str):
         # 1. Đảm bảo Tỉnh tồn tại trong v2
         p_no = p_no_str
         p_db = db.query(Province).filter(Province.province_no == p_no, Province.admin_version == 2).first()
+        all_p = get_nso_provinces() or []
+        this_p = next((x for x in all_p if x.get("MaTinh") == p_no_str), {})
         
         if not p_db:
-            # Lấy thông tin loại hình từ danh sách tỉnh
-            all_p = get_nso_provinces()
-            this_p = next((x for x in all_p if x.get("MaTinh") == p_no_str), {})
+            p_type = this_p.get("LoaiHinh") or "Tỉnh"
             p_db = Province(
-                province_no=p_no, 
-                province_name=p_name, 
-                admin_version=2, 
-                type_name=this_p.get("LoaiHinh", "Tỉnh")
+                province_no=p_no,
+                province_name=clean_admin_unit_name(p_name, p_type),
+                admin_version=2,
+                type_name=p_type,
             )
             db.add(p_db)
             db.flush()
             add_log(f"Đã tạo Tỉnh mới: {p_name}", "success")
         else:
-            # Luôn cập nhật thông tin mới nhất
-            p_db.province_name = p_name
+            p_type = this_p.get("LoaiHinh") or p_db.type_name or "Tỉnh"
+            p_db.province_name = clean_admin_unit_name(p_name, p_type)
             p_db.province_no = p_no     # Update MaTinh as string (preserving leading zeros)
+            p_db.type_name = p_type
             p_db.updated_date = now
             add_log(f"Đã cập nhật Tỉnh: {p_name} (Mã số: {p_no})", "info")
         
@@ -73,29 +76,35 @@ def sync_province_nso(db: Session, p_no_str: str, p_name: str):
         for d_nso in nso_districts:
             d_code = d_nso.get("MaQuanHuyen")
             d_name = d_nso.get("TenQuanHuyen")
+            d_type = d_nso.get("LoaiHinh") or ""
+            d_name_clean = clean_admin_unit_name(d_name, d_type)
             
             d_db = db.query(District).filter(District.district_no == d_code, District.admin_version == 2).first()
             if not d_db:
-                # Fallback: Match by name if code is missing/wrong
-                d_db = db.query(District).filter(District.district_name == d_name, District.province_id == p_db.province_id, District.admin_version == 2).first()
+                # Fallback: Match by name if code is missing/wrong (raw hoặc đã bỏ prefix loại hình)
+                d_db = db.query(District).filter(
+                    District.province_id == p_db.province_id,
+                    District.admin_version == 2,
+                    or_(District.district_name == d_name, District.district_name == d_name_clean),
+                ).first()
                 if d_db:
                     d_db.district_no = d_code # Correct the code
             if not d_db:
                 d_db = District(
-                    district_no=d_code, 
-                    district_name=d_name, 
-                    province_id=p_db.province_id, 
-                    admin_version=2, 
-                    type_name=d_nso.get("LoaiHinh", "")
+                    district_no=d_code,
+                    district_name=d_name_clean,
+                    province_id=p_db.province_id,
+                    admin_version=2,
+                    type_name=d_type,
                 )
                 db.add(d_db)
                 db.flush()
                 stats["districts_created"] += 1
             else:
-                d_db.district_name = d_name
+                d_db.district_name = d_name_clean
                 d_db.district_no = d_code # Update MaQuanHuyen
                 d_db.province_id = p_db.province_id
-                d_db.type_name = d_nso.get("LoaiHinh", "")
+                d_db.type_name = d_type
                 d_db.updated_date = now
                 stats["districts_updated"] += 1
             
@@ -104,30 +113,36 @@ def sync_province_nso(db: Session, p_no_str: str, p_name: str):
             for w_nso in nso_wards:
                 w_code = w_nso.get("MaPhuongXa") or w_nso.get("MaXa")
                 w_name = w_nso.get("TenPhuongXa") or w_nso.get("TenXa")
+                w_type = w_nso.get("LoaiHinh") or ""
+                w_name_clean = clean_admin_unit_name(w_name, w_type)
                 
                 w_db = db.query(Ward).filter(Ward.ward_no == w_code, Ward.admin_version == 2).first()
                 if not w_db:
                     # Fallback: Match by name if code is missing/wrong
-                    w_db = db.query(Ward).filter(Ward.ward_name == w_name, Ward.district_id == d_db.district_id, Ward.admin_version == 2).first()
+                    w_db = db.query(Ward).filter(
+                        Ward.district_id == d_db.district_id,
+                        Ward.admin_version == 2,
+                        or_(Ward.ward_name == w_name, Ward.ward_name == w_name_clean),
+                    ).first()
                     if w_db:
                         w_db.ward_no = w_code # Correct the code
                 if not w_db:
                     w_db = Ward(
-                        ward_no=w_code, 
-                        ward_name=w_name, 
+                        ward_no=w_code,
+                        ward_name=w_name_clean,
                         district_id=d_db.district_id,
                         province_no=p_no,
-                        admin_version=2, 
-                        type_name=w_nso.get("LoaiHinh", "")
+                        admin_version=2,
+                        type_name=w_type,
                     )
                     db.add(w_db)
                     stats["wards_created"] += 1
                 else:
-                    w_db.ward_name = w_name
+                    w_db.ward_name = w_name_clean
                     w_db.ward_no = w_code # Update MaPhuongXa/MaXa
                     w_db.district_id = d_db.district_id
                     w_db.province_no = p_no
-                    w_db.type_name = w_nso.get("LoaiHinh", "")
+                    w_db.type_name = w_type
                     w_db.updated_date = now
                     stats["wards_updated"] += 1
             

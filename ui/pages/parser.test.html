@@ -125,7 +125,7 @@ function assertContains(s, sub, msg)  { if (!String(s).includes(sub)) throw new 
 function assertNotContains(s, sub, msg){ if (String(s).includes(sub)) throw new Error(msg || `"${sub}" should NOT appear in: ${String(s).slice(0,120)}`); }
 
 /* ══════════════════════════════════════════════════════════════════
-   2. GLOBALS / STUBS  (replicate exactly what app.js?v=202605051716 exposes)
+   2. GLOBALS / STUBS  (replicate exactly what app.js?v=202605060229 exposes)
    ══════════════════════════════════════════════════════════════════ */
 window.API_BASE = "http://localhost:8081/api";
 
@@ -159,7 +159,7 @@ function escapeHtml(str) {
 }
 
 /* ══════════════════════════════════════════════════════════════════
-   3. PRODUCTION FUNCTIONS UNDER TEST  (exact copies from app.js?v=202605051716)
+   3. PRODUCTION FUNCTIONS UNDER TEST  (exact copies from app.js?v=202605060229)
    ══════════════════════════════════════════════════════════════════ */
 
 const _MODEL_TASK_META = {

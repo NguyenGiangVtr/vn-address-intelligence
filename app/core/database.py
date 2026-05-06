@@ -93,7 +93,12 @@ class AddressCleansingQueue(Base):
     district_name = Column(Text)
     ward_id = Column(Integer)
     ward_name = Column(Text)
-    
+
+    # Lineage IDs (legacy / pre-mapping) — join mat.* via old_id when present
+    old_province_id = Column(Integer)
+    old_district_id = Column(Integer)
+    old_ward_id = Column(Integer)
+
     # Core Address & AI Results
     street_address = Column(Text)
     phobert_parsed_components = Column(JSON) # jsonb
