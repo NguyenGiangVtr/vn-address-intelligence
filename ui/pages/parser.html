@@ -58,9 +58,12 @@
             <span class="parser-section-label"><i class="fa-solid fa-tags"></i> NER (PreLabeler — tô màu)</span>
             <div class="parser-ner-legend" id="parser-ner-legend"></div>
         </div>
-        <p class="parser-ner-hint text-secondary" style="font-size:12px;margin:0 0 8px 0">
-            Vùng dưới dùng kết quả <strong>PreLabeler</strong> (rule/hybrid). Thẻ <strong>NER (HF/local)</strong> trong lưới hiển thị model <code>AddressNER</code> giống pipeline production.
-        </p>
+        <div class="parser-ner-output">
+            <span class="parser-placeholder">
+                Vùng dưới dùng kết quả <strong>PreLabeler</strong> (rule/hybrid). Thẻ <strong>NER (HF/local)</strong> trong lưới hiển thị model <code>AddressNER</code> giống pipeline production.
+            </p>
+        </div>
+        
         <div id="parser-output" class="parser-ner-output">
             <span class="parser-placeholder">Kết quả span từ PreLabeler hiển thị tại đây; màu theo nhãn từ API</span>
         </div>
