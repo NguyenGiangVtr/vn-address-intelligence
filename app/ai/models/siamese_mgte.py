@@ -46,7 +46,7 @@ class SiameseMGTE:
         self._corpus_emb: Optional[np.ndarray] = None
 
         logger.info(" mGTE Siamese loaded. Emb dim: %d",
-                    self.model.get_sentence_embedding_dimension())
+                    self.model.get_embedding_dimension())
 
     # ------------------------------------------------------------------
     def encode_corpus(self, addresses: List[str]):

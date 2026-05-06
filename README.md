@@ -91,9 +91,10 @@ vn-address-intelligence/
 git clone https://github.com/your-username/vn-address-intelligence.git
 cd vn-address-intelligence
 
-# 2. Tạo môi trường ảo và cài đặt thư viện
-python -m venv .venv
-source .venv/bin/activate  # Hoặc .venv\Scripts\activate trên Windows
+# 2. Tạo môi trường ảo (Python 3.11+) và cài đặt thư viện
+python3.11 -m venv .venv   # Linux/macOS — Windows: py -3.11 -m venv .venv
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
+pip install -U pip
 pip install -r requirements.txt
 
 # 3. Cấu hình môi trường

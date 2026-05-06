@@ -434,7 +434,7 @@ class Layer2_mGTE:
         self.model.eval()
 
         print(
-            f" mGTE model loaded successfully (embedding_dim: {self.model.get_sentence_embedding_dimension()})"
+            f" mGTE model loaded successfully (embedding_dim: {self.model.get_embedding_dimension()})"
         )
 
     def encode(self, texts: List[str]) -> np.ndarray:

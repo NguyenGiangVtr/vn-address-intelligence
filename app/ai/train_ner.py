@@ -7,6 +7,7 @@ Sử dụng HuggingFace Trainer API + seqeval để đánh giá.
 Cách chạy:
     python app/ai/train_ner.py --data data/labeled_export.json
     python app/ai/train_ner.py --data data/labeled_export.json --epochs 20 --lr 3e-5
+    python app/ai/train_ner.py --hf-dataset dathuynh1108/ner-address-standard-dataset --hf-max-train 20000
 """
 
 import os
@@ -15,6 +16,7 @@ import json
 import logging
 import argparse
 from pathlib import Path
+from typing import Optional
 
 import torch
 import numpy as np
@@ -39,6 +41,19 @@ from app.ai.job_artifacts import record_training_history
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s.%(msecs)03d [%(levelname)s] %(message)s", datefmt="%H:%M:%S")
 logger = logging.getLogger("TrainNER")
+
+# BIO từ https://huggingface.co/datasets/dathuynh1108/ner-address-standard-dataset → nhãn dự án (constants)
+HF_STANDARD_BIO_TO_PROJECT = {
+    "O": "O",
+    "B-STREET": "B-STR",
+    "I-STREET": "I-STR",
+    "B-WARD": "B-WDS",
+    "I-WARD": "I-WDS",
+    "B-DISTRICT": "B-DST",
+    "I-DISTRICT": "I-DST",
+    "B-PROVINCE": "B-PRO",
+    "I-PROVINCE": "I-PRO",
+}
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Bước 1: Chuyển đổi Label Studio JSON → BIO Tokens
@@ -74,17 +89,16 @@ def convert_labelstudio_to_bio(data: list, tokenizer, label2id: dict) -> list:
         elif "predictions" in item and item["predictions"]:
             annotations = item["predictions"][0].get("result", [])
 
-        # Lọc chỉ lấy labels type + Map text→value
+        # Map nhãn hiển thị tiếng Việt (export cũ) → mã value — không có khi chỉ dùng value trong constants
+        text_to_value = {lbl["text"]: lbl["value"] for lbl in NER_LABELS if lbl.get("text")}
         spans = []
-        text_to_value = {lbl["text"]: lbl["value"] for lbl in NER_LABELS}
-        
         for ann in annotations:
             if ann.get("type") != "labels":
                 continue
             value = ann.get("value", {})
             label_text = value.get("labels", [None])[0]
             if label_text and value.get("start") is not None:
-                # Map text label to value (Label Studio export uses text, training expects value)
+                # Chuẩn hoá về mã value (Label Studio lưu mã trong labels[]; export cũ có thể map qua text_to_value)
                 label_value = text_to_value.get(label_text, label_text)
                 if label_value != label_text:
                     logger.debug(f"Mapped: '{label_text}' → '{label_value}'")
@@ -181,6 +195,65 @@ def convert_labelstudio_to_bio(data: list, tokenizer, label2id: dict) -> list:
     return processed
 
 
+def convert_hf_address_standard_to_bio(dataset, tokenizer, label2id: dict, max_len: int = 256) -> list:
+    """
+    Đọc samples có keys ``tokens``, ``ner_tags`` (như dataset dathuynh* / ner-address-standard-dataset).
+    Ánh xạ nhãn về lược đồ BIO trong ``constants.NER_LABELS``.
+    """
+    processed = []
+    ner_col = dataset.features.get("ner_tags")
+    class_label = getattr(ner_col, "feature", None)
+
+    for i in range(len(dataset)):
+        ex = dataset[i]
+        words = ex.get("tokens") or []
+        raw_tags = ex.get("ner_tags") or []
+        if len(words) != len(raw_tags) or not words:
+            continue
+
+        tag_strs = []
+        for t in raw_tags:
+            if isinstance(t, int) and class_label is not None and hasattr(class_label, "int2str"):
+                tag_strs.append(class_label.int2str(t))
+            else:
+                tag_strs.append(str(t))
+
+        word_labels = []
+        for t in tag_strs:
+            mapped = HF_STANDARD_BIO_TO_PROJECT.get(t, "O")
+            if mapped not in label2id:
+                mapped = "O"
+            word_labels.append(mapped)
+
+        all_input_ids = [tokenizer.bos_token_id]
+        all_labels = [-100]
+
+        for word, word_label in zip(words, word_labels):
+            word_tokens = tokenizer.encode(word, add_special_tokens=False)
+            if len(word_tokens) == 0:
+                continue
+            all_input_ids.extend(word_tokens)
+            label_id = label2id.get(word_label, label2id["O"])
+            all_labels.append(label_id)
+            all_labels.extend([-100] * (len(word_tokens) - 1))
+
+        all_input_ids.append(tokenizer.eos_token_id)
+        all_labels.append(-100)
+
+        if len(all_input_ids) > max_len:
+            all_input_ids = all_input_ids[:max_len]
+            all_labels = all_labels[:max_len]
+
+        processed.append({
+            "input_ids": all_input_ids,
+            "attention_mask": [1] * len(all_input_ids),
+            "labels": all_labels,
+        })
+
+    logger.info("HF standard dataset → BIO: %d mẫu (sau lọc độ dài/khớp token).", len(processed))
+    return processed
+
+
 def validate_conversion(data: list, processed: list, tokenizer, id2label: dict, n_samples: int = 5):
     """In ra một vài mẫu để kiểm tra nhãn BIO có đúng không."""
     logger.info(f"\n{'='*60}")
@@ -260,67 +333,79 @@ def _compute_token_accuracy(predictions: np.ndarray, labels: np.ndarray) -> floa
 # ──────────────────────────────────────────────────────────────────────────────
 
 def train_model(
-    json_path: str,
+    json_path: Optional[str] = None,
     output_dir: str = "models/phobert-ner-vn",
     epochs: int = 15,
     batch_size: int = 16,
     learning_rate: float = 2e-5,
     eval_split: float = 0.2,
-    seed: int = 42
+    seed: int = 42,
+    hf_dataset: Optional[str] = None,
+    hf_max_train_samples: int = 50_000,
+    hf_max_eval_samples: int = 5_000,
 ):
     """
-    Huấn luyện mô hình PhoBERT NER với dữ liệu từ Label Studio.
-
-    Parameters
-    ----------
-    json_path : str
-        Đường dẫn file JSON export từ Label Studio
-    output_dir : str
-        Thư mục lưu model fine-tuned
-    epochs : int
-        Số epoch huấn luyện
-    batch_size : int
-        Batch size (giảm nếu thiếu VRAM)
-    learning_rate : float
-        Learning rate (2e-5 là chuẩn cho BERT fine-tuning)
-    eval_split : float
-        Tỷ lệ dữ liệu dành cho evaluation (0.2 = 20%)
-    seed : int
-        Random seed để tái tạo kết quả
+    Huấn luyện PhoBERT NER: either Label Studio JSON (``json_path``) hoặc dataset HF
+    (``hf_dataset``, ví dụ dathuynh1108/ner-address-standard-dataset).
     """
-    # 1. Load dữ liệu gán nhãn
-    logger.info(f"Đọc dữ liệu từ {json_path}...")
-    with open(json_path, encoding="utf-8") as f:
-        data = json.load(f)
-    logger.info(f"Tổng số mẫu: {len(data)}")
+    use_hf = bool(hf_dataset)
+    if use_hf == bool(json_path):
+        raise ValueError("Chỉ định đúng một nguồn: json_path (Label Studio) hoặc hf_dataset (Hugging Face).")
 
-    # 2. Chuẩn bị label mapping từ constants.py
     label_list = get_ner_label_list()
     label2id = {l: i for i, l in enumerate(label_list)}
     id2label = {i: l for i, l in enumerate(label_list)}
     logger.info(f"Số nhãn BIO: {len(label_list)} ({label_list})")
 
-    # 3. Load tokenizer
     tokenizer = AutoTokenizer.from_pretrained("vinai/phobert-base", trust_remote_code=True)
 
-    # 4. Chuyển đổi Label Studio → BIO
-    processed = convert_labelstudio_to_bio(data, tokenizer, label2id)
+    if use_hf:
+        from datasets import load_dataset
 
-    if len(processed) == 0:
-        logger.error("Không có mẫu nào được chuyển đổi thành công. Kiểm tra lại file JSON.")
-        return
+        logger.info(
+            "Tải HF %s — train[:%s], test[:%s]…",
+            hf_dataset,
+            hf_max_train_samples,
+            hf_max_eval_samples,
+        )
+        train_raw = load_dataset(hf_dataset, split=f"train[:{hf_max_train_samples}]")
+        eval_raw = load_dataset(hf_dataset, split=f"test[:{hf_max_eval_samples}]")
+        train_data = convert_hf_address_standard_to_bio(train_raw, tokenizer, label2id)
+        eval_data = convert_hf_address_standard_to_bio(eval_raw, tokenizer, label2id)
+        if len(train_data) == 0:
+            logger.error("Không chuyển đổi được mẫu train từ HF. Kiểm tra schema dataset.")
+            return
+        if len(eval_data) == 0:
+            logger.warning("Eval HF rỗng — tách ngẫu nhiên từ train.")
+            np.random.seed(seed)
+            ix = np.random.permutation(len(train_data))
+            split_idx = int(len(train_data) * (1 - eval_split))
+            eval_data = [train_data[i] for i in ix[split_idx:]]
+            train_data = [train_data[i] for i in ix[:split_idx]]
+        logger.info("Train: %d mẫu | Eval: %d mẫu (HF)", len(train_data), len(eval_data))
+        data_notes = f"hf_dataset={hf_dataset};train_cap={hf_max_train_samples}"
+    else:
+        logger.info(f"Đọc dữ liệu từ {json_path}...")
+        with open(json_path, encoding="utf-8") as f:
+            data = json.load(f)
+        logger.info(f"Tổng số mẫu: {len(data)}")
 
-    # Validate chuyển đổi
-    validate_conversion(data, processed, tokenizer, id2label)
+        processed = convert_labelstudio_to_bio(data, tokenizer, label2id)
 
-    # 5. Chia Train / Eval
-    np.random.seed(seed)
-    indices = np.random.permutation(len(processed))
-    split_idx = int(len(processed) * (1 - eval_split))
+        if len(processed) == 0:
+            logger.error("Không có mẫu nào được chuyển đổi thành công. Kiểm tra lại file JSON.")
+            return
 
-    train_data = [processed[i] for i in indices[:split_idx]]
-    eval_data = [processed[i] for i in indices[split_idx:]]
-    logger.info(f"Train: {len(train_data)} mẫu | Eval: {len(eval_data)} mẫu")
+        validate_conversion(data, processed, tokenizer, id2label)
+
+        np.random.seed(seed)
+        indices = np.random.permutation(len(processed))
+        split_idx = int(len(processed) * (1 - eval_split))
+
+        train_data = [processed[i] for i in indices[:split_idx]]
+        eval_data = [processed[i] for i in indices[split_idx:]]
+        logger.info(f"Train: {len(train_data)} mẫu | Eval: {len(eval_data)} mẫu")
+        data_notes = f"labelstudio={json_path}"
 
     # 6. Tạo HuggingFace Dataset
     def to_hf_dataset(items):
@@ -432,7 +517,7 @@ def train_model(
             loss=round(float(train_result.training_loss), 6),
             samples_count=len(train_data),
             notes=(
-                f"epochs={epochs}; batch_size={batch_size}; lr={learning_rate}; "
+                f"{data_notes}; epochs={epochs}; batch_size={batch_size}; lr={learning_rate}; "
                 f"eval_split={eval_split}; eval_loss={float(eval_results.get('eval_loss', 0.0)):.6f}"
             ),
         )
@@ -452,6 +537,7 @@ def train_model(
             "epochs": epochs,
             "learning_rate": learning_rate,
             "batch_size": batch_size,
+            "data_source": data_notes,
         }, f, ensure_ascii=False, indent=2)
 
     logger.info(f"\nModel đã được lưu tại: {output_dir}")
@@ -462,16 +548,21 @@ def train_model(
 # ──────────────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Huấn luyện PhoBERT NER cho địa chỉ Việt Nam")
-    parser.add_argument("--data", required=True, help="Đường dẫn file JSON export từ Label Studio")
+    parser.add_argument("--data", default=None, help="JSON export từ Label Studio (bỏ qua nếu dùng --hf-dataset)")
+    parser.add_argument("--hf-dataset", default=None, help="VD: dathuynh1108/ner-address-standard-dataset")
+    parser.add_argument("--hf-max-train", type=int, default=50_000, help="Giới hạn mẫu train từ HF")
+    parser.add_argument("--hf-max-eval", type=int, default=5_000, help="Giới hạn mẫu test từ HF (split test)")
     parser.add_argument("--output", default="models/phobert-ner-vn", help="Thư mục lưu model")
     parser.add_argument("--epochs", type=int, default=15, help="Số epoch huấn luyện")
     parser.add_argument("--batch-size", type=int, default=16, help="Batch size")
     parser.add_argument("--lr", type=float, default=2e-5, help="Learning rate")
-    parser.add_argument("--eval-split", type=float, default=0.2, help="Tỷ lệ eval (0.2 = 20%)")
+    parser.add_argument("--eval-split", type=float, default=0.2, help="Tỷ lệ eval (0.2 = 20%) — với Label Studio")
     parser.add_argument("--validate-only", action="store_true", help="Chỉ validate chuyển đổi, không train")
     args = parser.parse_args()
 
     if args.validate_only:
+        if not args.data:
+            parser.error("--validate-only cần --data")
         # Chỉ chạy validate để kiểm tra chuyển đổi BIO
         label_list = get_ner_label_list()
         label2id = {l: i for i, l in enumerate(label_list)}
@@ -483,12 +574,26 @@ if __name__ == "__main__":
 
         processed = convert_labelstudio_to_bio(data, tokenizer, label2id)
         validate_conversion(data, processed, tokenizer, id2label, n_samples=10)
+    elif args.hf_dataset:
+        train_model(
+            json_path=None,
+            output_dir=args.output,
+            epochs=args.epochs,
+            batch_size=args.batch_size,
+            learning_rate=args.lr,
+            eval_split=args.eval_split,
+            hf_dataset=args.hf_dataset,
+            hf_max_train_samples=args.hf_max_train,
+            hf_max_eval_samples=args.hf_max_eval,
+        )
     else:
+        if not args.data:
+            parser.error("Cần --data hoặc --hf-dataset")
         train_model(
             json_path=args.data,
             output_dir=args.output,
             epochs=args.epochs,
             batch_size=args.batch_size,
             learning_rate=args.lr,
-            eval_split=args.eval_split
+            eval_split=args.eval_split,
         )

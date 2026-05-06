@@ -63,7 +63,7 @@ class PhoBERTSiamese:
 
         logger.info(" Loading PhoBERT: %s (device=%s)", model_name, self.device)
         transformer = models.Transformer(model_name, max_seq_length=max_seq_length)
-        pooling     = models.Pooling(transformer.get_word_embedding_dimension())
+        pooling     = models.Pooling(transformer.get_embedding_dimension())
         self.model  = SentenceTransformer(modules=[transformer, pooling], device=self.device)
         self.model.eval()
 

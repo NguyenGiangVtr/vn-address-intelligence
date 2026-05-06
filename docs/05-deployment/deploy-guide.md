@@ -6,8 +6,8 @@ Tài liệu này tổng hợp toàn bộ quy trình từ thiết lập server ba
 
 | Thành phần | Thông số |
 |---|---|
-| **Hệ điều hành** | Ubuntu 20.04.6 LTS (Focal) |
-| **Python** | 3.11.9+ |
+| **Hệ điều hành** | Ubuntu 20.04+ hoặc 22.04+ (khuyến nghị LTS) |
+| **Python** | 3.11.x (ràng buộc `requires-python` trong `pyproject.toml`) |
 | **Cơ sở dữ liệu** | PostgreSQL 12 + PostGIS 3 |
 | **Domain** | [https://vnai.nod.io.vn](https://vnai.nod.io.vn) |
 | **IP Server** | 157.66.81.69 |
@@ -19,13 +19,44 @@ Tài liệu này tổng hợp toàn bộ quy trình từ thiết lập server ba
 
 Thực hiện các lệnh này trên **VPS** (thông qua MobaXterm):
 
-### 2.1. Upload Setup Script
+### 2.1. Cài Python 3.11 trên VPS (thủ công — chỉ khi không chạy script đủ bước)
+
+Script `vnai-vps-setup.sh` đã **tự cài Python 3.11** nếu máy chưa có (Ubuntu 20.04 dùng PPA deadsnakes). Nếu bạn cài tay trước khi chạy script hoặc chỉ cần bổ sung interpreter:
+
+**Ubuntu 22.04 / 24.04** (gói trong repo chính):
+
+```bash
+sudo apt-get update
+sudo apt-get install -y python3.11 python3.11-venv python3.11-dev build-essential
+python3.11 --version
+```
+
+**Ubuntu 20.04** (không có sẵn 3.11 trên Focal):
+
+```bash
+sudo apt-get update
+sudo apt-get install -y software-properties-common
+sudo add-apt-repository -y ppa:deadsnakes/ppa
+sudo apt-get update
+sudo apt-get install -y python3.11 python3.11-venv python3.11-dev build-essential
+python3.11 --version
+```
+
+**Tạo/chạy lại virtualenv ở `/opt/vnai`** (sau khi đã có code + `requirements.txt`):
+
+```bash
+cd /opt/vnai
+sudo -u vnai bash -c 'python3.11 -m venv .venv && source .venv/bin/activate && pip install -U pip && pip install -r requirements.txt'
+sudo supervisorctl restart vnai-api
+```
+
+### 2.2. Upload Setup Script
 Sử dụng lệnh sau tại terminal máy local (PowerShell hoặc Git Bash) để đẩy file setup lên VPS:
 ```powershell
 scp scripts/deployment/vnai-vps-setup.sh root@157.66.81.69:/tmp/
 ```
 
-### 2.2. Chạy Setup
+### 2.3. Chạy Setup
 Đăng nhập vào VPS (MobaXterm) và chạy lệnh:
 ```bash
 # Cấp quyền và chạy script
@@ -33,7 +64,7 @@ sudo bash /tmp/vnai-vps-setup.sh
 ```
 *Script này sẽ tự động cấu hình Nginx, Supervisor, Python venv, Certbot SSL và tạo cấu trúc thư mục `/opt/vnai`.*
 
-### 2.3. Cấu hình Biến môi trường (.env)
+### 2.4. Cấu hình Biến môi trường (.env)
 ```bash
 # Copy file mẫu
 cp /opt/vnai/.env.example /opt/vnai/.env
@@ -42,6 +73,8 @@ cp /opt/vnai/.env.example /opt/vnai/.env
 nano /opt/vnai/.env
 ```
 *Sau khi sửa: `Ctrl + O` (Lưu), `Enter`, `Ctrl + X` (Thoát).*
+
+**Hugging Face Hub:** Nếu log có cảnh báo kiểu unauthenticated / rate limit khi tải model (PhoBERT, mGTE, LLM…), thêm vào `.env` một dòng `HF_TOKEN=…` với [token Read](https://huggingface.co/settings/tokens). API đọc `.env` qua `load_dotenv` khi khởi động — không cần chỉnh Supervisor.
 
 ---
 

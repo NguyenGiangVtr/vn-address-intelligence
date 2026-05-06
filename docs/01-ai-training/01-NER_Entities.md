@@ -302,7 +302,7 @@ assert all(isinstance(v, str) or v is None for v in ner_out.values())
 ## 📚 References
 
 - **Code:** `app/ai/models/ner_model.py`, `app/ai/train_ner.py`
-- **Config:** `app/ai/constants.py` (NER_LABELS)
+- **Config:** `app/ai/constants.py` (`NER_LABELS`: dict/object per entity with `value`, `color`, `hotkey` — không có `text`; Label Studio dùng `value` làm nhãn hiển thị). **UI:** `GET /api/config/ner-labels` → `{ "labels": [ ... ] }`.
 - **Labels:** 10 entity types defined in `constants.py`
 - **Training script:** `app/ai/train_ner.py`
 

@@ -1,8 +1,9 @@
 #!/bin/bash
 # ══════════════════════════════════════════════════════════════
 # VPS Setup — VN Address Intelligence
-# Target: Ubuntu 20.04 Focal | PostgreSQL 12 (đã có) | Nginx (đã có)
-# Chạy: sudo bash /tmp/vps-setup.sh
+# Target: Ubuntu 20.04+ | PostgreSQL 12+ (đã có) | Nginx (đã có)
+# Python: 3.11 — script sẽ cài qua apt / deadsnakes nếu thiếu
+# Chạy: sudo bash /tmp/vnai-vps-setup.sh
 # ══════════════════════════════════════════════════════════════
 
 set -e
@@ -11,10 +12,37 @@ APP_USER="vnai"
 APP_DIR="/opt/vnai"
 API_PORT=8081   # 8080 đã bị Docker chiếm
 
+ensure_python311() {
+    if command -v python3.11 >/dev/null 2>&1 && python3.11 -c "import sys; assert sys.version_info >= (3, 11)" 2>/dev/null; then
+        echo "  Python 3.11 đã có: $(python3.11 --version)"
+        return 0
+    fi
+    echo "  Đang cài Python 3.11..."
+    apt-get install -y -qq software-properties-common
+    # shellcheck source=/dev/null
+    . /etc/os-release
+    case "${VERSION_ID:-}" in
+        20.04|18.04)
+            add-apt-repository -y ppa:deadsnakes/ppa
+            apt-get update -qq
+            apt-get install -y -qq python3.11 python3.11-venv python3.11-dev
+            ;;
+        *)
+            apt-get update -qq
+            apt-get install -y -qq python3.11 python3.11-venv python3.11-dev || {
+                add-apt-repository -y ppa:deadsnakes/ppa
+                apt-get update -qq
+                apt-get install -y -qq python3.11 python3.11-venv python3.11-dev
+            }
+            ;;
+    esac
+    echo "  Đã cài: $(python3.11 --version)"
+}
+
 echo "══════════════════════════════════════════════"
 echo "  VN Address Intelligence — VPS Setup"
-echo "  Ubuntu 20.04 Focal · PostgreSQL 12 (giữ nguyên)"
-echo "  Python 3.11 (User installed)"
+echo "  Ubuntu 20.04+ · PostgreSQL (giữ nguyên)"
+echo "  Python 3.11 (tự cài nếu thiếu)"
 echo "══════════════════════════════════════════════"
 
 # ── 0. Xóa repo PostgreSQL bị lỗi 404 ──
@@ -27,11 +55,13 @@ fi
 # Xóa dòng apt.postgresql.org nếu bị nhúng trong sources.list
 sed -i '/apt\.postgresql\.org/d' /etc/apt/sources.list 2>/dev/null || true
 
-# ── 1. System packages ──
-echo "[1/7] Installing system packages (using existing Python 3.11)..."
+# ── 1. Python 3.11 + system packages ──
+echo "[1/7] Ensuring Python 3.11 and system packages..."
 apt-get update -qq
+ensure_python311
 
 apt-get install -y -qq \
+    build-essential \
     git curl wget unzip \
     supervisor \
     rsync

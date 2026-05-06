@@ -137,7 +137,7 @@ const PAGE_META = {
   'parser': {
     title: 'Phân tích địa chỉ - Vietnamese Address Intelligence',
     description: 'Công cụ phân tích địa chỉ Việt Nam bằng 4 mô hình AI: PreLabeler, PhoBERT, mGTE và Qwen LLM',
-    keywords: 'parser, phân tích địa chỉ, NER, PhoBERT, mGTE, Qwen, AI model'
+    keywords: 'parser, phân tích địa chỉ, NER, AddressNER, PhoBERT, mGTE, Qwen, Hugging Face'
   },
   'batch': {
     title: 'Xử lý hàng loạt - Vietnamese Address Intelligence',
@@ -350,19 +350,43 @@ function initRouting() {
   });
 }
 
-// NER Labels (mirrors constants.py)
-const NER_LABELS = [
-  { value: "PCD", text: "Plus Code", color: "#f032e6", hotkey: "0", example: "7P28QR4F+2M" },
-  { value: "BLD", text: "Tòa nhà/Chung cư", color: "#f58231", hotkey: "1", example: "Chung Cư Tecco Green Nest" },
-  { value: "POI", text: "Địa danh/Mốc", color: "#911eb4", hotkey: "2", example: "Đối Diện Chợ Bà Chiểu" },
-  { value: "ALY", text: "Hẻm/Ngõ", color: "#4363d8", hotkey: "3", example: "Hẻm 141" },
-  { value: "NUM", text: "Số nhà/Lô", color: "#e6194B", hotkey: "4", example: "Số 17/2A" },
-  { value: "STR", text: "Tên đường", color: "#3cb44b", hotkey: "5", example: "Đường Phạm Thế Hiển" },
-  { value: "NHB", text: "Khu phố/Thôn/Ấp", color: "#469990", hotkey: "6", example: "Khu Phố 3" },
-  { value: "WDS", text: "Phường/Xã", color: "#ffe119", hotkey: "7", example: "Phường Tân Thới Nhất" },
-  { value: "DST", text: "Quận/Huyện", color: "#800000", hotkey: "8", example: "Quận 12" },
-  { value: "PRO", text: "Tỉnh/TP", color: "#000075", hotkey: "9", example: "TP Hồ Chí Minh" },
-];
+async function fetchNerLabelsFromApi() {
+  const res = await fetchWithApiFallback("/config/ner-labels");
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status}`);
+  }
+  const data = await res.json();
+  const labels = Array.isArray(data.labels) ? data.labels : [];
+  if (!labels.length) {
+    throw new Error("empty labels");
+  }
+  return labels;
+}
+
+/** Danh sách nhãn NER — luôn lấy từ GET /api/config/ner-labels (đồng bộ constants.py). */
+let NER_LABELS = [];
+
+/**
+ * Tải nhãn từ API. Gọi `forceRefresh=true` sau khi đổi API_BASE trong Settings.
+ * @returns {Promise<Array>}
+ */
+async function ensureNerLabelsLoaded(forceRefresh = false) {
+  if (!forceRefresh && NER_LABELS.length > 0) {
+    window.NER_LABELS = NER_LABELS;
+    return NER_LABELS;
+  }
+  try {
+    NER_LABELS = await fetchNerLabelsFromApi();
+  } catch (err) {
+    console.warn("[VNAI] Không tải được /config/ner-labels:", err);
+    NER_LABELS = [];
+    if (showToast) {
+      showToast("Không tải được danh sách nhãn NER từ API. Kiểm tra URL API và đăng nhập.", "warning");
+    }
+  }
+  window.NER_LABELS = NER_LABELS;
+  return NER_LABELS;
+}
 
 const SAMPLE_ADDRESSES = [
   "2695/7 Đường Phạm Thế Hiển, phường 7, Quận 8, Thành phố Hồ Chí Minh, Việt Nam",
@@ -517,6 +541,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     return;
   }
 
+  await ensureNerLabelsLoaded();
+
   // Load all pages first
   await loadPages();
 
@@ -540,6 +566,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   safeInit("initEvidenceView", initEvidenceView);
   safeInit("initTrainingHub", initTrainingHub);
   safeInit("initBoundaryVisualizationUI", initBoundaryVisualizationUI);
+  safeInit("setupThemeToggle", setupThemeToggle);
   safeInit("initSettingsPage", initSettingsPage);
 
   document.getElementById('btn-logout')?.addEventListener('click', async () => {
@@ -633,6 +660,42 @@ async function testLabelStudioConnectionFromSettings(buttonNode) {
   }
 }
 
+function updateThemeToggleButton(theme) {
+  const btn = document.getElementById('btn-theme-toggle');
+  if (!btn) return;
+  const icon = btn.querySelector('i');
+  if (!icon) return;
+  if (theme === 'light') {
+    icon.className = 'fa-solid fa-moon';
+  } else {
+    icon.className = 'fa-solid fa-sun';
+  }
+}
+
+function setupThemeToggle() {
+  const btn = document.getElementById('btn-theme-toggle');
+  if (!btn) return;
+
+  const current = loadUISettings();
+  updateThemeToggleButton(resolveTheme(current.theme));
+
+  btn.addEventListener('click', () => {
+    const settings = loadUISettings();
+    const currentTheme = resolveTheme(settings.theme);
+    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+
+    settings.theme = newTheme;
+    saveUISettings(settings);
+    applyVisualSettings(settings);
+    updateThemeToggleButton(newTheme);
+
+    const themeSelect = document.getElementById('cfg-theme');
+    if (themeSelect) {
+      themeSelect.value = newTheme;
+    }
+  });
+}
+
 function initSettingsPage() {
   const settingsPage = document.getElementById('settings');
   if (!settingsPage) return;
@@ -650,6 +713,7 @@ function initSettingsPage() {
       current.theme = resolveTheme(themeSelect.value);
       saveUISettings(current);
       applyVisualSettings(current);
+      updateThemeToggleButton(current.theme);
     });
   }
 
@@ -667,13 +731,20 @@ function initSettingsPage() {
   }
 
   if (saveBtn) {
-    saveBtn.addEventListener('click', () => {
+    saveBtn.addEventListener('click', async () => {
       const formData = getSettingsFormData();
       if (!formData) return;
 
       saveUISettings(formData);
       API_BASE = formData.apiBaseUrl;
       applyVisualSettings(formData);
+      await ensureNerLabelsLoaded(true);
+      try {
+        populateLabelRegistry();
+      } catch (_e) { /* DOM có thể chưa có registry */ }
+      try {
+        _buildParserNERLegend();
+      } catch (_e) { /* parser page có thể chưa mount */ }
       showToast('Đã lưu cấu hình Settings trên trình duyệt', 'success');
     });
   }
@@ -1677,6 +1748,8 @@ function renderOverviewChart(stats) {
 // ═══════════════════════════════════════════════════════════
 // LABEL REGISTRY
 // ═══════════════════════════════════════════════════════════
+let _labelRegistrySearchBound = false;
+
 function populateLabelRegistry() {
   const tbody = document.getElementById("label-registry-body");
   const cardView = document.getElementById("labels-card-view");
@@ -1695,10 +1768,8 @@ function populateLabelRegistry() {
     tbody.innerHTML = NER_LABELS.map(l => `
       <tr>
         <td><span class="label-badge" style="background:${l.color}22;color:${l.color}">${l.value}</span></td>
-        <td><strong style="color:var(--text-primary)">${l.text}</strong><br><span style="font-size:12px;color:var(--text-tertiary)">${l.example}</span></td>
         <td><div style="display:flex;align-items:center;gap:6px"><div style="width:16px;height:16px;border-radius:3px;background:${l.color};border:1px solid rgba(0,0,0,0.1)"></div> <span class="text-mono" style="font-size:11px">${l.color}</span></div></td>
         <td><kbd style="background:var(--bg-muted);padding:4px 8px;border-radius:4px;font-size:11px;border:1px solid var(--border);cursor:default">${l.hotkey}</kbd></td>
-        <td><span style="padding:2px 6px;background:var(--accent-light, rgba(59, 130, 246, 0.1));border-radius:3px;font-size:11px;color:var(--accent)">${l.example}</span></td>
       </tr>
     `).join("");
   }
@@ -1720,22 +1791,17 @@ function populateLabelRegistry() {
           <kbd style="background:${l.color}22;color:${l.color};padding:3px 6px;border-radius:3px;font-size:10px;border:1px solid ${l.color}33;cursor:default;font-weight:600">${l.hotkey}</kbd>
         </div>
         
-        <h4 style="margin:0 0 6px 0;font-size:13px;color:var(--text-primary);font-weight:600">${l.text}</h4>
-        
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
           <div style="width:12px;height:12px;border-radius:2px;background:${l.color}"></div>
           <span style="font-size:10px;color:var(--text-tertiary);font-family:monospace">${l.color}</span>
-        </div>
-        
-        <div style="padding:8px;background:var(--bg-muted);border-radius:4px;font-size:11px;color:var(--text-secondary);font-style:italic">
-          "${l.example}"
         </div>
       </div>
     `).join("");
   }
 
-  // Setup search functionality
-  if (searchInput) {
+  // Setup search functionality (một lần — tránh double-bind khi reload nhãn từ Settings)
+  if (searchInput && !_labelRegistrySearchBound) {
+    _labelRegistrySearchBound = true;
     searchInput.addEventListener('input', (e) => {
       const query = e.target.value.toLowerCase();
 
@@ -1804,11 +1870,12 @@ function _updateParserModelStatusBar(status) {
 
   const MODEL_LABELS = {
     prelabeler: "PreLabeler",
+    address_ner: "NER (HF)",
     phobert: "PhoBERT",
     mgte: "mGTE",
     llm: "Qwen LLM",
   };
-  const ALL_AI_MODELS = ["phobert", "mgte", "llm"];
+  const ALL_AI_MODELS = ["address_ner", "phobert", "mgte", "llm"];
 
   const loaded = new Set(status.loadedModels || []);
   const errors = status.errors || {};
@@ -1825,8 +1892,8 @@ function _updateParserModelStatusBar(status) {
 
     const statusLabels = {
       idle: "Model AI chưa được nạp — nhấn Tải model để bắt đầu",
-      loading: `Đang nạp model AI vào bộ nhớ...${currentModelText}${progressText} (${status.loadedModels?.length || 0}/3 hoàn thành)`,
-      ready: `Model sẵn sàng — ${status.loadedModels?.length || 0}/3 model AI đã nạp${status.corpusSize ? `, ${status.corpusSize.toLocaleString()} địa chỉ corpus` : ""}`,
+      loading: `Đang nạp model AI vào bộ nhớ...${currentModelText}${progressText} (${status.loadedModels?.length || 0}/4 hoàn thành)`,
+      ready: `Model sẵn sàng — ${status.loadedModels?.length || 0}/4 model AI đã nạp${status.corpusSize ? `, ${status.corpusSize.toLocaleString()} địa chỉ corpus` : ""}`,
       error: "Một số model không thể nạp — xem chi tiết bên dưới",
     };
     text.textContent = statusLabels[status.status] || status.status;
@@ -1880,6 +1947,9 @@ async function _pollParserModelStatus() {
 
     const data = await res.json();
     _updateParserModelStatusBar(data);
+    if (typeof data.corpusSize === "number") {
+      _updateParserMeta({ corpusSize: data.corpusSize });
+    }
 
     // Keep polling while loading - faster polling for better UX
     if (data.status === "loading") {
@@ -2060,7 +2130,7 @@ function _collectParserResults() {
   };
 
   // Collect results from each model card
-  ["prelabeler", "phobert", "mgte", "llm"].forEach(modelName => {
+  ["prelabeler", "address_ner", "phobert", "mgte", "llm"].forEach(modelName => {
     const resultEl = document.getElementById(`presult-${modelName}`);
     const statsEl = document.getElementById(`pstats-${modelName}`);
 
@@ -2105,7 +2175,7 @@ function _showParserHelpModal() {
             <ol>
               <li>Nhập địa chỉ Việt Nam vào ô input</li>
               <li>Nhấn "Phân tích" hoặc phím Enter</li>
-              <li>Xem kết quả từ 4 mô hình AI khác nhau</li>
+              <li>Xem kết quả từ 5 pipeline (PreLabeler + NER production + 3 model khác)</li>
               <li>So sánh hiệu suất và độ chính xác</li>
             </ol>
           </div>
@@ -2123,7 +2193,8 @@ function _showParserHelpModal() {
           <div class="help-section">
             <h4><i class="fa-solid fa-brain"></i> Các mô hình</h4>
             <ul>
-              <li><strong>PreLabeler:</strong> Trích xuất thực thể cơ bản</li>
+              <li><strong>NER (tô màu trên cùng):</strong> PreLabeler — rule/hybrid</li>
+              <li><strong>NER (HF/local):</strong> AddressNER — giống production</li>
               <li><strong>PhoBERT:</strong> Mô hình BERT tiếng Việt</li>
               <li><strong>mGTE:</strong> Embedding đa ngôn ngữ</li>
               <li><strong>Qwen 2.5:</strong> Large Language Model</li>
@@ -2181,7 +2252,7 @@ function _updatePerformanceMetrics(totalMs, inputText) {
   let bestModel = "N/A";
   let bestScore = 0;
 
-  ["prelabeler", "phobert", "mgte", "llm"].forEach(modelName => {
+  ["prelabeler", "address_ner", "phobert", "mgte", "llm"].forEach(modelName => {
     const resultEl = document.getElementById(`presult-${modelName}`);
     if (resultEl && !resultEl.querySelector('.pmodel-not-loaded')) {
       // Count entities (spans with ner-entity class)
@@ -2246,7 +2317,7 @@ function _setParserStatus(state, text) {
 }
 
 function _resetModelCards() {
-  const models = ["prelabeler", "phobert", "mgte", "llm"];
+  const models = ["prelabeler", "address_ner", "phobert", "mgte", "llm"];
   models.forEach(m => {
     const card = document.getElementById(`pcard-${m}`);
     const result = document.getElementById(`presult-${m}`);
@@ -2293,21 +2364,22 @@ async function runParser() {
 
   // Reset UI
   _resetModelCards();
-  _setParserStatus("running", "Đang phân tích — gửi yêu cầu đến 4 model...");
+  _setParserStatus("running", "Đang phân tích — gửi yêu cầu đến 5 model...");
   if (heroInner) heroInner.classList.add("is-running");
   if (btnParse) { btnParse.disabled = true; btnParse.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>Đang xử lý</span>'; }
   if (timingEl) timingEl.style.display = "none";
 
   // Clear NER output
   const nerOut = document.getElementById("parser-output");
-  if (nerOut) nerOut.innerHTML = '<span class="parser-placeholder">Đang chờ kết quả từ PreLabeler...</span>';
+  if (nerOut) nerOut.innerHTML = '<span class="parser-placeholder">Đang chờ span từ PreLabeler...</span>';
 
   const startTs = Date.now();
   const payload = sampleId ? { id: parseInt(sampleId) } : { raw_address: text };
 
-  // Run all 4 models in PARALLEL — each updates its own card when done
+  // Run all models in PARALLEL — each updates its own card when done
   const models = [
     { key: "prelabeler", label: "PreLabeler" },
+    { key: "address_ner", label: "NER (HF/local)" },
     { key: "phobert", label: "PhoBERT" },
     { key: "mgte", label: "mGTE" },
     { key: "llm", label: "Qwen LLM" },
@@ -2316,6 +2388,8 @@ async function runParser() {
   let completedCount = 0;
   let firstNERDone = false;
   let lastMeta = null;
+
+  const totalModelsUi = models.length;
 
   const fetchModel = async ({ key, label }) => {
     const t0 = Date.now();
@@ -2361,7 +2435,7 @@ async function runParser() {
       _renderModelCardError(key, label, e.message);
     } finally {
       completedCount++;
-      _setParserStatus("running", `Đang phân tích — ${completedCount}/4 model hoàn thành...`);
+      _setParserStatus("running", `Đang phân tích — ${completedCount}/${totalModelsUi} model hoàn thành...`);
     }
   };
 
@@ -2372,7 +2446,7 @@ async function runParser() {
     const totalMsFmt = totalMs >= 1000
       ? `${(totalMs / 1000).toFixed(2)}s`
       : `${totalMs.toLocaleString("vi-VN")}ms`;
-    _setParserStatus("done", "Hoàn thành — 4/4 model");
+    _setParserStatus("done", `Hoàn thành — ${totalModelsUi}/${totalModelsUi} model`);
     if (timingEl && timingVal) { timingVal.textContent = totalMsFmt; timingEl.style.display = "flex"; }
 
     // Update meta footer
@@ -2397,6 +2471,12 @@ const _MODEL_TASK_META = {
     taskLabel: "Trích xuất thực thể",
     outputType: "entities",
     outputDesc: null,
+  },
+  address_ner: {
+    task: "NER", icon: "fa-sitemap",
+    taskLabel: "NER · AddressNER (production)",
+    outputType: "entity_dict",
+    outputDesc: "Dict STR/WDS/DST/PRO từ token classification hoặc regex — cùng stack với production_pipeline",
   },
   phobert: {
     task: "Retrieval", icon: "fa-magnifying-glass",
@@ -2490,11 +2570,28 @@ function _renderModelCard(model, out, latencyMs) {
           const lbl = e.label || (e.value?.labels?.[0]) || "?";
           const txt = e.text || e.value?.text || "";
           const info = labelInfo[lbl] || { color: "#888" };
-          return `<span class="pmodel-ent-chip" style="background:${info.color}18;color:${info.color}" title="${info.text || lbl}">${lbl}: ${escapeHtml(txt)}</span>`;
+          return `<span class="pmodel-ent-chip" style="background:${info.color}18;color:${info.color}" title="${lbl}">${lbl}: ${escapeHtml(txt)}</span>`;
         }).join("");
         html += `<div class="pmodel-entities">${chips}</div>`;
+      } else if (out.result && typeof out.result === "object" && !Array.isArray(out.result)) {
+        const pairs = Object.entries(out.result).filter(([, v]) => v != null && String(v).trim() !== "");
+        if (pairs.length > 0) {
+          const chips = pairs.map(([k, v]) => {
+            const info = labelInfo[k] || { color: "#64748b" };
+            return `<span class="pmodel-ent-chip" style="background:${info.color}18;color:${info.color}" title="${escapeHtml(k)}">${escapeHtml(k)}: ${escapeHtml(String(v))}</span>`;
+          }).join("");
+          html += `<div class="pmodel-entities">${chips}</div>`;
+        }
       }
-      if (!normalized && entities.length === 0 && !out.error) {
+      if (out.mode === "address_ner" && out.model_id) {
+        html += `<div class="pmodel-task-badge" style="margin-top:6px;opacity:0.85;font-size:10px" title="Cùng quy tắc NER_MODEL_ID / models/phobert-ner-vn / HF mặc định"><i class="fa-solid fa-microchip"></i> ${escapeHtml(String(out.model_id))}</div>`;
+      }
+      if (out.mode === "address_ner" && out.deep_ner_active === false && !out.error) {
+        html += `<span class="pmodel-retrieval-warn" style="font-size:10px"><i class="fa-solid fa-circle-info"></i> Regex fallback (không có transformer trong RAM)</span>`;
+      }
+      const hasDict = out.result && typeof out.result === "object" && !Array.isArray(out.result)
+        && Object.keys(out.result).some(k => out.result[k]);
+      if (!normalized && entities.length === 0 && !hasDict && !out.error) {
         html += `<span style="color:var(--text-tertiary);font-size:11px">Không tìm thấy kết quả phù hợp</span>`;
       }
       resultEl.innerHTML = html;
@@ -2563,8 +2660,8 @@ function _renderParserCompareSummary() {
   if (existing) existing.remove();
 
   // Collect results from all rendered cards
-  const modelKeys = ["prelabeler", "phobert", "mgte", "llm"];
-  const modelNames = { prelabeler: "PreLabeler", phobert: "PhoBERT", mgte: "mGTE", llm: "Qwen LLM" };
+  const modelKeys = ["prelabeler", "address_ner", "phobert", "mgte", "llm"];
+  const modelNames = { prelabeler: "PreLabeler", address_ner: "NER (HF/local)", phobert: "PhoBERT", mgte: "mGTE", llm: "Qwen LLM" };
   const rows = modelKeys.map(k => {
     const resultEl = document.getElementById(`presult-${k}`);
     const statsEl = document.getElementById(`pstats-${k}`);
@@ -2617,18 +2714,42 @@ function _renderParserCompareSummary() {
 }
 
 function _updateParserMeta(meta) {
+  if (!meta) return;
   const el = document.getElementById("parser-meta");
   if (!el) return;
+
+  const corpusEl = document.getElementById("parser-meta-corpus-line");
+  const acsEl = document.getElementById("parser-meta-acs-line");
+  const epochEl = document.getElementById("parser-meta-epoch-line");
+
+  const locale = "vi-VN";
+  if (corpusEl && typeof meta.corpusSize === "number") {
+    corpusEl.innerHTML = `<strong>${meta.corpusSize.toLocaleString(locale)}</strong> địa chỉ trong corpus`;
+  }
+
+  if (meta._acs && acsEl) {
+    const acs = meta._acs;
+    const scoreColor = acs.acs_score >= 0.8 ? "var(--success)" : acs.acs_score >= 0.5 ? "var(--warning)" : "var(--danger)";
+    const decision = acs.acs_decision != null ? ` · ${escapeHtml(String(acs.acs_decision))}` : "";
+    acsEl.innerHTML = `ACS <strong style="color:${scoreColor}">${(acs.acs_score * 100).toFixed(1)}%</strong>${decision}`;
+    if (epochEl && acs.address_epoch != null) {
+      epochEl.textContent = `Epoch: ${acs.address_epoch}`;
+    }
+  }
+
+  if (corpusEl && acsEl && epochEl) return;
+
   const parts = [];
-  if (meta.corpusSize) {
-    parts.push(`<div style="display:flex;align-items:center;gap:6px"><i class="fa-solid fa-database" style="color:var(--info);font-size:13px"></i><span class="text-secondary" style="font-size:12px"><strong>${meta.corpusSize.toLocaleString()}</strong> địa chỉ trong corpus</span></div>`);
+  if (typeof meta.corpusSize === "number") {
+    parts.push(`<div style="display:flex;align-items:center;gap:6px"><i class="fa-solid fa-database" style="color:var(--info);font-size:13px"></i><span class="text-secondary" style="font-size:12px"><strong>${meta.corpusSize.toLocaleString(locale)}</strong> địa chỉ trong corpus</span></div>`);
   }
   if (meta._acs) {
     const acs = meta._acs;
     const scoreColor = acs.acs_score >= 0.8 ? "var(--success)" : acs.acs_score >= 0.5 ? "var(--warning)" : "var(--danger)";
-    parts.push(`<div style="display:flex;align-items:center;gap:6px"><i class="fa-solid fa-chart-line" style="color:var(--success);font-size:13px"></i><span style="font-size:12px;color:var(--text-secondary)">ACS <strong style="color:${scoreColor}">${(acs.acs_score * 100).toFixed(1)}%</strong>${acs.acs_decision ? ` · ${acs.acs_decision}` : ""}</span></div>`);
-    if (acs.address_epoch) {
-      parts.push(`<div style="display:flex;align-items:center;gap:6px"><i class="fa-solid fa-code-commit" style="color:var(--text-tertiary);font-size:13px"></i><span style="font-size:12px;color:var(--text-tertiary)">Epoch: ${acs.address_epoch}</span></div>`);
+    const decision = acs.acs_decision != null ? ` · ${escapeHtml(String(acs.acs_decision))}` : "";
+    parts.push(`<div style="display:flex;align-items:center;gap:6px"><i class="fa-solid fa-chart-line" style="color:var(--success);font-size:13px"></i><span style="font-size:12px;color:var(--text-secondary)">ACS <strong style="color:${scoreColor}">${(acs.acs_score * 100).toFixed(1)}%</strong>${decision}</span></div>`);
+    if (acs.address_epoch != null) {
+      parts.push(`<div style="display:flex;align-items:center;gap:6px"><i class="fa-solid fa-code-commit" style="color:var(--text-tertiary);font-size:13px"></i><span style="font-size:12px;color:var(--text-tertiary)">Epoch: ${escapeHtml(String(acs.address_epoch))}</span></div>`);
     }
   }
   const divider = `<div style="width:4px;height:4px;border-radius:50%;background:var(--border-default);"></div>`;
@@ -2730,7 +2851,7 @@ function renderEntitiesTable(entities) {
   tbody.innerHTML = unique.map(e => {
     const info = labelInfo[e.label] || {};
     return `<tr>
-      <td><span class="badge" style="background:${info.color}22;color:${info.color}">${e.label}</span> ${info.text || ""}</td>
+      <td><span class="badge" style="background:${info.color}22;color:${info.color}">${e.label}</span></td>
       <td>${escapeHtml(e.text)}</td>
       <td>${(0.7 + Math.random() * 0.25).toFixed(2)}</td>
     </tr>`;

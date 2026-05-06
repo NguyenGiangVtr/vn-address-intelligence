@@ -13,6 +13,14 @@ import time
 import re
 import jwt
 import sys
+
+# Handle _lzma import with fallback for compatibility
+try:
+    import _lzma
+except ImportError:
+    from backports import lzma
+    sys.modules['_lzma'] = lzma
+
 import subprocess
 import threading
 import traceback
@@ -561,6 +569,8 @@ def _build_parser_runtime_bundle() -> dict:
         "phobert": None,
         "mgte": None,
         "llm": None,
+        "address_ner": None,
+        "address_ner_model_id": None,
         "prelabeler": PreLabeler,
         "corpus": [],
         "errors": {}
@@ -622,6 +632,29 @@ def _build_parser_runtime_bundle() -> dict:
         logger.error(f"Failed to load LLM: {e}")
         bundle["errors"]["llm"] = str(e)
         parser_loading_state["errors"]["llm"] = str(e)
+        parser_loading_state["currentModel"] = None
+
+    # AddressNER — cùng quy tắc chọn model như production_pipeline / NER_MODEL_ID
+    try:
+        from app.ai.models.ner_model import AddressNER, resolve_ner_model_path
+
+        ner_path = resolve_ner_model_path()
+        bundle["address_ner_model_id"] = ner_path
+        logger.info("Loading AddressNER for parser (%s)...", ner_path)
+        parser_loading_state["currentModel"] = "address_ner"
+        address_ner = AddressNER(model_path=ner_path)
+        bundle["address_ner"] = address_ner
+        parser_loading_state["loadedModels"].append("address_ner")
+        if not address_ner.ner_pipeline:
+            _ner_warn = "Transformer NER không khả dụng — chỉ regex fallback"
+            bundle["errors"]["address_ner"] = _ner_warn
+            parser_loading_state["errors"]["address_ner"] = _ner_warn
+        parser_loading_state["currentModel"] = None
+        logger.info("AddressNER for parser ready (transformer=%s)", bool(address_ner.ner_pipeline))
+    except Exception as e:
+        logger.error("Failed to load AddressNER for parser: %s", e)
+        bundle["errors"]["address_ner"] = str(e)
+        parser_loading_state["errors"]["address_ner"] = str(e)
         parser_loading_state["currentModel"] = None
 
     has_errors = bool(bundle["errors"])
@@ -706,6 +739,31 @@ def _run_parser_research(sample: AddressCleansingQueue, target_model: Optional[s
             outputs["prelabeler"]["entityCount"] = len(outputs["prelabeler"]["result"])
         except Exception as e:
             outputs["prelabeler"] = {"error": str(e)}
+
+    # 1b. AddressNER (HF / PhoBERT fine-tune / regex) — đồng bộ production
+    if not target_model or target_model == "address_ner":
+        ner_inst = bundle.get("address_ner")
+        model_id = bundle.get("address_ner_model_id")
+        if ner_inst:
+            try:
+                t0 = time.perf_counter()
+                result_dict = ner_inst.extract(raw_address)
+                lat_ms = (time.perf_counter() - t0) * 1000
+                outputs["address_ner"] = {
+                    "mode": "address_ner",
+                    "model_id": model_id,
+                    "result": result_dict,
+                    "entityCount": len([k for k, v in (result_dict or {}).items() if v]),
+                    "latencyMs": round(lat_ms, 2),
+                    "deep_ner_active": bool(getattr(ner_inst, "ner_pipeline", None)),
+                }
+            except Exception as e:
+                outputs["address_ner"] = {"error": str(e)}
+        else:
+            outputs["address_ner"] = {
+                "status": "Not loaded",
+                "error": bundle.get("errors", {}).get("address_ner", "AddressNER not initialized"),
+            }
 
     # 2. PhoBERT
     if not target_model or target_model == "phobert":
@@ -825,6 +883,7 @@ def _run_parser_research(sample: AddressCleansingQueue, target_model: Optional[s
         "meta": {
             "corpusSize": len(bundle.get("corpus") or []),
             "evaluatedAt": datetime.utcnow().isoformat() + "Z",
+            "nerModelId": bundle.get("address_ner_model_id"),
             "note": None,
         },
     }
@@ -925,6 +984,14 @@ def get_db():
 def health_check():
     """Trả về trạng thái hoạt động của API và thời gian máy chủ hiện tại."""
     return {"status": "ok", "time": time.time()}
+
+
+@api_router.get("/config/ner-labels", tags=["Hệ thống"], summary="Danh sách nhãn NER cho UI")
+def get_ner_labels_for_ui():
+    """Trả về `NER_LABELS` từ `app/ai/constants.py` — nguồn duy nhất cho SPA và Label Studio export."""
+    from app.ai.constants import NER_LABELS
+
+    return {"labels": list(NER_LABELS)}
 
 async def get_current_user(token: str = Depends(oauth2_scheme)):
     credentials_exception = HTTPException(
@@ -2193,12 +2260,11 @@ def get_parser_status():
     """Trả về trạng thái nạp model AI (idle/loading/ready/error) cùng danh sách model đã sẵn sàng."""
     with parser_runtime_lock:
         loaded = parser_loading_state.get("loadedModels", [])
-        # prelabeler is always available (rule-based)
+        # prelabeler is always available (rule-based); 4 neural stacks tracked for progress
         available = list(loaded) + ["prelabeler"]
         current_model = parser_loading_state.get("currentModel")
-        
-        # Calculate progress percentage
-        total_models = 3  # phobert, mgte, llm
+
+        total_models = 4  # phobert, mgte, llm, address_ner
         progress = (len(loaded) / total_models * 100) if loaded else 0
         
         return {
@@ -2211,6 +2277,7 @@ def get_parser_status():
             "progress": progress,
             "errors": parser_loading_state.get("errors", {}),
             "corpusSize": len(parser_runtime_bundle.get("corpus", [])) if parser_runtime_bundle else 0,
+            "nerModelId": (parser_runtime_bundle or {}).get("address_ner_model_id"),
         }
 
 

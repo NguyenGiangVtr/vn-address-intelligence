@@ -365,7 +365,7 @@ VALUES (...);
     <Label value="STR" background="#3cb44b"/>
     <Label value="WDS" background="#ffe119"/>
     <Label value="DST" background="#800000"/>
-    <Label value="PRO" background="#000075"/>
+    <Label value="PRO" background="#38bdf8"/>
     <Label value="ALY" background="#4363d8"/>
     <Label value="BLD" background="#f58231"/>
     <Label value="NHB" background="#469990"/>
@@ -442,16 +442,20 @@ Human-vs-Prelabeler Agreement:
 ### Pre-export validation
 
 ```python
+from app.ai.constants import NER_LABELS
+
 # Checks trước khi export
 assert len(export_data) > 0
 assert all("text" in d["data"] for d in export_data)
 assert all(len(d["data"]["text"]) > 10 for d in export_data)
 
-# Label validation
+# Label validation (labels là list một phần tử mã NER)
+ALLOWED_NER = {l["value"] for l in NER_LABELS}
 for record in export_data:
     for label in record["predictions"][0]["result"]:
         assert label["score"] >= 0.5  # Minimum confidence
-        assert label["value"]["labels"] in NER_LABELS
+        labs = label["value"].get("labels") or []
+        assert labs and labs[0] in ALLOWED_NER
         
 # Admin version validation (2026-05-06 addition)
 for record in export_data:

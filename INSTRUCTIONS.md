@@ -88,20 +88,20 @@ Schema prq: Processing Queue (AddressCleansingQueue — bảng chính)
 | LLM Qwen3 | `models/llm_model.py` | Final normalization |
 
 ### 3.3. NER Labels (Source of Truth: `app/ai/constants.py`)
-Mọi thay đổi label CHỈ sửa tại `constants.py`. Các file khác auto đồng bộ.
+Mọi thay đổi label CHỈ sửa tại `constants.py` (`value`, `color`, `hotkey`). Không dùng trường `text`. **SPA** lấy danh sách từ **`GET /api/config/ner-labels`** (JSON `labels`) — không nhân đôi trong `app.js`.
 
-| Code | Tên | Hotkey |
-|---|---|---|
-| PCD | Plus Code | 0 |
-| BLD | Tòa nhà/Chung cư | 1 |
-| POI | Địa danh/Mốc/Cửa hàng | 2 |
-| ALY | Hẻm/Ngõ | 3 |
-| NUM | Số nhà / Lô / P. | 4 |
-| STR | Tên đường | 5 |
-| NHB | Khu phố/Thôn/Ấp/Làng/Xóm | 6 |
-| WDS | Phường/Xã | 7 |
-| DST | Quận/Huyện | 8 |
-| PRO | Tỉnh/Thành phố | 9 |
+| Code | Hotkey |
+|---|---|
+| PCD | 0 |
+| BLD | 1 |
+| POI | 2 |
+| ALY | 3 |
+| NUM | 4 |
+| STR | 5 |
+| NHB | 6 |
+| WDS | 7 |
+| DST | 8 |
+| PRO | 9 |
 
 ---
 
@@ -165,7 +165,7 @@ vn-address-intelligence/
 ## 6. Quy tắc Code
 
 ### 6.1. Python
-- Python 3.11+
+- Python 3.11+ (ràng buộc chính thức: `requires-python` trong `pyproject.toml`)
 - Encoding: UTF-8 (Windows terminal dùng cp1252 — tránh emoji trong click.echo)
 - Logging: `logging` module, format `%(asctime)s [%(levelname)s] %(message)s`
 - Import path: Scripts trong `app/ai/` dùng `sys.path.insert(0, str(Path(__file__).parent))`
@@ -222,8 +222,8 @@ Mỗi tính năng AI đều phải có UI tương ứng:
 ## 8. Quy trình Phát triển
 
 ### 8.1. Khi thêm Label mới
-1. Sửa `app/ai/constants.py` (NER_LABELS)
-2. Kiểm tra: `train_ner.py`, `export_for_annotation.py`, `ner_model.py` auto đồng bộ
+1. Sửa `app/ai/constants.py` (`NER_LABELS`: `value`, `color`, `hotkey`; không dùng `text` — Label Studio và UI hiển thị từ `value`)
+2. Kiểm tra: `train_ner.py`, `export_for_annotation.py`, `ner_model.py`; UI nhận nhãn qua `GET /api/config/ner-labels` (reload trang hoặc Lưu Settings sau khi đổi API URL)
 3. Chạy export lại: `python app/ai/export_for_annotation.py --limit 100`
 
 ### 8.2. Khi thay đổi Database schema

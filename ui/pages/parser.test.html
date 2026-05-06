@@ -73,6 +73,11 @@
         <div id="presult-prelabeler" class="pmodel-result"><div class="pmodel-shimmer"></div></div>
         <div id="pstats-prelabeler"></div>
       </div>
+      <div id="pcard-address_ner" class="pmodel-card">
+        <div id="pbadge-address_ner"></div>
+        <div id="presult-address_ner" class="pmodel-result"><div class="pmodel-shimmer"></div></div>
+        <div id="pstats-address_ner"></div>
+      </div>
       <div id="pcard-phobert" class="pmodel-card">
         <div id="pbadge-phobert"></div>
         <div id="presult-phobert" class="pmodel-result"><div class="pmodel-shimmer"></div></div>
@@ -125,21 +130,22 @@ function assertContains(s, sub, msg)  { if (!String(s).includes(sub)) throw new 
 function assertNotContains(s, sub, msg){ if (String(s).includes(sub)) throw new Error(msg || `"${sub}" should NOT appear in: ${String(s).slice(0,120)}`); }
 
 /* ══════════════════════════════════════════════════════════════════
-   2. GLOBALS / STUBS  (replicate exactly what app.js?v=202605060229 exposes)
+   2. GLOBALS / STUBS  (NER_LABELS = payload GET /api/config/ner-labels — stub cố định cho test offline)
    ══════════════════════════════════════════════════════════════════ */
 window.API_BASE = "http://localhost:8081/api";
 
+/** Stub khớp `{ labels: [...] }` từ backend khi không gọi được API */
 window.NER_LABELS = [
-  { value:"PCD", text:"Plus Code",   color:"#f032e6" },
-  { value:"BLD", text:"Tòa nhà",     color:"#f58231" },
-  { value:"POI", text:"Địa danh",    color:"#911eb4" },
-  { value:"ALY", text:"Hẻm/Ngõ",    color:"#4363d8" },
-  { value:"NUM", text:"Số nhà",      color:"#e6194B" },
-  { value:"STR", text:"Tên đường",   color:"#3cb44b" },
-  { value:"NHB", text:"Khu phố",     color:"#469990" },
-  { value:"WDS", text:"Phường/Xã",   color:"#ffe119" },
-  { value:"DST", text:"Quận/Huyện",  color:"#800000" },
-  { value:"PRO", text:"Tỉnh/TP",     color:"#000075" },
+  { value:"PCD", color:"#f032e6", hotkey:"0" },
+  { value:"BLD", color:"#f58231", hotkey:"1" },
+  { value:"POI", color:"#911eb4", hotkey:"2" },
+  { value:"ALY", color:"#4363d8", hotkey:"3" },
+  { value:"NUM", color:"#e6194B", hotkey:"4" },
+  { value:"STR", color:"#3cb44b", hotkey:"5" },
+  { value:"NHB", color:"#469990", hotkey:"6" },
+  { value:"WDS", color:"#ffe119", hotkey:"7" },
+  { value:"DST", color:"#800000", hotkey:"8" },
+  { value:"PRO", color:"#38bdf8", hotkey:"9" },
 ];
 
 window.SAMPLE_ADDRESSES = [
@@ -159,11 +165,12 @@ function escapeHtml(str) {
 }
 
 /* ══════════════════════════════════════════════════════════════════
-   3. PRODUCTION FUNCTIONS UNDER TEST  (exact copies from app.js?v=202605060229)
+   3. PRODUCTION FUNCTIONS UNDER TEST  (exact copies from app.js?v=202605061739)
    ══════════════════════════════════════════════════════════════════ */
 
 const _MODEL_TASK_META = {
   prelabeler: { task:"NER",       icon:"fa-tags",             taskLabel:"Trích xuất thực thể",   outputType:"entities"   },
+  address_ner:{ task:"NER",       icon:"fa-sitemap",          taskLabel:"NER · AddressNER",      outputType:"entity_dict" },
   phobert:    { task:"Retrieval", icon:"fa-magnifying-glass", taskLabel:"Chuẩn hóa ngữ nghĩa",   outputType:"normalized" },
   mgte:       { task:"Embedding", icon:"fa-layer-group",      taskLabel:"Embedding đa ngôn ngữ", outputType:"normalized" },
   llm:        { task:"LLM",       icon:"fa-brain",            taskLabel:"Suy luận ngôn ngữ",     outputType:"normalized" },
@@ -177,7 +184,7 @@ function _setParserStatus(state, text) {
 }
 
 function _resetModelCards() {
-  ["prelabeler","phobert","mgte","llm"].forEach(m => {
+  ["prelabeler","address_ner","phobert","mgte","llm"].forEach(m => {
     const card   = document.getElementById(`pcard-${m}`);
     const result = document.getElementById(`presult-${m}`);
     const stats  = document.getElementById(`pstats-${m}`);
@@ -226,8 +233,19 @@ function _renderModelCard(model, out, latencyMs) {
           return `<span class="pmodel-ent-chip" style="color:${info.color}">${lbl}: ${escapeHtml(txt)}</span>`;
         }).join("");
         html += `<div class="pmodel-entities">${chips}</div>`;
+      } else if (out.result && typeof out.result === "object" && !Array.isArray(out.result)) {
+        const pairs = Object.entries(out.result).filter(([, v]) => v != null && String(v).trim() !== "");
+        if (pairs.length > 0) {
+          const chips = pairs.map(([k, v]) => {
+            const info = labelInfo[k] || { color:"#64748b" };
+            return `<span class="pmodel-ent-chip" style="color:${info.color}">${escapeHtml(k)}: ${escapeHtml(String(v))}</span>`;
+          }).join("");
+          html += `<div class="pmodel-entities">${chips}</div>`;
+        }
       }
-      if (!normalized && entities.length === 0 && !out.error)
+      const hasDict = out.result && typeof out.result === "object" && !Array.isArray(out.result)
+        && Object.keys(out.result).some(k => out.result[k]);
+      if (!normalized && entities.length === 0 && !hasDict && !out.error)
         html += `<span class="empty-result">Không tìm thấy kết quả phù hợp</span>`;
       resultEl.innerHTML = html;
     }
@@ -261,8 +279,8 @@ function _renderParserCompareSummary() {
   const grid = document.getElementById("parser-models-grid");
   if (!grid) return;
   document.getElementById("parser-compare-summary")?.remove();
-  const MODEL_NAMES = { prelabeler:"PreLabeler", phobert:"PhoBERT", mgte:"mGTE", llm:"Qwen LLM" };
-  const rows = ["prelabeler","phobert","mgte","llm"].map(k => {
+  const MODEL_NAMES = { prelabeler:"PreLabeler", address_ner:"NER (HF/local)", phobert:"PhoBERT", mgte:"mGTE", llm:"Qwen LLM" };
+  const rows = ["prelabeler","address_ner","phobert","mgte","llm"].map(k => {
     const resultEl    = document.getElementById(`presult-${k}`);
     const statsEl     = document.getElementById(`pstats-${k}`);
     const isError     = document.getElementById(`pcard-${k}`)?.classList.contains("is-error");
@@ -371,7 +389,7 @@ async function runParser() {
   const timingVal = document.getElementById("parser-timing-val");
 
   _resetModelCards();
-  _setParserStatus("running", "Đang phân tích — gửi yêu cầu đến 4 model...");
+  _setParserStatus("running", "Đang phân tích — gửi yêu cầu đến 5 model...");
   if (heroInner) heroInner.classList.add("is-running");
   if (btnParse)  { btnParse.disabled = true;  btnParse.innerHTML = "<span>Đang xử lý</span>"; }
   if (timingEl)  timingEl.style.display = "none";
@@ -382,9 +400,10 @@ async function runParser() {
   const startTs = Date.now();
   const payload = sampleId ? { id: parseInt(sampleId) } : { raw_address: text };
   const MODELS  = [
-    { key:"prelabeler" }, { key:"phobert" }, { key:"mgte" }, { key:"llm" },
+    { key:"prelabeler" }, { key:"address_ner" }, { key:"phobert" }, { key:"mgte" }, { key:"llm" },
   ];
   let completedCount = 0, firstNERDone = false, lastMeta = null;
+  const totalModels = MODELS.length;
 
   const fetchModel = async ({ key }) => {
     const t0 = Date.now();
@@ -409,7 +428,7 @@ async function runParser() {
       _renderModelCardError(key);
     } finally {
       completedCount++;
-      _setParserStatus("running", `Đang phân tích — ${completedCount}/4 model hoàn thành...`);
+      _setParserStatus("running", `Đang phân tích — ${completedCount}/${totalModels} model hoàn thành...`);
     }
   };
 
@@ -450,11 +469,13 @@ function mockFetch(overrides = {}) {
                   meta:{ corpusSize:10000 } },
     llm:        { outputs:{ llm:{ mode:"qwen2.5_llm", normalizedAddress:"123 Lê Lợi, Bến Thành, Quận 1, TP. Hồ Chí Minh", score:0.897, latencyMs:219 } },
                   meta:{ corpusSize:10000 } },
+    address_ner:{ outputs:{ address_ner:{ mode:"address_ner", model_id:"stub/ner", result:{ STR:"Lê Lợi", WDS:"Bến Thành", DST:"Quận 1", PRO:"HCM" }, entityCount:4, latencyMs:15, deep_ner_active:true } },
+                  meta:{ corpusSize:10000 } },
   };
   const merged = { ...defaults, ...overrides };
 
   window.fetch = async (url, opts) => {
-    const key = ["prelabeler","phobert","mgte","llm"].find(k => url.includes(`model=${k}`));
+    const key = ["prelabeler","address_ner","phobert","mgte","llm"].find(k => url.includes(`model=${k}`));
     const cfg = merged[key];
     if (!cfg) throw new Error(`No mock for ${url}`);
     if (cfg._throw) throw new Error(cfg._throw);
@@ -474,10 +495,10 @@ describe("DOM Fixture — phần tử bắt buộc", () => {
     "parser-input","btn-parse","btn-parse-sample-local","btn-parse-sample-db",
     "parser-status-dot","parser-status","parser-timing","parser-timing-val",
     "parser-output","parser-ner-legend","parser-models-grid","parser-meta",
-    "pcard-prelabeler","pcard-phobert","pcard-mgte","pcard-llm",
-    "presult-prelabeler","presult-phobert","presult-mgte","presult-llm",
-    "pstats-prelabeler","pstats-phobert","pstats-mgte","pstats-llm",
-    "pbadge-prelabeler","pbadge-phobert","pbadge-mgte","pbadge-llm",
+    "pcard-prelabeler","pcard-address_ner","pcard-phobert","pcard-mgte","pcard-llm",
+    "presult-prelabeler","presult-address_ner","presult-phobert","presult-mgte","presult-llm",
+    "pstats-prelabeler","pstats-address_ner","pstats-phobert","pstats-mgte","pstats-llm",
+    "pbadge-prelabeler","pbadge-address_ner","pbadge-phobert","pbadge-mgte","pbadge-llm",
   ];
   REQUIRED_IDS.forEach(id => {
     it(`#${id} tồn tại`, () => assert(document.getElementById(id), `#${id} không tìm thấy`));
@@ -539,18 +560,18 @@ describe("_setParserStatus — cập nhật status bar", () => {
 
 // ── 4. _resetModelCards ───────────────────────────────────────────
 describe("_resetModelCards — đặt lại UI về trạng thái ban đầu", () => {
-  it("xóa class is-done khỏi tất cả 4 card", () => {
-    ["prelabeler","phobert","mgte","llm"].forEach(m =>
+  it("xóa class is-done khỏi tất cả 5 card", () => {
+    ["prelabeler","address_ner","phobert","mgte","llm"].forEach(m =>
       document.getElementById(`pcard-${m}`).classList.add("is-done"));
     _resetModelCards();
-    ["prelabeler","phobert","mgte","llm"].forEach(m =>
+    ["prelabeler","address_ner","phobert","mgte","llm"].forEach(m =>
       assert(!document.getElementById(`pcard-${m}`).classList.contains("is-done"), `pcard-${m} vẫn có is-done`));
   });
-  it("xóa class is-error khỏi tất cả 4 card", () => {
-    ["prelabeler","phobert","mgte","llm"].forEach(m =>
+  it("xóa class is-error khỏi tất cả 5 card", () => {
+    ["prelabeler","address_ner","phobert","mgte","llm"].forEach(m =>
       document.getElementById(`pcard-${m}`).classList.add("is-error"));
     _resetModelCards();
-    ["prelabeler","phobert","mgte","llm"].forEach(m =>
+    ["prelabeler","address_ner","phobert","mgte","llm"].forEach(m =>
       assert(!document.getElementById(`pcard-${m}`).classList.contains("is-error"), `pcard-${m} vẫn có is-error`));
   });
   it("xóa parser-compare-summary nếu tồn tại", () => {
@@ -562,7 +583,7 @@ describe("_resetModelCards — đặt lại UI về trạng thái ban đầu", (
   });
   it("thêm lại pmodel-shimmer vào mỗi result div", () => {
     _resetModelCards();
-    ["prelabeler","phobert","mgte","llm"].forEach(m =>
+    ["prelabeler","address_ner","phobert","mgte","llm"].forEach(m =>
       assert(document.querySelector(`#presult-${m} .pmodel-shimmer`), `Thiếu shimmer trong presult-${m}`));
   });
   it("xóa stats innerHTML", () => {
@@ -835,7 +856,7 @@ describe("renderNERHighlight — tô màu NER trên text đầu vào", () => {
 describe("_renderParserCompareSummary — bảng so sánh kết quả", () => {
   it("không tạo summary khi tất cả card đều lỗi", () => {
     _resetModelCards();
-    ["prelabeler","phobert","mgte","llm"].forEach(m => _renderModelCardError(m));
+    ["prelabeler","address_ner","phobert","mgte","llm"].forEach(m => _renderModelCardError(m));
     _renderParserCompareSummary();
     assert(!document.getElementById("parser-compare-summary"), "Không được tạo summary khi all error");
   });
@@ -851,7 +872,7 @@ describe("_renderParserCompareSummary — bảng so sánh kết quả", () => {
   });
   it("bảng có 4 rows khi tất cả model DONE", () => {
     _resetModelCards();
-    ["prelabeler","phobert","mgte","llm"].forEach(m =>
+    ["prelabeler","address_ner","phobert","mgte","llm"].forEach(m =>
       _renderModelCard(m, m==="prelabeler"
         ? { result:MOCK_ENTITIES, entityCount:5 }
         : { normalizedAddress:"Kết quả", score:0.9, latencyMs:30 }, 100));
@@ -949,12 +970,14 @@ describe("_updateParserMeta — cập nhật meta footer", () => {
 
 // ── 12. _MODEL_TASK_META ──────────────────────────────────────────
 describe("_MODEL_TASK_META — metadata tác vụ các model", () => {
-  it("4 model đều có entry", () => {
-    ["prelabeler","phobert","mgte","llm"].forEach(k =>
+  it("5 model đều có entry", () => {
+    ["prelabeler","address_ner","phobert","mgte","llm"].forEach(k =>
       assert(_MODEL_TASK_META[k], `Thiếu entry cho ${k}`));
   });
   it("prelabeler outputType = 'entities'", () =>
     assertEqual(_MODEL_TASK_META.prelabeler.outputType, "entities"));
+  it("address_ner outputType = 'entity_dict'", () =>
+    assertEqual(_MODEL_TASK_META.address_ner.outputType, "entity_dict"));
   it("phobert/mgte/llm outputType = 'normalized'", () =>
     ["phobert","mgte","llm"].forEach(k =>
       assertEqual(_MODEL_TASK_META[k].outputType, "normalized", `${k} outputType sai`)));
@@ -989,7 +1012,7 @@ describe("runParser() — pipeline tích hợp (mock fetch)", () => {
     await runParser();
     assertContains(document.getElementById("btn-parse").innerHTML, "Phân tích");
   });
-  it("status text = 'Hoàn thành' sau khi 4 model xong", async () => {
+  it("status text = 'Hoàn thành' sau khi 5 model xong", async () => {
     document.getElementById("parser-input").value = "test";
     mockFetch();
     await runParser();
@@ -1015,11 +1038,11 @@ describe("runParser() — pipeline tích hợp (mock fetch)", () => {
     await runParser();
     assert(document.querySelectorAll("#parser-output .ner-entity").length > 0, "Phải có NER spans");
   });
-  it("4 card đều có class is-done", async () => {
+  it("5 card đều có class is-done", async () => {
     document.getElementById("parser-input").value = "test";
     mockFetch();
     await runParser();
-    ["prelabeler","phobert","mgte","llm"].forEach(m =>
+    ["prelabeler","address_ner","phobert","mgte","llm"].forEach(m =>
       assert(document.getElementById(`pcard-${m}`).classList.contains("is-done"), `${m} chưa DONE`));
   });
   it("comparison summary tồn tại sau khi xong", async () => {
@@ -1045,7 +1068,7 @@ describe("runParser() — pipeline tích hợp (mock fetch)", () => {
     document.getElementById("parser-input").value = "test";
     mockFetch({ phobert: { _status:500 } });
     await runParser();
-    ["prelabeler","mgte","llm"].forEach(m =>
+    ["prelabeler","address_ner","mgte","llm"].forEach(m =>
       assert(document.getElementById(`pcard-${m}`).classList.contains("is-done"),
         `${m} phải DONE dù phobert lỗi`));
   });
@@ -1067,7 +1090,7 @@ describe("runParser() — pipeline tích hợp (mock fetch)", () => {
     let body = null;
     window.fetch = async (url, opts) => {
       body = JSON.parse(opts.body);
-      const key = ["prelabeler","phobert","mgte","llm"].find(k => url.includes(`model=${k}`));
+      const key = ["prelabeler","address_ner","phobert","mgte","llm"].find(k => url.includes(`model=${k}`));
       return { ok:true, json:async()=>({ outputs:{ [key]:{ normalizedAddress:"x", score:0.9, latencyMs:10 } }, meta:{ corpusSize:1 } }) };
     };
     await runParser();
@@ -1080,7 +1103,7 @@ describe("runParser() — pipeline tích hợp (mock fetch)", () => {
     let body = null;
     window.fetch = async (url, opts) => {
       body = JSON.parse(opts.body);
-      const key = ["prelabeler","phobert","mgte","llm"].find(k => url.includes(`model=${k}`));
+      const key = ["prelabeler","address_ner","phobert","mgte","llm"].find(k => url.includes(`model=${k}`));
       return { ok:true, json:async()=>({ outputs:{ [key]:{ normalizedAddress:"x", score:0.9, latencyMs:10 } }, meta:{ corpusSize:1 } }) };
     };
     await runParser();
@@ -1091,23 +1114,23 @@ describe("runParser() — pipeline tích hợp (mock fetch)", () => {
     let headers = null;
     window.fetch = async (url, opts) => {
       headers = opts.headers;
-      const key = ["prelabeler","phobert","mgte","llm"].find(k => url.includes(`model=${k}`));
+      const key = ["prelabeler","address_ner","phobert","mgte","llm"].find(k => url.includes(`model=${k}`));
       return { ok:true, json:async()=>({ outputs:{ [key]:{ normalizedAddress:"x", score:0.9, latencyMs:10 } }, meta:{} }) };
     };
     await runParser();
     assertContains(headers?.Authorization || "", "Bearer", "Thiếu Authorization header");
   });
-  it("4 fetch calls gọi đúng endpoint /parser/analyze?model=*", async () => {
+  it("5 fetch calls gọi đúng endpoint /parser/analyze?model=*", async () => {
     document.getElementById("parser-input").value = "test endpoint";
     const called = new Set();
     window.fetch = async (url, opts) => {
-      const key = ["prelabeler","phobert","mgte","llm"].find(k => url.includes(`model=${k}`));
+      const key = ["prelabeler","address_ner","phobert","mgte","llm"].find(k => url.includes(`model=${k}`));
       if (key) called.add(key);
       return { ok:true, json:async()=>({ outputs:{ [key]:{ normalizedAddress:"x", score:0.9, latencyMs:10 } }, meta:{} }) };
     };
     await runParser();
-    assertEqual(called.size, 4, `Phải gọi 4 model, thực tế: ${[...called]}`);
-    ["prelabeler","phobert","mgte","llm"].forEach(k => assert(called.has(k), `Thiếu call model=${k}`));
+    assertEqual(called.size, 5, `Phải gọi 5 model, thực tế: ${[...called]}`);
+    ["prelabeler","address_ner","phobert","mgte","llm"].forEach(k => assert(called.has(k), `Thiếu call model=${k}`));
   });
   it("parser-compare-summary bị xóa trước mỗi lần chạy mới", async () => {
     document.getElementById("parser-input").value = "test reset";

@@ -314,7 +314,7 @@ def export_label_config(output_file: str):
         if "hint" in l: attrs += f' hint="{l["hint"]}"'
         if "hotkey" in l: attrs += f' hotkey="{l["hotkey"]}"'
         
-        xml_content += f'    <Label {attrs}>{l["text"]}</Label>\n'
+        xml_content += f'    <Label {attrs}/>\n'
     
     xml_content += '  </Labels>\n  <Text name="text" value="$text"/>\n</View>'
     

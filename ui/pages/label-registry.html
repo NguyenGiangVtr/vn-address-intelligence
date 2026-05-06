@@ -46,11 +46,9 @@
                 <table class="table table-hover">
                     <thead>
                         <tr>
-                            <th width="100">Nhãn</th>
-                            <th>Mô tả</th>
-                            <th width="120">Kiểu</th>
+                            <th width="100">Mã nhãn</th>
+                            <th width="140">Màu</th>
                             <th width="100">Phím tắt</th>
-                            <th>Ví dụ</th>
                         </tr>
                     </thead>
                     <tbody id="label-registry-body">
@@ -98,7 +96,7 @@
             </div>
             
             <div style="margin-top: 16px; padding: 12px; background: var(--accent-light, rgba(59, 130, 246, 0.1)); border-left: 3px solid var(--accent); border-radius: 4px; font-size: 12px; color: var(--text-secondary);">
-                <strong style="color: var(--accent);">💡 Lưu ý:</strong> Danh sách nhãn đồng bộ với constants.py. Mọi thay đổi cần cập nhật ở cả frontend và backend.
+                <strong style="color: var(--accent);">💡 Lưu ý:</strong> Danh sách nhãn tải từ API <code>GET /api/config/ner-labels</code> (nguồn <code>app/ai/constants.py</code>). Label Studio export dùng cùng định nghĩa.
             </div>
         </div>
     </div>

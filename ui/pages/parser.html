@@ -55,11 +55,14 @@
     <!-- ── NER Highlight Output ── -->
     <div class="parser-ner-zone" id="parser-ner-zone">
         <div class="parser-ner-header">
-            <span class="parser-section-label"><i class="fa-solid fa-tags"></i> NER Entities</span>
+            <span class="parser-section-label"><i class="fa-solid fa-tags"></i> NER (PreLabeler — tô màu)</span>
             <div class="parser-ner-legend" id="parser-ner-legend"></div>
         </div>
+        <p class="parser-ner-hint text-secondary" style="font-size:12px;margin:0 0 8px 0">
+            Vùng dưới dùng kết quả <strong>PreLabeler</strong> (rule/hybrid). Thẻ <strong>NER (HF/local)</strong> trong lưới hiển thị model <code>AddressNER</code> giống pipeline production.
+        </p>
         <div id="parser-output" class="parser-ner-output">
-            <span class="parser-placeholder">Kết quả tách thực thể sẽ hiển thị tại đây, được tô màu theo nhãn NER chuẩn hóa</span>
+            <span class="parser-placeholder">Kết quả span từ PreLabeler hiển thị tại đây; màu theo nhãn từ API</span>
         </div>
     </div>
 
@@ -79,6 +82,23 @@
                     <span class="pmodel-idle-hint">Nhập địa chỉ và nhấn Phân tích</span>
                 </div>
                 <div class="pmodel-stats" id="pstats-prelabeler"></div>
+            </div>
+        </div>
+
+        <div class="pmodel-card" id="pcard-address_ner" data-model="address_ner">
+            <div class="pmodel-header">
+                <div class="pmodel-icon" style="--mc:#38bdf8"><i class="fa-solid fa-sitemap"></i></div>
+                <div class="pmodel-title">
+                    <div class="pmodel-name">NER (HF / local)</div>
+                    <div class="pmodel-sub"><code>AddressNER</code> — token classification hoặc regex; đồng bộ production</div>
+                </div>
+                <div class="pmodel-badge" id="pbadge-address_ner"><span class="pmodel-badge-idle">READY</span></div>
+            </div>
+            <div class="pmodel-body">
+                <div class="pmodel-result" id="presult-address_ner">
+                    <span class="pmodel-idle-hint">Nhập địa chỉ và nhấn Phân tích</span>
+                </div>
+                <div class="pmodel-stats" id="pstats-address_ner"></div>
             </div>
         </div>
 
@@ -136,20 +156,20 @@
     <!-- ── Compact Footer ── -->
     <div class="parser-footer-row">
         <div class="parser-meta-card" id="parser-meta">
-            <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+            <div id="parser-meta-inner" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
                 <div style="display:flex;align-items:center;gap:6px">
                     <i class="fa-solid fa-database" style="color:var(--info);font-size:13px"></i>
-                    <span class="text-secondary" style="font-size:12px"><strong>Đang tải...</strong> địa chỉ trong corpus</span>
+                    <span id="parser-meta-corpus-line" class="text-secondary" style="font-size:12px"><strong>Đang tải...</strong> địa chỉ trong corpus</span>
                 </div>
                 <div style="width:4px;height:4px;border-radius:50%;background:var(--border-default);"></div>
                 <div style="display:flex;align-items:center;gap:6px">
                     <i class="fa-solid fa-chart-line" style="color:var(--success);font-size:13px"></i>
-                    <span style="font-size:12px;color:var(--text-secondary)">ACS <strong style="color:var(--warning)">79.8%</strong> · AUTO_CONVERT</span>
+                    <span id="parser-meta-acs-line" style="font-size:12px;color:var(--text-secondary)">ACS <strong style="color:var(--warning)">79.8%</strong> · AUTO_CONVERT</span>
                 </div>
                 <div style="width:4px;height:4px;border-radius:50%;background:var(--border-default);"></div>
                 <div style="display:flex;align-items:center;gap:6px">
                     <i class="fa-solid fa-code-commit" style="color:var(--text-tertiary);font-size:13px"></i>
-                    <span style="font-size:12px;color:var(--text-tertiary)">Epoch: PRE_2025</span>
+                    <span id="parser-meta-epoch-line" style="font-size:12px;color:var(--text-tertiary)">Epoch: PRE_2025</span>
                 </div>
             </div>
         </div>

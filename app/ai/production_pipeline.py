@@ -18,7 +18,7 @@ from datetime import datetime
 sys.path.insert(0, str(Path(__file__).parent))
 
 from db_connector import DBConnector
-from models import SiameseMGTE, LLMQwen3, AddressNER
+from models import SiameseMGTE, LLMQwen3, AddressNER, DEFAULT_HF_NER_MODEL_ID, resolve_ner_model_path
 from utils.config_loader import load_config_with_env
 from acs_calculator import ACSCalculator
 from epoch_detector import EpochDetector
@@ -86,11 +86,13 @@ def run_pipeline(config_path: str, limit: int = None):
         logger.error("Critical: Corpus was not loaded successfully")
         raise RuntimeError("Pipeline initialization failed: corpus not loaded.")
     
-    # Load NER Model (Đã Fine-tuned hoặc dùng Regex fallback)
-    ner_path = "models/phobert-ner-vn"
-    ner_model_path = ner_path if Path(ner_path).exists() else ""
-    if not ner_model_path:
-        logger.info("Fine-tuned NER model not found at models/phobert-ner-vn. Regex fallback will be used.")
+    ner_model_path = resolve_ner_model_path()
+    if ner_model_path == DEFAULT_HF_NER_MODEL_ID:
+        logger.info(
+            "No local NER at models/phobert-ner-vn and NER_MODEL_ID unset; "
+            "using Hugging Face model %s (first run may download weights).",
+            DEFAULT_HF_NER_MODEL_ID,
+        )
     ner = AddressNER(model_path=ner_model_path)
     
     llm = LLMQwen3(model_name=mod_cfg["llm"]["model_name"], use_quantization=False)

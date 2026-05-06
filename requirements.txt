@@ -1,3 +1,4 @@
+# Python >=3.11 (requires-python trong pyproject.toml)
 # ── Core ──
 sqlalchemy>=2.0.25
 psycopg2-binary>=2.9.9
@@ -33,6 +34,7 @@ scipy>=1.10.1
 
 # ── Vietnamese NLP ──
 pyvi>=0.1.1
+vnaddress>=1.0.5
 
 # ── Data Collection ──
 overpy>=0.6
