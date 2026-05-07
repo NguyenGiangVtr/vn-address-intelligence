@@ -217,3 +217,7 @@ __marimo__/
 /data
 /scripts/testing
 /reports
+
+*.safetensors
+*.pt
+checkpoint-*/
