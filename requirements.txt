@@ -1,9 +1,15 @@
+# Global constraints to keep transitive deps stable
+-c constraints.txt
+
 # Python >=3.11 (requires-python trong pyproject.toml)
 # ── Core ──
 sqlalchemy>=2.0.25
 psycopg2-binary>=2.9.9
 python-dotenv>=1.0.1
 requests>=2.31.0
+urllib3<3
+charset-normalizer<4
+chardet<6,>=3.0.2
 pandas>=1.5.3
 openpyxl>=3.1.2
 click>=8.1.7

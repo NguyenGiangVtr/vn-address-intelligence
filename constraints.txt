@@ -1,0 +1,5 @@
+# Compatibility guardrails for requests dependency stack.
+# Keep these ranges aligned to avoid RequestsDependencyWarning.
+urllib3<3
+charset-normalizer<4
+chardet<6,>=3.0.2

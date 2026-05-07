@@ -16,6 +16,7 @@ import json
 import logging
 import argparse
 import re
+from itertools import islice
 from pathlib import Path
 from typing import Optional
 
@@ -61,6 +62,23 @@ HF_STANDARD_BIO_TO_PROJECT = {
     "I-FLOOR": "I-FLR",
     "B-ROOM": "B-RM",
     "I-ROOM": "I-RM",
+}
+
+# Fallback ID mapping for the HF standard dataset when ClassLabel metadata is unavailable.
+HF_STANDARD_ID_TO_BIO = {
+    0: "O",
+    1: "B-STREET",
+    2: "I-STREET",
+    3: "B-WARD",
+    4: "I-WARD",
+    5: "B-DISTRICT",
+    6: "I-DISTRICT",
+    7: "B-PROVINCE",
+    8: "I-PROVINCE",
+    9: "B-FLOOR",
+    10: "I-FLOOR",
+    11: "B-ROOM",
+    12: "I-ROOM",
 }
 
 REQUIRED_ENTITY_LABELS = {"NUM", "STR", "WDS", "DST", "PRO", "NHB", "BLD", "POI", "FLR", "RM"}
@@ -211,11 +229,15 @@ def convert_hf_address_standard_to_bio(dataset, tokenizer, label2id: dict, max_l
     Ánh xạ nhãn về lược đồ BIO trong ``constants.NER_LABELS``.
     """
     processed = []
-    ner_col = dataset.features.get("ner_tags")
+    features = getattr(dataset, "features", {}) or {}
+    ner_col = features.get("ner_tags")
     class_label = getattr(ner_col, "feature", None)
+    if hasattr(dataset, "__len__") and hasattr(dataset, "__getitem__"):
+        iterator = (dataset[i] for i in range(len(dataset)))
+    else:
+        iterator = iter(dataset)
 
-    for i in range(len(dataset)):
-        ex = dataset[i]
+    for ex in iterator:
         words = ex.get("tokens") or []
         raw_tags = ex.get("ner_tags") or []
         if len(words) != len(raw_tags) or not words:
@@ -225,6 +247,8 @@ def convert_hf_address_standard_to_bio(dataset, tokenizer, label2id: dict, max_l
         for t in raw_tags:
             if isinstance(t, int) and class_label is not None and hasattr(class_label, "int2str"):
                 tag_strs.append(class_label.int2str(t))
+            elif isinstance(t, int):
+                tag_strs.append(HF_STANDARD_ID_TO_BIO.get(t, "O"))
             else:
                 tag_strs.append(str(t))
 
@@ -476,8 +500,19 @@ def train_model(
             hf_max_train_samples,
             hf_max_eval_samples,
         )
-        train_raw = load_dataset(hf_dataset, split=f"train[:{hf_max_train_samples}]")
-        eval_raw = load_dataset(hf_dataset, split=f"test[:{hf_max_eval_samples}]")
+        used_streaming = False
+        try:
+            train_raw = load_dataset(hf_dataset, split=f"train[:{hf_max_train_samples}]")
+            eval_raw = load_dataset(hf_dataset, split=f"test[:{hf_max_eval_samples}]")
+        except Exception as exc:
+            logger.warning(
+                "HF load_dataset mặc định lỗi (%s). Fallback sang streaming=True để tránh DatasetGenerationError.",
+                exc,
+            )
+            used_streaming = True
+            train_raw = list(islice(load_dataset(hf_dataset, split="train", streaming=True), hf_max_train_samples))
+            eval_raw = list(islice(load_dataset(hf_dataset, split="test", streaming=True), hf_max_eval_samples))
+
         train_data = convert_hf_address_standard_to_bio(train_raw, tokenizer, label2id)
         eval_data = convert_hf_address_standard_to_bio(eval_raw, tokenizer, label2id)
         if include_ground_truth:
@@ -499,7 +534,10 @@ def train_model(
             eval_data = [train_data[i] for i in ix[split_idx:]]
             train_data = [train_data[i] for i in ix[:split_idx]]
         logger.info("Train: %d mẫu | Eval: %d mẫu (HF)", len(train_data), len(eval_data))
-        data_notes = f"hf_dataset={hf_dataset};train_cap={hf_max_train_samples}"
+        data_notes = (
+            f"hf_dataset={hf_dataset};train_cap={hf_max_train_samples};"
+            f"eval_cap={hf_max_eval_samples};streaming={used_streaming}"
+        )
     else:
         logger.info(f"Đọc dữ liệu từ {json_path}...")
         with open(json_path, encoding="utf-8") as f:
