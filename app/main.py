@@ -57,7 +57,7 @@ def admin_map():
 @cli.command('admin:clean-names')
 @click.option('--dry-run', is_flag=True, help='Count rows only; no DB writes.')
 def admin_clean_names(dry_run):
-    """Apply clean_admin_unit_name to mat.province, mat.district, mat.ward."""
+    """Normalize VI admin names và đồng bộ *_name_en / type_name_en (slug ASCII)."""
     label = "dry-run" if dry_run else "update"
     click.echo(f"--- admin:clean-names ({label}) ---")
     db = SessionLocal()
@@ -70,7 +70,7 @@ def admin_clean_names(dry_run):
     if dry_run:
         click.echo("OK: dry-run (no writes).")
     else:
-        click.echo("OK: committed updates to mat.province, mat.district, mat.ward.")
+        click.echo("OK: committed updates to mat.province, mat.district, mat.ward (VI + slug _en columns).")
 
 @cli.command('admin:stats')
 def admin_stats():
@@ -143,6 +143,20 @@ def alias_seed_v3(ctx, **kwargs):
 @click.pass_context
 def alias_check_db(ctx):
     ctx.invoke(admin_stats)
+
+@cli.command('fetch-osm', hidden=True)
+@click.option('--limit', default=63, help='Number of provinces.')
+@click.option('--target', default=5000000, help='Target entities count.')
+@click.pass_context
+def alias_fetch_osm_hyphen(ctx, limit, target):
+    ctx.invoke(osm_fetch, limit=limit, target=target)
+
+@cli.command('fetch_osm', hidden=True)
+@click.option('--limit', default=63, help='Number of provinces.')
+@click.option('--target', default=5000000, help='Target entities count.')
+@click.pass_context
+def alias_fetch_osm_underscore(ctx, limit, target):
+    ctx.invoke(osm_fetch, limit=limit, target=target)
 
 if __name__ == "__main__":
     cli()

@@ -8,16 +8,16 @@ Giúp đồng bộ nhãn (Labels) giữa Export, Training và Inference.
 # 1. Định nghĩa danh sách nhãn NER chuẩn
 # Mỗi nhãn: value (mã, hiển thị trên Label Studio), color, hotkey (tuỳ chọn: alias, hint)
 NER_LABELS = [
-    {"value": "PCD", "color": "#f032e6", "hotkey": "0"},
-    {"value": "BLD", "color": "#f58231", "hotkey": "1"},
-    {"value": "POI", "color": "#911eb4", "hotkey": "2"},
-    {"value": "ALY", "color": "#4363d8", "hotkey": "3"},
-    {"value": "NUM", "color": "#e6194B", "hotkey": "4"},
-    {"value": "STR", "color": "#3cb44b", "hotkey": "5"},
+    {"value": "NUM", "color": "#e6194B", "hotkey": "1"},
+    {"value": "STR", "color": "#3cb44b", "hotkey": "2"},
+    {"value": "WDS", "color": "#ffe119", "hotkey": "3"},
+    {"value": "DST", "color": "#800000", "hotkey": "4"},
+    {"value": "PRO", "color": "#38bdf8", "hotkey": "5"},
     {"value": "NHB", "color": "#469990", "hotkey": "6"},
-    {"value": "WDS", "color": "#ffe119", "hotkey": "7"},
-    {"value": "DST", "color": "#800000", "hotkey": "8"},
-    {"value": "PRO", "color": "#38bdf8", "hotkey": "9"},
+    {"value": "BLD", "color": "#f58231", "hotkey": "7"},
+    {"value": "POI", "color": "#911eb4", "hotkey": "8"},
+    {"value": "FLR", "color": "#4363d8", "hotkey": "9"},
+    {"value": "RM", "color": "#f032e6", "hotkey": "0"},
 ]
 
 def get_ner_label_list():

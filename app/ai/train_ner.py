@@ -15,11 +15,13 @@ import sys
 import json
 import logging
 import argparse
+import re
 from pathlib import Path
 from typing import Optional
 
 import torch
 import numpy as np
+import inspect
 from datasets import Dataset, DatasetDict
 from transformers import (
     AutoTokenizer,
@@ -38,6 +40,8 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from app.ai.constants import get_ner_label_list, NER_LABELS
 from app.ai.job_artifacts import record_training_history
+from app.core.database import SessionLocal
+from sqlalchemy import text
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s.%(msecs)03d [%(levelname)s] %(message)s", datefmt="%H:%M:%S")
 logger = logging.getLogger("TrainNER")
@@ -53,7 +57,13 @@ HF_STANDARD_BIO_TO_PROJECT = {
     "I-DISTRICT": "I-DST",
     "B-PROVINCE": "B-PRO",
     "I-PROVINCE": "I-PRO",
+    "B-FLOOR": "B-FLR",
+    "I-FLOOR": "I-FLR",
+    "B-ROOM": "B-RM",
+    "I-ROOM": "I-RM",
 }
+
+REQUIRED_ENTITY_LABELS = {"NUM", "STR", "WDS", "DST", "PRO", "NHB", "BLD", "POI", "FLR", "RM"}
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Bước 1: Chuyển đổi Label Studio JSON → BIO Tokens
@@ -254,6 +264,101 @@ def convert_hf_address_standard_to_bio(dataset, tokenizer, label2id: dict, max_l
     return processed
 
 
+def _label_from_bio(label: str) -> str:
+    if label == "O":
+        return "O"
+    return label.split("-", 1)[-1] if "-" in label else label
+
+
+def validate_required_labels(label_list: list[str]) -> None:
+    labels = {_label_from_bio(lb) for lb in label_list if lb != "O"}
+    missing = REQUIRED_ENTITY_LABELS - labels
+    extras = labels - REQUIRED_ENTITY_LABELS
+    if missing or extras:
+        raise ValueError(
+            f"NER label schema mismatch. Missing={sorted(missing)}, extras={sorted(extras)}; "
+            f"required={sorted(REQUIRED_ENTITY_LABELS)}"
+        )
+
+
+def _tokenize_words(text_value: str) -> list[str]:
+    return [w for w in re.split(r"\s+", (text_value or "").strip()) if w]
+
+
+def _weak_bio_from_components(address: str, components: dict, label2id: dict, tokenizer, max_len: int = 256) -> dict:
+    words = _tokenize_words(address)
+    if not words:
+        return {}
+    word_labels = ["O"] * len(words)
+    priority = ["NUM", "STR", "NHB", "WDS", "DST", "PRO", "BLD", "POI", "FLR", "RM"]
+    for comp_label in priority:
+        comp_text = (components or {}).get(comp_label)
+        comp_words = _tokenize_words(comp_text or "")
+        if not comp_words:
+            continue
+        n = len(comp_words)
+        for i in range(0, len(words) - n + 1):
+            if [x.lower() for x in words[i : i + n]] == [x.lower() for x in comp_words]:
+                b = f"B-{comp_label}"
+                i_tag = f"I-{comp_label}"
+                if b not in label2id:
+                    continue
+                word_labels[i] = b
+                for j in range(1, n):
+                    word_labels[i + j] = i_tag
+                break
+
+    all_input_ids = [tokenizer.bos_token_id]
+    all_labels = [-100]
+    for word, word_label in zip(words, word_labels):
+        word_tokens = tokenizer.encode(word, add_special_tokens=False)
+        if not word_tokens:
+            continue
+        all_input_ids.extend(word_tokens)
+        all_labels.append(label2id.get(word_label, label2id["O"]))
+        all_labels.extend([-100] * (len(word_tokens) - 1))
+
+    all_input_ids.append(tokenizer.eos_token_id)
+    all_labels.append(-100)
+    if len(all_input_ids) > max_len:
+        all_input_ids = all_input_ids[:max_len]
+        all_labels = all_labels[:max_len]
+    return {"input_ids": all_input_ids, "attention_mask": [1] * len(all_input_ids), "labels": all_labels}
+
+
+def load_ground_truth_weak_bio_samples(tokenizer, label2id: dict, limit: int = 10000) -> list:
+    sql = text(
+        """
+        SELECT standardized_address, address_components
+        FROM prq.address_clean_corpus
+        WHERE source_type = 'QUEUE_STANDARDIZED'
+          AND address_components IS NOT NULL
+          AND standardized_address IS NOT NULL
+          AND length(trim(standardized_address)) > 5
+        ORDER BY updated_at DESC NULLS LAST, id DESC
+        LIMIT :limit
+        """
+    )
+    session = SessionLocal()
+    try:
+        rows = session.execute(sql, {"limit": int(limit)}).mappings().all()
+    finally:
+        session.close()
+
+    out = []
+    for r in rows:
+        sample = _weak_bio_from_components(
+            r["standardized_address"],
+            r["address_components"] or {},
+            label2id,
+            tokenizer,
+        )
+        if sample:
+            out.append(sample)
+    logger.info("Ground-truth weak BIO samples: %d", len(out))
+    return out
+
+
 def validate_conversion(data: list, processed: list, tokenizer, id2label: dict, n_samples: int = 5):
     """In ra một vài mẫu để kiểm tra nhãn BIO có đúng không."""
     logger.info(f"\n{'='*60}")
@@ -343,6 +448,8 @@ def train_model(
     hf_dataset: Optional[str] = None,
     hf_max_train_samples: int = 50_000,
     hf_max_eval_samples: int = 5_000,
+    include_ground_truth: bool = False,
+    gt_max_train_samples: int = 10_000,
 ):
     """
     Huấn luyện PhoBERT NER: either Label Studio JSON (``json_path``) hoặc dataset HF
@@ -353,6 +460,7 @@ def train_model(
         raise ValueError("Chỉ định đúng một nguồn: json_path (Label Studio) hoặc hf_dataset (Hugging Face).")
 
     label_list = get_ner_label_list()
+    validate_required_labels(label_list)
     label2id = {l: i for i, l in enumerate(label_list)}
     id2label = {i: l for i, l in enumerate(label_list)}
     logger.info(f"Số nhãn BIO: {len(label_list)} ({label_list})")
@@ -372,6 +480,14 @@ def train_model(
         eval_raw = load_dataset(hf_dataset, split=f"test[:{hf_max_eval_samples}]")
         train_data = convert_hf_address_standard_to_bio(train_raw, tokenizer, label2id)
         eval_data = convert_hf_address_standard_to_bio(eval_raw, tokenizer, label2id)
+        if include_ground_truth:
+            gt_train = load_ground_truth_weak_bio_samples(
+                tokenizer=tokenizer,
+                label2id=label2id,
+                limit=gt_max_train_samples,
+            )
+            train_data.extend(gt_train)
+            logger.info("Merged HF + ground_truth weak labels => train=%d", len(train_data))
         if len(train_data) == 0:
             logger.error("Không chuyển đổi được mẫu train từ HF. Kiểm tra schema dataset.")
             return
@@ -427,10 +543,8 @@ def train_model(
     )
 
     # 8. Training Arguments
-    training_args = TrainingArguments(
+    ta_kwargs = dict(
         output_dir=output_dir,
-        evaluation_strategy="epoch",
-        save_strategy="epoch",
         learning_rate=learning_rate,
         per_device_train_batch_size=batch_size,
         per_device_eval_batch_size=batch_size * 2,
@@ -444,8 +558,16 @@ def train_model(
         metric_for_best_model="f1",
         greater_is_better=True,
         seed=seed,
-        fp16=torch.cuda.is_available(),  # Mixed precision nếu có GPU
+        fp16=torch.cuda.is_available(),
     )
+    sig = inspect.signature(TrainingArguments.__init__)
+    if "evaluation_strategy" in sig.parameters:
+        ta_kwargs["evaluation_strategy"] = "epoch"
+    elif "eval_strategy" in sig.parameters:
+        ta_kwargs["eval_strategy"] = "epoch"
+    if "save_strategy" in sig.parameters:
+        ta_kwargs["save_strategy"] = "epoch"
+    training_args = TrainingArguments(**ta_kwargs)
 
     # 9. Data Collator (Dynamic padding)
     data_collator = DataCollatorForTokenClassification(
@@ -558,6 +680,8 @@ if __name__ == "__main__":
     parser.add_argument("--lr", type=float, default=2e-5, help="Learning rate")
     parser.add_argument("--eval-split", type=float, default=0.2, help="Tỷ lệ eval (0.2 = 20%) — với Label Studio")
     parser.add_argument("--validate-only", action="store_true", help="Chỉ validate chuyển đổi, không train")
+    parser.add_argument("--include-ground-truth", action="store_true", help="Trộn thêm weak labels từ address_clean_corpus")
+    parser.add_argument("--gt-max-train", type=int, default=10000, help="Giới hạn mẫu weak labels ground_truth")
     args = parser.parse_args()
 
     if args.validate_only:
@@ -585,6 +709,8 @@ if __name__ == "__main__":
             hf_dataset=args.hf_dataset,
             hf_max_train_samples=args.hf_max_train,
             hf_max_eval_samples=args.hf_max_eval,
+            include_ground_truth=args.include_ground_truth,
+            gt_max_train_samples=args.gt_max_train,
         )
     else:
         if not args.data:
@@ -596,4 +722,6 @@ if __name__ == "__main__":
             batch_size=args.batch_size,
             learning_rate=args.lr,
             eval_split=args.eval_split,
+            include_ground_truth=args.include_ground_truth,
+            gt_max_train_samples=args.gt_max_train,
         )

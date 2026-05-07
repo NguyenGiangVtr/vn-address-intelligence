@@ -344,15 +344,20 @@ Bảng **địa chỉ thô** nhẹ (luồng xử lý đơn giản / staging).
 | `id` | PK (BigInteger, thường trùng id nguồn Typesense) |
 | `address` | Địa chỉ chuẩn (VN) |
 | `old_address` | Bản thô / trước chuẩn hóa |
-| `ward_id`, `district_id`, `province_id` | HC sau map |
-| `old_ward_id`, `old_district_id`, `old_province_id` | HC gốc |
+| `ward_id`, `district_id`, `province_id` | **Lineage sau ánh xạ:** cùng không gian với `mat.*.old_id`, join `mat` với **`admin_version = 2`** (không phải `mat.ward.ward_id` nội bộ) |
+| `old_ward_id`, `old_district_id`, `old_province_id` | **Lineage tiền cải cách / field gốc:** join `mat.*.old_id` với **`admin_version = 1`** (khi thiếu trên document crawl, điền từ raw `province_id`/`district_id`/`ward_id` chưa map) |
 | `old_address_eng`, `address_eng` | Tiếng Anh |
 | `latitude`, `longitude` | Tọa độ |
 | `popular` | Độ phổ biến / hit |
 | `source_system` | `TYPESENSE`, `GOOGLE`, `MANUAL`, … |
 | `data_quality_score` | Chất lượng 0–1 |
 | `is_validated`, `validation_notes` | Kiểm định người |
+| `last_sync_run_id`, `last_seen_at` | Audit crawl Typesense → FK/lần chạm (`ath.typesense_ground_truth_sync_run`); thêm bằng migration SQL |
 | `created_at`, `updated_at` | Audit |
+
+**View:** `prq.v_ground_truth_admin` — một dòng GT + tên P/D/Xã cho cả hai kỳ HC (v1/v2); xem [`scripts/sql/prq_ground_truth_admin_view.sql`](scripts/sql/prq_ground_truth_admin_view.sql).
+
+**Collection Typesense (tài liệu field):** [`docs/typesense/google_addresses.schema.json`](typesense/google_addresses.schema.json).
 
 **Index ORM:** theo `province_id`, `district_id`, `ward_id`, `(latitude, longitude)`.
 

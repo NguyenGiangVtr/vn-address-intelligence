@@ -5254,4 +5254,162 @@ body.no-scroll {
   }
 }
 
+/* ── Label registry (NER list + search) ─────────────────────────────────── */
+#page-content #label-registry.page.full-height-page {
+  gap: var(--spacing-lg, 20px);
+  min-height: 0;
+  box-sizing: border-box;
+  padding-bottom: max(24px, env(safe-area-inset-bottom));
+}
+
+#page-content #label-registry.full-height-page {
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+#page-content #label-registry .page-header {
+  flex-shrink: 0;
+  margin-bottom: 0;
+}
+
+#page-content #label-registry .lr-search-card {
+  flex-shrink: 0;
+}
+
+#page-content #label-registry .lr-labels-card {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+#page-content #label-registry .lr-card-header {
+  border-bottom: 1px solid var(--border-subtle, var(--border-default, #e5e7eb));
+  flex-shrink: 0;
+}
+
+#page-content #label-registry .lr-card-pad,
+#page-content #label-registry .lr-card-body {
+  padding: 16px 20px;
+  box-sizing: border-box;
+}
+
+#page-content #label-registry .lr-card-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+#page-content #label-registry .lr-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px 20px;
+}
+
+#page-content #label-registry .lr-search-wrap {
+  flex: 1 1 260px;
+  min-width: 0;
+}
+
+#page-content #label-registry .lr-input-group {
+  position: relative;
+  display: block;
+  width: 100%;
+}
+
+#page-content #label-registry .lr-input-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-tertiary);
+  pointer-events: none;
+  font-size: 14px;
+  z-index: 1;
+}
+
+#page-content #label-registry .lr-search-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding-left: 40px !important;
+}
+
+#page-content #label-registry .lr-stat {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: var(--bg-muted);
+  border-radius: 8px;
+  border: 1px solid var(--border-subtle, var(--border-default, rgba(0, 0, 0, 0.08)));
+  font-size: 13px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+#page-content #label-registry .lr-stat strong {
+  color: var(--text-primary);
+  font-size: 15px;
+}
+
+#page-content #label-registry .lr-stat-label {
+  margin-left: 2px;
+}
+
+#page-content #label-registry .lr-labels-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+#page-content #label-registry .label-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+#page-content #label-registry .label-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+}
+
+#page-content #label-registry .label-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+@media (max-width: 768px) {
+  #page-content #label-registry #labels-table-view {
+    display: none !important;
+  }
+
+  #page-content #label-registry #labels-card-view.lr-labels-grid {
+    display: grid !important;
+  }
+
+  #page-content #label-registry .lr-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  #page-content #label-registry .lr-stat {
+    justify-content: center;
+  }
+}
+
+@media (min-width: 769px) {
+  #page-content #label-registry #labels-table-view {
+    display: block !important;
+  }
+
+  #page-content #label-registry #labels-card-view.lr-labels-grid {
+    display: none !important;
+  }
+}
+
 /* Ensure sidebar always appears above everything on mobile */

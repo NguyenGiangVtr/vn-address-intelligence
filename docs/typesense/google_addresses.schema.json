@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$comment": "Tài liệu hóa field mong đợi từ collection Typesense (ví dụ TYPESENSE_COLLECTION=google_addresses). Cập nhật khi schema thật trên server thay đổi.",
+  "type": "object",
+  "description": "Document gốc crawl vào prq.ground_truth. Ưu tiên sync qua GET /collections/{collection}/documents/export (JSONL, streaming — không đi qua máy scoring). province_id/district_id/ward_id trên document thường là lineage (không gian old_id).",
+  "properties": {
+    "id": { "type": "string", "description": "Khóa document; sync chuyển sang BigInteger PK." },
+    "address": { "type": "string" },
+    "old_address": { "type": "string" },
+    "province_id": { "type": "integer", "description": "ID tỉnh trên index (lọc filter_by / lọc client — cần facet/index nếu muốn filter ở server)." },
+    "district_id": { "type": "integer" },
+    "ward_id": { "type": "integer" },
+    "old_province_id": { "type": "integer", "description": "Tùy chọn: lineage HC trước cải cách; nếu có thì không áp dụng lại admin_unit_mapping trong sync." },
+    "old_district_id": { "type": "integer" },
+    "old_ward_id": { "type": "integer" },
+    "old_address_eng": { "type": "string" },
+    "address_eng": { "type": "string" },
+    "location": {
+      "type": "array",
+      "items": { "type": "number" },
+      "minItems": 2,
+      "maxItems": 2,
+      "description": "[latitude, longitude]"
+    },
+    "popular": { "type": "integer" }
+  },
+  "x_filter_strategy": {
+    "server_side": "filter_by=province_id:=<id> yêu cầu province_id được facet (index) trong schema Typesense; nếu không có, API trả 400 và sync dùng lọc local (vẫn đúng, chỉ tốn quét thêm trang). Đây không phải lỗi — bật facet cho province_id trên collection (vd. vn_admin_units) nếu muốn lọc phía server.",
+    "local_fallback": "So sánh doc.province_id với tham số province_id của CLI/API."
+  }
+}

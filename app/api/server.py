@@ -360,7 +360,7 @@ def _run_osm_job(job_id: str, limit_provinces: int, target_total: int):
         sys.executable,
         "-m",
         "app.main",
-        "fetch-osm",
+        "osm:fetch",
         "--limit",
         str(limit_provinces),
         "--target",
@@ -2381,7 +2381,15 @@ def analyze_parser_address(data: dict, model: Optional[str] = None, db: Session 
                 }
             )
 
-def _read_explorer_queue(db: Session, limit: int, q: str):
+def _read_explorer_queue(
+    db: Session,
+    page: int,
+    limit: int,
+    q: str,
+    province_id: Optional[int],
+    district_id: Optional[int],
+    ward_id: Optional[int],
+):
     try:
         query = db.query(
             AddressCleansingQueue.id,
@@ -2391,36 +2399,81 @@ def _read_explorer_queue(db: Session, limit: int, q: str):
             AddressCleansingQueue.province_name,
             AddressCleansingQueue.processing_status,
         )
-        if q:
-            query = query.filter(AddressCleansingQueue.raw_address.ilike(f"%{q}%"))
-        
-        samples = query.order_by(AddressCleansingQueue.id.desc()).limit(limit).all()
-        
-        return [
-            {
-                "id": s.id,
-                "raw_address": s.raw_address,
-                "ward_name": s.ward_name,
-                "district_name": s.district_name,
-                "province_name": s.province_name,
-                "status": s.processing_status or "PENDING"
-            }
-            for s in samples
-        ]
+        if ward_id is not None:
+            query = query.filter(AddressCleansingQueue.ward_id == ward_id)
+        elif district_id is not None:
+            query = query.filter(AddressCleansingQueue.district_id == district_id)
+        elif province_id is not None:
+            query = query.filter(AddressCleansingQueue.province_id == province_id)
+
+        q_stripped = (q or "").strip()
+        if q_stripped:
+            term = f"%{q_stripped}%"
+            query = query.filter(
+                or_(
+                    AddressCleansingQueue.raw_address.ilike(term),
+                    AddressCleansingQueue.ward_name.ilike(term),
+                    AddressCleansingQueue.district_name.ilike(term),
+                    AddressCleansingQueue.province_name.ilike(term),
+                    AddressCleansingQueue.processing_status.ilike(term),
+                )
+            )
+
+        total = query.count()
+        offset = (page - 1) * limit
+        samples = (
+            query.order_by(AddressCleansingQueue.id.desc())
+            .offset(offset)
+            .limit(limit)
+            .all()
+        )
+
+        return {
+            "items": [
+                {
+                    "id": s.id,
+                    "raw_address": s.raw_address,
+                    "ward_name": s.ward_name,
+                    "district_name": s.district_name,
+                    "province_name": s.province_name,
+                    "status": s.processing_status or "PENDING",
+                }
+                for s in samples
+            ],
+            "total": total,
+            "page": page,
+            "limit": limit,
+        }
     except Exception as e:
         logger.warning(f"Explorer queue fetch error: {e}")
         raise HTTPException(status_code=500, detail=f"Lỗi Tìm kiếm prq.address_cleansing_queue: {str(e)}")
 
 
 @api_router.get("/explorer/queue", tags=["Xử lý hàng loạt"], summary="Danh sách hàng đợi chuẩn hóa")
-def get_explorer_queue(db: Session = Depends(get_db), limit: int = 100, q: str = ""):
+def get_explorer_queue(
+    db: Session = Depends(get_db),
+    page: int = Query(1, ge=1),
+    limit: int = Query(50, ge=1, le=200),
+    q: str = "",
+    province_id: Optional[int] = Query(None),
+    district_id: Optional[int] = Query(None),
+    ward_id: Optional[int] = Query(None),
+):
     """Lấy danh sách các địa chỉ đang chờ hoặc đã xử lý trong hàng đợi chuẩn hóa."""
-    return _read_explorer_queue(db, limit, q)
+    return _read_explorer_queue(db, page, limit, q, province_id, district_id, ward_id)
 
 
 @app.get("/explorer/queue")
-def get_explorer_queue_root(db: Session = Depends(get_db), limit: int = 100, q: str = ""):
-    return _read_explorer_queue(db, limit, q)
+def get_explorer_queue_root(
+    db: Session = Depends(get_db),
+    page: int = Query(1, ge=1),
+    limit: int = Query(50, ge=1, le=200),
+    q: str = "",
+    province_id: Optional[int] = Query(None),
+    district_id: Optional[int] = Query(None),
+    ward_id: Optional[int] = Query(None),
+):
+    return _read_explorer_queue(db, page, limit, q, province_id, district_id, ward_id)
 
 @api_router.get("/label-studio/debug", tags=["AI Address Parser"], summary="Kiểm tra kết nối Label Studio")
 async def debug_ls_connection(current_user: str = Depends(get_current_user)):
@@ -2509,7 +2562,17 @@ async def sync_ls_to_training(db: Session = Depends(get_db), current_user: str =
                 response = await client.get(ls_api_url, headers=headers, params=params)
 
             if response.status_code != 200:
-                raise HTTPException(status_code=response.status_code, detail="Không thể tải dữ liệu từ Label Studio.")
+                if response.status_code in (401, 403):
+                    raise HTTPException(
+                        status_code=status.HTTP_502_BAD_GATEWAY,
+                        detail=(
+                            "Label Studio từ chối xác thực — kiểm tra LABEL_STUDIO_API_TOKEN và quyền đọc project "
+                            f"(upstream HTTP {response.status_code})."
+                        ),
+                    )
+                raise HTTPException(
+                    status_code=response.status_code, detail="Không thể tải dữ liệu từ Label Studio."
+                )
 
             data = response.json()
             all_tasks = data if isinstance(data, list) else data.get("tasks", data.get("results", []))
@@ -2620,9 +2683,17 @@ async def get_ls_tasks(current_user: str = Depends(get_current_user)):
                 return tasks
             else:
                 logger.error(f"Label Studio fetch failed after all attempts. Last status: {response.status_code}")
+                if response.status_code in (401, 403):
+                    raise HTTPException(
+                        status_code=status.HTTP_502_BAD_GATEWAY,
+                        detail=(
+                            "Label Studio từ chối token hoặc quyền truy cập — cập nhật LABEL_STUDIO_API_TOKEN trong .env "
+                            f"và đảm bảo token có quyền đọc project (upstream HTTP {response.status_code})."
+                        ),
+                    )
                 raise HTTPException(
                     status_code=response.status_code if response.status_code >= 400 else 500,
-                    detail=f"Label Studio API error: {response.status_code}"
+                    detail=f"Label Studio API error: {response.status_code}",
                 )
     except HTTPException:
         raise

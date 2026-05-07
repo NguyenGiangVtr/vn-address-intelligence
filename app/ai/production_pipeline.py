@@ -95,7 +95,13 @@ def run_pipeline(config_path: str, limit: int = None):
         )
     ner = AddressNER(model_path=ner_model_path)
     
-    llm = LLMQwen3(model_name=mod_cfg["llm"]["model_name"], use_quantization=False)
+    llm = LLMQwen3(
+        model_name=mod_cfg["llm"]["model_name"],
+        use_quantization=bool(mod_cfg["llm"].get("use_quantization", True)),
+        quantization_bits=int(mod_cfg["llm"].get("quantization_bits", 8)),
+        max_new_tokens=int(mod_cfg["llm"].get("max_new_tokens", 128)),
+        temperature=float(mod_cfg["llm"].get("temperature", 0.0)),
+    )
 
     # ACS Calculator và Epoch Detector (không cần DB session ở pipeline standalone)
     acs_calc     = ACSCalculator(db_session=None)
@@ -104,7 +110,8 @@ def run_pipeline(config_path: str, limit: int = None):
     # 2. Xử lý Dữ liệu ─────────────────────────────────────────────────────────
     # Lấy những bản ghi đang PENDING hoặc chưa có address_standardized
     query = f"""
-        SELECT id, raw_address, street_address, ward_name, district_name, province_name 
+        SELECT id, raw_address, street_address, ward_name, district_name, province_name,
+               ward_id, district_id, province_id, latitude, longitude
         FROM prq.address_cleansing_queue
         WHERE processing_status = 'PENDING' OR address_standardized IS NULL
     """
@@ -152,8 +159,9 @@ def run_pipeline(config_path: str, limit: int = None):
             
             context_addr = ", ".join([p for p in context_parts if p])
             
-            # D. LLM Final Normalization
-            llm_data, llm_score, _ = llm.normalize(context_addr, []) 
+            # D. Retrieval + LLM Final Normalization
+            top_candidates = [c for c, _ in retriever.retrieve_top_k(context_addr, top_k=5)]
+            llm_data, llm_score, _ = llm.normalize(context_addr, top_candidates)
             
             if not isinstance(llm_data, dict):
                 llm_data = {"full_address": str(llm_data)}
@@ -164,14 +172,21 @@ def run_pipeline(config_path: str, limit: int = None):
             epoch_result = epoch_detector.detect(raw_addr)
 
             # F. ACS Calculation
+            semantic_score = float(llm_score)
+            if top_candidates:
+                _, retrieval_score, _ = retriever.normalize(context_addr)
+                semantic_score = max(semantic_score, float(retrieval_score))
+
             acs = acs_calc.compute(
                 raw_address=raw_addr,
                 standardized_address=standardized,
-                semantic_score=float(llm_score),
+                semantic_score=semantic_score,
                 province_id=row.get("province_id"),
                 district_id=row.get("district_id"),
                 ward_id=row.get("ward_id"),
                 admin_version=2,  # Default Post-2025; epoch detector cập nhật
+                latitude=row.get("latitude"),
+                longitude=row.get("longitude"),
             )
 
             batch_results.append({

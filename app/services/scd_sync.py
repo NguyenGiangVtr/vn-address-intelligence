@@ -36,8 +36,8 @@ from app.core.database import Province, District, Ward, SyncLog, UnitEdge
 
 _SCD_CHECKSUM_FIELDS = {
     'province': ['province_name', 'province_name_en', 'type_name', 'population', 'area_km2', 'decision_number', 'notes'],
-    'district': ['district_name', 'district_name_en', 'type_name', 'province_id', 'population', 'area_km2', 'decision_number', 'notes'],
-    'ward': ['ward_name', 'ward_name_en', 'type_name', 'district_id', 'province_no', 'population', 'area_km2', 'decision_number', 'notes'],
+    'district': ['district_name', 'district_name_en', 'type_name', 'type_name_en', 'province_id', 'population', 'area_km2', 'decision_number', 'notes'],
+    'ward': ['ward_name', 'ward_name_en', 'type_name', 'type_name_en', 'district_id', 'province_no', 'population', 'area_km2', 'decision_number', 'notes'],
 }
 
 _MODEL_MAP = {

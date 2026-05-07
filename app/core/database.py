@@ -469,8 +469,30 @@ class BenchmarkRunResult(Base):
     created_at      = Column(DateTime, default=func.now())
 
 
+class TypesenseGroundTruthSyncRun(Base):
+    """Một lần chạy crawl Typesense → prq.ground_truth (xem scripts/sql/prq_ground_truth_admin_view.sql)."""
+
+    __tablename__ = 'typesense_ground_truth_sync_run'
+    __table_args__ = {'schema': 'ath'}
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    started_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    finished_at = Column(DateTime(timezone=True), nullable=True)
+    collection = Column(Text, nullable=False)
+    records_scanned = Column(Integer, default=0)
+    records_upserted = Column(Integer, default=0)
+    filter_province_id = Column(Integer, nullable=True)
+    notes = Column(Text, nullable=True)
+
+
 class GroundTruth(Base):
-    """Dữ liệu địa chỉ chuẩn hóa (Ground Truth) từ Google/Typesense - di chuyển sang schema prq để xử lý linh hoạt hơn."""
+    """Chuẩn tham chiếu địa chỉ (Typesense/Google/manual).
+
+    Cột province_id / district_id / ward_id là mã lineage (cùng không gian mat.*.old_id sau ánh xạ
+    qua admin_unit_mapping); join mat với admin_version=2 — xem prq.v_ground_truth_admin và MAT-SCHEMA-JOIN-RULES.
+
+    Cột old_* là lineage tiền cải cách; join mat với admin_version=1.
+    """
     __tablename__ = 'ground_truth'
     __table_args__ = (
         Index('idx_ground_truth_province', 'province_id'),
@@ -484,12 +506,12 @@ class GroundTruth(Base):
     address = Column(Text, nullable=False)
     old_address = Column(Text)
     
-    # Current administrative IDs (after mapping)
+    # Lineage post-reform (join mat.*.old_id, admin_version=2)
     ward_id = Column(Integer)
     district_id = Column(Integer)
     province_id = Column(Integer)
     
-    # Original IDs from Typesense/old database
+    # Lineage pre-reform / tường minh trên document (join mat.*.old_id, admin_version=1)
     old_ward_id = Column(Integer)
     old_district_id = Column(Integer)
     old_province_id = Column(Integer)
@@ -510,6 +532,10 @@ class GroundTruth(Base):
     data_quality_score = Column(Float)                       # 0-1 score for data quality
     is_validated = Column(Boolean, default=False)           # Human validation status
     validation_notes = Column(Text)                         # Notes from validation
+
+    # Typesense crawl audit (bảng ath.typesense_ground_truth_sync_run; thêm cột bằng migration SQL)
+    last_sync_run_id = Column(Integer, ForeignKey('ath.typesense_ground_truth_sync_run.id'), nullable=True)
+    last_seen_at = Column(DateTime(timezone=True), nullable=True)
     
     # Timestamps
     created_at = Column(DateTime, default=func.now())
@@ -603,153 +629,9 @@ def sync_typesense_to_db(province_id: int = None, limit: int = None):
     Crawl data từ Typesense và lưu vào database.
     - province_id: Lọc theo tỉnh thành (nếu có).
     - limit: Giới hạn số lượng bản ghi.
+
+    Triển khai: app.services.typesense_ground_truth_sync.sync_typesense_to_db
     """
-    import requests
-    import json
-    from sqlalchemy.dialects.postgresql import insert
+    from app.services.typesense_ground_truth_sync import sync_typesense_to_db as _run
 
-    print(f"Starting sync from Typesense collection: {Config.TYPESENSE_COLLECTION}")
-    
-    # 1. Khởi tạo Typesense connection
-    # Sử dụng requests để gọi API trực tiếp để tránh phụ thuộc thư viện bên thứ 3
-    base_url = f"{Config.TYPESENSE_PROTOCOL}://{Config.TYPESENSE_HOST}:{Config.TYPESENSE_PORT}/collections/{Config.TYPESENSE_COLLECTION}/documents/search"
-    headers = {
-        "X-TYPESENSE-API-KEY": Config.TYPESENSE_API_KEY,
-        "Content-Type": "application/json"
-    }
-
-    # 2. Xây dựng query
-    batch_size = 250
-    offset = 0
-    total_processed = 0
-    
-    filter_by = f"province_id:={province_id}" if province_id else ""
-    
-    session = SessionLocal()
-    try:
-        # 0. Load Mapping Table into memory for fast lookup
-        print("Loading Admin Unit Mapping for ID transformation...")
-        # Sắp xếp theo admin_version tăng dần để version cao hơn sẽ ghi đè trong dictionary
-        mappings = session.query(AdminUnitMapping).order_by(AdminUnitMapping.admin_version.asc()).all()
-        # Tạo dictionary để lookup: (level, old_id) -> new_id
-        map_dict = {(m.level, m.old_id): m.new_id for m in mappings}
-        
-        def get_new_id(level, old_id):
-            if old_id is None: return None
-            return map_dict.get((level, old_id), old_id) # Fallback về chính nó nếu không tìm thấy mapping
-
-        while True:
-            # Tính toán limit cho batch hiện tại
-            # Nếu không thể filter ở server, chúng ta phải lấy batch mặc định (250) để lọc locally
-            current_limit = batch_size
-            if limit and (total_processed + batch_size > limit) and not filter_by:
-                current_limit = limit - total_processed
-            
-            if current_limit <= 0:
-                break
-
-            params = {
-                "q": "*",
-                "per_page": batch_size, # Luôn lấy full batch để tối ưu throughput khi lọc local
-                "page": (offset // batch_size) + 1
-            }
-            
-            # Thêm filter_by nếu có thể
-            if filter_by:
-                params["filter_by"] = filter_by
-
-            response = requests.get(base_url, headers=headers, params=params)
-            
-            # Xử lý lỗi "non-indexed field" bằng cách fallback về lấy toàn bộ và lọc local
-            if response.status_code == 400 and "non-indexed field" in response.text:
-                if filter_by:
-                    print(f"Warning: Field 'province_id' is not indexed for filtering. Falling back to local filtering...")
-                    filter_by = None # Tắt filter ở server
-                    offset = 0 # Reset để lấy từ đầu
-                    total_processed = 0
-                    continue
-                else:
-                    print(f"Error calling Typesense: {response.text}")
-                    break
-            elif response.status_code != 200:
-                print(f"Error calling Typesense: {response.text}")
-                break
-            
-            data = response.json()
-            hits = data.get("hits", [])
-            if not hits:
-                break
-            
-            # 3. Chuyển đổi và chuẩn bị dữ liệu cho database
-            db_records = []
-            for hit in hits:
-                doc = hit["document"]
-                
-                # Lọc local dựa trên OLD province_id (vì typesense đang lưu OLD ID)
-                doc_old_province_id = doc.get("province_id")
-                if province_id is not None and doc_old_province_id != province_id:
-                    continue
-
-                # Kiểm tra giới hạn số lượng nếu lọc local
-                if limit and total_processed >= limit:
-                    break
-                
-                # Trích xuất location [lat, lon]
-                location = doc.get("location", [None, None])
-                lat = location[0] if len(location) > 0 else None
-                lon = location[1] if len(location) > 1 else None
-                
-                # Thực hiện Mapping từ OLD ID -> NEW ID
-                record = {
-                    "id": int(doc.get("id")),
-                    "address": doc.get("address"),
-                    "old_address": doc.get("old_address"),
-                    "province_id": get_new_id(1, doc.get("province_id")),
-                    "district_id": get_new_id(2, doc.get("district_id")),
-                    "ward_id": get_new_id(3, doc.get("ward_id")),
-                    "old_province_id": get_new_id(1, doc.get("old_province_id")),
-                    "old_district_id": get_new_id(2, doc.get("old_district_id")),
-                    "old_ward_id": get_new_id(3, doc.get("old_ward_id")),
-                    "old_address_eng": doc.get("old_address_eng"),
-                    "address_eng": doc.get("address_eng"),
-                    "latitude": lat,
-                    "longitude": lon,
-                    "popular": doc.get("popular", 0)
-                }
-                db_records.append(record)
-                total_processed += 1
-            
-            # 4. Upsert (Merge) vào database (sử dụng bảng mới prq.ground_truth)
-            if db_records:
-                # Thêm metadata cho bảng mới
-                for record in db_records:
-                    record['source_system'] = 'TYPESENSE'
-                    record['is_validated'] = False
-                    
-                stmt = insert(GroundTruth).values(db_records)
-                stmt = stmt.on_conflict_do_update(
-                    index_elements=['id'],
-                    set_={
-                        k: v for k, v in db_records[0].items() if k != 'id'
-                    }
-                )
-                session.execute(stmt)
-                session.commit()
-            
-            offset += len(hits) # Offset dựa trên số lượng hit thực tế từ server
-            
-            print(f"Processed {total_processed} records (Server scanned: {offset})...")
-            
-            if limit and total_processed >= limit:
-                break
-                
-            if len(hits) < batch_size:
-                break
-                
-        print(f"Sync completed. Total records synced: {total_processed}")
-        
-    except Exception as e:
-        print(f"Error during sync: {str(e)}")
-        session.rollback()
-    finally:
-        session.close()
+    return _run(province_id=province_id, limit=limit)

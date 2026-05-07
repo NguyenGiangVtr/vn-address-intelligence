@@ -8,6 +8,13 @@ import urllib.parse
 env_path = Path(__file__).parent.parent.parent / ".env"
 load_dotenv(dotenv_path=env_path)
 
+def _typesense_export_read_timeout():
+    raw = os.getenv("TYPESENSE_EXPORT_READ_TIMEOUT_SEC", "").strip()
+    if raw in ("", "0", "none", "None"):
+        return None
+    return float(raw)
+
+
 class Config:
     DB_HOST = os.getenv("DB_HOST")
     DB_PORT = os.getenv("DB_PORT", "5432")
@@ -46,6 +53,11 @@ class Config:
     TYPESENSE_PROTOCOL = os.getenv("TYPESENSE_PROTOCOL", "http")
     TYPESENSE_API_KEY = os.getenv("TYPESENSE_API_KEY", "xyz")
     TYPESENSE_COLLECTION = os.getenv("TYPESENSE_COLLECTION", "google_addresses")
+    # Crawl qua /documents/export (JSONL): batch_size Typesense streaming; timeout đọc 0/unset = không giới hạn
+    TYPESENSE_EXPORT_REMOTE_BATCH_SIZE = int(os.getenv("TYPESENSE_EXPORT_REMOTE_BATCH_SIZE", "250"))
+    TYPESENSE_EXPORT_CONNECT_TIMEOUT_SEC = int(os.getenv("TYPESENSE_EXPORT_CONNECT_TIMEOUT_SEC", "60"))
+    TYPESENSE_EXPORT_READ_TIMEOUT_SEC = _typesense_export_read_timeout()
+    TYPESENSE_EXPORT_PROGRESS_LINES = int(os.getenv("TYPESENSE_EXPORT_PROGRESS_LINES", "50000"))
 
     # Redis Cache
     REDIS_HOST = os.getenv("REDIS_HOST", "localhost")

@@ -1,7 +1,7 @@
 """
 models/llm_model.py
 ===================
-Qwen3 LLM Zero-shot: nhận query + top-5 candidates từ retriever,
+Qwen LLM Zero-shot: nhận query + top-5 candidates từ retriever,
 suy luận và chọn hoặc tạo địa chỉ chuẩn cuối cùng.
 """
 
@@ -43,7 +43,7 @@ Lưu ý:
 
 class LLMQwen3:
     """
-    Qwen3 LLM dùng để chuẩn hóa địa chỉ zero-shot.
+    Qwen LLM dùng để chuẩn hóa địa chỉ zero-shot.
     Có thể dùng kết hợp với bất kỳ retriever nào để lấy candidates.
     """
 
@@ -51,6 +51,7 @@ class LLMQwen3:
         self,
         model_name: str = "Qwen/Qwen3-4B",
         use_quantization: bool = True,
+        quantization_bits: int = 8,
         max_new_tokens: int = 256,
         temperature: float = 0.0,
         device: str = "auto",
@@ -71,8 +72,10 @@ class LLMQwen3:
             )
 
             if use_quantization:
+                use_4bit = int(quantization_bits) == 4
                 bnb_cfg = BitsAndBytesConfig(
-                    load_in_8bit=True,
+                    load_in_8bit=not use_4bit,
+                    load_in_4bit=use_4bit,
                     bnb_4bit_use_double_quant=True,
                     bnb_4bit_quant_type="nf4",
                     bnb_4bit_compute_dtype=torch.bfloat16,
@@ -83,7 +86,7 @@ class LLMQwen3:
                     device_map="auto",
                     trust_remote_code=True,
                 )
-                logger.info("    8-bit quantization enabled.")
+                logger.info("    %s-bit quantization enabled.", "4" if use_4bit else "8")
             else:
                 self.model = AutoModelForCausalLM.from_pretrained(
                     model_name,

@@ -18,6 +18,7 @@ from sqlalchemy import and_, or_, text, func
 import pandas as pd
 
 from app.core.database import SessionLocal, GroundTruth, Ward, District, Province
+from app.services.typesense_ground_truth_sync import POST_ADMIN_VERSION
 
 logger = logging.getLogger(__name__)
 
@@ -64,21 +65,25 @@ class GroundTruthService:
         logger.info(f"Retrieving ground truth data with filters: province={province_id}, district={district_id}, ward={ward_id}")
         
         if validate_admin_units:
-            # Query với join để validate admin units
+            # Join mat theo old_id + admin_version (post‑reform), thống nhất query prq.v_ground_truth_admin
+            av = POST_ADMIN_VERSION
             query = self.session.query(GroundTruth)\
                 .join(Ward, and_(
                     GroundTruth.ward_id == Ward.old_id,
                     Ward.is_deleted == False,
-                    Ward.is_active == True
+                    Ward.is_active == True,
+                    Ward.admin_version == av,
                 ))\
                 .join(District, and_(
                     GroundTruth.district_id == District.old_id,
                     District.is_deleted == False,
-                    District.is_active == True
+                    District.is_active == True,
+                    District.admin_version == av,
                 ))\
                 .join(Province, and_(
-                    District.province_id == Province.old_id,
-                    Province.is_deleted == False
+                    GroundTruth.province_id == Province.old_id,
+                    Province.is_deleted == False,
+                    Province.admin_version == av,
                 ))
         else:
             query = self.session.query(GroundTruth)

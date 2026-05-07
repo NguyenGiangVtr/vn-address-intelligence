@@ -28,6 +28,7 @@ W_TEXT      = 0.30   # Similarity văn bản (levenshtein / token overlap)
 W_SEM       = 0.35   # Semantic similarity (Siamese mGTE score)
 W_HIERARCHY = 0.25   # Hierarchy validation (Phường ∈ Huyện ∈ Tỉnh)
 W_TEMPORAL  = 0.10   # Temporal weight (phạt admin version cũ)
+W_GEO       = 0.10   # Độ tin cậy geolocation (nếu có)
 
 # ── Decision thresholds ────────────────────────────────────────────────────────
 THRESHOLD_AUTO_ACCEPT  = 0.90
@@ -42,6 +43,7 @@ class ACSComponents:
     s_sem:       float = 0.0   # Semantic similarity [0..1]
     v_hierarchy: float = 0.0   # Hierarchy validity [0..1]
     v_temporal:  float = 1.0   # Temporal weight [0..1] — default full score
+    v_geo:       float = 0.5   # Geospatial validity [0..1]
     acs_score:   float = 0.0   # Weighted sum
     acs_decision: str  = "REJECT"
 
@@ -75,6 +77,8 @@ class ACSCalculator:
         district_id: Optional[int] = None,
         ward_id: Optional[int] = None,
         admin_version: Optional[int] = None,
+        latitude: Optional[float] = None,
+        longitude: Optional[float] = None,
     ) -> ACSComponents:
         """
         Tính ACS đầy đủ.
@@ -93,12 +97,14 @@ class ACSCalculator:
         comp.s_sem       = float(max(0.0, min(1.0, semantic_score)))
         comp.v_hierarchy = self.validate_hierarchy(province_id, district_id, ward_id)
         comp.v_temporal  = self.compute_temporal_weight(admin_version)
+        comp.v_geo       = self.compute_geo_weight(latitude=latitude, longitude=longitude)
 
         comp.acs_score = (
-            W_TEXT      * comp.s_text
-            + W_SEM       * comp.s_sem
-            + W_HIERARCHY * comp.v_hierarchy
-            + W_TEMPORAL  * comp.v_temporal
+            (W_TEXT      * comp.s_text)
+            + (W_SEM       * comp.s_sem)
+            + (W_HIERARCHY * comp.v_hierarchy)
+            + (W_TEMPORAL  * comp.v_temporal)
+            + (W_GEO       * comp.v_geo)
         )
         comp.acs_score   = round(comp.acs_score, 4)
         comp.acs_decision = self.get_decision(comp.acs_score)
@@ -188,6 +194,20 @@ class ACSCalculator:
         if admin_version >= 2:
             return 1.0
         return 0.8  # Pre-2025 penalty
+
+    @staticmethod
+    def compute_geo_weight(latitude: Optional[float], longitude: Optional[float]) -> float:
+        """
+        Geospatial confidence based on coordinate availability and validity.
+        """
+        if latitude is None or longitude is None:
+            return 0.5
+        if not (-90.0 <= float(latitude) <= 90.0 and -180.0 <= float(longitude) <= 180.0):
+            return 0.0
+        # For Vietnam-focused pipeline, soft preference in expected bounding box.
+        if 8.0 <= float(latitude) <= 24.0 and 102.0 <= float(longitude) <= 110.0:
+            return 1.0
+        return 0.7
 
     @staticmethod
     def get_decision(acs_score: float) -> str:

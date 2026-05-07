@@ -127,6 +127,17 @@ class SiameseMGTE:
     def normalize_batch(self, queries: List[str]) -> List[Tuple[str, float, float]]:
         return [self.normalize(q) for q in queries]
 
+    def retrieve_top_k(self, query: str, top_k: int = 5) -> List[Tuple[str, float]]:
+        """Return top-k corpus candidates and cosine scores."""
+        if self._corpus_emb is None or len(self._corpus) == 0:
+            raise RuntimeError("Corpus embeddings not initialized. Call encode_corpus() first.")
+        k = max(1, min(top_k, len(self._corpus)))
+        q_emb = self.model.encode([query], normalize_embeddings=True, convert_to_numpy=True)[0]
+        scores = self._corpus_emb @ q_emb
+        idxs = np.argpartition(-scores, range(k))[:k]
+        sorted_idxs = idxs[np.argsort(-scores[idxs])]
+        return [(self._corpus[i], float(scores[i])) for i in sorted_idxs]
+
     # ------------------------------------------------------------------
     def match_with_temporal(
         self,

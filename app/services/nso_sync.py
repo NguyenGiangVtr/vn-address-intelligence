@@ -17,7 +17,11 @@ from sqlalchemy import or_
 from app.core.database import Province, District, Ward
 from datetime import datetime
 from app.services.nso_api import get_nso_provinces, get_nso_districts, get_nso_wards
-from app.services.admin_name_normalize import clean_admin_unit_name
+from app.services.admin_name_normalize import (
+    clean_admin_unit_name,
+    derive_admin_type_name_en,
+    derive_admin_unit_name_en,
+)
 
 # Global log store for real-time reporting
 sync_logs = []
@@ -49,9 +53,11 @@ def sync_province_nso(db: Session, p_no_str: str, p_name: str):
         
         if not p_db:
             p_type = this_p.get("LoaiHinh") or "Tỉnh"
+            pn = clean_admin_unit_name(p_name, p_type)
             p_db = Province(
                 province_no=p_no,
-                province_name=clean_admin_unit_name(p_name, p_type),
+                province_name=pn,
+                province_name_en=derive_admin_unit_name_en(pn),
                 admin_version=2,
                 type_name=p_type,
             )
@@ -60,7 +66,9 @@ def sync_province_nso(db: Session, p_no_str: str, p_name: str):
             add_log(f"Đã tạo Tỉnh mới: {p_name}", "success")
         else:
             p_type = this_p.get("LoaiHinh") or p_db.type_name or "Tỉnh"
-            p_db.province_name = clean_admin_unit_name(p_name, p_type)
+            pn = clean_admin_unit_name(p_name, p_type)
+            p_db.province_name = pn
+            p_db.province_name_en = derive_admin_unit_name_en(pn)
             p_db.province_no = p_no     # Update MaTinh as string (preserving leading zeros)
             p_db.type_name = p_type
             p_db.updated_date = now
@@ -93,18 +101,22 @@ def sync_province_nso(db: Session, p_no_str: str, p_name: str):
                 d_db = District(
                     district_no=d_code,
                     district_name=d_name_clean,
+                    district_name_en=derive_admin_unit_name_en(d_name_clean),
                     province_id=p_db.province_id,
                     admin_version=2,
                     type_name=d_type,
+                    type_name_en=derive_admin_type_name_en(d_type),
                 )
                 db.add(d_db)
                 db.flush()
                 stats["districts_created"] += 1
             else:
                 d_db.district_name = d_name_clean
+                d_db.district_name_en = derive_admin_unit_name_en(d_name_clean)
                 d_db.district_no = d_code # Update MaQuanHuyen
                 d_db.province_id = p_db.province_id
                 d_db.type_name = d_type
+                d_db.type_name_en = derive_admin_type_name_en(d_type)
                 d_db.updated_date = now
                 stats["districts_updated"] += 1
             
@@ -130,19 +142,23 @@ def sync_province_nso(db: Session, p_no_str: str, p_name: str):
                     w_db = Ward(
                         ward_no=w_code,
                         ward_name=w_name_clean,
+                        ward_name_en=derive_admin_unit_name_en(w_name_clean),
                         district_id=d_db.district_id,
                         province_no=p_no,
                         admin_version=2,
                         type_name=w_type,
+                        type_name_en=derive_admin_type_name_en(w_type),
                     )
                     db.add(w_db)
                     stats["wards_created"] += 1
                 else:
                     w_db.ward_name = w_name_clean
+                    w_db.ward_name_en = derive_admin_unit_name_en(w_name_clean)
                     w_db.ward_no = w_code # Update MaPhuongXa/MaXa
                     w_db.district_id = d_db.district_id
                     w_db.province_no = p_no
                     w_db.type_name = w_type
+                    w_db.type_name_en = derive_admin_type_name_en(w_type)
                     w_db.updated_date = now
                     stats["wards_updated"] += 1
             

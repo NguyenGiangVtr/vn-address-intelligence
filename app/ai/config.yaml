@@ -30,12 +30,14 @@ models:
 
   llm:
     enabled: true
-    model_name: "Qwen/Qwen2.5-1.5B-Instruct"  # Nhẹ hơn, tốc độ nhanh hơn
+    model_name: "Qwen/Qwen2.5-1.5B-Instruct"
     result_column: "normalized_llm"
-    use_quantization: true                      # Bật quantization để tiết kiệm RAM
-    max_new_tokens: 128                         # Giảm tokens để tăng tốc
+    use_quantization: true
+    quantization_bits: 4                        # 4 hoặc 8 bit cho production
+    max_new_tokens: 128
     temperature: 0.3
     device: "auto"
+    target_throughput_per_min: 100
 
 experiment:
   standard_addresses_schema: "prq"               # schema của bảng địa chỉ chuẩn

@@ -3973,6 +3973,10 @@ let explorerState = {
   wards: {}
 };
 async function initDataExplorer() {
+  const EXPLORER_PAGE_SIZE = 25;
+  let explorerPage = 1;
+  let explorerFetchId = 0;
+
   VNAIControls.renderSmartFilter('explorer-filter-container', {
     prefix: 'explorer',
     title: 'Tìm kiếm hàng đợi xử lý địa chỉ',
@@ -3981,12 +3985,31 @@ async function initDataExplorer() {
     buttonText: 'Tìm kiếm'
   });
 
-  const loadData = async (state) => {
-    const activeState = state || explorerState;
+  const setExplorerPager = (total, page, pageSize) => {
+    const badge = document.getElementById('explorer-count-badge');
+    const meta = document.getElementById('explorer-paging-meta');
+    const indicator = document.getElementById('explorer-page-indicator');
+    const prev = document.getElementById('explorer-page-prev');
+    const next = document.getElementById('explorer-page-next');
+    const totalPages = total <= 0 ? 1 : Math.ceil(total / pageSize);
+    if (badge) badge.textContent = `${total.toLocaleString()} bản ghi`;
+    const fromIdx = total === 0 ? 0 : (page - 1) * pageSize + 1;
+    const toIdx = Math.min(page * pageSize, total);
+    if (meta) meta.textContent = total ? `Hiển thị ${fromIdx.toLocaleString()}–${toIdx.toLocaleString()} của ${total.toLocaleString()}` : 'Không có bản ghi';
+    if (indicator) indicator.textContent = `Trang ${page} / ${totalPages}`;
+    if (prev) { prev.disabled = page <= 1; }
+    if (next) { next.disabled = page >= totalPages || total === 0; }
+  };
+
+  const loadData = async (filterState, opts = {}) => {
+    const activeState = filterState || explorerState;
     const tbody = document.getElementById("explorer-body");
     const sBtn = document.getElementById("explorer-btn-search");
     if (!tbody) return;
 
+    if (!opts.keepPage) explorerPage = 1;
+
+    const reqId = ++explorerFetchId;
     if (sBtn) sBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
     try {
       const q = document.getElementById("explorer-search-input")?.value.trim() || "";
@@ -3996,18 +4019,65 @@ async function initDataExplorer() {
       const dId = dVal ? (typeof dVal === 'object' ? dVal.district_id : dVal) : "";
       const wId = activeState.wards[document.getElementById('explorer-ward-input')?.value] || "";
 
-      let url = `${API_BASE}/explorer/queue?limit=100&q=${encodeURIComponent(q)}`;
-      if (wId) url += `&ward_id=${wId}`;
-      else if (dId) url += `&district_id=${dId}`;
-      else if (pId) url += `&province_id=${pId}`;
+      const params = new URLSearchParams({
+        page: String(explorerPage),
+        limit: String(EXPLORER_PAGE_SIZE),
+        q,
+      });
+      if (wId) params.append('ward_id', String(wId));
+      else if (dId) params.append('district_id', String(dId));
+      else if (pId) params.append('province_id', String(pId));
 
-      const res = await fetch(url, { headers: getAuthHeader() });
-      const data = await res.json();
+      const res = await fetch(`${API_BASE}/explorer/queue?${params}`, { headers: getAuthHeader() });
+      let data;
+      try {
+        data = await res.json();
+      } catch (parseErr) {
+        console.error(parseErr);
+        if (reqId !== explorerFetchId) return;
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--danger);">Không đọc được phản hồi máy chủ</td></tr>`;
+        setExplorerPager(0, 1, EXPLORER_PAGE_SIZE);
+        return;
+      }
+      if (reqId !== explorerFetchId) return;
 
-      if (data.length === 0) {
+      if (!res.ok) {
+        const detail = data && typeof data.detail === 'string' ? data.detail : `HTTP ${res.status}`;
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--danger);">${escapeHtml(detail)}</td></tr>`;
+        setExplorerPager(0, 1, EXPLORER_PAGE_SIZE);
+        return;
+      }
+
+      let rows = [];
+      let total = 0;
+      if (Array.isArray(data)) {
+        rows = data;
+        total = data.length;
+      } else if (data && Array.isArray(data.items)) {
+        rows = data.items;
+        total = typeof data.total === 'number' ? data.total : rows.length;
+        if (typeof data.page === 'number') explorerPage = data.page;
+      } else {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--danger);">Định dạng dữ liệu không hợp lệ</td></tr>`;
+        setExplorerPager(0, 1, EXPLORER_PAGE_SIZE);
+        return;
+      }
+
+      const totalPages = total <= 0 ? 1 : Math.ceil(total / EXPLORER_PAGE_SIZE);
+      if (total === 0) {
+        explorerPage = 1;
+      } else if (explorerPage > totalPages) {
+        explorerPage = totalPages;
+        loadData(activeState, { keepPage: true });
+        return;
+      }
+
+      setExplorerPager(total, explorerPage, EXPLORER_PAGE_SIZE);
+
+      if (rows.length === 0) {
         tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-tertiary);">Không có dữ liệu phù hợp</td></tr>`;
       } else {
-        tbody.innerHTML = data.map(item => {
+        tbody.innerHTML = rows.map(item => {
           let statusBadge = "info";
           if (item.status === "DONE") statusBadge = "success";
           else if (item.status === "ERROR") statusBadge = "danger";
@@ -4015,30 +4085,42 @@ async function initDataExplorer() {
 
           return `<tr>
             <td class="text-mono" style="font-size: 11px;">#${item.id}</td>
-            <td>${item.raw_address}</td>
-            <td>${item.ward_name || "-"}</td>
-            <td>${item.district_name || "-"}</td>
-            <td>${item.province_name || "-"}</td>
-            <td><span class="badge ${statusBadge}">${item.status}</span></td>
+            <td>${escapeHtml(item.raw_address != null ? String(item.raw_address) : '')}</td>
+            <td>${escapeHtml(item.ward_name != null ? String(item.ward_name) : '-')}</td>
+            <td>${escapeHtml(item.district_name != null ? String(item.district_name) : '-')}</td>
+            <td>${escapeHtml(item.province_name != null ? String(item.province_name) : '-')}</td>
+            <td><span class="badge ${statusBadge}">${escapeHtml(item.status != null ? String(item.status) : '')}</span></td>
           </tr>`;
         }).join("");
       }
     } catch (err) {
       console.error(err);
+      if (reqId !== explorerFetchId) return;
       tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--danger);">Lỗi tải dữ liệu</td></tr>`;
+      setExplorerPager(0, 1, EXPLORER_PAGE_SIZE);
     } finally {
-      if (sBtn) sBtn.innerHTML = 'Tìm kiếm';
+      if (reqId === explorerFetchId && sBtn) sBtn.innerHTML = 'Tìm kiếm';
       adjustActivePageHeight();
     }
   };
 
   explorerState = await VNAIControls.initSmartFilter('explorer', {
-    onSearch: loadData
+    onSearch: (st) => loadData(st ?? explorerState),
   });
 
-  // Add search listeners
-  document.getElementById('explorer-search-input')?.addEventListener('input', () => loadData());
-  document.getElementById('explorer-btn-search')?.addEventListener('click', () => loadData());
+  document.getElementById('explorer-search-input')?.addEventListener('input', () =>
+    loadData(undefined, {})
+  );
+
+  document.getElementById('explorer-page-prev')?.addEventListener('click', () => {
+    if (explorerPage <= 1) return;
+    explorerPage--;
+    loadData(undefined, { keepPage: true });
+  });
+  document.getElementById('explorer-page-next')?.addEventListener('click', () => {
+    explorerPage++;
+    loadData(undefined, { keepPage: true });
+  });
 
   loadData();
 }
@@ -4218,10 +4300,20 @@ async function loadPages() {
     try {
       const response = await fetch(`pages/${pageId}.html`);
       if (!response.ok) throw new Error(`Failed to load ${pageId}`);
-      const html = await response.text();
+      const html = (await response.text()).trim();
 
       const div = document.createElement('div');
       div.innerHTML = html;
+
+      // Templates may include a trailing <style>; firstElementChild would skip it unless hoisted.
+      for (const node of [...div.childNodes]) {
+        if (
+          node.nodeType === Node.ELEMENT_NODE &&
+          node.tagName === 'STYLE'
+        ) {
+          document.head.appendChild(node);
+        }
+      }
 
       // The templates should contain the <div class="page" id="..."> wrapper
       // If they don't, we should add it. My templates already have it.
@@ -4333,7 +4425,16 @@ async function fetchLabelStudioTasks() {
       headers: getAuthHeader()
     });
 
-    if (!response.ok) throw new Error(`API error: ${response.status}`);
+    if (!response.ok) {
+      let detail = '';
+      try {
+        const errBody = await response.json();
+        if (errBody && errBody.detail != null) {
+          detail = typeof errBody.detail === 'string' ? errBody.detail : JSON.stringify(errBody.detail);
+        }
+      } catch (_) { /* ignore non-JSON */ }
+      throw new Error(detail || `API error: ${response.status}`);
+    }
 
     const tasks = await response.json();
 

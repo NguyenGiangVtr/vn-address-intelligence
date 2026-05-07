@@ -138,13 +138,13 @@ def check_embedding_columns():
         conn.close()
 
 def convert_json_to_vector():
-    """Convert JSON embeddings to vector type."""
+    """Legacy no-op for backward compatibility (embeddings are written as vector)."""
     config = get_db_config()
     conn = psycopg2.connect(**config)
     
     try:
         with conn.cursor() as cur:
-            logger.info("🔄 Converting embedding columns to vector type...")
+            logger.info("🔄 Embeddings are expected in native vector columns; skipping conversion.")
             
             # First check if we have any data
             cur.execute("""
@@ -162,41 +162,8 @@ def convert_json_to_vector():
                 logger.warning("⚠️ No embeddings found to convert. Run compute_embeddings.py first.")
                 return False
             
-            # Add new vector columns
-            logger.info("🏗️ Adding vector columns...")
-            
-            cur.execute("""
-                ALTER TABLE prq.address_clean_corpus 
-                ADD COLUMN IF NOT EXISTS mgte_embedding_vector vector(768),
-                ADD COLUMN IF NOT EXISTS phobert_embedding_vector vector(768)
-            """)
-            
-            # Convert mGTE embeddings if available
-            if mgte_count > 0:
-                logger.info("🔄 Converting mGTE embeddings to vector...")
-                cur.execute("""
-                    UPDATE prq.address_clean_corpus 
-                    SET mgte_embedding_vector = mgte_embedding::vector
-                    WHERE mgte_embedding IS NOT NULL 
-                      AND mgte_embedding_vector IS NULL
-                """)
-                converted_mgte = cur.rowcount
-                logger.info(f"✅ Converted {converted_mgte} mGTE embeddings")
-            
-            # Convert PhoBERT embeddings if available
-            if phobert_count > 0:
-                logger.info("🔄 Converting PhoBERT embeddings to vector...")
-                cur.execute("""
-                    UPDATE prq.address_clean_corpus 
-                    SET phobert_embedding_vector = phobert_embedding::vector
-                    WHERE phobert_embedding IS NOT NULL 
-                      AND phobert_embedding_vector IS NULL
-                """)
-                converted_phobert = cur.rowcount
-                logger.info(f"✅ Converted {converted_phobert} PhoBERT embeddings")
-            
             conn.commit()
-            logger.info("✅ Vector conversion completed")
+            logger.info("✅ Conversion step skipped")
             return True
             
     except Exception as e:
@@ -216,8 +183,8 @@ def create_vector_indexes():
             # Check if we have vector data
             cur.execute("""
                 SELECT 
-                    COUNT(CASE WHEN mgte_embedding_vector IS NOT NULL THEN 1 END) as mgte_count,
-                    COUNT(CASE WHEN phobert_embedding_vector IS NOT NULL THEN 1 END) as phobert_count
+                    COUNT(CASE WHEN mgte_embedding IS NOT NULL THEN 1 END) as mgte_count,
+                    COUNT(CASE WHEN phobert_embedding IS NOT NULL THEN 1 END) as phobert_count
                 FROM prq.address_clean_corpus
                 WHERE is_active = true
             """)
@@ -237,8 +204,8 @@ def create_vector_indexes():
                     cur.execute("""
                         CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_corpus_mgte_vector_hnsw 
                         ON prq.address_clean_corpus 
-                        USING hnsw (mgte_embedding_vector vector_cosine_ops)
-                        WHERE is_active = true AND mgte_embedding_vector IS NOT NULL
+                        USING hnsw (mgte_embedding vector_cosine_ops)
+                        WHERE is_active = true AND mgte_embedding IS NOT NULL
                     """)
                     logger.info("✅ mGTE HNSW index created")
                 except Exception as e:
@@ -246,9 +213,9 @@ def create_vector_indexes():
                     cur.execute("""
                         CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_corpus_mgte_vector_ivfflat
                         ON prq.address_clean_corpus 
-                        USING ivfflat (mgte_embedding_vector vector_cosine_ops)
+                        USING ivfflat (mgte_embedding vector_cosine_ops)
                         WITH (lists = 100)
-                        WHERE is_active = true AND mgte_embedding_vector IS NOT NULL
+                        WHERE is_active = true AND mgte_embedding IS NOT NULL
                     """)
                     logger.info("✅ mGTE IVFFlat index created")
             
@@ -259,8 +226,8 @@ def create_vector_indexes():
                     cur.execute("""
                         CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_corpus_phobert_vector_hnsw
                         ON prq.address_clean_corpus 
-                        USING hnsw (phobert_embedding_vector vector_cosine_ops)
-                        WHERE is_active = true AND phobert_embedding_vector IS NOT NULL
+                        USING hnsw (phobert_embedding vector_cosine_ops)
+                        WHERE is_active = true AND phobert_embedding IS NOT NULL
                     """)
                     logger.info("✅ PhoBERT HNSW index created")
                 except Exception as e:
@@ -268,9 +235,9 @@ def create_vector_indexes():
                     cur.execute("""
                         CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_corpus_phobert_vector_ivfflat
                         ON prq.address_clean_corpus 
-                        USING ivfflat (phobert_embedding_vector vector_cosine_ops)
+                        USING ivfflat (phobert_embedding vector_cosine_ops)
                         WITH (lists = 100)
-                        WHERE is_active = true AND phobert_embedding_vector IS NOT NULL
+                        WHERE is_active = true AND phobert_embedding IS NOT NULL
                     """)
                     logger.info("✅ PhoBERT IVFFlat index created")
             
@@ -346,8 +313,51 @@ def main():
     # Step 4: Verify indexes
     logger.info("🔍 Verifying created indexes...")
     check_index_status()
+    benchmark_query_latency()
     
     logger.info("🎉 Vector index setup completed!")
+
+def benchmark_query_latency(samples: int = 20):
+    """Quick p95 latency benchmark for vector similarity."""
+    config = get_db_config()
+    conn = psycopg2.connect(**config)
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT mgte_embedding
+                FROM prq.address_clean_corpus
+                WHERE is_active = true AND mgte_embedding IS NOT NULL
+                LIMIT %s
+                """,
+                (samples,),
+            )
+            rows = cur.fetchall()
+            if not rows:
+                logger.warning("⚠️ No vectors found for latency benchmark")
+                return
+            import time
+            latencies = []
+            for (vec,) in rows:
+                t0 = time.time()
+                cur.execute(
+                    """
+                    SELECT id
+                    FROM prq.address_clean_corpus
+                    WHERE is_active = true AND mgte_embedding IS NOT NULL
+                    ORDER BY mgte_embedding <=> %s::vector
+                    LIMIT 10
+                    """,
+                    (vec,),
+                )
+                cur.fetchall()
+                latencies.append((time.time() - t0) * 1000.0)
+            latencies.sort()
+            p95 = latencies[min(len(latencies) - 1, int(len(latencies) * 0.95))]
+            logger.info("📈 Vector query latency p95=%.2fms (target <10ms)", p95)
+    finally:
+        conn.close()
+
 
 if __name__ == "__main__":
     main()

@@ -4,6 +4,7 @@ Compute embeddings for corpus addresses to optimize retrieval performance.
 """
 
 import os
+import json
 import logging
 import numpy as np
 import psycopg2
@@ -130,20 +131,16 @@ class EmbeddingComputer:
         embedding_col = f"{embedding_type}_embedding"
         
         try:
-            import json
-            
             with conn.cursor() as cur:
                 for record_id, embedding in id_embedding_pairs:
-                    # Convert numpy array to JSON string for JSONB storage
-                    embedding_json = json.dumps(embedding.tolist())
-                    
+                    vector_literal = "[" + ",".join(f"{float(v):.8f}" for v in embedding.tolist()) + "]"
                     cur.execute(f"""
                         UPDATE prq.address_clean_corpus 
-                        SET {embedding_col} = %s::jsonb,
+                        SET {embedding_col} = %s::vector,
                             embedding_version = 'v1',
                             updated_at = CURRENT_TIMESTAMP
                         WHERE id = %s
-                    """, (embedding_json, record_id))
+                    """, (vector_literal, record_id))
                 
                 conn.commit()
                 logger.info(f"✅ Updated {len(id_embedding_pairs)} {embedding_type} embeddings")
@@ -160,6 +157,7 @@ class EmbeddingComputer:
         logger.info(f"🧠 Starting {embedding_type} embedding computation...")
         
         total_processed = 0
+        checkpoint_path = f"reports/{embedding_type}_embedding_checkpoint.json"
         
         while True:
             # Get next batch of addresses without embeddings
@@ -191,6 +189,9 @@ class EmbeddingComputer:
             
             total_processed += len(texts)
             logger.info(f"📊 Total processed: {total_processed}")
+            os.makedirs("reports", exist_ok=True)
+            with open(checkpoint_path, "w", encoding="utf-8") as f:
+                json.dump({"embedding_type": embedding_type, "processed": total_processed}, f, indent=2)
             
         logger.info(f"🎉 {embedding_type.upper()} embedding computation completed! Total: {total_processed}")
     
