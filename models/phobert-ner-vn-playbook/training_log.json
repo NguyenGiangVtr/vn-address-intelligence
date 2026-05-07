@@ -1,14 +1,14 @@
 {
-  "train_loss": 1.3196251273155213,
+  "train_loss": 0.42405001672108966,
   "eval_results": {
-    "eval_loss": 0.687467634677887,
-    "eval_f1": 0.7793682132280354,
-    "eval_precision": 0.7558640497845859,
-    "eval_recall": 0.804381049414162,
-    "eval_runtime": 13.1913,
-    "eval_samples_per_second": 30.323,
-    "eval_steps_per_second": 1.895,
-    "epoch": 1.0
+    "eval_loss": 0.12362916022539139,
+    "eval_f1": 0.951075784569001,
+    "eval_precision": 0.9439608269858542,
+    "eval_recall": 0.9582988124827396,
+    "eval_runtime": 20.2841,
+    "eval_samples_per_second": 39.44,
+    "eval_steps_per_second": 1.232,
+    "epoch": 2.0
   },
   "label_list": [
     "O",
@@ -33,10 +33,10 @@
     "B-RM",
     "I-RM"
   ],
-  "n_train": 1600,
-  "n_eval": 400,
-  "epochs": 1,
+  "n_train": 6000,
+  "n_eval": 800,
+  "epochs": 2,
   "learning_rate": 2e-05,
-  "batch_size": 8,
-  "data_source": "labelstudio=data/ner_bootstrap_2000_prelabeled.json"
+  "batch_size": 16,
+  "data_source": "hf_dataset=dathuynh1108/ner-address-standard-dataset;train_cap=4000;eval_cap=800;streaming=True"
 }

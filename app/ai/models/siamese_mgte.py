@@ -138,6 +138,26 @@ class SiameseMGTE:
         sorted_idxs = idxs[np.argsort(-scores[idxs])]
         return [(self._corpus[i], float(scores[i])) for i in sorted_idxs]
 
+    def retrieve_top_k_with_meta(self, query: str, top_k: int = 5) -> List[Tuple[str, float, dict]]:
+        """Like retrieve_top_k but also returns the corpus metadata dict for each
+        candidate, so callers can read fields such as ``latitude``/``longitude``.
+
+        Falls back to empty dicts if encode_corpus_with_metadata() was not used.
+        """
+        if self._corpus_emb is None or len(self._corpus) == 0:
+            raise RuntimeError("Corpus embeddings not initialized. Call encode_corpus() first.")
+        k = max(1, min(top_k, len(self._corpus)))
+        q_emb = self.model.encode([query], normalize_embeddings=True, convert_to_numpy=True)[0]
+        scores = self._corpus_emb @ q_emb
+        idxs = np.argpartition(-scores, range(k))[:k]
+        sorted_idxs = idxs[np.argsort(-scores[idxs])]
+        meta_list = getattr(self, "_corpus_metadata", None) or []
+        out: List[Tuple[str, float, dict]] = []
+        for i in sorted_idxs:
+            meta = meta_list[i] if i < len(meta_list) else {}
+            out.append((self._corpus[i], float(scores[i]), meta or {}))
+        return out
+
     # ------------------------------------------------------------------
     def match_with_temporal(
         self,

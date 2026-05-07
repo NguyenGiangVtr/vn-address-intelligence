@@ -23,6 +23,66 @@ LOGGER = logging.getLogger("migrate_ground_truth_to_clean_corpus")
 
 REQUIRED_LABELS = ("NUM", "STR", "WDS", "DST", "PRO", "NHB", "BLD", "POI", "FLR", "RM")
 
+# Regex patterns for the five labels that the original column-based join cannot cover.
+# Patterns are case-insensitive. We avoid \b because \b on Vietnamese diacritics is
+# unreliable in the cp1252-friendly default; instead we anchor on (^|\s|,|\.|;) lookbehind.
+_LBND = r"(?:^|(?<=[\s,.;()/-]))"
+
+_RE_FLR = re.compile(
+    _LBND + r"(?:tầng|tang|lầu|lau|floor|fl\.?)\s*([0-9]{1,2}[A-Za-z]?)",
+    re.IGNORECASE,
+)
+_RE_RM = re.compile(
+    _LBND + r"(?:phòng|phong|p\.|room|rm\.?|căn|can)\s*([0-9]+[A-Za-z]?(?:[\-\.][0-9A-Za-z]+)?)",
+    re.IGNORECASE,
+)
+_RE_NHB = re.compile(
+    _LBND + r"(?:khu phố|khu pho|kp\.?|tổ|to|ấp|ap|thôn|thon|xóm|xom)\s+([^,]+?)(?=,|$)",
+    re.IGNORECASE,
+)
+_RE_BLD = re.compile(
+    _LBND + r"(?:tòa nhà|toa nha|tòa|toa|building|block|chung cư|chung cu|cc\.?)\s+([^,]+?)(?=,|$)",
+    re.IGNORECASE,
+)
+_RE_POI = re.compile(
+    _LBND + r"(?:trường|truong|bệnh viện|benh vien|bv\.?|công viên|cong vien|"
+    r"chợ|cho|siêu thị|sieu thi|trung tâm|trung tam|sân bay|san bay|"
+    r"công ty|cong ty|cty\.?)\s+([^,]+?)(?=,|$)",
+    re.IGNORECASE,
+)
+
+
+def _extract_extra_labels(addr: str) -> tuple[dict[str, Any], str]:
+    """Extract FLR/RM/NHB/BLD/POI via regex.
+
+    Returns (label_dict, residual_address) where residual_address has the matched
+    fragments removed so the downstream NUM/STR pass does not pick them up.
+    """
+    extras: dict[str, Any] = {"FLR": None, "RM": None, "NHB": None, "BLD": None, "POI": None}
+    residual = addr
+
+    # Order matters: more specific (POI/BLD/NHB) before short tokens (FLR/RM)
+    for label, pattern in (
+        ("POI", _RE_POI),
+        ("BLD", _RE_BLD),
+        ("NHB", _RE_NHB),
+        ("FLR", _RE_FLR),
+        ("RM", _RE_RM),
+    ):
+        m = pattern.search(residual)
+        if not m:
+            continue
+        value = m.group(1).strip(" -/.,")
+        if not value:
+            continue
+        extras[label] = value
+        # Remove the entire matched fragment to avoid leaking into STR
+        residual = (residual[: m.start()] + residual[m.end() :]).strip(" ,")
+    # Collapse repeated whitespace/commas left behind after stripping
+    residual = re.sub(r"\s{2,}", " ", residual)
+    residual = re.sub(r"\s*,\s*,+", ", ", residual)
+    return extras, residual
+
 
 def _extract_components(address: str | None, province: str | None, district: str | None, ward: str | None) -> dict[str, Any]:
     addr = (address or "").strip()
@@ -33,13 +93,19 @@ def _extract_components(address: str | None, province: str | None, district: str
     if not addr:
         return out
 
-    # Extract simple house number prefix (e.g. "123", "12/5", "45A")
-    num_match = re.match(r"^\s*([0-9]+(?:/[0-9A-Za-z]+)*)", addr)
+    # 1) Extract FLR/RM/NHB/BLD/POI first; remove matched fragments from working copy
+    extras, residual = _extract_extra_labels(addr)
+    for k, v in extras.items():
+        out[k] = v
+
+    # 2) Extract simple house number prefix (e.g. "123", "12/5", "45A", "45A/3") from residual.
+    # Allow trailing alphanumeric suffixes and slash-segments.
+    num_match = re.match(r"^\s*([0-9]+[A-Za-z]?(?:/[0-9]+[A-Za-z]?)*)", residual)
     if num_match:
         out["NUM"] = num_match.group(1)
 
-    # STR is remainder before first comma after removing NUM prefix
-    head = addr.split(",")[0].strip()
+    # 3) STR is remainder before first comma after removing NUM prefix
+    head = residual.split(",")[0].strip()
     if out["NUM"] and head.startswith(out["NUM"]):
         head = head[len(out["NUM"]) :].strip(" -/")
     out["STR"] = head or None

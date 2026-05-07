@@ -599,6 +599,9 @@ def train_model(
         fp16=torch.cuda.is_available(),
     )
     sig = inspect.signature(TrainingArguments.__init__)
+    if "report_to" in sig.parameters:
+        # Avoid wandb/tensorboard login prompts on machines without WANDB_API_KEY
+        ta_kwargs["report_to"] = []
     if "evaluation_strategy" in sig.parameters:
         ta_kwargs["evaluation_strategy"] = "epoch"
     elif "eval_strategy" in sig.parameters:

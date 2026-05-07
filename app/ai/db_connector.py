@@ -377,21 +377,34 @@ class DBConnector:
         
         where_clause = " AND ".join(conditions)
         
+        # Adjust the WHERE clause to refer to the corpus alias (we LEFT JOIN
+        # prq.ground_truth below to surface latitude/longitude for QUEUE_STANDARDIZED rows).
+        where_clause_aliased = where_clause.replace("admin_epoch", "c.admin_epoch") \
+                                            .replace("is_active", "c.is_active") \
+                                            .replace("source_type IN", "c.source_type IN") \
+                                            .replace("quality_score >=", "c.quality_score >=") \
+                                            .replace("standardized_address IS NOT NULL", "c.standardized_address IS NOT NULL") \
+                                            .replace("LENGTH(standardized_address)", "LENGTH(c.standardized_address)")
+
         query = f"""
-            SELECT 
-                id,
-                standardized_address,
-                source_type, 
-                quality_score,
-                admin_epoch,
-                admin_version,
-                province_id,
-                district_id,
-                ward_id,
-                effective_date
-            FROM prq.address_clean_corpus
-            WHERE {where_clause}
-            ORDER BY quality_score DESC, usage_count DESC
+            SELECT
+                c.id,
+                c.standardized_address,
+                c.source_type,
+                c.quality_score,
+                c.admin_epoch,
+                c.admin_version,
+                c.province_id,
+                c.district_id,
+                c.ward_id,
+                c.effective_date,
+                gt.latitude,
+                gt.longitude
+            FROM prq.address_clean_corpus c
+            LEFT JOIN prq.ground_truth gt
+                ON c.source_type = 'QUEUE_STANDARDIZED' AND gt.id = c.source_id
+            WHERE {where_clause_aliased}
+            ORDER BY c.quality_score DESC, c.usage_count DESC
         """
         
         if limit:
@@ -416,7 +429,9 @@ class DBConnector:
                     'province_id': r['province_id'],
                     'district_id': r['district_id'], 
                     'ward_id': r['ward_id'],
-                    'effective_date': r['effective_date'].isoformat() if r['effective_date'] else None
+                    'effective_date': r['effective_date'].isoformat() if r['effective_date'] else None,
+                    'latitude': float(r['latitude']) if r.get('latitude') is not None else None,
+                    'longitude': float(r['longitude']) if r.get('longitude') is not None else None,
                 }
             else:
                 # Fallback for tuple cursor
@@ -430,7 +445,9 @@ class DBConnector:
                     'province_id': r[6],
                     'district_id': r[7],
                     'ward_id': r[8],
-                    'effective_date': r[9].isoformat() if r[9] else None
+                    'effective_date': r[9].isoformat() if r[9] else None,
+                    'latitude': float(r[10]) if r[10] is not None else None,
+                    'longitude': float(r[11]) if r[11] is not None else None,
                 }
                 
             if addr:

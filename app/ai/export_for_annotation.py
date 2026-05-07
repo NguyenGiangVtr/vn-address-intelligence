@@ -38,18 +38,16 @@ class PreLabeler:
     """
     Bộ gán nhãn lai (Hybrid) kết hợp String Matching (Master Data) và Regex (Heuristics).
     Tối ưu cho việc tạo Ground Truth cho mô hình NER PhoBERT.
+    Chiến lược: Macro Matching → Priority Micro Rules → STR/POI Heuristic → NUM scan.
     """
-    
-    # Danh sách các thành phố trực thuộc trung ương
+
     CENTRAL_CITIES = {"hồ chí minh", "hcm", "hà nội", "hn", "đà nẵng", "đn", "hải phòng", "hp", "cần thơ", "ct"}
 
-    # ──────────────────────────────────────────────────────────────────────────
-    # Cấu hình tiền tố và từ khóa đơn vị hành chính để làm sạch nhãn
-    # ──────────────────────────────────────────────────────────────────────────
+    # Tiền tố đơn vị hành chính để làm sạch nhãn
     PREFIX_PATTERNS = {
         "PCD": None,
-        "BLD": r'(?i)^(Tòa\s*nhà|Chung\s*cư|CC|Khu\s*tập\s*thể|KTT|Văn\s*phòng|Khu\s*đô\s*thị|KĐT|KCN|CCN|Tầng|Phòng|Lầu|Block)\s+',
-        "POI": r'(?i)^(Trường|Bệnh\s*viện|BV|Cửa\s*hàng|Tạp\s*hóa|ATM|UBND|Chợ|Siêu\s*thị|Công\s*viên|Công\s*ty|Cty|Nhà\s*thờ|Chùa|Khu công nghiệp|KCN)\s+',
+        "BLD": r'(?i)^(Tòa\s*nhà|Chung\s*cư|CC|Khu\s*tập\s*thể|KTT|Văn\s*phòng|Khu\s*đô\s*thị|KĐT|Block|Tầng|Phòng|Lầu)\s+',
+        "POI": None,  # Giữ nguyên full cụm: "Khách sạn A", "Nhà Trọ B"
         "ALY": r'(?i)^(Hẻm|Ngõ|Kiệt|Ngách)\s+',
         "NUM": r'(?i)^(Số nhà|Số|Lô|Km)\s+',
         "STR": r'(?i)^(Đường|Phố|Đ\.|QL|Quốc\s*lộ|ĐT|TL|Tỉnh\s*lộ|Đại\s*lộ|Hương\s*lộ|HL)\s+',
@@ -58,81 +56,76 @@ class PreLabeler:
         "DST": r'(?i)^(Quận|Huyện|Thị xã|Q\.|H\.)\s+',
         "PRO": r'(?i)^(Thành phố|Tỉnh|TP\.|TP)\s+',
     }
-    
+
     ADMIN_KEYWORDS = r'(?i)\s*,?\s*\b(Phường|Xã|Thị trấn|Quận|Huyện|Thị xã|Thành phố|Tỉnh|TP|P\.|Q\.|H\.|X\.)\b'
 
-    # Quy tắc Regex cho các đơn vị vi mô (Sắp xếp theo NER_LABELS)
+    # Từ khóa POI dùng chung (MICRO_RULES + tách STR hỗn hợp)
+    _POI_KW = r'(?i)(?:Trường|Bệnh\s*viện|BV|Cửa\s*hàng|Tạp\s*hóa|ATM|UBND|Chợ|Siêu\s*thị|Công\s*viên|Công\s*ty|Cty|Nhà\s*thờ|Chùa|KCN|Khách\s*sạn|Nhà\s*hàng|Nhà\s*trọ|Nhà\s*nghỉ|Nhà\s*văn\s*hóa|Tiệm|Phân\s*bón|Quán|Resort|Spa|Garage|Xưởng|Trạm|Đình|Đền|Miếu)'
+
+    # Thứ tự ưu tiên: NHB/POI trước NUM để tránh "Ấp 5" bị gán NUM=5
     MICRO_RULES = [
         ("PCD", r'(?i)(?:\b|^)([23456789CFGHJMPQRVWX]{4,8}\+[23456789CFGHJMPQRVWX]{2,3})(?:\b|$)', 0.95),
-        ("BLD", r'(?i)(?:Tòa\s*nhà|Chung\s*cư|CC|Khu\s*tập\s*thể|KTT|Văn\s*phòng|Khu\s*đô\s*thị|KĐT|KCN|CCN|Tầng|Phòng|Lầu|Block)\s+[^,.\n]+', 0.75),
-        ("POI", r'(?i)(?:Trường|Bệnh\s*viện|BV|Cửa\s*hàng|Tạp\s*hóa|ATM|UBND|Chợ|Siêu\s*thị|Công\s*viên|Công\s*ty|Cty|Nhà\s*thờ|Chùa|Khu công nghiệp|KCN)\s+[^,.\n]+', 0.7),
+        ("NHB", r'(?i)(?:Khu\s*phố|KP|Tổ\s*dân\s*phố|Thôn|Ấp|Bản|Tổ|Sóc|Phum|Xóm|Làng|Khóm|Cụm|Buôn|Plei|KDC)\s+[^,.\n]+', 0.85),
+        ("POI", r'(?i)(?:Trường|Bệnh\s*viện|BV|Cửa\s*hàng|Tạp\s*hóa|ATM|UBND|Chợ|Siêu\s*thị|Công\s*viên|Công\s*ty|Cty|Nhà\s*thờ|Chùa|KCN|Khách\s*sạn|Nhà\s*hàng|Nhà\s*trọ|Nhà\s*nghỉ|Nhà\s*văn\s*hóa|Tiệm|Phân\s*bón|Quán|Resort|Spa|Garage|Xưởng|Trạm|Đình|Đền|Miếu)\s+[^,.\n]+', 0.8),
         ("ALY", r'(?i)(?:Hẻm|Ngõ|Kiệt|Ngách)\s+[^,.\n]+', 0.85),
+        ("BLD", r'(?i)(?:Tòa\s*nhà|Chung\s*cư|CC|Khu\s*tập\s*thể|KTT|Văn\s*phòng|Khu\s*đô\s*thị|KĐT|Block)\s+[^,.\n]+', 0.75),
         ("NUM", r'(?i)(?:Số nhà|Số\s+)?\d+[A-Za-z]?(?:[/\-]\d+[A-Za-z]?)*|(?:\b|^)(?:Lô|Km)\s+[\w\-]+', 0.9),
         ("STR", r'(?i)(?:Đường|Phố|Đ\.|QL|Quốc\s*lộ|ĐT|TL|Tỉnh\s*lộ|Đại\s*lộ|Hương\s*lộ|HL)\s+[^,.\n]+', 0.85),
-        ("NHB", r'(?i)(?:Khu\s*phố|KP|Tổ\s*dân\s*phố|Thôn|Ấp|Bản|Tổ|Sóc|Phum|Xóm|Làng|Khóm|Cụm|Buôn|Plei|KDC)\s+[^,.\n]+', 0.8),
     ]
 
     @classmethod
-    def predict(cls, 
-                raw_address: str, 
-                ward_name: str = None, 
-                district_name: str = None, 
+    def predict(cls,
+                raw_address: str,
+                ward_name: str = None,
+                district_name: str = None,
                 province_name: str = None,
                 known_streets: set = None) -> list:
-        
+
         if not raw_address:
             return []
 
         results = []
-        labeled_spans = [] # Lưu trữ (start, end) để chống quét đè nhãn
+        labeled_spans = []  # (start, end) để chống gán đè nhãn
 
         def add_result(start: int, end: int, text: str, label: str, score: float):
-            # Lấy bản gốc để tính offset nếu bị cắt tiền tố
-            original_text = text
-            
-            # 1. Loại bỏ tiền tố (Đường, Phố, Số, ...) theo yêu cầu
+            # Kiểm tra chồng lấn TRƯỚC khi xử lý (tránh lãng phí công cắt prefix)
+            for s, e in labeled_spans:
+                if (s <= start < e) or (s < end <= e) or (start <= s and end >= e):
+                    return False
+
+            # Cắt tiền tố (Đường, Phố, Số, Ấp...) – POI giữ nguyên full cụm
             prefix_pat = cls.PREFIX_PATTERNS.get(label)
             if prefix_pat:
                 m_pref = re.search(prefix_pat, text)
                 if m_pref:
-                    pref_len = m_pref.end()
-                    remaining = text[pref_len:]
-                    stripped = remaining.lstrip()
-                    offset = pref_len + (len(remaining) - len(stripped))
-                    
-                    text = stripped
-                    start += offset
+                    clean = text[m_pref.end():].lstrip()
+                    start += m_pref.end() + (len(text[m_pref.end():]) - len(clean))
+                    text = clean
 
-            # 2. Sửa lỗi STR tham lam: Loại bỏ phần đơn vị hành chính hoặc đơn vị khác dính vào ở cuối
+            # Cắt phần admin bị dính ở cuối (áp dụng với mọi nhãn ngoại trừ PRO/DST/WDS)
+            if label not in ("PRO", "DST", "WDS"):
+                m_admin = re.search(cls.ADMIN_KEYWORDS, text)
+                if m_admin:
+                    text = text[:m_admin.start()].strip(' ,')
+
+            # Với STR: cắt thêm nếu dính tiền tố BLD/NHB/ALY ở cuối
             if label == "STR":
-                # Cắt ở cuối nếu dính đơn vị hành chính
-                m_admin = re.search(cls.ADMIN_KEYWORDS, text)
-                if m_admin:
-                    text = text[:m_admin.start()].strip(' ,')
-                
-                # Cắt ở cuối nếu dính tiền tố của BLD, POI, ALY (Ví dụ: "Nguyễn Sơn Chung Cư...")
-                for stop_label in ["BLD", "POI", "ALY"]:
-                    stop_pat = cls.PREFIX_PATTERNS.get(stop_label)
-                    if stop_pat:
-                        m_stop = re.search(stop_pat, text)
-                        if m_stop:
-                            # Nếu dính tiền tố đơn vị khác, cắt bỏ từ đó
-                            text = text[:m_stop.start()].strip(' ,')
-            elif label in ["ALY", "BLD", "NHB", "POI"]:
-                m_admin = re.search(cls.ADMIN_KEYWORDS, text)
-                if m_admin:
-                    text = text[:m_admin.start()].strip(' ,')
+                for stop_lbl in ("BLD", "NHB", "ALY"):
+                    sp = cls.PREFIX_PATTERNS.get(stop_lbl)
+                    if sp:
+                        ms = re.search(sp, text)
+                        if ms and ms.start() > 0:
+                            text = text[:ms.start()].strip(' ,')
 
             if not text:
                 return False
-            
-            end = start + len(text)
 
-            # Kiểm tra chồng lấn (sau khi đã tinh chỉnh span)
+            end = start + len(text)
+            # Kiểm tra lại sau khi tinh chỉnh span
             for s, e in labeled_spans:
                 if (s <= start < e) or (s < end <= e) or (start <= s and end >= e):
                     return False
-            
+
             results.append({
                 "from_name": "label", "to_name": "text", "type": "labels", "score": score,
                 "value": {"start": start, "end": end, "text": text, "labels": [label]}
@@ -140,168 +133,132 @@ class PreLabeler:
             labeled_spans.append((start, end))
             return True
 
-        # Giai đoạn 1: String Matching cho các cấp Vĩ mô (Dựa trên Master Data)
-        # Sắp xếp theo độ dài giảm dần để ưu tiên khớp cụm từ dài trước
-        macros = [
-            ("PRO", province_name),
-            ("DST", district_name),
-            ("WDS", ward_name)
-        ]
-
-        for label, entity_name in macros:
-            if not entity_name: continue
-            
-            # Tạo các biến thể tìm kiếm để tăng khả năng khớp
-            search_terms = [entity_name]
-            # Thêm biến thể bỏ tiền tố (Ví dụ: "Quận 1" -> "1", "Phường Bến Nghé" -> "Bến Nghé")
-            short_name = re.sub(r'(?i)^(Thành phố|Tỉnh|Quận|Huyện|Thị xã|Phường|Xã|Thị trấn|TP\.|Q\.|H\.|P\.|X\.)\s*', '', entity_name).strip()
-            if short_name and short_name != entity_name:
-                search_terms.append(short_name)
-            
-            for term in sorted(search_terms, key=len, reverse=True):
-                # Tìm tất cả các lần xuất hiện (xử lý over-information)
-                for match in re.finditer(re.escape(term), raw_address, re.I):
-                    add_result(match.start(), match.end(), raw_address[match.start():match.end()], label, 1.0)
-
-        # Giai đoạn 1.2: Heuristic nhận diện STR nằm giữa NUM và WDS (WS)
-        # Theo yêu cầu: STR nằm giữa NUM và WDS và có thể nằm trong danh sách từ OSM
-        num_regex = r'(?i)(?:Số\s+)?\d+[A-Za-z]?(?:[/\-]\d+[A-Za-z]?)*|(?:\b|^)(?:Lô|Km)\s+[\w\-]+'
-        
-        # Lấy các mốc WDS đã tìm thấy ở Giai đoạn 1
-        wds_spans = [ (r['value']['start'], r['value']['end']) for r in results if 'WDS' in r['value']['labels'] ]
-        
-        if wds_spans:
-            # Tìm tất cả các số nhà tiềm năng
-            for n_match in re.finditer(num_regex, raw_address):
-                n_end = n_match.end()
-                # Tìm WDS gần nhất phía sau NUM này
-                after_wds = [s for s in wds_spans if s[0] >= n_end]
-                if after_wds:
-                    w_start, _ = min(after_wds, key=lambda x: x[0])
-                    # Đoạn văn bản ở giữa NUM và WDS
-                    gap_text = raw_address[n_end:w_start].strip(' ,')
-                    
-                    # Tiền xử lý gap_text: Nếu chứa tiền tố đường, chỉ lấy từ đó (Sửa lỗi dính "Số nhà" vào STR)
-                    str_pref_match = re.search(cls.PREFIX_PATTERNS["STR"], gap_text)
-                    if str_pref_match:
-                        gap_text = gap_text[str_pref_match.start():]
-                    
-                    # Nếu gap_text chứa tiền tố của các đơn vị khác (BLD, POI, ALY) -> Loại bỏ phần đó
-                    for stop_label in ["BLD", "POI", "ALY"]:
-                        stop_pat = cls.PREFIX_PATTERNS.get(stop_label)
-                        if stop_pat:
-                            m_stop = re.search(stop_pat, gap_text)
-                            if m_stop:
-                                gap_text = gap_text[:m_stop.start()].strip(' ,')
-
-                    if gap_text and len(gap_text.split()) <= 6: # Tên đường thường không quá dài
-                        is_match = False
-                        if known_streets and gap_text.lower() in known_streets:
-                            is_match = True
-                        
-                        # Heuristic bổ sung: Nếu bắt đầu bằng chữ hoa và không chứa dấu phẩy/chấm
-                        elif re.match(r'^[A-ZĐ][^,.\n]+$', gap_text):
-                            is_match = True
-                            
-                        if is_match:
-                            # Tìm vị trí chính xác trong raw_address để add_result
-                            m_gap = re.search(re.escape(gap_text), raw_address[n_end:w_start])
-                            if m_gap:
-                                g_start = n_end + m_gap.start()
-                                g_end = g_start + len(gap_text)
-                                # Ưu tiên điểm cao hơn nếu khớp trong list OSM
-                                score = 0.92 if (known_streets and gap_text.lower() in known_streets) else 0.8
-                                add_result(g_start, g_end, gap_text, 'STR', score)
-
-        # Giai đoạn 1.5: Cố gắng trích xuất STR (Tên đường) khi PRO/DST/WDS đã biết
-        # Chiến lược:
-        # - Tạo một bản sao sạch của địa chỉ, loại bỏ các chuỗi PRO/DST/WDS và hậu tố quốc gia
-        # - Tách theo dấu phẩy và tìm segment chứa số nhà + tên đường (hỗ trợ 74/26, 927/1, 11B, K814)
-        # - Nếu tìm được, thêm nhãn `STR` cho phần tên đường và `NUM` cho số nhà
-        clean_addr = raw_address
-        # Loại bỏ hậu tố quốc gia
-        clean_addr = re.sub(r',?\s*việt\s*nam.*$', '', clean_addr, flags=re.I)
-
-        def _remove_macro_variants(text: str, name: str) -> str:
+        # ── Giai đoạn 1: Macro Matching (PRO, DST, WDS từ Master Data) ──────────
+        # Chỉ lấy lần xuất hiện đầu tiên → tránh lặp nhãn khi địa chỉ dư thừa
+        for label, name in [("PRO", province_name), ("DST", district_name), ("WDS", ward_name)]:
             if not name:
-                return text
-            # Các tiền tố thường gặp
-            prefixes = r'(?:Thành phố|Tỉnh|Quận|Huyện|Thị xã|Phường|Xã|Thị trấn|TP\.|TP|Q\.|Q|H\.|P\.|P)\s*'
-            # Loại bỏ cả biến thể có tiền tố và không có
-            pattern = rf'(?:{prefixes})?\s*{re.escape(name)}'
-            return re.sub(pattern, '', text, flags=re.I)
+                continue
+            short = re.sub(r'(?i)^(Thành phố|Tỉnh|Quận|Huyện|Thị xã|Phường|Xã|Thị trấn|TP\.|Q\.|H\.|P\.|X\.)\s*', '', name).strip()
+            for term in sorted({name, short} - {''}, key=len, reverse=True):
+                m = re.search(re.escape(term), raw_address, re.I)
+                if m:
+                    add_result(m.start(), m.end(), m.group(), label, 1.0)
+                    break
 
-        clean_addr = _remove_macro_variants(clean_addr, ward_name)
-        clean_addr = _remove_macro_variants(clean_addr, district_name)
-        clean_addr = _remove_macro_variants(clean_addr, province_name)
+        # ── Giai đoạn 2: Priority Micro Rules (NHB, POI, ALY, BLD, PCD) ─────────
+        # Chạy trước NUM/STR để "Ấp 5" → NHB="Ấp 5" thay vì NUM=5
+        priority_labels = {"NHB", "POI", "ALY", "BLD", "PCD"}
+        for label, pattern, score in cls.MICRO_RULES:
+            if label not in priority_labels:
+                continue
+            for match in re.finditer(pattern, raw_address):
+                add_result(match.start(), match.end(), match.group(), label, score)
 
-        # Chuẩn hóa khoảng trắng, xóa dấu phẩy thừa
-        clean_addr = re.sub(r'\s*,\s*', ',', clean_addr)
-        clean_addr = re.sub(r'\s+', ' ', clean_addr).strip(' ,')
+        # ── Giai đoạn 3: Xử lý STR và tách thực thể hỗn hợp STR+POI ─────────────
+        # Chiến lược A: Nếu STR chứa POI bên trong → tách ngay
+        #   VD: "Đường Số 9 Nhà Trọ Dung Loan" → STR="9", POI="Nhà Trọ Dung Loan"
+        poi_split_re = cls._POI_KW + r'.*'
+        for match in re.finditer(r'(?i)(?:Đường|Phố|Đ\.)\s+([^,.\n]+)', raw_address):
+            val = match.group(1).strip()
+            s0 = match.start(1)
+            # Kiểm tra nếu val bắt đầu bằng "Số N <POI>" hoặc "<N> <POI>"
+            m_split = re.search(poi_split_re, val, re.I)
+            if m_split:
+                str_part = val[:m_split.start()].strip(' ,')
+                poi_part = val[m_split.start():].strip(' ,')
+                if str_part:
+                    add_result(s0, s0 + len(str_part), str_part, "STR", 0.9)
+                if poi_part:
+                    add_result(s0 + m_split.start(), s0 + m_split.start() + len(poi_part), poi_part, "POI", 0.9)
+            else:
+                add_result(s0, s0 + len(val), val, "STR", 0.85)
 
-        segments = [s.strip() for s in clean_addr.split(',') if s.strip()]
+        # Chiến lược B: Heuristic STR giữa NUM và WDS (dùng OSM streets)
+        wds_spans = [(r['value']['start'], r['value']['end']) for r in results if 'WDS' in r['value']['labels']]
+        num_re = r'(?i)(?:Số\s+)?\d+[A-Za-z]?(?:[/\-]\d+[A-Za-z]?)*|(?:\b|^)(?:Lô|Km)\s+[\w\-]+'
+        if wds_spans:
+            for nm in re.finditer(num_re, raw_address):
+                after = [s for s in wds_spans if s[0] >= nm.end()]
+                if not after:
+                    continue
+                w_start, _ = min(after, key=lambda x: x[0])
+                gap = raw_address[nm.end():w_start].strip(' ,')
+                # Bỏ qua nếu gap bắt đầu bằng NHB prefix
+                if re.match(cls.PREFIX_PATTERNS["NHB"], gap, re.I):
+                    continue
+                sp = re.search(cls.PREFIX_PATTERNS["STR"], gap)
+                if sp:
+                    gap = gap[sp.start():]
+                for sl in ("BLD", "ALY"):
+                    stp = cls.PREFIX_PATTERNS.get(sl)
+                    if stp:
+                        ms2 = re.search(stp, gap)
+                        if ms2:
+                            gap = gap[:ms2.start()].strip(' ,')
+                if gap and len(gap.split()) <= 6:
+                    is_street = (known_streets and gap.lower() in known_streets) or re.match(r'^[A-ZĐ\u00C0-\u1EF9][^,.\n]+$', gap)
+                    if is_street:
+                        mg = re.search(re.escape(gap), raw_address[nm.end():w_start])
+                        if mg:
+                            gs = nm.end() + mg.start()
+                            sc = 0.92 if (known_streets and gap.lower() in known_streets) else 0.8
+                            add_result(gs, gs + len(gap), gap, 'STR', sc)
 
-        def _find_in_raw(sub: str):
-            if not sub: return None
-            m = re.search(re.escape(sub), raw_address, flags=re.I)
+        # Chiến lược C: Segment splitting (clean addr → num+rest pattern)
+        clean = re.sub(r',?\s*việt\s*nam.*$', '', raw_address, flags=re.I)
+
+        def _rm_macro(txt, nm2):
+            if not nm2:
+                return txt
+            pfx = r'(?:Thành phố|Tỉnh|Quận|Huyện|Thị xã|Phường|Xã|Thị trấn|TP\.|TP|Q\.|Q|H\.|P\.|P)\s*'
+            return re.sub(rf'(?:{pfx})?\s*{re.escape(nm2)}', '', txt, flags=re.I)
+
+        for n in (ward_name, district_name, province_name):
+            clean = _rm_macro(clean, n)
+        clean = re.sub(r'\s*,\s*', ',', clean)
+        clean = re.sub(r'\s+', ' ', clean).strip(' ,')
+
+        def _find_raw(sub):
+            if not sub:
+                return None
+            m = re.search(re.escape(sub), raw_address, re.I)
             if m:
                 return m.start(), m.end(), raw_address[m.start():m.end()]
-            # Fallback: try case-insensitive search by lowering
             lo = raw_address.lower().find(sub.lower())
-            if lo >= 0:
-                return lo, lo + len(sub), raw_address[lo:lo + len(sub)]
-            return None
+            return (lo, lo + len(sub), raw_address[lo:lo + len(sub)]) if lo >= 0 else None
 
-        # Pattern for house numbers (supports 74/26, 927/1, 11B, K814)
-        num_pattern = re.compile(r'(?i)^(?P<num>(?:K\d+|\d+[A-Za-z]?)(?:[\\/\-]\d+[A-Za-z]?)*)(?:\s+)(?P<rest>.+)$')
-
-        for i, seg in enumerate(segments[:3]):
-            # Try to match number + rest
-            m = num_pattern.match(seg)
-            if m:
-                num = m.group('num').strip()
-                rest = m.group('rest').strip()
-                # Attempt to isolate street name from rest by removing leading POI/building words
-                rest_clean = re.sub(r'^(?:Tòa nhà|Chung cư|Khu|Khu dân cư|Block|Tầng|Phòng|Lầu|Topaz Home|Chung Cư)\b[,\s]*', '', rest, flags=re.I)
-
-                # If rest contains additional separators (like '-') take full rest as street candidate
-                street_candidate = rest_clean
-
-                # Locate in original and add labels
-                found = _find_in_raw(street_candidate)
-                if found:
-                    s0, e0, txt = found
-                    add_result(s0, e0, txt, 'STR', 0.95)
-                # also add NUM if possible
-                found_num = _find_in_raw(num)
-                if found_num:
-                    s1, e1, txtn = found_num
-                    add_result(s1, e1, txtn, 'NUM', 0.98)
+        num_pat = re.compile(r'(?i)^(?P<num>(?:K\d+|\d+[A-Za-z]?)(?:[\/\-]\d+[A-Za-z]?)*)(?:\s+)(?P<rest>.+)$')
+        for seg in [s.strip() for s in clean.split(',') if s.strip()][:3]:
+            mm = num_pat.match(seg)
+            if mm:
+                num_str = mm.group('num').strip()
+                rest = re.sub(r'^(?:Tòa nhà|Chung cư|Khu dân cư|Block|Tầng|Phòng|Lầu)\b[,\s]*', '', mm.group('rest').strip(), flags=re.I)
+                f = _find_raw(rest)
+                if f:
+                    add_result(f[0], f[1], f[2], 'STR', 0.95)
+                fn = _find_raw(num_str)
+                if fn:
+                    add_result(fn[0], fn[1], fn[2], 'NUM', 0.98)
                 break
-
-            # If segment doesn't start with number, but contains street words, try micro rule on segment
-            for lab, pat, score in cls.MICRO_RULES:
-                if lab != 'STR':
+            for _l, _p, _sc in cls.MICRO_RULES:
+                if _l != 'STR':
                     continue
-                mm = re.search(pat, seg)
-                if mm:
-                    candidate = mm.group(0).strip()
-                    found = _find_in_raw(candidate)
-                    if found:
-                        s0, e0, txt = found
-                        add_result(s0, e0, txt, 'STR', max(0.85, score))
-                        break
+                mm2 = re.search(_p, seg)
+                if mm2:
+                    f = _find_raw(mm2.group(0).strip())
+                    if f:
+                        add_result(f[0], f[1], f[2], 'STR', max(0.85, _sc))
+                    break
 
-        # Giai đoạn 2: Regex Heuristics cho các cấp Vi mô
+        # ── Giai đoạn 4: Quét NUM (nhãn còn lại, không cần ưu tiên) ─────────────
         for label, pattern, score in cls.MICRO_RULES:
+            if label in priority_labels or label == "STR":
+                continue
             for match in re.finditer(pattern, raw_address):
-                matched_text = match.group(0).strip()
-                # Tính toán lại start/end sau khi strip
-                start = match.start() + match.group(0).find(matched_text)
-                end = start + len(matched_text)
-                add_result(start, end, matched_text, label, score)
+                add_result(match.start(), match.end(), match.group(), label, score)
 
         return results
+
 
 from app.ai.constants import NER_LABELS
 

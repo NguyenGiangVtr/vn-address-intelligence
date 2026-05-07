@@ -16,6 +16,10 @@ models:
   phobert:
     enabled: true
     model_name: "vinai/phobert-base"
+    # Local fine-tuned NER artifact (Phase 2 playbook output). Falls back to
+    # vinai/phobert-base when the directory is missing. Override via env
+    # NER_MODEL_ID in .env when needed.
+    local_path: "models/phobert-ner-vn-playbook"
     result_column: "normalized_phobert"
     max_seq_length: 256
     batch_size: 32
@@ -23,7 +27,9 @@ models:
 
   siamese_mgte:
     enabled: true
-    model_name: "Alibaba-NLP/gte-multilingual-base"
+    # Use the playbook-trained Siamese mGTE model when available; falls back
+    # to the upstream Alibaba-NLP base when the directory is missing.
+    model_name: "models/mgte-siamese-vn-playbook"
     result_column: "normalized_mgte"
     batch_size: 32
     device: "auto"
@@ -43,7 +49,7 @@ experiment:
   standard_addresses_schema: "prq"               # schema của bảng địa chỉ chuẩn
   standard_addresses_table: "address_cleansing_queue"
   standard_addresses_column: "raw_address"
-  corpus_limit: 1000                             # Giảm corpus để tăng tốc loading
+  corpus_limit: 12000                            # Top-N corpus rows for Siamese encode (balance recall vs startup time)
   output_report_path: "reports/experiment_report.html"
   save_csv: true
   csv_path: "reports/experiment_results.csv"

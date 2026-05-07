@@ -9,7 +9,7 @@ import logging
 import numpy as np
 import psycopg2
 from dotenv import load_dotenv
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 import torch
 from transformers import AutoTokenizer, AutoModel
 from sentence_transformers import SentenceTransformer
@@ -100,7 +100,7 @@ class EmbeddingComputer:
         )
         
         return embeddings
-    
+
     def get_addresses_without_embeddings(self, embedding_type: str, limit: int = 1000) -> List[Tuple[int, str]]:
         """Get addresses that don't have embeddings yet."""
         conn = psycopg2.connect(**self.db_config)
@@ -124,27 +124,72 @@ class EmbeddingComputer:
         finally:
             conn.close()
     
-    def update_embeddings(self, embedding_type: str, id_embedding_pairs: List[Tuple[int, np.ndarray]]):
-        """Update embeddings in database."""
+    def _detect_column_type(self, column: str) -> str:
+        """Return the udt_name of the embedding column (e.g. 'vector' or 'jsonb')."""
         conn = psycopg2.connect(**self.db_config)
-        
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT udt_name FROM information_schema.columns
+                    WHERE table_schema='prq' AND table_name='address_clean_corpus'
+                      AND column_name=%s
+                    """,
+                    (column,),
+                )
+                row = cur.fetchone()
+                return (row[0] if row else "") or ""
+        finally:
+            conn.close()
+
+    def update_embeddings(self, embedding_type: str, id_embedding_pairs: List[Tuple[int, np.ndarray]]):
+        """Update embeddings in database, supporting both vector(768) and jsonb columns.
+
+        When pgvector is not installed the corpus columns fall back to jsonb,
+        so we write a JSON array instead of a literal vector cast.
+        """
+        conn = psycopg2.connect(**self.db_config)
+
         embedding_col = f"{embedding_type}_embedding"
-        
+        col_type = self._detect_column_type(embedding_col).lower()
+        is_vector = col_type == "vector"
+        if not is_vector:
+            logger.info(
+                "📝 Embedding column %s is %s; writing JSON array (pgvector not active)",
+                embedding_col, col_type or "unknown",
+            )
+
         try:
             with conn.cursor() as cur:
                 for record_id, embedding in id_embedding_pairs:
-                    vector_literal = "[" + ",".join(f"{float(v):.8f}" for v in embedding.tolist()) + "]"
-                    cur.execute(f"""
-                        UPDATE prq.address_clean_corpus 
-                        SET {embedding_col} = %s::vector,
-                            embedding_version = 'v1',
-                            updated_at = CURRENT_TIMESTAMP
-                        WHERE id = %s
-                    """, (vector_literal, record_id))
-                
+                    if is_vector:
+                        vector_literal = "[" + ",".join(f"{float(v):.8f}" for v in embedding.tolist()) + "]"
+                        cur.execute(
+                            f"""
+                            UPDATE prq.address_clean_corpus
+                            SET {embedding_col} = %s::vector,
+                                embedding_version = 'v1',
+                                updated_at = CURRENT_TIMESTAMP
+                            WHERE id = %s
+                            """,
+                            (vector_literal, record_id),
+                        )
+                    else:
+                        json_payload = json.dumps([float(v) for v in embedding.tolist()])
+                        cur.execute(
+                            f"""
+                            UPDATE prq.address_clean_corpus
+                            SET {embedding_col} = %s::jsonb,
+                                embedding_version = 'v1',
+                                updated_at = CURRENT_TIMESTAMP
+                            WHERE id = %s
+                            """,
+                            (json_payload, record_id),
+                        )
+
                 conn.commit()
                 logger.info(f"✅ Updated {len(id_embedding_pairs)} {embedding_type} embeddings")
-                
+
         except Exception as e:
             logger.error(f"❌ Error updating embeddings: {e}")
             conn.rollback()
@@ -152,14 +197,31 @@ class EmbeddingComputer:
         finally:
             conn.close()
     
-    def compute_and_store_embeddings(self, embedding_type: str, batch_size: int = 500):
-        """Compute and store embeddings for corpus addresses."""
+    def compute_and_store_embeddings(
+        self,
+        embedding_type: str,
+        batch_size: int = 500,
+        max_batches: Optional[int] = None,
+    ):
+        """Compute and store embeddings for corpus addresses.
+
+        If ``max_batches`` is set, stop after that many DB update batches (useful
+        for smoke runs on huge corpora). Default ``None`` = process until empty.
+        """
         logger.info(f"🧠 Starting {embedding_type} embedding computation...")
         
         total_processed = 0
         checkpoint_path = f"reports/{embedding_type}_embedding_checkpoint.json"
+        batches_done = 0
         
         while True:
+            if max_batches is not None and batches_done >= max_batches:
+                logger.info(
+                    "⏹️ Stopping after %d batches (--max-batches) for %s",
+                    max_batches,
+                    embedding_type,
+                )
+                break
             # Get next batch of addresses without embeddings
             addresses_data = self.get_addresses_without_embeddings(embedding_type, batch_size)
             
@@ -188,6 +250,7 @@ class EmbeddingComputer:
             self.update_embeddings(embedding_type, id_embedding_pairs)
             
             total_processed += len(texts)
+            batches_done += 1
             logger.info(f"📊 Total processed: {total_processed}")
             os.makedirs("reports", exist_ok=True)
             with open(checkpoint_path, "w", encoding="utf-8") as f:
@@ -226,6 +289,39 @@ class EmbeddingComputer:
 
 def main():
     """Main function to compute embeddings."""
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Compute PhoBERT + mGTE embeddings for address_clean_corpus")
+    parser.add_argument(
+        "--phobert-batch-size",
+        type=int,
+        default=50,
+        help="Rows per batch for PhoBERT updates",
+    )
+    parser.add_argument(
+        "--mgte-batch-size",
+        type=int,
+        default=100,
+        help="Rows per batch for mGTE updates",
+    )
+    parser.add_argument(
+        "--max-batches",
+        type=int,
+        default=None,
+        help="Optional cap on batches per embedding type (smoke runs); omit for full corpus",
+    )
+    parser.add_argument(
+        "--skip-phobert",
+        action="store_true",
+        help="Only run mGTE pass",
+    )
+    parser.add_argument(
+        "--skip-mgte",
+        action="store_true",
+        help="Only run PhoBERT pass",
+    )
+    args = parser.parse_args()
+
     logger.info("🚀 Starting embedding computation...")
     
     computer = EmbeddingComputer()
@@ -233,15 +329,23 @@ def main():
     # Show current stats
     computer.get_embedding_stats()
     
-    # Compute PhoBERT embeddings first (Vietnamese specialized, no trust_remote_code needed)
-    logger.info("\n" + "="*50)
-    logger.info("🎯 Computing PhoBERT embeddings...")
-    computer.compute_and_store_embeddings('phobert', batch_size=50)
+    if not args.skip_phobert:
+        logger.info("\n" + "="*50)
+        logger.info("🎯 Computing PhoBERT embeddings...")
+        computer.compute_and_store_embeddings(
+            "phobert",
+            batch_size=args.phobert_batch_size,
+            max_batches=args.max_batches,
+        )
     
-    # Compute mGTE embeddings (multilingual baseline)
-    logger.info("\n" + "="*50)
-    logger.info("🎯 Computing mGTE embeddings...")
-    computer.compute_and_store_embeddings('mgte', batch_size=100)
+    if not args.skip_mgte:
+        logger.info("\n" + "="*50)
+        logger.info("🎯 Computing mGTE embeddings...")
+        computer.compute_and_store_embeddings(
+            "mgte",
+            batch_size=args.mgte_batch_size,
+            max_batches=args.max_batches,
+        )
     
     # Final stats
     logger.info("\n" + "="*50)

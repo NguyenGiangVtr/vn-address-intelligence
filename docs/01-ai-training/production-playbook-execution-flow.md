@@ -252,6 +252,31 @@ python setup_vector_indexes.py
 - p95_latency_ms: `...`
 - pass/fail: `...`
 
+## 5.3 pgvector chưa cài trên Postgres (DBA unblock)
+
+Nếu `python setup_vector_indexes.py` kết thúc với lỗi kiểu:
+
+`could not open extension control file ".../postgresql/.../extension/vector.control": No such file or directory`
+
+thì **extension pgvector chưa được cài trên server** (không phải lỗi Python). Cần DBA/OS package:
+
+- Cài `pgvector` đúng major version PostgreSQL (ví dụ PG 12), hoặc dùng image/container đã có sẵn pgvector.
+- Sau đó (superuser): `CREATE EXTENSION IF NOT EXISTS vector;`
+- Khi đó mới chạy lại `setup_vector_indexes.py` để tạo HNSW/IVFFlat và benchmark p95.
+
+**Lưu ý schema corpus hiện tại:** nếu cột `mgte_embedding` / `phobert_embedding` đang là `jsonb`, script `compute_embeddings.py` vẫn ghi được embedding dạng JSON; để index vector thực sự hoạt động cần migration sang kiểu `vector(768)` (hoặc kích thước đúng model) **sau** khi pgvector đã bật.
+
+---
+
+## 5.4 KPI đã ghi nhận (môi trường playbook — tham chiếu)
+
+| Bước | KPI | Giá trị tham chiếu | Ghi chú |
+|------|-----|-------------------|---------|
+| NER | `eval_f1` | **0.951** | `models/phobert-ner-vn-playbook/training_log.json` (train nhỏ 6k/800 eval, 2 epoch — scale lên 50k×15 epoch trên GPU khi production) |
+| Retrieval | top1 / top5 / mrr@10 / ndcg@10 | **0.954 / 0.968 / 0.960 / 0.963** | `evaluate_retriever.py --limit 500` |
+| Embeddings | incremental | `compute_embeddings.py --max-batches 2` | Smoke; full run bỏ `--max-batches` |
+| Vector index | pgvector | **blocked** | Xem §5.3 |
+
 ---
 
 ## 6) Production Pipeline
@@ -333,6 +358,15 @@ python setup_vector_indexes.py
 
 # 6) Production pipeline
 python app/ai/production_pipeline.py --config app/ai/config.yaml
+
+# 6b) Pilot 1k + audit + summary (Phase 4.2–4.4)
+# PYTHONUNBUFFERED=1 helps Progress: lines appear every 50 rows without pipe buffering.
+$env:PYTHONUNBUFFERED='1'; python app/ai/production_pipeline.py --config app/ai/config.yaml --limit 1000
+python scripts/diagnostics/audit_pilot_vs_gt.py --window-minutes 120 --limit 1000
+python scripts/diagnostics/full_cleanse_summary.py
+
+# 6c) Full cleanse 500k (Phase 4.3) — hoặc chạy script PowerShell
+powershell -File scripts/run_full_cleanse_500k.ps1
 ```
 
 Nếu muốn, sau khi bạn chạy xong, mình sẽ tổng hợp log thực tế của bạn thành một `KPI report` chuẩn release (go/no-go) ngay trong repo.

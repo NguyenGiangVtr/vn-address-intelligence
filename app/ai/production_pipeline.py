@@ -42,6 +42,11 @@ def run_pipeline(config_path: str, limit: int = None):
     
     db = DBConnector(db_cfg)
     db.connect()
+
+    exp_cfg = cfg.get("experiment") or {}
+    corpus_limit = int(exp_cfg.get("corpus_limit", 50000) or 50000)
+    if corpus_limit < 1:
+        corpus_limit = 50000
     
     # 1. Khởi tạo các mô hình ──────────────────────────────────────────────────
     logger.info("Initializing models...")
@@ -50,12 +55,12 @@ def run_pipeline(config_path: str, limit: int = None):
     # Load corpus từ bảng address_clean_corpus với fallback
     corpus_loaded = False
     try:
-        logger.info("Loading corpus from prq.address_clean_corpus...")
+        logger.info("Loading corpus from prq.address_clean_corpus (limit=%s)...", corpus_limit)
         corpus_addresses, corpus_metadata = db.load_clean_corpus_with_metadata(
             admin_epoch="2025",
-            source_types=["ADMINISTRATIVE", "QUEUE_STANDARDIZED"],
+            source_types=["ADMINISTRATIVE", "QUEUE_STANDARDIZED", "HF_NER_DERIVED"],
             min_quality_score=0.7,
-            limit=50000  # Giới hạn để tránh memory issues
+            limit=corpus_limit,
         )
         
         if len(corpus_addresses) > 0:
@@ -159,10 +164,14 @@ def run_pipeline(config_path: str, limit: int = None):
             
             context_addr = ", ".join([p for p in context_parts if p])
             
-            # D. Retrieval + LLM Final Normalization
-            top_candidates = [c for c, _ in retriever.retrieve_top_k(context_addr, top_k=5)]
+            # D. Retrieval + LLM Final Normalization (Phase 4.1: keep top-1 metadata
+            # so we can recover lat/long for back-fill).
+            ranked = retriever.retrieve_top_k_with_meta(context_addr, top_k=5)
+            top_candidates = [c for c, _, _ in ranked]
+            top_meta = ranked[0][2] if ranked else {}
+            top_score = float(ranked[0][1]) if ranked else 0.0
             llm_data, llm_score, _ = llm.normalize(context_addr, top_candidates)
-            
+
             if not isinstance(llm_data, dict):
                 llm_data = {"full_address": str(llm_data)}
 
@@ -172,10 +181,19 @@ def run_pipeline(config_path: str, limit: int = None):
             epoch_result = epoch_detector.detect(raw_addr)
 
             # F. ACS Calculation
-            semantic_score = float(llm_score)
-            if top_candidates:
-                _, retrieval_score, _ = retriever.normalize(context_addr)
-                semantic_score = max(semantic_score, float(retrieval_score))
+            mgte_score = top_score
+            semantic_score = max(float(llm_score), mgte_score)
+
+            # Back-fill latitude/longitude from the top corpus candidate's metadata
+            # when the queue row itself does not already have coordinates.
+            row_lat = row.get("latitude")
+            row_lon = row.get("longitude")
+            backfill_lat = None
+            backfill_lon = None
+            if (row_lat is None) and top_meta.get("latitude") is not None:
+                backfill_lat = top_meta.get("latitude")
+            if (row_lon is None) and top_meta.get("longitude") is not None:
+                backfill_lon = top_meta.get("longitude")
 
             acs = acs_calc.compute(
                 raw_address=raw_addr,
@@ -185,17 +203,18 @@ def run_pipeline(config_path: str, limit: int = None):
                 district_id=row.get("district_id"),
                 ward_id=row.get("ward_id"),
                 admin_version=2,  # Default Post-2025; epoch detector cập nhật
-                latitude=row.get("latitude"),
-                longitude=row.get("longitude"),
+                latitude=row_lat if row_lat is not None else backfill_lat,
+                longitude=row_lon if row_lon is not None else backfill_lon,
             )
 
-            batch_results.append({
+            result_payload = {
                 "id": row['id'],
                 "processing_status": "DONE",
                 "processing_method": "HYBRID_V1",
                 "address_standardized": standardized,
                 "phobert_confidence_score": float(llm_score),
                 "phobert_parsed_components": json.dumps(ner_results),
+                "mgte_confidence_score": mgte_score,
                 "acs_score": float(acs.acs_score),
                 "acs_decision": acs.acs_decision,
                 "s_text": float(acs.s_text),
@@ -203,7 +222,12 @@ def run_pipeline(config_path: str, limit: int = None):
                 "v_hierarchy": float(acs.v_hierarchy),
                 "v_temporal": float(acs.v_temporal),
                 "address_epoch": epoch_result.epoch,
-            })
+            }
+            if backfill_lat is not None:
+                result_payload["latitude"] = backfill_lat
+            if backfill_lon is not None:
+                result_payload["longitude"] = backfill_lon
+            batch_results.append(result_payload)
             
             if len(batch_results) % 50 == 0:
                 logger.info(f" Progress: {len(batch_results):,}/{len(rows):,}")
@@ -242,10 +266,13 @@ def run_pipeline(config_path: str, limit: int = None):
     if batch_results:
         ids = [r["id"] for r in batch_results]
         
-        # Cập nhật từng cột
+        # Cập nhật từng cột (Phase 4.1: include mgte_confidence_score + lat/lon back-fill)
         cols_to_update = [
             "processing_status", "processing_method", "address_standardized",
-            "phobert_confidence_score", "phobert_parsed_components", "error_message",
+            "phobert_confidence_score", "phobert_parsed_components",
+            "mgte_confidence_score",
+            "latitude", "longitude",
+            "error_message",
             "acs_score", "acs_decision", "s_text", "s_sem",
             "v_hierarchy", "v_temporal", "address_epoch",
         ]

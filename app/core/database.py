@@ -6,12 +6,32 @@ from sqlalchemy.orm import sessionmaker, relationship
 from sqlalchemy.sql import func
 from app.core.config import Config
 
-# Engine and Session setup
-engine = create_engine(Config.SQLALCHEMY_DATABASE_URL)
+# Engine and Session setup.
+# Connection pooling per production playbook (Phase 3.3): keep a small pool of
+# 2 baseline connections (pool_size) and allow short bursts up to 8 total
+# (pool_size + max_overflow) for batched production_pipeline workloads.
+# pool_pre_ping protects against stale connections after long-running jobs.
+engine = create_engine(
+    Config.SQLALCHEMY_DATABASE_URL,
+    pool_size=2,
+    max_overflow=6,
+    pool_pre_ping=True,
+    pool_recycle=1800,
+)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# Old Engine setup for mapping purposes
-old_engine = create_engine(Config.OLD_SQLALCHEMY_DATABASE_URL) if Config.OLD_SQLALCHEMY_DATABASE_URL else None
+# Old Engine setup for mapping purposes (smaller pool, only used for legacy lookups)
+old_engine = (
+    create_engine(
+        Config.OLD_SQLALCHEMY_DATABASE_URL,
+        pool_size=1,
+        max_overflow=2,
+        pool_pre_ping=True,
+        pool_recycle=1800,
+    )
+    if Config.OLD_SQLALCHEMY_DATABASE_URL
+    else None
+)
 OldSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=old_engine) if old_engine else None
 
 Base = declarative_base()
