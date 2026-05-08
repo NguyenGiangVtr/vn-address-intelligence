@@ -200,9 +200,9 @@ const PAGE_META = {
     keywords: 'settings, cài đặt, configuration, preferences'
   },
   'prelabeler-test': {
-    title: 'Test Suite PreLabeler - Vietnamese Address Intelligence',
-    description: 'Công cụ kiểm thử và đảm bảo chất lượng cho bộ gán nhãn địa chỉ PreLabeler',
-    keywords: 'test suite, prelabeler, unit test, regression test, address labeling'
+    title: 'Address Label Studio - Vietnamese Address Intelligence',
+    description: 'Không gian gán nhãn, đối chiếu kết quả và tinh chỉnh dữ liệu địa chỉ theo phong cách Label Studio',
+    keywords: 'address label studio, prelabeler, data labeling, annotation, address ai'
   }
 };
 
@@ -4943,9 +4943,9 @@ async function initEvidenceView() {
       const label = String(ent.label || '').trim().toUpperCase();
       if (!needle || !label) return;
       const needleLower = needle.toLowerCase();
-      let from = 0;
-      while (from < raw.length) {
-        const start = rawLower.indexOf(needleLower, from);
+      let searchPos = raw.length;
+      while (searchPos >= 0) {
+        const start = rawLower.lastIndexOf(needleLower, searchPos);
         if (start < 0) break;
         const end = start + needle.length;
         if (isFreeRange(start, end)) {
@@ -4956,8 +4956,10 @@ async function initEvidenceView() {
             label,
             color: labelColorForPreview(label),
           });
+          // Annotate each expected entity once, preferring the right-most match.
+          break;
         }
-        from = start + needle.length;
+        searchPos = start - 1;
       }
     });
 
@@ -5401,7 +5403,7 @@ async function initEvidenceView() {
           </div>
         </div>
         <div class="plt-editor-scroll">
-          <div class="plt-field plt-field-full plt-raw-pin"><label>Raw address *</label>
+          <div class="plt-field plt-field-full plt-raw-pin">
             <textarea class="form-input plt-raw-address-input" id="plt-raw-address"
               oninput="pltUpdInput(this.value)" onpaste="pltAutoExtract(event)"
               placeholder="Địa chỉ đầy đủ...">${pltEsc(c.input || '')}</textarea>
@@ -5413,10 +5415,8 @@ async function initEvidenceView() {
                 ${badge}
               </div>
             </div>
-            ${hkHint ? `<p class="plt-hotkey-hint">${pltEsc(hkHint)}</p>` : ''}
             ${renderAnnotatedRawText(c)}
             <div class="plt-label-grid" id="plt-exp-list">${renderMergedLabelGrid(c, result)}</div>
-            ${!result ? `<div class="plt-run-prompt"><i class="fa-solid fa-circle-info"></i> Chạy test để xem tick xanh (khớp) hoặc kết quả thực tế (lệch) theo từng nhãn.</div>` : ''}
             ${renderRunAuxiliary(result)}
           </div>
         </div>

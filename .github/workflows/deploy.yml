@@ -128,6 +128,7 @@ jobs:
     env:
       DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
       SERVICE_NAME: ${{ secrets.SERVICE_NAME }}
+      RELEASES_TO_KEEP: ${{ vars.RELEASES_TO_KEEP || '3' }}
     steps:
       - name: Download release artifact
         uses: actions/download-artifact@v4
@@ -161,13 +162,19 @@ jobs:
             mkdir -p "$RELEASE_DIR"
             mkdir -p "$DEPLOY_PATH/releases"
 
+            # Free space before extracting/installing by pruning old releases.
+            if [ -d "$DEPLOY_PATH/releases" ]; then
+              ls -1dt "$DEPLOY_PATH"/releases/* 2>/dev/null | tail -n +$((RELEASES_TO_KEEP + 1)) | xargs -r rm -rf
+            fi
+
             tar -xzf /tmp/vnai-deploy/release.tar.gz -C "$RELEASE_DIR"
 
             cd "$RELEASE_DIR"
+            export PIP_NO_CACHE_DIR=1
             python3 -m venv .venv
             . .venv/bin/activate
             pip install --upgrade pip
-            pip install -r requirements.txt
+            pip install --no-cache-dir -r requirements-prod.txt
 
             ln -sfn "$RELEASE_DIR" "$DEPLOY_PATH/current"
 
@@ -176,6 +183,7 @@ jobs:
             sudo systemctl is-active --quiet "$SERVICE_NAME"
 
             rm -f /tmp/vnai-deploy/release.tar.gz
+            rm -rf /tmp/pip-*
 
   notify:
     runs-on: ubuntu-latest
