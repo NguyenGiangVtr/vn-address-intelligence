@@ -5446,7 +5446,6 @@ body.no-scroll {
 
 #prelabeler-test .plt-header-sub {
   margin: 0 0 8px;
-  font-size: 12px;
 }
 
 #prelabeler-test .plt-summary-band {
@@ -5458,7 +5457,6 @@ body.no-scroll {
   background: var(--bg-elevated);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
-  font-size: 12px;
   color: var(--text-secondary);
 }
 
@@ -5477,6 +5475,14 @@ body.no-scroll {
   align-items: center;
   gap: 8px;
   margin-left: auto;
+}
+
+/* PreLabeler button size normalization (same feel as other pages) */
+#prelabeler-test .plt-summary-actions .btn,
+#prelabeler-test .plt-list-toolbar .btn,
+#prelabeler-test .plt-editor-head .btn {
+  min-height: 36px;
+  padding: 0 14px;
 }
 
 #prelabeler-test .plt-sum-item {
@@ -5535,7 +5541,6 @@ body.no-scroll {
 
 #prelabeler-test .plt-search-input {
   flex: 1;
-  font-size: 12px;
 }
 
 #prelabeler-test .plt-list-body {
@@ -5640,7 +5645,7 @@ body.no-scroll {
 }
 
 #prelabeler-test .plt-label-cell__fail-tag {
-  font-size: 11px;
+  font-size: 13px;
   line-height: 1.35;
   padding: 5px 8px;
   border-radius: var(--radius-sm);
@@ -5671,7 +5676,7 @@ body.no-scroll {
   flex: 1;
   height: 34px;
   font-family: ui-monospace, 'JetBrains Mono', monospace;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 /* Legacy result-only cell (no longer used); kept harmless if referenced */
@@ -5955,7 +5960,6 @@ body.no-scroll {
 #prelabeler-test .plt-exp-head {
   padding-top: 14px;
   margin-bottom: 10px;
-  font-size: 12px;
 }
 
 #prelabeler-test .plt-exp-head__title {
@@ -5996,14 +6000,14 @@ body.no-scroll {
 
 #prelabeler-test .plt-hotkey-hint {
   margin: 0 0 10px;
-  font-size: 11px;
+  font-size: 13px;
   color: var(--text-tertiary);
 }
 
 #prelabeler-test .plt-run-prompt {
   margin-top: 12px;
   padding: 12px 14px;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-tertiary);
   text-align: center;
   background: var(--bg-elevated);
@@ -6202,6 +6206,24 @@ body.no-scroll {
 }
 
 @media (max-width: 640px) {
+  #prelabeler-test .plt-list-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  #prelabeler-test .plt-search-input {
+    width: 100%;
+  }
+
+  #prelabeler-test .plt-summary-actions .btn,
+  #prelabeler-test .plt-list-toolbar .btn,
+  #prelabeler-test .plt-editor-head .btn {
+    min-height: 40px;
+    width: 100%;
+    justify-content: center;
+  }
+
   #prelabeler-test .plt-label-grid {
     grid-template-columns: 1fr;
     grid-template-rows: none;

@@ -4819,11 +4819,21 @@ async function initEvidenceView() {
     );
   }
 
+  function normalizePltEntityLabel(raw) {
+    const s = String(raw || '').trim().toUpperCase();
+    if (!s) return '';
+    if (s.startsWith('B-') || s.startsWith('I-')) return s.slice(2);
+    return s;
+  }
+
   /** Mọi span từ PreLabeler có đúng nhãn (để hiển thị khi FAIL: lệch text hoặc nhiều span cùng nhãn). */
   function actualSpansForLabel(r, label) {
-    const lab = String(label || '').toUpperCase();
+    const lab = normalizePltEntityLabel(label);
     return (r.actual || []).filter(
-      x => String(x.label || '').trim().toUpperCase() === lab
+      x => {
+        const got = normalizePltEntityLabel(x.label);
+        return got === lab;
+      }
     );
   }
 
@@ -4831,8 +4841,6 @@ async function initEvidenceView() {
    * Nội dung thẻ fail: nêu rõ kỳ vọng LỆCH với những gì model trả (hoặc không trả nhãn này).
    */
   function formatPltActualForFail(r, label) {
-    const expRaw = firstExpectedTextForLabel(r.expected, label);
-    const expShow = String(expRaw || '').trim();
     const spans = actualSpansForLabel(r, label);
     const texts = spans
       .map(x => String(x.text || '').trim())
@@ -4853,7 +4861,7 @@ async function initEvidenceView() {
       uniq.push(t);
     }
     const actualJoined = uniq.map(t => pltEsc(t)).join(' · ');
-    return `Kỳ vọng: “${pltEsc(expShow)}”. Thực tế: ${actualJoined}`;
+    return `Thực tế: ${actualJoined}`;
   }
 
   function renderRunAuxiliary(r) {
@@ -5041,10 +5049,10 @@ async function initEvidenceView() {
       <div class="plt-editor">
         <div class="plt-editor-head">
           <input type="text" value="${pltEsc(c.name || '')}" oninput="pltUpd('name',this.value)" placeholder="Tên test case...">
-          <label style="font-size:12px;color:var(--text-tertiary);display:flex;align-items:center;gap:8px;cursor:pointer;white-space:nowrap">
+          <label style="color:var(--text-tertiary);display:flex;align-items:center;gap:8px;cursor:pointer;white-space:nowrap">
             <input type="checkbox" ${c.strict ? 'checked' : ''} onchange="pltUpd('strict',this.checked)"> Strict
           </label>
-          <button class="btn btn-accent btn-sm" onclick="pltRunOne()"><i class="fa-solid fa-play"></i> Chạy</button>
+          <button class="btn btn-accent" onclick="pltRunOne()"><i class="fa-solid fa-play"></i> Chạy</button>
         </div>
         <div class="plt-field-grid">
           <div class="plt-field plt-field-full"><label>Raw address *</label>
