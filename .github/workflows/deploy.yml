@@ -74,15 +74,7 @@ jobs:
       - name: Build release tarball
         shell: bash
         run: |
-          tar \
-            --exclude-vcs \
-            --exclude=".venv" \
-            --exclude="publish" \
-            --exclude="__pycache__" \
-            --exclude="*.pyc" \
-            --exclude="*.pyo" \
-            --exclude="*.log" \
-            -czf release.tar.gz .
+          git archive --format=tar.gz --output=release.tar.gz HEAD
 
       - name: Upload release package
         uses: appleboy/scp-action@v0.1.7
