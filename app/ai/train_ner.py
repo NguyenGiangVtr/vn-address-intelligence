@@ -58,10 +58,10 @@ HF_STANDARD_BIO_TO_PROJECT = {
     "I-DISTRICT": "I-DST",
     "B-PROVINCE": "B-PRO",
     "I-PROVINCE": "I-PRO",
-    "B-FLOOR": "B-FLR",
-    "I-FLOOR": "I-FLR",
-    "B-ROOM": "B-RM",
-    "I-ROOM": "I-RM",
+    "B-FLOOR": "B-ALY",
+    "I-FLOOR": "I-ALY",
+    "B-ROOM": "B-PCD",
+    "I-ROOM": "I-PCD",
 }
 
 # Fallback ID mapping for the HF standard dataset when ClassLabel metadata is unavailable.
@@ -81,7 +81,7 @@ HF_STANDARD_ID_TO_BIO = {
     12: "I-ROOM",
 }
 
-REQUIRED_ENTITY_LABELS = {"NUM", "STR", "WDS", "DST", "PRO", "NHB", "BLD", "POI", "FLR", "RM"}
+REQUIRED_ENTITY_LABELS = {"NUM", "STR", "WDS", "DST", "PRO", "NHB", "BLD", "POI", "ALY", "PCD"}
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Bước 1: Chuyển đổi Label Studio JSON → BIO Tokens
@@ -314,7 +314,7 @@ def _weak_bio_from_components(address: str, components: dict, label2id: dict, to
     if not words:
         return {}
     word_labels = ["O"] * len(words)
-    priority = ["NUM", "STR", "NHB", "WDS", "DST", "PRO", "BLD", "POI", "FLR", "RM"]
+    priority = ["NUM", "STR", "NHB", "WDS", "DST", "PRO", "BLD", "POI", "ALY", "PCD"]
     for comp_label in priority:
         comp_text = (components or {}).get(comp_label)
         comp_words = _tokenize_words(comp_text or "")

@@ -1,5 +1,4 @@
-# Global constraints to keep transitive deps stable
--c constraints.txt
+# Global constraints to keep transitive deps stable (Moved directly into requirements)
 
 # Python >=3.11 (requires-python trong pyproject.toml)
 # ── Core ──

@@ -77,7 +77,7 @@ async function fetchWithApiFallback(path, options = {}) {
 const PAGES = [
   "overview", "parser", "batch", "training", "label-studio",
   "experiments", "explorer", "osm-enrichment", "lookup", "boundary-visualization",
-  "admin-units", "nso-sync", "settings", "evidence", "label-registry"
+  "admin-units", "nso-sync", "settings", "evidence", "label-registry", "prelabeler-test"
 ];
 
 const {
@@ -198,6 +198,11 @@ const PAGE_META = {
     title: 'Cài đặt - Vietnamese Address Intelligence',
     description: 'Cấu hình và tùy chỉnh hệ thống Vietnamese Address Intelligence',
     keywords: 'settings, cài đặt, configuration, preferences'
+  },
+  'prelabeler-test': {
+    title: 'Test Suite PreLabeler - Vietnamese Address Intelligence',
+    description: 'Công cụ kiểm thử và đảm bảo chất lượng cho bộ gán nhãn địa chỉ PreLabeler',
+    keywords: 'test suite, prelabeler, unit test, regression test, address labeling'
   }
 };
 
@@ -322,6 +327,9 @@ function initializePageSpecific(pageId) {
       break;
     case 'label-registry':
       populateLabelRegistry();
+      break;
+    case 'prelabeler-test':
+      if (window.pltInitPage) window.pltInitPage();
       break;
     // Add more page-specific initialization as needed
   }
@@ -1513,6 +1521,8 @@ const PAGE_GROUP_MAP = {
   'label-studio': 'ai-bench',
   'training': 'ai-bench',
   'experiments': 'ai-bench',
+  'label-registry': 'ai-bench',
+  'prelabeler-test': 'ai-bench',
 };
 
 function openNavGroup(groupId) {
@@ -1551,6 +1561,9 @@ const SIDEBAR_COLLAPSED_KEY = 'vnai_sidebar_collapsed';
 function setSidebarCollapsed(collapsed) {
   const sidebar = document.querySelector('.sidebar');
   if (!sidebar) return;
+  const isMobile = window.innerWidth <= 768;
+  // Không giữ trạng thái collapsed trên mobile vì gây lỗi hiển thị/interaction.
+  if (isMobile) collapsed = false;
   sidebar.classList.toggle('collapsed', collapsed);
   localStorage.setItem(SIDEBAR_COLLAPSED_KEY, collapsed ? '1' : '0');
 
@@ -1571,7 +1584,8 @@ function setupSidebarCollapse() {
 
   // Restore persisted state
   const persisted = localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1';
-  if (persisted) setSidebarCollapsed(true);
+  if (window.innerWidth > 768 && persisted) setSidebarCollapsed(true);
+  if (window.innerWidth <= 768) setSidebarCollapsed(false);
 
   btn.addEventListener('click', () => {
     const sidebar = document.querySelector('.sidebar');
@@ -1604,6 +1618,8 @@ function setupNavigation() {
         closeMobileMenu();
       } else {
         console.log("🔓 Opening mobile menu");
+        // Mobile menu phải luôn full-size, không dùng collapsed mode.
+        setSidebarCollapsed(false);
         sidebar.classList.add("mobile-active");
         if (overlay) overlay.classList.add("mobile-active");
         document.body.classList.add("no-scroll");
@@ -4246,6 +4262,9 @@ function adjustActivePageHeight() {
   const activePage = document.querySelector('.page.active');
   if (!activePage) return;
 
+  // PreLabeler Test Suite: natural page scroll only (no inner max-height clamps).
+  if (activePage.id === 'prelabeler-test') return;
+
   const pageContent = document.getElementById('page-content');
   if (!pageContent) return;
 
@@ -4608,3 +4627,714 @@ async function initEvidenceView() {
     fileList.innerHTML = `<li class="text-danger p-12">Không tải được manifest: ${escapeHtml(error.message)}</li>`;
   }
 }
+(function () {
+  'use strict';
+
+  /** Trùng `app/ai/constants.py` NER_LABELS — hotkey 0→9. */
+  const PLT_NER_LABELS_FALLBACK = [
+    { value: 'PCD', hotkey: '0' },
+    { value: 'BLD', hotkey: '1' },
+    { value: 'POI', hotkey: '2' },
+    { value: 'ALY', hotkey: '3' },
+    { value: 'NUM', hotkey: '4' },
+    { value: 'STR', hotkey: '5' },
+    { value: 'NHB', hotkey: '6' },
+    { value: 'WDS', hotkey: '7' },
+    { value: 'DST', hotkey: '8' },
+    { value: 'PRO', hotkey: '9' },
+  ];
+
+  const PLT_HOTKEY_BY_VALUE = new Map(PLT_NER_LABELS_FALLBACK.map(x => [x.value, x.hotkey]));
+
+  /** Thứ tự nhãn + hotkey: từ /api/config/ner-labels, luôn sort theo hotkey (giống constants.py). */
+  let nerLabelsOrdered = [];
+
+  const API = (window.location.hostname === 'localhost' || window.location.protocol === 'file:')
+    ? 'http://localhost:8081/api'
+    : '/api';
+
+  let cases = [], activeId = null, results = {};
+
+  function sortLabelsByHotkey(rows) {
+    return [...rows].sort((a, b) => {
+      const na = parseInt(String(a.hotkey), 10);
+      const nb = parseInt(String(b.hotkey), 10);
+      if (!Number.isNaN(na) && !Number.isNaN(nb) && na !== nb) return na - nb;
+      return String(a.value).localeCompare(String(b.value));
+    });
+  }
+
+  function normalizeApiLabels(labels) {
+    const arr = Array.isArray(labels) ? labels : [];
+    return arr
+      .map((l, i) => {
+        if (typeof l === 'string') {
+          const value = String(l).trim().toUpperCase();
+          if (!value) return null;
+          const hotkey = PLT_HOTKEY_BY_VALUE.get(value) ?? String(i);
+          return { value, hotkey };
+        }
+        const value = String(l && l.value != null ? l.value : '').trim().toUpperCase();
+        if (!value) return null;
+        let hotkey =
+          l && l.hotkey != null && String(l.hotkey).trim() !== ''
+            ? String(l.hotkey).trim()
+            : PLT_HOTKEY_BY_VALUE.get(value) ?? String(i);
+        return { value, hotkey };
+      })
+      .filter(Boolean);
+  }
+
+  function applyNerLabelOrder(rawList) {
+    let rows = sortLabelsByHotkey(normalizeApiLabels(rawList));
+    const seen = new Set();
+    rows = rows.filter(r => {
+      if (seen.has(r.value)) return false;
+      seen.add(r.value);
+      return true;
+    });
+    if (!rows.length) rows = [...PLT_NER_LABELS_FALLBACK];
+    return rows;
+  }
+
+  /**
+   * Ưu tiên `ensureNerLabelsLoaded` từ app.js (đúng API_BASE / fallback giống SPA).
+   * Nếu chưa có hoặc rỗng → GET /config/ner-labels trực tiếp.
+   */
+  async function refreshPltNerLabels() {
+    try {
+      if (typeof ensureNerLabelsLoaded === 'function') {
+        const labels = await ensureNerLabelsLoaded(false);
+        if (Array.isArray(labels) && labels.length) {
+          nerLabelsOrdered = applyNerLabelOrder(labels);
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn('[PreLabeler] ensureNerLabelsLoaded:', e);
+    }
+    try {
+      const res = await fetch(`${API}/config/ner-labels`);
+      if (!res.ok) throw new Error(String(res.status));
+      const data = await res.json();
+      nerLabelsOrdered = applyNerLabelOrder(data.labels);
+    } catch (e2) {
+      console.warn('[PreLabeler] GET /config/ner-labels:', e2);
+      nerLabelsOrdered = [...PLT_NER_LABELS_FALLBACK];
+    }
+  }
+
+  function authHdr() {
+    const t = localStorage.getItem('vnai_token') || '';
+    return { 'Content-Type': 'application/json', ...(t ? { Authorization: `Bearer ${t}` } : {}) };
+  }
+
+  function pltEsc(s) {
+    return String(s || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function firstExpectedTextForLabel(expected, label) {
+    const lab = String(label || '').toUpperCase();
+    const hit = (expected || []).find(e => e && String(e.label || '').toUpperCase() === lab);
+    return hit ? String(hit.text || '') : '';
+  }
+
+  function setExpectedForLabel(label, text) {
+    const c = cases.find(x => x.id === activeId);
+    if (!c) return;
+    const lab = String(label || '').toUpperCase();
+    c.expected = (c.expected || []).filter(e => String(e.label || '').toUpperCase() !== lab);
+    const t = String(text || '').trim();
+    if (t) c.expected.push({ label: lab, text: t });
+    pltSave();
+  }
+
+  function renderMergedLabelGrid(c, result) {
+    const expected = c.expected;
+    if (!nerLabelsOrdered.length) {
+      return `<div class="plt-label-grid-empty">Không tải được <code>/api/config/ner-labels</code>. Kiểm tra kết nối API và tải lại trang.</div>`;
+    }
+    const r = result && !result.error ? result : null;
+    return nerLabelsOrdered.map(({ value, hotkey }) => {
+      const val = pltEsc(firstExpectedTextForLabel(expected, value));
+      const hk = pltEsc(hotkey);
+      const vEsc = pltEsc(value);
+      const vJs = JSON.stringify(value);
+
+      let cellClass = 'plt-label-cell plt-label-cell--merged';
+      let failTagHtml = '';
+
+      if (r) {
+        const expTextRaw = firstExpectedTextForLabel(c.expected, value);
+        const d = detailFor(r, value, expTextRaw);
+
+        if (String(expTextRaw || '').trim()) {
+          const ok = d && d.found;
+          if (ok) {
+            cellClass += ' plt-label-cell--pass';
+          } else {
+            cellClass += ' plt-label-cell--fail';
+            const actDisplay = formatPltActualForFail(r, value);
+            failTagHtml = `<div class="plt-label-cell__fail-tag" role="status">${actDisplay}</div>`;
+          }
+        }
+      }
+
+      return `
+        <div class="${cellClass}" data-label="${vEsc}">
+          <span class="plt-label-cell__hk" title="Hotkey ${hk}">${hk}</span>
+          <span class="plt-badge lc-${value}">${vEsc}</span>
+          <div class="plt-label-cell__main">
+            <div class="plt-label-cell__input-row">
+              <input class="form-input plt-label-cell__input" type="text"
+                value="${val}" placeholder="—"
+                oninput='pltSetExpectedLabel(${vJs}, this.value)'>
+              <span class="plt-label-cell__tick" aria-label="Khớp kỳ vọng"><i class="fa-solid fa-check"></i></span>
+            </div>
+            ${failTagHtml}
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  function detailFor(r, label, expText) {
+    const details = r.details || [];
+    const lab = String(label || '').toUpperCase();
+    const expNorm = String(expText || '').trim().toLowerCase();
+    if (expNorm) {
+      const d = details.find(
+        x =>
+          x.expected &&
+          String(x.expected.label || '').toUpperCase() === lab &&
+          String(x.expected.text || '').trim().toLowerCase() === expNorm
+      );
+      if (d) return d;
+    }
+    return details.find(
+      x => x.expected && String(x.expected.label || '').toUpperCase() === lab
+    );
+  }
+
+  /** Mọi span từ PreLabeler có đúng nhãn (để hiển thị khi FAIL: lệch text hoặc nhiều span cùng nhãn). */
+  function actualSpansForLabel(r, label) {
+    const lab = String(label || '').toUpperCase();
+    return (r.actual || []).filter(
+      x => String(x.label || '').trim().toUpperCase() === lab
+    );
+  }
+
+  /**
+   * Nội dung thẻ fail: nêu rõ kỳ vọng LỆCH với những gì model trả (hoặc không trả nhãn này).
+   */
+  function formatPltActualForFail(r, label) {
+    const expRaw = firstExpectedTextForLabel(r.expected, label);
+    const expShow = String(expRaw || '').trim();
+    const spans = actualSpansForLabel(r, label);
+    const texts = spans
+      .map(x => String(x.text || '').trim())
+      .filter(t => t.length > 0);
+
+    if (!texts.length) {
+      return `Không có thực thể nhãn ${pltEsc(
+        String(label || '').toUpperCase()
+      )} trong kết quả PreLabeler.`;
+    }
+
+    const seen = new Set();
+    const uniq = [];
+    for (const t of texts) {
+      const k = t.toLowerCase();
+      if (seen.has(k)) continue;
+      seen.add(k);
+      uniq.push(t);
+    }
+    const actualJoined = uniq.map(t => pltEsc(t)).join(' · ');
+    return `Kỳ vọng: “${pltEsc(expShow)}”. Thực tế: ${actualJoined}`;
+  }
+
+  function renderRunAuxiliary(r) {
+    if (!r) return '';
+    if (r.error) {
+      return `<div class="plt-run-error" role="alert">
+        <div class="plt-run-error__title"><i class="fa-solid fa-triangle-exclamation"></i> Lỗi khi chạy test</div>
+        <pre class="plt-run-error__msg">${pltEsc(r.error)}</pre>
+      </div>`;
+    }
+    if (!(r.unexpected || []).length) return '';
+    return `
+      <div class="plt-unexpected-block">
+        <div class="plt-result-section-title">Dư thừa (strict)</div>
+        <div class="plt-tokens">
+          ${(r.unexpected || [])
+            .map(
+              u =>
+                `<div class="plt-token"><span class="plt-badge lc-${u.label}">${u.label}</span> ${pltEsc(u.text)}</div>`
+            )
+            .join('')}
+        </div>
+      </div>`;
+  }
+
+  function hotkeyRangeHint() {
+    if (nerLabelsOrdered.length >= 2) {
+      return `Hotkey ${pltEsc(nerLabelsOrdered[0].hotkey)}–${pltEsc(
+        nerLabelsOrdered[nerLabelsOrdered.length - 1].hotkey
+      )}`;
+    }
+    if (nerLabelsOrdered.length === 1) {
+      return `Hotkey ${pltEsc(nerLabelsOrdered[0].hotkey)}`;
+    }
+    return '';
+  }
+
+  async function pltInit() {
+    await refreshPltNerLabels();
+    const listEl = document.getElementById('plt-list');
+    if (listEl) {
+      listEl.innerHTML =
+        '<div style="padding:20px;text-align:center;color:var(--text-tertiary)"><i class="fa-solid fa-spinner fa-spin"></i> Đang tải dữ liệu...</div>';
+    }
+
+    try {
+      const resp = await fetch(`${API}/prelabeler-tests`, { headers: authHdr() });
+      if (!resp.ok) throw new Error(resp.status);
+      const raw = await resp.json();
+      cases = raw.map(c => ({
+        ...c,
+        input:
+          typeof c.input === 'string'
+            ? c.input
+            : c.input && c.input.raw_address
+              ? String(c.input.raw_address)
+              : '',
+        expected: typeof c.expected === 'string' ? JSON.parse(c.expected) : (c.expected || []),
+      }));
+    } catch (e) {
+      console.warn('PreLabeler test: cannot load from DB, trying localStorage', e);
+      cases = JSON.parse(localStorage.getItem('plt_cases') || '[]');
+    }
+    renderList();
+    updateSummary();
+
+    if (cases.length > 0 && !activeId) pltSelect(cases[0].id);
+  }
+
+  function renderList() {
+    const q = (document.getElementById('plt-search')?.value || '').toLowerCase();
+    const el = document.getElementById('plt-list');
+    if (!el) return;
+
+    const filtered = cases.filter(
+      c =>
+        (c.name || '').toLowerCase().includes(q) || String(c.input || '').toLowerCase().includes(q)
+    );
+
+    if (!filtered.length) {
+      el.innerHTML =
+        '<div class="empty-state" style="padding:40px;text-align:center;color:var(--text-tertiary)"><i class="fa-solid fa-magnifying-glass" style="font-size:24px;margin-bottom:8px;display:block"></i> Không có kết quả</div>';
+      return;
+    }
+
+    el.innerHTML = filtered
+      .map(c => {
+        const rr = results[c.id];
+        const dot = rr == null ? 'plt-dot-none' : rr.passed ? 'plt-dot-pass' : 'plt-dot-fail';
+        const cls = rr == null ? '' : rr.passed ? 'pass' : 'fail';
+        return `
+        <div class="plt-item ${cls}${activeId === c.id ? ' active' : ''}" onclick="pltSelect('${c.id}')">
+          <div class="plt-item-name">
+            <span class="plt-dot ${dot}"></span>${pltEsc(c.name || 'Chưa đặt tên')}
+            <div class="plt-item-actions">
+              <button class="btn-icon" onclick="event.stopPropagation();pltDup('${c.id}')" title="Nhân đôi"><i class="fa-solid fa-copy"></i></button>
+              <button class="btn-icon" style="color:var(--danger)" onclick="event.stopPropagation();pltDel('${c.id}')" title="Xóa"><i class="fa-solid fa-trash"></i></button>
+            </div>
+          </div>
+          <div class="plt-item-addr">${pltEsc(c.input || '')}</div>
+        </div>`;
+      })
+      .join('');
+  }
+
+  function uid() {
+    return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  }
+
+  function pltNew() {
+    const c = { id: uid(), name: 'Test case mới', input: '', expected: [], strict: false };
+    cases.push(c);
+    pltSelect(c.id);
+    pltSave();
+  }
+
+  function pltDup(id) {
+    const src = cases.find(c => c.id === id);
+    if (!src) return;
+    const c = JSON.parse(JSON.stringify(src));
+    c.id = uid();
+    c.name = (src.name || '') + ' (copy)';
+    cases.push(c);
+    pltSelect(c.id);
+    pltSave();
+  }
+
+  function pltDel(id) {
+    if (!confirm('Xóa test case này?')) return;
+    cases = cases.filter(c => c.id !== id);
+    if (activeId === id) {
+      activeId = null;
+      const ed = document.getElementById('plt-editor-area');
+      if (ed) {
+        ed.innerHTML =
+          '<div class="empty-state card plt-editor-empty"><i class="fa-solid fa-flask-vial"></i><p>Chọn hoặc tạo test case để bắt đầu</p></div>';
+      }
+    }
+    delete results[id];
+    pltSave();
+    renderList();
+    updateSummary();
+  }
+
+  function pltSelect(id) {
+    activeId = id;
+    renderList();
+    renderEditor();
+  }
+
+  let saveTimer = null;
+  let pltDelegatedEventsBound = false;
+
+  async function pltSave() {
+    localStorage.setItem('plt_cases', JSON.stringify(cases));
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(async () => {
+      try {
+        await fetch(`${API}/prelabeler-tests`, {
+          method: 'POST',
+          headers: authHdr(),
+          body: JSON.stringify(cases),
+        });
+      } catch (e) {
+        console.warn('Save to DB failed, using localStorage', e);
+      }
+    }, 800);
+  }
+
+  function renderEditor() {
+    const c = cases.find(x => x.id === activeId);
+    if (!c) return;
+    const result = results[c.id];
+    const area = document.getElementById('plt-editor-area');
+    if (!area) return;
+    const hkHint = hotkeyRangeHint();
+    const badge =
+      result && !result.error
+        ? `<span class="plt-overall-badge plt-overall-badge--${result.passed ? 'pass' : 'fail'}" title="Tổng kết test case">
+            <i class="fa-solid ${result.passed ? 'fa-circle-check' : 'fa-circle-xmark'}"></i>
+            ${result.passed ? 'PASS' : 'FAIL'}
+          </span>`
+        : '';
+    area.innerHTML = `
+      <div class="plt-editor">
+        <div class="plt-editor-head">
+          <input type="text" value="${pltEsc(c.name || '')}" oninput="pltUpd('name',this.value)" placeholder="Tên test case...">
+          <label style="font-size:12px;color:var(--text-tertiary);display:flex;align-items:center;gap:8px;cursor:pointer;white-space:nowrap">
+            <input type="checkbox" ${c.strict ? 'checked' : ''} onchange="pltUpd('strict',this.checked)"> Strict
+          </label>
+          <button class="btn btn-accent btn-sm" onclick="pltRunOne()"><i class="fa-solid fa-play"></i> Chạy</button>
+        </div>
+        <div class="plt-field-grid">
+          <div class="plt-field plt-field-full"><label>Raw address *</label>
+            <textarea class="form-input plt-raw-address-input" id="plt-raw-address"
+              oninput="pltUpdInput(this.value)" onpaste="pltAutoExtract(event)"
+              placeholder="Địa chỉ đầy đủ...">${pltEsc(c.input || '')}</textarea>
+          </div>
+        </div>
+        <div class="plt-exp-section">
+          <div class="plt-exp-head">
+            <div class="plt-exp-head__title">
+              <span>Nhãn kỳ vọng &amp; đối chiếu</span>
+              ${badge}
+            </div>
+          </div>
+          ${hkHint ? `<p class="plt-hotkey-hint">${pltEsc(hkHint)}</p>` : ''}
+          <div class="plt-label-grid" id="plt-exp-list">${renderMergedLabelGrid(c, result)}</div>
+          ${!result ? `<div class="plt-run-prompt"><i class="fa-solid fa-circle-info"></i> Chạy test để xem tick xanh (khớp) hoặc kết quả thực tế (lệch) theo từng nhãn.</div>` : ''}
+          ${renderRunAuxiliary(result)}
+        </div>
+      </div>
+    `;
+  }
+
+  function pltUpd(key, val) {
+    const c = cases.find(x => x.id === activeId);
+    if (!c) return;
+    c[key] = val;
+    pltSave();
+    renderList();
+  }
+
+  function pltUpdInput(val) {
+    const c = cases.find(x => x.id === activeId);
+    if (!c) return;
+    c.input = String(val || '');
+    pltSave();
+  }
+
+  async function pltRunOne() {
+    const c = cases.find(x => x.id === activeId);
+    if (!c) return;
+    const btn = document.querySelector('.plt-editor-head .btn-accent');
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+    }
+    try {
+      const res = await fetch(`${API}/prelabeler-tests/run`, {
+        method: 'POST',
+        headers: authHdr(),
+        body: JSON.stringify({ cases: [normalizeCaseForApi(c, 0)] }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      results[c.id] = data[0];
+    } catch (e) {
+      window.showToast?.('Lỗi server: ' + e.message, 'danger');
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-play"></i> Chạy';
+      }
+    }
+    renderEditor();
+    renderList();
+    updateSummary();
+  }
+
+  async function pltRunAll() {
+    const btn = document.getElementById('plt-btn-run-all');
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+    }
+    try {
+      const res = await fetch(`${API}/prelabeler-tests/run`, {
+        method: 'POST',
+        headers: authHdr(),
+        body: JSON.stringify({ cases: cases.map((c, i) => normalizeCaseForApi(c, i)) }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      data.forEach((rr, i) => {
+        const rid = rr && rr.id != null ? String(rr.id) : null;
+        if (rid) results[rid] = rr;
+        else if (cases[i]) results[cases[i].id] = rr;
+      });
+      window.showToast?.(`Hoàn thành ${data.length} test`, 'success');
+    } catch (e) {
+      window.showToast?.('Lỗi: ' + e.message, 'danger');
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-play"></i> Run All';
+      }
+    }
+    if (activeId) renderEditor();
+    renderList();
+    updateSummary();
+  }
+
+  function updateSummary() {
+    const ran = Object.values(results);
+    const pass = ran.filter(r => r.passed).length;
+    const fail = ran.filter(r => !r.passed).length;
+    const pct = ran.length ? Math.round((pass / ran.length) * 100) : 0;
+
+    const elTotal = document.getElementById('plt-s-total');
+    const elPass = document.getElementById('plt-s-pass');
+    const elFail = document.getElementById('plt-s-fail');
+    const elProg = document.getElementById('plt-progress');
+    const elPct = document.getElementById('plt-pct');
+
+    if (elTotal) elTotal.textContent = cases.length;
+    if (elPass) elPass.textContent = pass;
+    if (elFail) elFail.textContent = fail;
+    if (elProg) {
+      elProg.style.width = pct + '%';
+      elProg.style.background = fail > 0 ? 'var(--danger)' : 'var(--success)';
+    }
+    if (elPct) elPct.textContent = ran.length ? `${pct}% · ${ran.length} đã chạy` : 'Chưa chạy';
+  }
+
+  function pltExport() {
+    const blob = new Blob([JSON.stringify(cases, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `prelabeler_testcases_${new Date().getTime()}.json`;
+    a.click();
+  }
+
+  function pltImport(ev) {
+    const file = ev.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async e => {
+      try {
+        cases = JSON.parse(e.target.result);
+        await pltSave();
+        renderList();
+        updateSummary();
+        window.showToast?.(`Import ${cases.length} test`, 'success');
+      } catch (err) {
+        window.showToast?.('JSON không hợp lệ', 'danger');
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  async function pltAutoExtract(ev) {
+    const text = (ev.clipboardData || window.clipboardData).getData('text');
+    if (!text || text.length < 5) return;
+
+    const c = cases.find(x => x.id === activeId);
+    if (!c) return;
+
+    const inputEl = ev.target;
+    const originalBg = inputEl.style.background;
+    inputEl.style.background = 'var(--accent-glow)';
+
+    setTimeout(async () => {
+      try {
+        const res = await fetch(`${API}/parser/analyze?model=prelabeler`, {
+          method: 'POST',
+          headers: authHdr(),
+          body: JSON.stringify({ raw_address: text }),
+        });
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        const entities = data.outputs?.prelabeler?.result || [];
+
+        let updated = false;
+        ['WDS', 'DST', 'PRO'].forEach(label => {
+          const hit = entities.find(e => e?.label === label && e?.text);
+          if (!hit) return;
+          const exists = (c.expected || []).some(
+            it =>
+              it?.label === label &&
+              String(it?.text || '').trim().toLowerCase() === String(hit.text).trim().toLowerCase()
+          );
+          if (!exists) {
+            c.expected = c.expected || [];
+            c.expected.push({ label, text: String(hit.text).trim() });
+            updated = true;
+          }
+        });
+
+        if (updated) {
+          pltSave();
+          renderEditor();
+          window.showToast?.('Đã thêm WDS/DST/PRO vào kỳ vọng', 'success');
+        }
+      } catch (e) {
+        console.warn('Auto extract failed', e);
+      } finally {
+        inputEl.style.background = originalBg;
+      }
+    }, 50);
+  }
+
+  function normalizeCaseForApi(c, idx = 0) {
+    const input = String((c && c.input != null) ? c.input : '');
+    const expectedRaw = Array.isArray(c?.expected) ? c.expected : [];
+    const expected = expectedRaw
+      .filter(e => e && typeof e === 'object')
+      .map(e => ({
+        label: String(e.label || '').trim().toUpperCase(),
+        text: String(e.text || '').trim(),
+      }))
+      .filter(e => e.label && e.text);
+
+    return {
+      id: String(c?.id || `case_${idx}`),
+      name: String(c?.name || ''),
+      input,
+      expected,
+      strict: Boolean(c?.strict),
+    };
+  }
+
+  /**
+   * Delegation lên `document`: fragment `#prelabeler-test` được nạp sau `loadPages()`,
+   * nên không được gắn listener trực tiếp khi DOMContentLoaded (race → Run All không chạy).
+   */
+  function pltBindDelegatedEvents() {
+    if (pltDelegatedEventsBound) return;
+    pltDelegatedEventsBound = true;
+
+    document.addEventListener(
+      'click',
+      e => {
+        const t = e.target;
+        if (!(t instanceof Element)) return;
+        if (t.closest('#plt-btn-new')) {
+          e.preventDefault();
+          pltNew();
+          return;
+        }
+        if (t.closest('#plt-btn-run-all')) {
+          e.preventDefault();
+          void pltRunAll();
+          return;
+        }
+        if (t.closest('#plt-btn-export')) {
+          e.preventDefault();
+          pltExport();
+          return;
+        }
+        if (t.closest('#plt-btn-import')) {
+          e.preventDefault();
+          document.getElementById('plt-file-input')?.click();
+        }
+      },
+      false
+    );
+
+    document.addEventListener('input', e => {
+      const tgt = e.target;
+      if (tgt && tgt.id === 'plt-search') renderList();
+    });
+
+    document.addEventListener('change', e => {
+      const tgt = e.target;
+      if (tgt && tgt.id === 'plt-file-input') pltImport(e);
+    });
+  }
+
+  window.pltSelect = pltSelect;
+  window.pltDup = pltDup;
+  window.pltDel = pltDel;
+  window.pltUpd = pltUpd;
+  window.pltUpdInput = pltUpdInput;
+  window.pltSetExpectedLabel = (label, text) => setExpectedForLabel(label, text);
+  window.pltRunOne = pltRunOne;
+  window.pltNew = pltNew;
+  window.pltRunAll = pltRunAll;
+  window.pltExport = pltExport;
+  window.pltAutoExtract = pltAutoExtract;
+  window.pltInitPage = () => pltInit();
+
+  pltBindDelegatedEvents();
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      void pltInit();
+    });
+  } else {
+    setTimeout(() => {
+      void pltInit();
+    }, 50);
+  }
+})();

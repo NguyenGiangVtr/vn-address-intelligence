@@ -42,7 +42,7 @@ from app.services.nso_api import get_nso_provinces, get_nso_districts, get_nso_w
 from app.api import schemas
 from app.api.boundary import router as boundary_router
 from app.api.spatial import router as spatial_router
-from typing import List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 import json
 
 from app.core.logging_config import setup_logging
@@ -72,7 +72,9 @@ app = FastAPI(
 
 @app.on_event("startup")
 async def on_startup():
-    """Pre-load AI models in background so the first analyze request is fast."""
+    """Khởi tạo database và nạp model AI trong background."""
+    _ensure_auth_user_table()
+    # Note: _ensure_prelabeler_testcases_table is already called at import time
     _start_background_model_loading()
 
 # Use APIRouter for cleaner route management
@@ -2943,6 +2945,310 @@ def migrate_address(payload: MigrateAddressRequest, db: Session = Depends(get_db
         "acs_score":          acs_comp.acs_score,
         "acs_decision":       acs_comp.acs_decision,
     }
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  PreLabeler Test Suite API
+#  Table: ai.prelabeler_testcases (created via migration below)
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _ensure_prelabeler_testcases_table():
+    """Create ai.prelabeler_testcases table if it doesn't exist."""
+    ddl = text("""
+        CREATE SCHEMA IF NOT EXISTS ai;
+        CREATE TABLE IF NOT EXISTS ai.prelabeler_testcases (
+            id          TEXT PRIMARY KEY,
+            name        TEXT NOT NULL DEFAULT '',
+            input       JSONB NOT NULL DEFAULT '{}',
+            expected    JSONB NOT NULL DEFAULT '[]',
+            strict      BOOLEAN NOT NULL DEFAULT FALSE,
+            test_result JSONB NULL,
+            tested_at   TIMESTAMPTZ NULL,
+            created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
+        ALTER TABLE ai.prelabeler_testcases ADD COLUMN IF NOT EXISTS test_result JSONB NULL;
+        ALTER TABLE ai.prelabeler_testcases ADD COLUMN IF NOT EXISTS tested_at TIMESTAMPTZ NULL;
+    """)
+    try:
+        with engine.connect() as conn:
+            conn.execute(ddl)
+            # Data migration:
+            # - input: JSON object -> raw_address string
+            # - expected: merge old expected + admin labels from input object
+            rows = conn.execute(text(
+                "SELECT id, input, expected FROM ai.prelabeler_testcases"
+            )).mappings().all()
+            for r in rows:
+                inp = r.get("input")
+                exp = r.get("expected") or []
+                if isinstance(exp, str):
+                    try:
+                        exp = json.loads(exp)
+                    except Exception:
+                        exp = []
+                if not isinstance(exp, list):
+                    exp = []
+
+                raw_address = ""
+                admin_items = []
+                if isinstance(inp, dict):
+                    raw_address = str(inp.get("raw_address") or "").strip()
+                    ward = str(inp.get("ward_name") or "").strip()
+                    district = str(inp.get("district_name") or "").strip()
+                    province = str(inp.get("province_name") or "").strip()
+                    if ward:
+                        admin_items.append({"label": "WDS", "text": ward})
+                    if district:
+                        admin_items.append({"label": "DST", "text": district})
+                    if province:
+                        admin_items.append({"label": "PRO", "text": province})
+                elif isinstance(inp, str):
+                    raw_address = inp.strip()
+                else:
+                    raw_address = str(inp or "").strip()
+
+                merged_expected = []
+                seen = set()
+                for item in [*admin_items, *exp]:
+                    if not isinstance(item, dict):
+                        continue
+                    label = str(item.get("label") or "").strip().upper()
+                    text_val = str(item.get("text") or "").strip()
+                    if not label or not text_val:
+                        continue
+                    key = (label, text_val.lower())
+                    if key in seen:
+                        continue
+                    seen.add(key)
+                    merged_expected.append({"label": label, "text": text_val})
+
+                conn.execute(text("""
+                    UPDATE ai.prelabeler_testcases
+                    SET input = CAST(:input AS JSONB),
+                        expected = CAST(:expected AS JSONB),
+                        updated_at = NOW()
+                    WHERE id = :id
+                """), {
+                    "id": r["id"],
+                    "input": json.dumps(raw_address, ensure_ascii=False),
+                    "expected": json.dumps(merged_expected, ensure_ascii=False),
+                })
+            conn.commit()
+        logger.info("ai.prelabeler_testcases table ensured")
+    except Exception as e:
+        logger.warning(f"Failed to create prelabeler_testcases table: {e}")
+
+# Run migration at import time (idempotent)
+_ensure_prelabeler_testcases_table()
+
+
+class PreLabelerTestCase(BaseModel):
+    # input mới: raw_address string; expected gồm cả admin labels + user labels.
+    id: Optional[Any] = None
+    name: Optional[Any] = ""
+    input: Optional[Any] = None
+    expected: Optional[List[Dict[str, Any]]] = None
+    strict: Optional[Any] = False
+
+
+class PreLabelerRunPayload(BaseModel):
+    cases: List[PreLabelerTestCase]
+
+
+@api_router.get("/prelabeler-tests", tags=["PreLabeler Test Suite"])
+def list_prelabeler_tests(current_user=Depends(get_current_user)):
+    """Lấy tất cả test case từ database."""
+    try:
+        with engine.connect() as conn:
+            rows = conn.execute(text(
+                "SELECT id, name, input, expected, strict, test_result, tested_at, created_at, updated_at "
+                "FROM ai.prelabeler_testcases ORDER BY created_at ASC"
+            )).mappings().all()
+        return [dict(r) for r in rows]
+    except Exception as e:
+        raise HTTPException(500, f"DB error: {e}")
+
+
+@api_router.post("/prelabeler-tests", tags=["PreLabeler Test Suite"])
+def save_prelabeler_tests(cases: List[PreLabelerTestCase], current_user=Depends(get_current_user)):
+    """Upsert toàn bộ danh sách test case (replace all strategy)."""
+    try:
+        with engine.begin() as conn:
+            ids = [str(c.id or f"case_{i}") for i, c in enumerate(cases)]
+            if ids:
+                # Manual placeholders to avoid SQLAlchemy IN clause mapping issues with text()
+                placeholders = ", ".join([f":id_{i}" for i in range(len(ids))])
+                params = {f"id_{i}": val for i, val in enumerate(ids)}
+                conn.execute(text(f"DELETE FROM ai.prelabeler_testcases WHERE id NOT IN ({placeholders})"), params)
+            else:
+                conn.execute(text("DELETE FROM ai.prelabeler_testcases"))
+            
+            # Upsert each case
+            for i, c in enumerate(cases):
+                case_id = str(c.id or f"case_{i}")
+                raw_input = c.input if isinstance(c.input, str) else ""
+                admin_from_input = []
+                if isinstance(c.input, dict):
+                    raw_input = str(c.input.get("raw_address") or "")
+                    ward = str(c.input.get("ward_name") or "").strip()
+                    district = str(c.input.get("district_name") or "").strip()
+                    province = str(c.input.get("province_name") or "").strip()
+                    if ward:
+                        admin_from_input.append({"label": "WDS", "text": ward})
+                    if district:
+                        admin_from_input.append({"label": "DST", "text": district})
+                    if province:
+                        admin_from_input.append({"label": "PRO", "text": province})
+
+                expected_items = c.expected or []
+                normalized_expected = []
+                seen = set()
+                for item in [*admin_from_input, *expected_items]:
+                    if not isinstance(item, dict):
+                        continue
+                    label = str(item.get("label") or "").strip().upper()
+                    text_val = str(item.get("text") or "").strip()
+                    if not label or not text_val:
+                        continue
+                    k = (label, text_val.lower())
+                    if k in seen:
+                        continue
+                    seen.add(k)
+                    normalized_expected.append({"label": label, "text": text_val})
+
+                conn.execute(text("""
+                    INSERT INTO ai.prelabeler_testcases (id, name, input, expected, strict, test_result, tested_at, updated_at)
+                    VALUES (:id, :name, CAST(:input AS JSONB), CAST(:expected AS JSONB), :strict, NULL, NULL, NOW())
+                    ON CONFLICT (id) DO UPDATE SET
+                        name = EXCLUDED.name,
+                        input = EXCLUDED.input,
+                        expected = EXCLUDED.expected,
+                        strict = EXCLUDED.strict,
+                        test_result = NULL,
+                        tested_at = NULL,
+                        updated_at = NOW()
+                """), {
+                    "id": case_id,
+                    "name": c.name or "",
+                    "input": json.dumps(str(raw_input or "").strip(), ensure_ascii=False),
+                    "expected": json.dumps(normalized_expected, ensure_ascii=False),
+                    "strict": bool(c.strict),
+                })
+        return {"ok": True, "count": len(cases)}
+    except Exception as e:
+        import traceback
+        tb = traceback.format_exc()
+        logger.error(f"Save PreLabeler tests failed: {e}\n{tb}")
+        raise HTTPException(500, f"DB error: {str(e)}")
+
+
+@api_router.delete("/prelabeler-tests/{test_id}", tags=["PreLabeler Test Suite"])
+def delete_prelabeler_test(test_id: str, current_user=Depends(get_current_user)):
+    """Xóa một test case theo ID."""
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("DELETE FROM ai.prelabeler_testcases WHERE id = :id"), {"id": test_id})
+            conn.commit()
+        return {"ok": True}
+    except Exception as e:
+        raise HTTPException(500, f"DB error: {e}")
+
+
+@api_router.post("/prelabeler-tests/run", tags=["PreLabeler Test Suite"])
+def run_prelabeler_tests(payload: PreLabelerRunPayload, current_user=Depends(get_current_user)):
+    """Chạy PreLabeler.predict() cho từng test case và so sánh với expected."""
+    from app.ai.export_for_annotation import PreLabeler
+
+    def _first_expected_text(items: List[Dict[str, Any]], label: str) -> Optional[str]:
+        for it in items:
+            if not isinstance(it, dict):
+                continue
+            if str(it.get("label") or "").upper() == label:
+                val = str(it.get("text") or "").strip()
+                if val:
+                    return val
+        return None
+
+    results = []
+    for idx, case in enumerate(payload.cases):
+        expected = case.expected or []  # [{"label": "STR", "text": "Tam Bình"}]
+        case_id = str(case.id or f"case_{idx}")
+        raw_address = case.input if isinstance(case.input, str) else ""
+        if isinstance(case.input, dict):
+            raw_address = str(case.input.get("raw_address") or "")
+        raw_address = str(raw_address or "").strip()
+        ward_name = _first_expected_text(expected, "WDS")
+        district_name = _first_expected_text(expected, "DST")
+        province_name = _first_expected_text(expected, "PRO")
+
+        try:
+            predictions = PreLabeler.predict(
+                raw_address=raw_address,
+                ward_name=ward_name,
+                district_name=district_name,
+                province_name=province_name,
+            )
+        except Exception as e:
+            results.append({
+                "id": case_id, "passed": False, "error": str(e),
+                "actual": [], "expected": expected, "details": [], "unexpected": []
+            })
+            continue
+
+        actual = [
+            {"label": p["value"]["labels"][0], "text": p["value"]["text"]}
+            for p in predictions
+        ]
+
+        details = []
+        all_passed = True
+        for exp in expected:
+            found = any(
+                a["label"] == exp.get("label") and
+                a["text"].strip().lower() == str(exp.get("text", "")).strip().lower()
+                for a in actual
+            )
+            details.append({"expected": exp, "found": found})
+            if not found:
+                all_passed = False
+
+        unexpected = []
+        if bool(case.strict):
+            for act in actual:
+                match = any(
+                    e.get("label") == act["label"] and
+                    str(e.get("text", "")).strip().lower() == act["text"].strip().lower()
+                    for e in expected
+                )
+                if not match:
+                    unexpected.append(act)
+                    all_passed = False
+
+        results.append({
+            "id": case_id, "passed": all_passed,
+            "actual": actual, "expected": expected,
+            "details": details, "unexpected": unexpected,
+        })
+
+    # Persist latest test result and time.
+    try:
+        with engine.begin() as conn:
+            for r in results:
+                conn.execute(text("""
+                    UPDATE ai.prelabeler_testcases
+                    SET test_result = CAST(:test_result AS JSONB),
+                        tested_at = NOW(),
+                        updated_at = NOW()
+                    WHERE id = :id
+                """), {
+                    "id": r.get("id"),
+                    "test_result": json.dumps(r, ensure_ascii=False),
+                })
+    except Exception as e:
+        logger.warning(f"Failed to persist prelabeler test results: {e}")
+
+    return results
 
 
 api_router.include_router(boundary_router, prefix="/boundary")

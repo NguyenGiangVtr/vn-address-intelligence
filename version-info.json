@@ -1,6 +1,6 @@
 {
-  "version": "202605061901",
-  "timestamp": "2026-05-06T12:01:26.696Z",
+  "version": "202605081007",
+  "timestamp": "2026-05-08T03:07:25.619Z",
   "files_updated": [
     "ui\\index.html",
     "ui\\login.html",
@@ -21,6 +21,7 @@
     "ui\\pages\\overview.html",
     "ui\\pages\\parser.html",
     "ui\\pages\\parser.test.html",
+    "ui\\pages\\prelabeler-test.html",
     "ui\\pages\\settings.html",
     "ui\\pages\\training.html",
     "ui\\pages\\ward-mapper.html"
