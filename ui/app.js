@@ -5049,10 +5049,12 @@ async function initEvidenceView() {
       <div class="plt-editor">
         <div class="plt-editor-head">
           <input type="text" value="${pltEsc(c.name || '')}" oninput="pltUpd('name',this.value)" placeholder="Tên test case...">
-          <label style="color:var(--text-tertiary);display:flex;align-items:center;gap:8px;cursor:pointer;white-space:nowrap">
-            <input type="checkbox" ${c.strict ? 'checked' : ''} onchange="pltUpd('strict',this.checked)"> Strict
-          </label>
-          <button class="btn btn-accent" onclick="pltRunOne()"><i class="fa-solid fa-play"></i> Chạy</button>
+          <div class="plt-editor-actions">
+            <label style="color:var(--text-tertiary);display:flex;align-items:center;gap:8px;cursor:pointer;white-space:nowrap">
+              <input type="checkbox" ${c.strict ? 'checked' : ''} onchange="pltUpd('strict',this.checked)"> Strict
+            </label>
+            <button class="btn btn-accent" onclick="pltRunOne()"><i class="fa-solid fa-play"></i> Chạy</button>
+          </div>
         </div>
         <div class="plt-field-grid">
           <div class="plt-field plt-field-full"><label>Raw address *</label>
