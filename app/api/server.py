@@ -2,7 +2,7 @@ from __future__ import annotations
 from fastapi import FastAPI, Depends, Request, HTTPException, status, APIRouter, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel
 from sqlalchemy.orm import Session, aliased
@@ -25,6 +25,9 @@ import subprocess
 import threading
 import traceback
 import httpx
+import io
+import tempfile
+import zipfile
 from uuid import uuid4
 from pathlib import Path
 from datetime import datetime, timedelta
@@ -3063,6 +3066,11 @@ class PreLabelerRunPayload(BaseModel):
     cases: List[PreLabelerTestCase]
 
 
+class PreLabelerExportPayload(BaseModel):
+    limit: int = 500
+    config_path: Optional[str] = "app/ai/config.yaml"
+
+
 @api_router.get("/prelabeler-tests", tags=["PreLabeler Test Suite"])
 def list_prelabeler_tests(current_user=Depends(get_current_user)):
     """Lấy tất cả test case từ database."""
@@ -3258,6 +3266,62 @@ def run_prelabeler_tests(payload: PreLabelerRunPayload, current_user=Depends(get
         logger.warning(f"Failed to persist prelabeler test results: {e}")
 
     return results
+
+
+@api_router.post("/prelabeler-tests/export-label-studio", tags=["PreLabeler Test Suite"])
+def export_prelabeler_label_studio(payload: PreLabelerExportPayload, current_user=Depends(get_current_user)):
+    """Export dữ liệu prelabel sang JSON/XML cho Label Studio, tương tự script CLI."""
+    from app.ai.export_for_annotation import export_data
+
+    limit = int(payload.limit or 0)
+    if limit <= 0:
+        raise HTTPException(status_code=400, detail="limit phải > 0")
+
+    config_path = str(payload.config_path or "app/ai/config.yaml").strip()
+    date_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+    base_name = f"ner_samples_{date_str}_{limit}"
+    zip_name = f"{base_name}_label_studio.zip"
+
+    try:
+        with tempfile.TemporaryDirectory(prefix="vnai_prelabeler_export_") as tmpdir:
+            output_file = Path(tmpdir) / f"{base_name}_prelabeled.json"
+            export_data(config_path, str(output_file), limit)
+            config_file = Path(str(output_file.with_suffix(".xml")).replace("_prelabeled", "_config"))
+
+            if not output_file.exists() or not config_file.exists():
+                raise RuntimeError("Export xong nhưng không tìm thấy file JSON/XML")
+
+            buffer = io.BytesIO()
+            with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+                zf.write(output_file, arcname=output_file.name)
+                zf.write(config_file, arcname=config_file.name)
+            buffer.seek(0)
+    except Exception as e:
+        logger.error(f"Export prelabeler data failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Export failed: {e}")
+
+    headers = {"Content-Disposition": f'attachment; filename="{zip_name}"'}
+    return StreamingResponse(buffer, media_type="application/zip", headers=headers)
+
+
+@api_router.get("/prelabeler-tests/export-file", tags=["PreLabeler Test Suite"])
+def download_prelabeler_export_file(name: str, current_user=Depends(get_current_user)):
+    """Tải file đã export từ thư mục data."""
+    safe_name = Path(str(name or "")).name
+    if not safe_name:
+        raise HTTPException(status_code=400, detail="Thiếu tên file")
+    if not (safe_name.endswith(".json") or safe_name.endswith(".xml")):
+        raise HTTPException(status_code=400, detail="Chỉ cho phép tải .json hoặc .xml")
+    if not safe_name.startswith("ner_samples_"):
+        raise HTTPException(status_code=400, detail="Tên file không hợp lệ")
+
+    file_path = (Path("data") / safe_name).resolve()
+    data_dir = Path("data").resolve()
+    if not str(file_path).startswith(str(data_dir)):
+        raise HTTPException(status_code=403, detail="Forbidden")
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Không tìm thấy file")
+    return FileResponse(str(file_path), filename=file_path.name)
 
 
 api_router.include_router(boundary_router, prefix="/boundary")

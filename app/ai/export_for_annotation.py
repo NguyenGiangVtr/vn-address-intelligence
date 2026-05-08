@@ -125,7 +125,7 @@ class PreLabeler:
                         if m_stop:
                             # Nếu dính tiền tố đơn vị khác, cắt bỏ từ đó
                             text = text[:m_stop.start()].strip(' ,')
-            elif label in ["ALY", "BLD", "NHB", "POI"]:
+            elif label in ["ALY", "BLD", "NHB"]:
                 m_admin = re.search(cls.ADMIN_KEYWORDS, text)
                 if m_admin:
                     text = text[:m_admin.start()].strip(' ,')
@@ -381,14 +381,14 @@ class PreLabeler:
             )
             free_text = raw_address[:first_admin.start()] if first_admin else raw_address
 
-            # Nhóm STR đặc thù: "Số N", "đường số N", "Đ. Tên Đường 11"
+            # Nhóm đặc thù: "Số N" -> NUM; "đường số N", "Đ. Tên Đường 11" -> STR
             m_so = re.search(r'(?i)^\s*Số\s+(\d+[A-Za-z]?(?:[/\-]\d+[A-Za-z]?)*)\b', free_text)
             if m_so:
                 second_seg = raw_segments[1] if len(raw_segments) > 1 else ""
                 if not re.match(r'(?i)^(Đường|Phố|Đ\.|QL|Quốc\s*lộ|ĐT|TL)\b', second_seg.strip()):
                     s = free_text.find(m_so.group(1))
                     if s >= 0:
-                        add_result(s, s + len(m_so.group(1)), m_so.group(1), "STR", 0.7)
+                        add_result(s, s + len(m_so.group(1)), m_so.group(1), "NUM", 0.9)
 
             m_duong_so = re.search(r'(?i)\bđường\s+số\s+(\d+[A-Za-z]?)\b', free_text)
             if m_duong_so:

@@ -5146,6 +5146,16 @@ async function initEvidenceView() {
     pltSave();
   }
 
+  function pltClearResults(caseIds) {
+    const ids = Array.isArray(caseIds) ? caseIds.map(x => String(x)) : [];
+    if (!ids.length) return;
+    ids.forEach(id => {
+      if (Object.prototype.hasOwnProperty.call(results, id)) {
+        delete results[id];
+      }
+    });
+  }
+
   function pltAddUnexpectedToExpected(label, text) {
     const c = cases.find(x => x.id === activeId);
     if (!c) return;
@@ -5186,6 +5196,14 @@ async function initEvidenceView() {
         headers: authHdr(),
         body: JSON.stringify({ cases: [normalizeCaseForApi(c, 0)] }),
       });
+      if (res.status === 401) {
+        pltClearResults([c.id]);
+        renderEditor();
+        renderList();
+        updateSummary();
+        window.showToast?.('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.', 'warning');
+        return;
+      }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       results[c.id] = data[0];
@@ -5214,6 +5232,14 @@ async function initEvidenceView() {
         headers: authHdr(),
         body: JSON.stringify({ cases: cases.map((c, i) => normalizeCaseForApi(c, i)) }),
       });
+      if (res.status === 401) {
+        pltClearResults(cases.map(c => c.id));
+        if (activeId) renderEditor();
+        renderList();
+        updateSummary();
+        window.showToast?.('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.', 'warning');
+        return;
+      }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       data.forEach((rr, i) => {
@@ -5267,6 +5293,57 @@ async function initEvidenceView() {
     a.href = URL.createObjectURL(blob);
     a.download = `prelabeler_testcases_${new Date().getTime()}.json`;
     a.click();
+  }
+
+  async function pltExportLabelStudio() {
+    const raw = window.prompt('Nhập số lượng bản ghi export cho Label Studio:', '500');
+    if (raw == null) return;
+    const limit = Number.parseInt(String(raw).trim(), 10);
+    if (!Number.isFinite(limit) || limit <= 0) {
+      window.showToast?.('Số lượng không hợp lệ. Vui lòng nhập số > 0.', 'warning');
+      return;
+    }
+
+    const btn = document.getElementById('plt-btn-export-ls');
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Exporting...';
+    }
+    try {
+      const res = await fetch(`${API}/prelabeler-tests/export-label-studio`, {
+        method: 'POST',
+        headers: authHdr(),
+        body: JSON.stringify({ limit }),
+      });
+      if (res.status === 401) {
+        window.showToast?.('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.', 'warning');
+        return;
+      }
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const blob = await res.blob();
+      const dispo = res.headers.get('content-disposition') || '';
+      const m = dispo.match(/filename=\"?([^\";]+)\"?/i);
+      const fileName = (m && m[1]) ? m[1] : `label_studio_export_${Date.now()}.zip`;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        URL.revokeObjectURL(url);
+        a.remove();
+      }, 1500);
+      window.showToast?.(`Đã export ${limit} mẫu cho Label Studio`, 'success');
+    } catch (e) {
+      window.showToast?.(`Export Label Studio thất bại: ${e.message}`, 'danger');
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-file-export"></i> Export Label Studio';
+      }
+    }
   }
 
   function pltImport(ev) {
@@ -5384,6 +5461,11 @@ async function initEvidenceView() {
         if (t.closest('#plt-btn-export')) {
           e.preventDefault();
           pltExport();
+          return;
+        }
+        if (t.closest('#plt-btn-export-ls')) {
+          e.preventDefault();
+          void pltExportLabelStudio();
           return;
         }
         if (t.closest('#plt-btn-import')) {

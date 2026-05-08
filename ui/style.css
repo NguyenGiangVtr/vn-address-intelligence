@@ -5936,7 +5936,7 @@ body.no-scroll {
 }
 
 #prelabeler-test .plt-raw-address-input {
-  min-height: 88px;
+  min-height: 45px;
   resize: vertical;
   line-height: 1.45;
   padding-top: 10px;
