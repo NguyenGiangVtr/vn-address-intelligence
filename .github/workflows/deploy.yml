@@ -111,6 +111,19 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v5
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies for prelabeler tests
+        shell: bash
+        run: pip install --no-cache-dir -r requirements-prod.txt
+
+      - name: Run prelabeler regression suite
+        shell: bash
+        run: python scripts/test/run_prelabeler_testcases.py
+
       - name: Apply cache-busting version to HTML assets
         shell: bash
         run: |

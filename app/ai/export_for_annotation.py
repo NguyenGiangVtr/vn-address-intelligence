@@ -58,6 +58,7 @@ class PreLabeler:
         "DST": r'(?i)^(Quận|Huyện|Thị xã|Q\.|H\.)\s+',
         "PRO": r'(?i)^(Thành phố|Tỉnh|TP\.|TP)\s+',
     }
+    STRIP_PREFIX_LABELS = set()
     
     ADMIN_KEYWORDS = r'(?i)\s*,?\s*\b(Phường|Xã|Thị trấn|Quận|Huyện|Thị xã|Thành phố|Tỉnh|TP|P\.|Q\.|H\.|X\.)\b'
 
@@ -91,8 +92,8 @@ class PreLabeler:
             # Lấy bản gốc để tính offset nếu bị cắt tiền tố
             original_text = text
             
-            # 1. Loại bỏ tiền tố (Đường, Phố, Số, ...) theo yêu cầu
-            prefix_pat = cls.PREFIX_PATTERNS.get(label)
+            # 1. Giữ nguyên tiền tố gốc theo yêu cầu "Type + Name"
+            prefix_pat = cls.PREFIX_PATTERNS.get(label) if label in cls.STRIP_PREFIX_LABELS else None
             if prefix_pat:
                 m_pref = re.search(prefix_pat, text)
                 if m_pref:
@@ -140,9 +141,9 @@ class PreLabeler:
             
             end = start + len(text)
 
-            # Multi-label support (an toàn cho regression):
-            # - Chỉ cho phép nhiều nhãn khi trùng CHÍNH XÁC cùng span.
-            # - Vẫn chặn các span chồng lấn khác nhau để tránh phát sinh nhãn thừa.
+            # Anti-overlap:
+            # - Master data (PRO/DST/WDS) luôn làm mốc chặn.
+            # - Với nhãn vi mô, ưu tiên span dài hơn (nếu cùng mức ưu tiên).
             for existing in results:
                 ex_val = existing.get("value", {})
                 ex_start = ex_val.get("start")
@@ -152,9 +153,6 @@ class PreLabeler:
                     continue
 
                 # Cùng span:
-                # - Mặc định gộp label để tránh phát sinh "unexpected" trong test strict.
-                # - Riêng cặp DST/PRO cùng span: giữ 2 records tách biệt vì API test
-                #   đang đọc labels[0] nên cần thấy đủ cả DST và PRO.
                 if ex_start == start and ex_end == end:
                     if label in ex_labels:
                         return False
@@ -165,9 +163,29 @@ class PreLabeler:
                     existing["score"] = max(float(existing.get("score", 0.0)), float(score))
                     return True
 
-                # Span overlap: chặn toàn bộ để giữ hành vi cũ ổn định.
+                new_is_macro = label in {"PRO", "DST", "WDS"}
+                ex_primary = str(ex_labels[0]) if ex_labels else ""
+                ex_is_macro = ex_primary in {"PRO", "DST", "WDS"}
                 is_overlap = (ex_start <= start < ex_end) or (ex_start < end <= ex_end) or (start <= ex_start and end >= ex_end)
                 if is_overlap:
+                    if ex_is_macro and new_is_macro and {ex_primary, str(label)}.issubset({"DST", "PRO"}):
+                        break
+                    # Macro luôn được ưu tiên, không cho span khác đè.
+                    if ex_is_macro and not new_is_macro:
+                        return False
+                    # Không cho macro mới đè lên span đang có (tránh mất vi mô đã đúng vị trí).
+                    if new_is_macro and not ex_is_macro:
+                        return False
+
+                    # Cùng lớp ưu tiên: chọn span dài hơn; nếu ngắn hơn/ bằng thì bỏ.
+                    new_len = end - start
+                    ex_len = ex_end - ex_start
+                    if new_len <= ex_len:
+                        return False
+                    results.remove(existing)
+                    break
+
+            if end <= start:
                     return False
             
             results.append({
@@ -204,9 +222,17 @@ class PreLabeler:
             for term in sorted(search_terms, key=len, reverse=True):
                 # Ưu tiên match "từ phải sang trái" để bám phần đuôi địa chỉ hành chính.
                 for match in re.finditer(rf'(?<!\w){re.escape(term)}(?!\w)', raw_address, re.I):
-                    left_ctx = raw_address[max(0, match.start() - 24):match.start()]
+                    s_pos = match.start()
+                    e_pos = match.end()
+                    left_ctx = raw_address[max(0, s_pos - 24):s_pos]
                     has_prefix_hint = bool(re.search(label_prefix_hints.get(label, r"$^"), left_ctx))
-                    candidate_matches.append((has_prefix_hint, match.start(), match.end()))
+                    # Nếu có tiền tố ngay trước trong chuỗi gốc, mở rộng span để giữ "Type + Name".
+                    pref_pat = cls.PREFIX_PATTERNS.get(label)
+                    if pref_pat:
+                        pref_match = re.search(pref_pat, left_ctx)
+                        if pref_match and pref_match.end() == len(left_ctx):
+                            s_pos = max(0, s_pos - (pref_match.end() - pref_match.start()))
+                    candidate_matches.append((has_prefix_hint, s_pos, e_pos))
                 if candidate_matches:
                     break
 
@@ -360,6 +386,34 @@ class PreLabeler:
             if has_str:
                 return
 
+            def _normalize_name(text: str) -> str:
+                return re.sub(r'\s+', ' ', (text or '').strip().lower())
+
+            def _strip_admin_prefix(name: str) -> str:
+                return re.sub(
+                    r'(?i)^(Thành phố|Tỉnh|Quận|Huyện|Thị xã|Phường|Xã|Thị trấn|TP\.?|Q\.?|H\.?|P\.?|X\.?)\s*',
+                    '',
+                    (name or '').strip()
+                ).strip()
+
+            ward_name_variants = set()
+            district_province_variants = set()
+
+            for macro_name, target_set in (
+                (ward_name, ward_name_variants),
+                (district_name, district_province_variants),
+                (province_name, district_province_variants),
+            ):
+                if not macro_name:
+                    continue
+                normalized_full = _normalize_name(macro_name)
+                if normalized_full:
+                    target_set.add(normalized_full)
+                stripped = _strip_admin_prefix(macro_name)
+                normalized_stripped = _normalize_name(stripped)
+                if normalized_stripped:
+                    target_set.add(normalized_stripped)
+
             admin_or_micro_prefix = re.compile(
                 r'(?i)^(Phường|Xã|Thị trấn|Quận|Huyện|Thị xã|Thành phố|Tỉnh|TP\.?|Q\.?|H\.?|P\.?|X\.?|'
                 r'Tổ|Khu phố|KP|Thôn|Ấp|Bản|Số|Số nhà|Hẻm|Ngõ|Kiệt|Ngách|Đường|Phố|Đ\.|QL|ĐT|TL)\b'
@@ -385,6 +439,16 @@ class PreLabeler:
                 next_seg = raw_segments[i + 1] if i + 1 < len(raw_segments) else ""
                 prev_has_num = bool(prev_num_re.match(prev_seg.strip()))
                 next_is_micro = bool(next_micro_re.match(next_seg.strip()))
+
+                seg_norm = _normalize_name(seg_clean)
+                # Tránh nhận diện nhầm STR cho tỉnh/huyện bị nhập lặp dạng "trần".
+                if seg_norm in district_province_variants:
+                    continue
+                # Nếu trùng tên phường thì chỉ cho phép khi có ngữ cảnh số nhà ở phía trước
+                # (ví dụ: "Số 112, Nguyễn Thị Minh Khai, ...").
+                if seg_norm in ward_name_variants and not prev_has_num:
+                    continue
+
                 if not (prev_has_num or next_is_micro):
                     continue
 
@@ -404,7 +468,7 @@ class PreLabeler:
             free_text = raw_address[:first_admin.start()] if first_admin else raw_address
 
             # Nhóm đặc thù: "Số N" -> NUM; "đường số N", "Đ. Tên Đường 11" -> STR
-            m_so = re.search(r'(?i)^\s*Số\s+(\d+[A-Za-z]?(?:[/\-]\d+[A-Za-z]?)*)\b', free_text)
+            m_so = re.search(r'(?i)^\s*(Số\s+\d+[A-Za-z]?(?:[/\-]\d+[A-Za-z]?)*)\b', free_text)
             if m_so:
                 second_seg = raw_segments[1] if len(raw_segments) > 1 else ""
                 if not re.match(r'(?i)^(Đường|Phố|Đ\.|QL|Quốc\s*lộ|ĐT|TL)\b', second_seg.strip()):
@@ -419,13 +483,6 @@ class PreLabeler:
             m_dot = re.search(r'(?i)\bĐ\.\s*([^\.,]+?\d+[A-Za-z]?)\b', free_text)
             if m_dot:
                 add_result(m_dot.start(1), m_dot.end(1), raw_address[m_dot.start(1):m_dot.end(1)], "STR", 0.84)
-
-            # Nhóm NHB tự do: "xóm ...", "thôn ..."
-            for m in re.finditer(r'(?i)\b(?:xóm|thôn)\s+(.+?)(?=\s+\b(?:xóm|thôn)\b|,|$)', free_text):
-                nhb_text = m.group(1).strip(" ,.-")
-                if nhb_text:
-                    end_pos = m.start(1) + len(nhb_text)
-                    add_result(m.start(1), end_pos, raw_address[m.start(1):end_pos], "NHB", 0.72)
 
             # Nhóm POI/PCD tự do
             m_cay_da = re.search(r'(?i)\b(cây\s+đa)\b', free_text)
@@ -456,10 +513,28 @@ class PreLabeler:
         _add_free_text_bundle_rules()
 
         # Giai đoạn 2: Regex Heuristics cho các cấp Vi mô
+        # Thu thập ứng viên rồi sort để ưu tiên span dài hơn trước.
+        nhb_piece_re = re.compile(
+            r'(?i)(Khu\s*phố|KP|Tổ\s*dân\s*phố|Thôn|Ấp|Bản|Tổ|Sóc|Phum|Xóm|Làng|Khóm|Cụm|Buôn|Plei|KDC)\s+[^,.;\n\-\/]+'
+        )
+
+        def _split_nhb_candidates(base_start: int, text: str):
+            pieces = []
+            for m in nhb_piece_re.finditer(text or ""):
+                seg = m.group(0).strip(" ,.-")
+                if not seg:
+                    continue
+                local_start = m.start() + m.group(0).find(seg)
+                s = base_start + local_start
+                e = s + len(seg)
+                pieces.append((s, e, seg))
+            # Chỉ tách khi thật sự có từ 2 cụm NHB trở lên.
+            return pieces if len(pieces) >= 2 else []
+
+        micro_candidates = []
         for label, pattern, score in cls.MICRO_RULES:
             for match in re.finditer(pattern, raw_address):
                 matched_text = match.group(0).strip()
-                # Tính toán lại start/end sau khi strip
                 start = match.start() + match.group(0).find(matched_text)
                 end = start + len(matched_text)
                 if label == "NUM":
@@ -467,7 +542,17 @@ class PreLabeler:
                     left_ctx = raw_address[max(0, start - 24):start].lower()
                     if re.search(r'(tổ|thôn|ấp|khu\s*phố|kp)\s*$', left_ctx, re.I):
                         continue
-                add_result(start, end, matched_text, label, score)
+                if label == "NHB":
+                    split_parts = _split_nhb_candidates(start, matched_text)
+                    if split_parts:
+                        for s, e, seg_text in split_parts:
+                            micro_candidates.append((label, s, e, seg_text, score))
+                        continue
+                micro_candidates.append((label, start, end, matched_text, score))
+
+        micro_candidates.sort(key=lambda x: (x[2] - x[1], x[4], -x[1]), reverse=True)
+        for label, start, end, matched_text, score in micro_candidates:
+            add_result(start, end, matched_text, label, score)
 
         return results
 

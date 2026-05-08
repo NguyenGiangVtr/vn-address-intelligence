@@ -14,6 +14,8 @@ import logging
 import yaml
 from pathlib import Path
 import sys
+import os
+import pytest
 
 # Add parent directory to path for imports
 sys.path.append(str(Path(__file__).parent.parent.parent))
@@ -24,10 +26,28 @@ from app.ai.models.siamese_mgte import SiameseMGTE
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+def _load_db_config() -> dict:
+    config_path = Path("app/ai/config.yaml")
+    if not config_path.exists():
+        pytest.skip("Missing app/ai/config.yaml for integration tests")
+    with open(config_path, "r", encoding="utf-8") as f:
+        config = yaml.safe_load(f)
+    db_config = (config or {}).get("database", {}).copy()
 
-def test_db_connector_methods(db_config: dict):
+    # Allow environment override for local runs.
+    db_config["host"] = os.getenv("DB_HOST", db_config.get("host"))
+    db_port = os.getenv("DB_PORT", db_config.get("port"))
+    db_config["port"] = int(db_port) if db_port else db_config.get("port")
+    db_config["dbname"] = os.getenv("DB_NAME", db_config.get("dbname"))
+    db_config["user"] = os.getenv("DB_USER", db_config.get("user"))
+    db_config["password"] = os.getenv("DB_PASS", db_config.get("password"))
+    return db_config
+
+
+def test_db_connector_methods():
     """Test các phương thức mới trong DatabaseConnector."""
     logger.info("🧪 Testing DatabaseConnector methods...")
+    db_config = _load_db_config()
     
     db = DBConnector(db_config)
     
@@ -71,18 +91,12 @@ def test_db_connector_methods(db_config: dict):
         db.close()
 
 
-def test_siamese_integration(db_config: dict):
+def test_siamese_integration():
     """Test integration với Siamese models."""
     logger.info("🧪 Testing Siamese model integration...")
+    db_config = _load_db_config()
     
-    db = DBConnector(
-        host=db_config['host'],
-        port=db_config['port'],
-        database=db_config['database'], 
-        user=db_config['user'],
-        password=db_config['password'],
-        schema=db_config.get('schema', 'public')
-    )
+    db = DBConnector(db_config)
     
     try:
         db.connect()
@@ -137,9 +151,10 @@ def test_siamese_integration(db_config: dict):
         db.close()
 
 
-def test_corpus_population_workflow(db_config: dict):
+def test_corpus_population_workflow():
     """Test workflow để populate corpus (dry run)."""
     logger.info("🧪 Testing corpus population workflow...")
+    db_config = _load_db_config()
     
     try:
         from app.ai.populate_clean_corpus import CorpusPopulator
@@ -163,7 +178,7 @@ def test_corpus_population_workflow(db_config: dict):
         return False
 
 
-def test_api_integration(db_config: dict):
+def test_api_integration():
     """Test integration với API server (corpus loading)."""
     logger.info("🧪 Testing API integration...")
     

@@ -106,6 +106,10 @@ class DBConnector:
             self._conn.close()
             logger.info(" Đã ngắt kết nối PostgreSQL.")
 
+    def close(self):
+        """Backward-compatible alias for older test scripts."""
+        self.disconnect()
+
     # ──────────────────────────────────────────────────────────────────────
     # Cursor context manager (có auto-reconnect)
     # ──────────────────────────────────────────────────────────────────────

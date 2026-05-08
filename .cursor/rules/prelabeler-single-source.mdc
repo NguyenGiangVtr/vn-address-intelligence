@@ -1,0 +1,18 @@
+---
+description: Keep PreLabeler labeling logic in one shared service
+alwaysApply: true
+---
+
+# PreLabeler DRY/SOLID Rule
+
+- Do not duplicate labeling-case domain logic across endpoints or scripts.
+- `random-predict`, `run`, and regression scripts must call shared functions in `app/services/prelabeler_labeling_service.py`.
+- Any change to expected-building or validation rules must be implemented in the shared service first, then consumed by callers.
+- Preserve `Type + Name` for all labels, especially admin units (`WDS`, `DST`, `PRO`) when present in raw text.
+- Keep two-way validation strict: missing expected or unexpected actual must fail.
+
+## Required Checks After Changes
+
+- Run `python -m py_compile` for edited Python files.
+- Run `python scripts/labeling/run_prelabeler_labeling_cases.py`.
+- If API behavior changes, verify `/api/prelabeler-cases/random-predict` and `/api/prelabeler-cases/run` are consistent.

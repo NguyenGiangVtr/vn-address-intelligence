@@ -77,7 +77,7 @@ async function fetchWithApiFallback(path, options = {}) {
 const PAGES = [
   "overview", "parser", "batch", "training", "label-studio",
   "experiments", "explorer", "osm-enrichment", "lookup", "boundary-visualization",
-  "admin-units", "nso-sync", "settings", "evidence", "label-registry", "prelabeler-test"
+  "admin-units", "nso-sync", "settings", "evidence", "label-registry", "prelabeler-cases"
 ];
 
 const {
@@ -199,10 +199,10 @@ const PAGE_META = {
     description: 'Cấu hình và tùy chỉnh hệ thống Vietnamese Address Intelligence',
     keywords: 'settings, cài đặt, configuration, preferences'
   },
-  'prelabeler-test': {
+  'prelabeler-cases': {
     title: 'Address Label Studio - Vietnamese Address Intelligence',
-    description: 'Không gian gán nhãn, đối chiếu kết quả và tinh chỉnh dữ liệu địa chỉ theo phong cách Label Studio',
-    keywords: 'address label studio, prelabeler, data labeling, annotation, address ai'
+    description: 'Thiết lập nhãn kỳ vọng, đối chiếu với kết quả suy luận và tinh chỉnh dữ liệu địa chỉ',
+    keywords: 'address labeling, vietnam address, ner, annotation, expected labels'
   }
 };
 
@@ -265,7 +265,10 @@ function getPageFromURL() {
   if (!hash || hash === '#/' || hash === '#') {
     return 'overview';
   }
-  const pageId = hash.substring(2); // Remove '#/'
+  let pageId = hash.substring(2); // Remove '#/'
+  if (pageId === 'prelabeler-test') {
+    pageId = 'prelabeler-cases';
+  }
 
   // Validate if page exists
   const pageEl = document.getElementById(pageId);
@@ -328,7 +331,7 @@ function initializePageSpecific(pageId) {
     case 'label-registry':
       populateLabelRegistry();
       break;
-    case 'prelabeler-test':
+    case 'prelabeler-cases':
       if (window.pltInitPage) window.pltInitPage();
       break;
     // Add more page-specific initialization as needed
@@ -1530,7 +1533,7 @@ const PAGE_GROUP_MAP = {
   'training': 'ai-bench',
   'experiments': 'ai-bench',
   'label-registry': 'ai-bench',
-  'prelabeler-test': 'ai-bench',
+  'prelabeler-cases': 'ai-bench',
 };
 
 function openNavGroup(groupId) {
@@ -1773,6 +1776,70 @@ function renderOverviewChart(stats) {
 // LABEL REGISTRY
 // ═══════════════════════════════════════════════════════════
 let _labelRegistrySearchBound = false;
+const _labelRegistryMediaCompact = window.matchMedia("(max-width: 1180px)");
+
+function _shortenLabelRegistryText(text, maxLen) {
+  const raw = (text || "").replace(/\s+/g, " ").trim();
+  if (raw.length <= maxLen) return raw;
+  return raw.slice(0, maxLen - 1).trimEnd() + "…";
+}
+
+function _isLabelRegistryCompact() {
+  return _labelRegistryMediaCompact.matches;
+}
+
+const LABEL_REGISTRY_RULES = {
+  PCD: {
+    title: "Mã Plus Code",
+    whenToUse: "Dùng khi thấy mã dạng Plus Code, ví dụ 7P28+X4.",
+    avoidWhen: "Không dùng cho mã bưu chính hoặc mã nội bộ khác."
+  },
+  BLD: {
+    title: "Tòa nhà, chung cư",
+    whenToUse: "Dùng cho tên tòa nhà hoặc chung cư, ví dụ Landmark 81.",
+    avoidWhen: "Không dùng cho tên đường hoặc tên quận, phường, tỉnh."
+  },
+  POI: {
+    title: "Mốc địa điểm",
+    whenToUse: "Dùng cho nơi dễ nhận biết như cửa hàng, bệnh viện, trường học, công viên.",
+    avoidWhen: "Không dùng cho tên quận, phường, tỉnh hoặc tên tòa nhà rõ ràng."
+  },
+  ALY: {
+    title: "Hẻm, ngõ, ngách",
+    whenToUse: "Dùng khi có từ hẻm, ngõ, ngách, kiệt.",
+    avoidWhen: "Không dùng cho số nhà chính hoặc số trong tên đường."
+  },
+  NUM: {
+    title: "Số nhà",
+    whenToUse: "Dùng cho số nhà chính, ví dụ 12, 268, 45/12.",
+    avoidWhen: "Không dùng cho số phường, số quận hoặc mã căn nội bộ."
+  },
+  STR: {
+    title: "Tên đường",
+    whenToUse: "Dùng cho tên đường, phố, đại lộ.",
+    avoidWhen: "Không dùng cho khu phố, ấp, thôn hoặc tên quận, phường, tỉnh."
+  },
+  NHB: {
+    title: "Khu phố, ấp, thôn, bản",
+    whenToUse: "Dùng cho cụm như khu phố 3, ấp 2, thôn Đông.",
+    avoidWhen: "Không dùng cho tên đường hoặc tên phường, xã."
+  },
+  WDS: {
+    title: "Phường, xã, thị trấn",
+    whenToUse: "Dùng cho cụm như Phường 14, Xã Tân Phú.",
+    avoidWhen: "Không dùng cho quận, huyện, tỉnh hoặc khu phố."
+  },
+  DST: {
+    title: "Quận, huyện, thị xã, thành phố",
+    whenToUse: "Dùng cho cụm như Quận 10, Huyện Củ Chi, TP Thủ Đức.",
+    avoidWhen: "Không dùng cho tên tỉnh hoặc thành phố lớn như Hà Nội, TP.HCM."
+  },
+  PRO: {
+    title: "Tỉnh/Thành phố",
+    whenToUse: "Dùng cho tỉnh hoặc thành phố, ví dụ TP.HCM, Hà Nội, Đồng Nai.",
+    avoidWhen: "Không dùng cho quận, huyện, phường hoặc tên cửa hàng."
+  }
+};
 
 function populateLabelRegistry() {
   const tbody = document.getElementById("label-registry-body");
@@ -1789,18 +1856,38 @@ function populateLabelRegistry() {
 
   // Render table view (desktop)
   if (tbody) {
-    tbody.innerHTML = NER_LABELS.map(l => `
+    tbody.innerHTML = NER_LABELS.map(l => {
+      const rule = LABEL_REGISTRY_RULES[l.value] || {};
+      const compact = _isLabelRegistryCompact();
+      const whenText = compact
+        ? _shortenLabelRegistryText(rule.whenToUse || "Đang cập nhật cách dùng.", 78)
+        : (rule.whenToUse || "Đang cập nhật cách dùng.");
+      const avoidText = compact
+        ? _shortenLabelRegistryText(rule.avoidWhen || "Đang cập nhật trường hợp không chọn.", 72)
+        : (rule.avoidWhen || "Đang cập nhật trường hợp không chọn.");
+      return `
       <tr>
         <td><span class="label-badge" style="background:${l.color}22;color:${l.color}">${l.value}</span></td>
-        <td><div style="display:flex;align-items:center;gap:6px"><div style="width:16px;height:16px;border-radius:3px;background:${l.color};border:1px solid rgba(0,0,0,0.1)"></div> <span class="text-mono" style="font-size:11px">${l.color}</span></div></td>
+        <td>
+          <div style="font-weight:600;color:var(--text-primary)">${rule.title || "Chưa định nghĩa"}</div>
+        </td>
+        <td>
+          <div style="font-size:12px;line-height:1.5;color:var(--text-secondary)" title="${rule.whenToUse || ""}">${whenText}</div>
+        </td>
+        <td>
+          <div style="font-size:12px;line-height:1.5;color:var(--danger, #ef4444)" title="${rule.avoidWhen || ""}">${avoidText}</div>
+        </td>
         <td><kbd style="background:var(--bg-muted);padding:4px 8px;border-radius:4px;font-size:11px;border:1px solid var(--border);cursor:default">${l.hotkey}</kbd></td>
       </tr>
-    `).join("");
+    `;
+    }).join("");
   }
 
   // Render card view (mobile)
   if (cardView) {
-    cardView.innerHTML = NER_LABELS.map(l => `
+    cardView.innerHTML = NER_LABELS.map(l => {
+      const rule = LABEL_REGISTRY_RULES[l.value] || {};
+      return `
       <div class="label-card" style="
         padding: 14px; 
         border: 1px solid var(--border); 
@@ -1819,8 +1906,23 @@ function populateLabelRegistry() {
           <div style="width:12px;height:12px;border-radius:2px;background:${l.color}"></div>
           <span style="font-size:10px;color:var(--text-tertiary);font-family:monospace">${l.color}</span>
         </div>
+
+        <div style="font-size:12px;line-height:1.55;color:var(--text-secondary);display:grid;gap:8px">
+          <div>
+            <strong style="display:block;color:var(--text-primary);font-size:12px;margin-bottom:2px">${rule.title || "Chưa định nghĩa"}</strong>
+          </div>
+          <div>
+            <span style="font-weight:600;color:var(--text-primary)">Gán khi:</span>
+            <span>${rule.whenToUse || "Đang cập nhật rule sử dụng."}</span>
+          </div>
+          <div>
+            <span style="font-weight:600;color:var(--danger, #ef4444)">Không gán khi:</span>
+            <span>${rule.avoidWhen || "Đang cập nhật rule tránh nhầm."}</span>
+          </div>
+        </div>
       </div>
-    `).join("");
+    `;
+    }).join("");
   }
 
   // Setup search functionality (một lần — tránh double-bind khi reload nhãn từ Settings)
@@ -4274,8 +4376,8 @@ function adjustActivePageHeight() {
   const activePage = document.querySelector('.page.active');
   if (!activePage) return;
 
-  // PreLabeler Test Suite: natural page scroll only (no inner max-height clamps).
-  if (activePage.id === 'prelabeler-test') return;
+  // PreLabeler Labeling Suite: natural page scroll only.
+  if (activePage.id === 'prelabeler-cases') return;
 
   const pageContent = document.getElementById('page-content');
   if (!pageContent) return;
@@ -4642,7 +4744,7 @@ async function initEvidenceView() {
 (function () {
   'use strict';
 
-  /** Trùng `app/ai/constants.py` NER_LABELS — hotkey 0→9. */
+  /** Mirrors `app/ai/constants.py` NER_LABELS — hotkeys 0→9. */
   const PLT_NER_LABELS_FALLBACK = [
     { value: 'PCD', hotkey: '0' },
     { value: 'BLD', hotkey: '1' },
@@ -4658,7 +4760,7 @@ async function initEvidenceView() {
 
   const PLT_HOTKEY_BY_VALUE = new Map(PLT_NER_LABELS_FALLBACK.map(x => [x.value, x.hotkey]));
 
-  /** Thứ tự nhãn + hotkey: từ /api/config/ner-labels, luôn sort theo hotkey (giống constants.py). */
+  /** Label order + hotkeys from /api/config/ner-labels, sorted by hotkey (same as constants.py). */
   let nerLabelsOrdered = [];
 
   const API = (window.location.hostname === 'localhost' || window.location.protocol === 'file:')
@@ -4711,8 +4813,8 @@ async function initEvidenceView() {
   }
 
   /**
-   * Ưu tiên `ensureNerLabelsLoaded` từ app.js (đúng API_BASE / fallback giống SPA).
-   * Nếu chưa có hoặc rỗng → GET /config/ner-labels trực tiếp.
+   * Prefer `ensureNerLabelsLoaded` from app.js (same API_BASE / fallback as the rest of the SPA).
+   * If missing or empty, GET /config/ner-labels directly.
    */
   async function refreshPltNerLabels() {
     try {
@@ -4823,7 +4925,7 @@ async function initEvidenceView() {
   function renderMergedLabelGrid(c, result) {
     const expected = c.expected;
     if (!nerLabelsOrdered.length) {
-      return `<div class="plt-label-grid-empty">Không tải được <code>/api/config/ner-labels</code>. Kiểm tra kết nối API và tải lại trang.</div>`;
+      return `<div class="plt-label-grid-empty">Không tải được danh sách loại nhãn. Kiểm tra kết nối dịch vụ và tải lại trang.</div>`;
     }
     const r = result && !result.error ? result : null;
     return nerLabelsOrdered.map(({ value, hotkey }) => {
@@ -4872,7 +4974,7 @@ async function initEvidenceView() {
         <div class="${cellClass}" data-label="${vEsc}">
           <div class="plt-label-cell__main">
             <div class="plt-label-cell__inline-row">
-              <span class="plt-label-cell__hk" title="Hotkey ${hk}">${hk}</span>
+              <span class="plt-label-cell__hk" title="Phím tắt ${hk}">${hk}</span>
               <span class="plt-badge lc-${value}">${vEsc}</span>
               <div class="plt-label-cell__input-row">
                 <input class="form-input plt-label-cell__input" type="text"
@@ -4881,7 +4983,7 @@ async function initEvidenceView() {
                 <button type="button" class="btn btn-outline plt-label-cell__add-btn"
                   title="Thêm giá trị"
                   onclick='pltAddExpectedLabel(${vJs}, this.previousElementSibling.value); this.previousElementSibling.value=""'>+</button>
-                <span class="plt-label-cell__tick" aria-label="Khớp kỳ vọng"><i class="fa-solid fa-check"></i></span>
+                <span class="plt-label-cell__tick" aria-label="Khớp nhãn kỳ vọng"><i class="fa-solid fa-check"></i></span>
               </div>
             </div>
             ${chipsHtml}
@@ -4923,7 +5025,7 @@ async function initEvidenceView() {
   function renderAnnotatedRawText(c) {
     const raw = String(c?.input || '');
     if (!raw.trim()) {
-      return '<div class="plt-raw-annotated plt-raw-annotated--empty">Chưa có raw address.</div>';
+      return '<div class="plt-raw-annotated plt-raw-annotated--empty">Chưa nhập địa chỉ gốc.</div>';
     }
 
     const entities = normalizeExpectedItems(c?.expected)
@@ -5011,7 +5113,7 @@ async function initEvidenceView() {
     return s;
   }
 
-  /** Mọi span từ PreLabeler có đúng nhãn (để hiển thị khi FAIL: lệch text hoặc nhiều span cùng nhãn). */
+  /** All PreLabeler spans matching this label (for FAIL UI: text mismatch or multiple spans). */
   function actualSpansForLabel(r, label) {
     const lab = normalizePltEntityLabel(label);
     return (r.actual || []).filter(
@@ -5023,7 +5125,7 @@ async function initEvidenceView() {
   }
 
   /**
-   * Nội dung thẻ fail: nêu rõ kỳ vọng LỆCH với những gì model trả (hoặc không trả nhãn này).
+   * User-facing Vietnamese copy for FAIL cells: compact "algorithm vs expected" line (label is in the row header).
    */
   function formatPltActualForFail(r, label, missingExpected = []) {
     const spans = actualSpansForLabel(r, label);
@@ -5031,15 +5133,8 @@ async function initEvidenceView() {
       .map(x => String(x.text || '').trim())
       .filter(t => t.length > 0);
 
-    if (!texts.length) {
-      const missingPrefix =
-        missingExpected.length > 0
-          ? `Thiếu: ${missingExpected.map(x => pltEsc(x)).join(' · ')}. `
-          : '';
-      return `Không có thực thể nhãn ${pltEsc(
-        String(label || '').toUpperCase()
-      )} trong kết quả PreLabeler. ${missingPrefix}`.trim();
-    }
+    const joinParts = arr => arr.map(x => pltEsc(x)).join(', ');
+    const missingReadable = joinParts(missingExpected);
 
     const seen = new Set();
     const uniq = [];
@@ -5049,12 +5144,14 @@ async function initEvidenceView() {
       seen.add(k);
       uniq.push(t);
     }
-    const actualJoined = uniq.map(t => pltEsc(t)).join(' · ');
-    const missingPrefix =
-      missingExpected.length > 0
-        ? `Thiếu: ${missingExpected.map(x => pltEsc(x)).join(' · ')} | `
-        : '';
-    return `${missingPrefix}Thực tế: ${actualJoined}`;
+    const actualReadable = joinParts(uniq);
+    const algo = actualReadable || '—';
+    const exp = missingReadable || '—';
+
+    if (missingReadable || !actualReadable) {
+      return `Không khớp: Thuật toán: ${algo}, Kỳ vọng: ${exp}.`;
+    }
+    return `Không khớp: Thuật toán: ${algo}.`;
   }
 
   function pltAddExpectedLabel(label, rawText) {
@@ -5079,20 +5176,20 @@ async function initEvidenceView() {
     if (!r) return '';
     if (r.error) {
       return `<div class="plt-run-error" role="alert">
-        <div class="plt-run-error__title"><i class="fa-solid fa-triangle-exclamation"></i> Lỗi khi chạy test</div>
+        <div class="plt-run-error__title"><i class="fa-solid fa-triangle-exclamation"></i> Lỗi khi chạy đối chiếu</div>
         <pre class="plt-run-error__msg">${pltEsc(r.error)}</pre>
       </div>`;
     }
     if (!(r.unexpected || []).length) return '';
     return `
       <div class="plt-unexpected-block">
-        <div class="plt-result-section-title">Dư thừa (strict)</div>
-        <div class="plt-run-prompt"><i class="fa-solid fa-hand-pointer"></i> Click vào từng thực thể để thêm nhanh vào nhãn kỳ vọng.</div>
+        <div class="plt-result-section-title">Nhãn ngoài kỳ vọng (chế độ nghiêm)</div>
+        <div class="plt-run-prompt"><i class="fa-solid fa-hand-pointer"></i> Chọn từng mục sau để thêm nhanh vào nhãn kỳ vọng.</div>
         <div class="plt-tokens">
           ${(r.unexpected || [])
             .map(
               u =>
-                `<button type="button" class="plt-token plt-token-add-exp" data-label="${pltEsc(u.label)}" data-text="${pltEsc(u.text)}" title="Thêm vào expected">
+                `<button type="button" class="plt-token plt-token-add-exp" data-label="${pltEsc(u.label)}" data-text="${pltEsc(u.text)}" title="Thêm vào nhãn kỳ vọng">
                   <span class="plt-badge lc-${u.label}">${u.label}</span> ${pltEsc(u.text)}
                 </button>`
             )
@@ -5103,12 +5200,12 @@ async function initEvidenceView() {
 
   function hotkeyRangeHint() {
     if (nerLabelsOrdered.length >= 2) {
-      return `Hotkey ${pltEsc(nerLabelsOrdered[0].hotkey)}–${pltEsc(
+      return `Phím tắt ${pltEsc(nerLabelsOrdered[0].hotkey)}–${pltEsc(
         nerLabelsOrdered[nerLabelsOrdered.length - 1].hotkey
       )}`;
     }
     if (nerLabelsOrdered.length === 1) {
-      return `Hotkey ${pltEsc(nerLabelsOrdered[0].hotkey)}`;
+      return `Phím tắt ${pltEsc(nerLabelsOrdered[0].hotkey)}`;
     }
     return '';
   }
@@ -5122,7 +5219,7 @@ async function initEvidenceView() {
     }
 
     try {
-      const resp = await fetch(`${API}/prelabeler-tests`, { headers: authHdr() });
+      const resp = await fetch(`${API}/prelabeler-cases`, { headers: authHdr() });
       if (!resp.ok) throw new Error(resp.status);
       const raw = await resp.json();
       cases = raw.map(c => ({
@@ -5136,18 +5233,20 @@ async function initEvidenceView() {
         expected: typeof c.expected === 'string' ? JSON.parse(c.expected) : (c.expected || []),
       }));
     } catch (e) {
-      console.warn('PreLabeler test: cannot load from DB, trying localStorage', e);
+      console.warn('PreLabeler labeling: cannot load from DB, trying localStorage', e);
       cases = JSON.parse(localStorage.getItem('plt_cases') || '[]');
     }
     const firstVisible = getVisibleCases()[0];
     if (firstVisible) {
-      // Always default to the first testcase as shown in the current list ordering.
+      // Always default to the first case as shown in current list ordering.
       pltSelect(firstVisible.id);
     } else {
       activeId = null;
       renderList();
+      renderPltEmptySurface();
     }
     updateSummary();
+    syncPltRunCluster();
   }
 
   function getVisibleCases() {
@@ -5225,7 +5324,7 @@ async function initEvidenceView() {
   function pltNew() {
     const c = {
       id: uid(),
-      name: 'Test case mới',
+      name: 'Mẫu địa chỉ mới',
       input: '',
       expected: [],
       strict: false,
@@ -5257,11 +5356,11 @@ async function initEvidenceView() {
     const btn = document.getElementById('plt-btn-random-predict');
     if (btn) {
       btn.disabled = true;
-      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Loading...';
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang xử lý…';
     }
 
     try {
-      const res = await fetch(`${API}/prelabeler-tests/random-predict`, {
+      const res = await fetch(`${API}/prelabeler-cases/random-predict`, {
         headers: authHdr(),
       });
       if (res.status === 401) {
@@ -5269,7 +5368,7 @@ async function initEvidenceView() {
         return;
       }
       if (res.status === 404) {
-        window.showToast?.('Không còn bản ghi mới trong queue để tạo testcase.', 'info');
+        window.showToast?.('Hiện không còn bản ghi mới trong hàng đợi để tạo mẫu.', 'info');
         return;
       }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -5278,7 +5377,7 @@ async function initEvidenceView() {
       const rawAddress = String(data?.raw_address || '').trim();
       const expected = normalizeExpectedItems(data?.expected);
       if (!rawAddress) {
-        window.showToast?.('API không trả về raw_address hợp lệ.', 'warning');
+        window.showToast?.('Phản hồi thiếu địa chỉ gốc hợp lệ.', 'warning');
         return;
       }
 
@@ -5289,14 +5388,14 @@ async function initEvidenceView() {
         selectedCase.input = rawAddress;
         selectedCase.expected = expected;
         if (!selectedCase.name || String(selectedCase.name).trim().length === 0) {
-          selectedCase.name = sourceId ? `Random #${sourceId}` : 'Random testcase';
+          selectedCase.name = sourceId ? `Mẫu ngẫu nhiên · ${sourceId}` : 'Mẫu ngẫu nhiên';
         }
         pltClearResults([selectedCase.id]);
         pltSelect(selectedCase.id);
       } else {
         const c = {
           id: uid(),
-          name: sourceId ? `Random #${sourceId}` : 'Random testcase',
+          name: sourceId ? `Mẫu ngẫu nhiên · ${sourceId}` : 'Mẫu ngẫu nhiên',
           input: rawAddress,
           expected,
           strict: false,
@@ -5310,15 +5409,15 @@ async function initEvidenceView() {
       renderEditor();
       updateSummary();
       window.showToast?.(
-        `${selectedCase ? 'Đã ghi đè testcase đang chọn' : 'Đã tạo testcase nhanh'}${sourceId ? ` (#${sourceId})` : ''}`,
+        `${selectedCase ? 'Đã cập nhật mẫu đang chọn' : 'Đã tạo mẫu mới'}${sourceId ? ` (${sourceId})` : ''}`,
         'success'
       );
     } catch (e) {
-      window.showToast?.(`Lỗi random & predict: ${e.message}`, 'danger');
+      window.showToast?.(`Lỗi khi lấy mẫu ngẫu nhiên: ${e.message}`, 'danger');
     } finally {
       if (btn) {
         btn.disabled = false;
-        btn.innerHTML = '<i class="fa-solid fa-shuffle"></i> Get random & predict';
+        btn.innerHTML = '<i class="fa-solid fa-shuffle"></i> Lấy mẫu ngẫu nhiên và gợi ý nhãn';
       }
     }
   }
@@ -5328,28 +5427,43 @@ async function initEvidenceView() {
     if (!src) return;
     const c = JSON.parse(JSON.stringify(src));
     c.id = uid();
-    c.name = (src.name || '') + ' (copy)';
+    c.name = (src.name || '') + ' — bản sao';
     c.created_at = new Date().toISOString();
     cases.push(c);
     pltSelect(c.id);
     pltSave();
   }
 
+  function pltEditorEmptyInnerHtml() {
+    return '<div class="empty-state plt-editor-empty"><i class="fa-solid fa-flask-vial"></i><p>Chọn mẫu bên trái hoặc nhấn Thêm mẫu để bắt đầu</p></div>';
+  }
+
+  function syncPltRunCluster() {
+    const runOne = document.getElementById('plt-btn-run-one');
+    if (!runOne) return;
+    const ok = Boolean(activeId && cases.some(x => x.id === activeId));
+    runOne.disabled = !ok;
+  }
+
+  function renderPltEmptySurface() {
+    const surface = document.getElementById('plt-editor-surface');
+    if (!surface) return;
+    surface.innerHTML = pltEditorEmptyInnerHtml();
+    syncPltRunCluster();
+  }
+
   function pltDel(id) {
-    if (!confirm('Xóa test case này?')) return;
+    if (!confirm('Xóa mẫu này?')) return;
     cases = cases.filter(c => c.id !== id);
     if (activeId === id) {
       activeId = null;
-      const ed = document.getElementById('plt-editor-area');
-      if (ed) {
-        ed.innerHTML =
-          '<div class="empty-state card plt-editor-empty"><i class="fa-solid fa-flask-vial"></i><p>Chọn hoặc tạo test case để bắt đầu</p></div>';
-      }
+      renderPltEmptySurface();
     }
     delete results[id];
     pltSave();
     renderList();
     updateSummary();
+    syncPltRunCluster();
   }
 
   function pltSelect(id) {
@@ -5366,7 +5480,7 @@ async function initEvidenceView() {
     clearTimeout(saveTimer);
     saveTimer = setTimeout(async () => {
       try {
-        await fetch(`${API}/prelabeler-tests`, {
+        await fetch(`${API}/prelabeler-cases`, {
           method: 'POST',
           headers: authHdr(),
           body: JSON.stringify(cases),
@@ -5378,28 +5492,31 @@ async function initEvidenceView() {
   }
 
   function renderEditor() {
+    const surface = document.getElementById('plt-editor-surface');
+    if (!surface) return;
     const c = cases.find(x => x.id === activeId);
-    if (!c) return;
+    if (!c) {
+      surface.innerHTML = pltEditorEmptyInnerHtml();
+      syncPltRunCluster();
+      return;
+    }
     const result = results[c.id];
-    const area = document.getElementById('plt-editor-area');
-    if (!area) return;
     const hkHint = hotkeyRangeHint();
     const badge =
       result && !result.error
-        ? `<span class="plt-overall-badge plt-overall-badge--${result.passed ? 'pass' : 'fail'}" title="Tổng kết test case">
+        ? `<span class="plt-overall-badge plt-overall-badge--${result.passed ? 'pass' : 'fail'}" title="Kết quả đối chiếu mẫu hiện tại">
             <i class="fa-solid ${result.passed ? 'fa-circle-check' : 'fa-circle-xmark'}"></i>
-            ${result.passed ? 'PASS' : 'FAIL'}
+            ${result.passed ? 'Đạt' : 'Chưa đạt'}
           </span>`
         : '';
-    area.innerHTML = `
+    surface.innerHTML = `
       <div class="plt-editor">
         <div class="plt-editor-head">
-          <input type="text" value="${pltEsc(c.name || '')}" oninput="pltUpd('name',this.value)" placeholder="Tên test case...">
+          <input type="text" value="${pltEsc(c.name || '')}" oninput="pltUpd('name',this.value)" placeholder="Tên mẫu…">
           <div class="plt-editor-actions">
-            <label style="color:var(--text-tertiary);display:flex;align-items:center;gap:8px;cursor:pointer;white-space:nowrap">
-              <input type="checkbox" ${c.strict ? 'checked' : ''} onchange="pltUpd('strict',this.checked)"> Strict
+            <label style="color:var(--text-tertiary);display:flex;align-items:center;gap:8px;cursor:pointer;white-space:nowrap" title="Bật để báo lỗi khi có nhận diện ngoài danh sách kỳ vọng">
+              <input type="checkbox" ${c.strict ? 'checked' : ''} onchange="pltUpd('strict',this.checked)"> Chế độ nghiêm
             </label>
-            <button class="btn btn-accent" onclick="pltRunOne()"><i class="fa-solid fa-play"></i> Chạy</button>
           </div>
         </div>
         <div class="plt-editor-scroll">
@@ -5411,7 +5528,7 @@ async function initEvidenceView() {
           <div class="plt-exp-section">
             <div class="plt-exp-head">
               <div class="plt-exp-head__title">
-                <span>Nhãn kỳ vọng &amp; đối chiếu</span>
+                <span>Nhãn kỳ vọng và đối chiếu</span>
                 ${badge}
               </div>
             </div>
@@ -5422,6 +5539,7 @@ async function initEvidenceView() {
         </div>
       </div>
     `;
+    syncPltRunCluster();
   }
 
   function pltUpd(key, val) {
@@ -5472,19 +5590,19 @@ async function initEvidenceView() {
     renderEditor();
     renderList();
     updateSummary();
-    window.showToast?.(`Đã thêm ${normLabel} vào expected`, 'success');
+    window.showToast?.(`Đã thêm ${normLabel} vào nhãn kỳ vọng`, 'success');
   }
 
   async function pltRunOne() {
     const c = cases.find(x => x.id === activeId);
     if (!c) return;
-    const btn = document.querySelector('.plt-editor-head .btn-accent');
+    const btn = document.getElementById('plt-btn-run-one');
     if (btn) {
       btn.disabled = true;
       btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
     }
     try {
-      const res = await fetch(`${API}/prelabeler-tests/run`, {
+      const res = await fetch(`${API}/prelabeler-cases/run`, {
         method: 'POST',
         headers: authHdr(),
         body: JSON.stringify({ cases: [normalizeCaseForApi(c, 0)] }),
@@ -5504,9 +5622,9 @@ async function initEvidenceView() {
       window.showToast?.('Lỗi server: ' + e.message, 'danger');
     } finally {
       if (btn) {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fa-solid fa-play"></i> Chạy';
+        btn.innerHTML = '<i class="fa-solid fa-play"></i> Đối chiếu';
       }
+      syncPltRunCluster();
     }
     renderEditor();
     renderList();
@@ -5520,7 +5638,7 @@ async function initEvidenceView() {
       btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
     }
     try {
-      const res = await fetch(`${API}/prelabeler-tests/run`, {
+      const res = await fetch(`${API}/prelabeler-cases/run`, {
         method: 'POST',
         headers: authHdr(),
         body: JSON.stringify({ cases: cases.map((c, i) => normalizeCaseForApi(c, i)) }),
@@ -5540,13 +5658,13 @@ async function initEvidenceView() {
         if (rid) results[rid] = rr;
         else if (cases[i]) results[cases[i].id] = rr;
       });
-      window.showToast?.(`Hoàn thành ${data.length} test`, 'success');
+      window.showToast?.(`Đã đối chiếu xong ${data.length} mẫu`, 'success');
     } catch (e) {
       window.showToast?.('Lỗi: ' + e.message, 'danger');
     } finally {
       if (btn) {
         btn.disabled = false;
-        btn.innerHTML = '<i class="fa-solid fa-play"></i> Run All';
+        btn.innerHTML = '<i class="fa-solid fa-forward-fast"></i> Đối chiếu mọi mẫu';
       }
     }
     if (activeId) renderEditor();
@@ -5575,7 +5693,7 @@ async function initEvidenceView() {
       elProg.style.width = pct + '%';
       elProg.style.background = fail > 0 ? 'var(--danger)' : 'var(--success)';
     }
-    if (elPct) elPct.textContent = ran.length ? `${pct}% · ${ran.length} đã chạy` : 'Chưa chạy';
+    if (elPct) elPct.textContent = ran.length ? `${pct}% · đã đối chiếu ${ran.length} mẫu` : 'Chưa đối chiếu';
     if (elFilterPass) elFilterPass.classList.toggle('active', pltResultFilter === 'pass');
     if (elFilterFail) elFilterFail.classList.toggle('active', pltResultFilter === 'fail');
   }
@@ -5584,12 +5702,12 @@ async function initEvidenceView() {
     const blob = new Blob([JSON.stringify(cases, null, 2)], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `prelabeler_testcases_${new Date().getTime()}.json`;
+    a.download = `prelabeler_labeling_cases_${new Date().getTime()}.json`;
     a.click();
   }
 
   async function pltExportLabelStudio() {
-    const raw = window.prompt('Nhập số lượng bản ghi export cho Label Studio:', '500');
+    const raw = window.prompt('Nhập số lượng bản ghi xuất cho Label Studio:', '500');
     if (raw == null) return;
     const limit = Number.parseInt(String(raw).trim(), 10);
     if (!Number.isFinite(limit) || limit <= 0) {
@@ -5600,10 +5718,10 @@ async function initEvidenceView() {
     const btn = document.getElementById('plt-btn-export-ls');
     if (btn) {
       btn.disabled = true;
-      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Exporting...';
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang xuất…';
     }
     try {
-      const res = await fetch(`${API}/prelabeler-tests/export-label-studio`, {
+      const res = await fetch(`${API}/prelabeler-cases/export-label-studio`, {
         method: 'POST',
         headers: authHdr(),
         body: JSON.stringify({ limit }),
@@ -5628,13 +5746,13 @@ async function initEvidenceView() {
         URL.revokeObjectURL(url);
         a.remove();
       }, 1500);
-      window.showToast?.(`Đã export ${limit} mẫu cho Label Studio`, 'success');
+      window.showToast?.(`Đã xuất ${limit} mẫu cho Label Studio`, 'success');
     } catch (e) {
-      window.showToast?.(`Export Label Studio thất bại: ${e.message}`, 'danger');
+      window.showToast?.(`Xuất Label Studio thất bại: ${e.message}`, 'danger');
     } finally {
       if (btn) {
         btn.disabled = false;
-        btn.innerHTML = '<i class="fa-solid fa-file-export"></i> Export Label Studio';
+        btn.innerHTML = '<i class="fa-solid fa-file-export"></i> Xuất Label Studio';
       }
     }
   }
@@ -5649,7 +5767,7 @@ async function initEvidenceView() {
         await pltSave();
         renderList();
         updateSummary();
-        window.showToast?.(`Import ${cases.length} test`, 'success');
+        window.showToast?.(`Đã nhập ${cases.length} mẫu`, 'success');
       } catch (err) {
         window.showToast?.('JSON không hợp lệ', 'danger');
       }
@@ -5698,7 +5816,7 @@ async function initEvidenceView() {
         if (updated) {
           pltSave();
           renderEditor();
-          window.showToast?.('Đã thêm WDS/DST/PRO vào kỳ vọng', 'success');
+          window.showToast?.('Đã thêm WDS/DST/PRO vào nhãn kỳ vọng', 'success');
         }
       } catch (e) {
         console.warn('Auto extract failed', e);
@@ -5729,8 +5847,8 @@ async function initEvidenceView() {
   }
 
   /**
-   * Delegation lên `document`: fragment `#prelabeler-test` được nạp sau `loadPages()`,
-   * nên không được gắn listener trực tiếp khi DOMContentLoaded (race → Run All không chạy).
+   * Delegate on `document`: `#prelabeler-cases` loads after `loadPages()`, so bind at DOMContentLoaded
+   * would race (batch run / toolbar clicks would not fire).
    */
   function pltBindDelegatedEvents() {
     if (pltDelegatedEventsBound) return;

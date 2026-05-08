@@ -42,6 +42,12 @@ from app.services.auth import verify_password, create_access_token, get_password
 from app.services.email_service import send_verification_email
 from app.services.nso_sync import sync_full_nso, sync_province_nso, sync_logs
 from app.services.nso_api import get_nso_provinces, get_nso_districts, get_nso_wards
+from app.services.prelabeler_labeling_service import (
+    first_expected_text,
+    predictions_to_expected,
+    enforce_admin_type_name,
+    validate_expected_against_actual,
+)
 from app.api import schemas
 from app.api.boundary import router as boundary_router
 from app.api.spatial import router as spatial_router
@@ -2958,7 +2964,7 @@ def migrate_address(payload: MigrateAddressRequest, db: Session = Depends(get_db
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-#  PreLabeler Test Suite API
+#  PreLabeler Labeling Suite API
 #  Table: ai.prelabeler_testcases (created via migration below)
 # ══════════════════════════════════════════════════════════════════════════════
 
@@ -3053,8 +3059,8 @@ def _ensure_prelabeler_testcases_table():
 _ensure_prelabeler_testcases_table()
 
 
-class PreLabelerTestCase(BaseModel):
-    # input mới: raw_address string; expected gồm cả admin labels + user labels.
+class PreLabelerLabelingCase(BaseModel):
+    # input moi: raw_address string; expected gom ca admin labels + user labels.
     id: Optional[Any] = None
     name: Optional[Any] = ""
     input: Optional[Any] = None
@@ -3062,8 +3068,8 @@ class PreLabelerTestCase(BaseModel):
     strict: Optional[Any] = False
 
 
-class PreLabelerRunPayload(BaseModel):
-    cases: List[PreLabelerTestCase]
+class PreLabelerLabelingRunPayload(BaseModel):
+    cases: List[PreLabelerLabelingCase]
 
 
 class PreLabelerExportPayload(BaseModel):
@@ -3071,9 +3077,9 @@ class PreLabelerExportPayload(BaseModel):
     config_path: Optional[str] = "app/ai/config.yaml"
 
 
-@api_router.get("/prelabeler-tests", tags=["PreLabeler Test Suite"])
-def list_prelabeler_tests(current_user=Depends(get_current_user)):
-    """Lấy tất cả test case từ database."""
+@api_router.get("/prelabeler-cases", tags=["PreLabeler Labeling Suite"])
+def list_prelabeler_cases(current_user=Depends(get_current_user)):
+    """Lay tat ca labeling cases tu database."""
     try:
         with engine.connect() as conn:
             rows = conn.execute(text(
@@ -3085,10 +3091,10 @@ def list_prelabeler_tests(current_user=Depends(get_current_user)):
         raise HTTPException(500, f"DB error: {e}")
 
 
-@api_router.get("/prelabeler-tests/random-predict", tags=["PreLabeler Test Suite"])
+@api_router.get("/prelabeler-cases/random-predict", tags=["PreLabeler Labeling Suite"])
 def random_prelabeler_predict(current_user=Depends(get_current_user)):
     """
-    Lấy ngẫu nhiên 1 raw_address trong queue chưa tồn tại ở bộ testcase,
+    Lay ngau nhien 1 raw_address trong queue chua ton tai o bo cases,
     sau đó chạy PreLabeler.predict và trả về expected gợi ý.
     """
     from app.ai.export_for_annotation import PreLabeler
@@ -3116,7 +3122,7 @@ def random_prelabeler_predict(current_user=Depends(get_current_user)):
             """)).mappings().first()
 
         if not row:
-            raise HTTPException(status_code=404, detail="Không còn dữ liệu ngẫu nhiên chưa có trong testcases")
+            raise HTTPException(status_code=404, detail="Khong con du lieu ngau nhien chua co trong cases")
 
         raw_address = str(row.get("raw_address") or "").strip()
         ward_name = str(row.get("ward_name") or "").strip() or None
@@ -3129,15 +3135,14 @@ def random_prelabeler_predict(current_user=Depends(get_current_user)):
             district_name=district_name,
             province_name=province_name,
         )
-        expected = [
-            {
-                "label": str(p.get("value", {}).get("labels", [""])[0] or "").strip().upper(),
-                "text": str(p.get("value", {}).get("text") or "").strip(),
-            }
-            for p in predictions
-            if isinstance(p, dict)
-        ]
-        expected = [x for x in expected if x["label"] and x["text"]]
+        expected = predictions_to_expected(predictions)
+        expected = enforce_admin_type_name(
+            expected=expected,
+            raw_address=raw_address,
+            ward_name=ward_name,
+            district_name=district_name,
+            province_name=province_name,
+        )
 
         return {
             "source_id": row.get("id"),
@@ -3155,9 +3160,9 @@ def random_prelabeler_predict(current_user=Depends(get_current_user)):
         raise HTTPException(status_code=500, detail=f"Random predict failed: {e}")
 
 
-@api_router.post("/prelabeler-tests", tags=["PreLabeler Test Suite"])
-def save_prelabeler_tests(cases: List[PreLabelerTestCase], current_user=Depends(get_current_user)):
-    """Upsert toàn bộ danh sách test case (replace all strategy)."""
+@api_router.post("/prelabeler-cases", tags=["PreLabeler Labeling Suite"])
+def save_prelabeler_cases(cases: List[PreLabelerLabelingCase], current_user=Depends(get_current_user)):
+    """Upsert toan bo danh sach labeling cases (replace all strategy)."""
     try:
         with engine.begin() as conn:
             ids = [str(c.id or f"case_{i}") for i, c in enumerate(cases)]
@@ -3228,32 +3233,22 @@ def save_prelabeler_tests(cases: List[PreLabelerTestCase], current_user=Depends(
         raise HTTPException(500, f"DB error: {str(e)}")
 
 
-@api_router.delete("/prelabeler-tests/{test_id}", tags=["PreLabeler Test Suite"])
-def delete_prelabeler_test(test_id: str, current_user=Depends(get_current_user)):
-    """Xóa một test case theo ID."""
+@api_router.delete("/prelabeler-cases/{case_id}", tags=["PreLabeler Labeling Suite"])
+def delete_prelabeler_case(case_id: str, current_user=Depends(get_current_user)):
+    """Xoa mot labeling case theo ID."""
     try:
         with engine.connect() as conn:
-            conn.execute(text("DELETE FROM ai.prelabeler_testcases WHERE id = :id"), {"id": test_id})
+            conn.execute(text("DELETE FROM ai.prelabeler_testcases WHERE id = :id"), {"id": case_id})
             conn.commit()
         return {"ok": True}
     except Exception as e:
         raise HTTPException(500, f"DB error: {e}")
 
 
-@api_router.post("/prelabeler-tests/run", tags=["PreLabeler Test Suite"])
-def run_prelabeler_tests(payload: PreLabelerRunPayload, current_user=Depends(get_current_user)):
-    """Chạy PreLabeler.predict() cho từng test case và so sánh với expected."""
+@api_router.post("/prelabeler-cases/run", tags=["PreLabeler Labeling Suite"])
+def run_prelabeler_cases(payload: PreLabelerLabelingRunPayload, current_user=Depends(get_current_user)):
+    """Chay PreLabeler.predict() cho tung labeling case va so sanh voi expected."""
     from app.ai.export_for_annotation import PreLabeler
-
-    def _first_expected_text(items: List[Dict[str, Any]], label: str) -> Optional[str]:
-        for it in items:
-            if not isinstance(it, dict):
-                continue
-            if str(it.get("label") or "").upper() == label:
-                val = str(it.get("text") or "").strip()
-                if val:
-                    return val
-        return None
 
     results = []
     for idx, case in enumerate(payload.cases):
@@ -3263,9 +3258,9 @@ def run_prelabeler_tests(payload: PreLabelerRunPayload, current_user=Depends(get
         if isinstance(case.input, dict):
             raw_address = str(case.input.get("raw_address") or "")
         raw_address = str(raw_address or "").strip()
-        ward_name = _first_expected_text(expected, "WDS")
-        district_name = _first_expected_text(expected, "DST")
-        province_name = _first_expected_text(expected, "PRO")
+        ward_name = first_expected_text(expected, "WDS")
+        district_name = first_expected_text(expected, "DST")
+        province_name = first_expected_text(expected, "PRO")
 
         try:
             predictions = PreLabeler.predict(
@@ -3286,39 +3281,21 @@ def run_prelabeler_tests(payload: PreLabelerRunPayload, current_user=Depends(get
             for p in predictions
         ]
 
-        details = []
-        all_passed = True
-        for exp in expected:
-            found = any(
-                a["label"] == exp.get("label") and
-                a["text"].strip().lower() == str(exp.get("text", "")).strip().lower()
-                for a in actual
-            )
-            details.append({"expected": exp, "found": found})
-            if not found:
-                all_passed = False
-
-        # Always enforce exact two-way matching:
-        # - expected missing in actual => fail (handled above)
-        # - actual not present in expected => fail (handled here)
-        unexpected = []
-        for act in actual:
-            match = any(
-                e.get("label") == act["label"] and
-                str(e.get("text", "")).strip().lower() == act["text"].strip().lower()
-                for e in expected
-            )
-            if not match:
-                unexpected.append(act)
-                all_passed = False
+        validation = validate_expected_against_actual(
+            raw_address=raw_address,
+            expected=expected,
+            actual=actual,
+        )
 
         results.append({
-            "id": case_id, "passed": all_passed,
+            "id": case_id, "passed": bool(validation.get("passed")),
             "actual": actual, "expected": expected,
-            "details": details, "unexpected": unexpected,
+            "details": validation.get("details", []),
+            "unexpected": validation.get("unexpected", []),
+            "validation_errors": validation.get("validation_errors", []),
         })
 
-    # Persist latest test result and time.
+    # Persist latest run result and time.
     try:
         with engine.begin() as conn:
             for r in results:
@@ -3333,12 +3310,12 @@ def run_prelabeler_tests(payload: PreLabelerRunPayload, current_user=Depends(get
                     "test_result": json.dumps(r, ensure_ascii=False),
                 })
     except Exception as e:
-        logger.warning(f"Failed to persist prelabeler test results: {e}")
+        logger.warning(f"Failed to persist prelabeler run results: {e}")
 
     return results
 
 
-@api_router.post("/prelabeler-tests/export-label-studio", tags=["PreLabeler Test Suite"])
+@api_router.post("/prelabeler-cases/export-label-studio", tags=["PreLabeler Labeling Suite"])
 def export_prelabeler_label_studio(payload: PreLabelerExportPayload, current_user=Depends(get_current_user)):
     """Export dữ liệu prelabel sang JSON/XML cho Label Studio, tương tự script CLI."""
     from app.ai.export_for_annotation import export_data
@@ -3374,7 +3351,7 @@ def export_prelabeler_label_studio(payload: PreLabelerExportPayload, current_use
     return StreamingResponse(buffer, media_type="application/zip", headers=headers)
 
 
-@api_router.get("/prelabeler-tests/export-file", tags=["PreLabeler Test Suite"])
+@api_router.get("/prelabeler-cases/export-file", tags=["PreLabeler Labeling Suite"])
 def download_prelabeler_export_file(name: str, current_user=Depends(get_current_user)):
     """Tải file đã export từ thư mục data."""
     safe_name = Path(str(name or "")).name

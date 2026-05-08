@@ -1,0 +1,82 @@
+<!-- Page: prelabeler-cases — user-facing strings are Vietnamese -->
+<div class="page" id="prelabeler-cases">
+
+  <!-- Header + summary strip -->
+  <div class="page-header plt-page-header-wrap">
+    <div class="plt-header-main">
+      <h2 class="page-title-inner">🏷️ Address Label Studio</h2>
+      <p class="page-subtitle plt-header-sub">Thiết lập nhãn kỳ vọng, đối chiếu với kết quả suy luận và tinh chỉnh dữ liệu địa chỉ</p>
+      
+      <div id="plt-summary" class="plt-summary-band" aria-label="Tổng quan kết quả và thao tác dữ liệu">
+        <div class="plt-summary-metrics">
+          <span class="plt-sum-item"><span id="plt-s-total">0</span> mẫu</span>
+          <span class="plt-sum-item plt-sum-pass" id="plt-filter-pass" role="button" tabindex="0" title="Chỉ hiển thị các mẫu đã đạt">
+            <i class="fa-solid fa-check"></i> <span id="plt-s-pass">0</span>
+          </span>
+          <span class="plt-sum-item plt-sum-fail" id="plt-filter-fail" role="button" tabindex="0" title="Chỉ hiển thị các mẫu chưa đạt">
+            <i class="fa-solid fa-xmark"></i> <span id="plt-s-fail">0</span>
+          </span>
+          <div class="plt-summary-bar" title="Tỷ lệ đạt trong số các mẫu đã đối chiếu">
+            <div id="plt-progress" class="plt-summary-bar-fill"></div>
+          </div>
+          <span id="plt-pct" class="plt-sum-pct">Chưa đối chiếu</span>
+        </div>
+        <div class="plt-summary-actions">
+          <button class="btn btn-outline" id="plt-btn-import" title="Nhập danh sách mẫu từ tệp JSON">
+            <i class="fa-solid fa-upload"></i> Nhập dữ liệu
+          </button>
+          <button class="btn btn-outline" id="plt-btn-export" title="Lưu danh sách mẫu ra tệp JSON">
+            <i class="fa-solid fa-download"></i> Xuất dữ liệu
+          </button>
+          <button class="btn btn-outline" id="plt-btn-export-ls" title="Tải gói ZIP phục vụ chú thích trên Label Studio">
+            <i class="fa-solid fa-file-export"></i> Xuất Label Studio
+          </button>
+          <input type="file" id="plt-file-input" accept=".json" style="display:none">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main layout: list | editor -->
+  <div class="plt-main-layout">
+
+    <!-- Left column: case list -->
+    <div class="card plt-list-card">
+      <div class="plt-list-toolbar">
+        <input id="plt-search" class="form-input plt-search-input" placeholder="🔍 Tìm theo tên hoặc địa chỉ…">
+        <button class="btn btn-primary" id="plt-btn-new">+ Thêm mẫu</button>
+      </div>
+      <div class="plt-list-body" id="plt-list">
+        <div class="empty-state"><i class="fa-solid fa-vial"></i>
+        <p>Chưa có mẫu nào</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right column: run toolbar + editor surface -->
+    <div class="plt-editor-col">
+      <div class="plt-run-cluster card" id="plt-run-cluster" role="toolbar" aria-label="Đối chiếu và xử lý mẫu">
+        <button type="button" class="btn plt-btn-run plt-btn-run-one" id="plt-btn-run-one" onclick="pltRunOne()" disabled title="Đối chiếu mẫu đang chọn với nhãn kỳ vọng">
+          <i class="fa-solid fa-play"></i> Đối chiếu
+        </button>
+        <button type="button" class="btn plt-btn-run plt-btn-run-all" id="plt-btn-run-all" title="Đối chiếu lần lượt mọi mẫu trong danh sách">
+          <i class="fa-solid fa-forward-fast"></i> Đối chiếu tất cả
+        </button>
+        <button type="button" class="btn plt-btn-random" id="plt-btn-random-predict" title="Lấy một địa chỉ ngẫu nhiên từ hàng đợi và điền gợi ý nhãn">
+          <i class="fa-solid fa-shuffle"></i> Lấy mẫu ngẫu nhiên và gợi ý nhãn
+        </button>
+        <label class="plt-overwrite-label" title="Khi bật: cập nhật mẫu đang chọn thay vì tạo mẫu mới">
+          <input type="checkbox" id="plt-random-overwrite-active">
+          Ghi đè mẫu đang chọn
+        </label>
+      </div>
+      <div class="plt-editor-surface card" id="plt-editor-surface">
+        <div class="empty-state plt-editor-empty">
+          <i class="fa-solid fa-flask-vial"></i>
+          <p>Chọn mẫu bên trái hoặc nhấn Thêm mẫu để bắt đầu</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>

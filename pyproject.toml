@@ -12,3 +12,6 @@ requires-python = ">=3.11,<3.14"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["app*"]
+
+[tool.pytest.ini_options]
+norecursedirs = ["publish"]

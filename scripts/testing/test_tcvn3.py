@@ -3,6 +3,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 import pandas as pd
 from io import StringIO
+import pytest
 
 base = os.path.join(os.path.dirname(__file__), '..', 'data', 'seed')
 
@@ -54,33 +55,26 @@ def decode_tcvn3_bytes(raw):
             chars.append('?')
     return ''.join(chars)
 
-# Test province file
-fp = os.path.join(base, 'nso-gov-province_25_04_2026.csv')
-with open(fp, 'rb') as f:
-    raw = f.read()
+def test_tcvn3_seed_files_are_decodable():
+    fp = os.path.join(base, 'nso-gov-province_25_04_2026.csv')
+    fp2 = os.path.join(base, 'nso-gov-ward_25_04_2026.csv')
 
-decoded = decode_tcvn3_bytes(raw)
-print("=== Province file decoded (first 400 chars) ===")
-print(decoded[:400])
+    missing = [p for p in (fp, fp2) if not os.path.exists(p)]
+    if missing:
+        pytest.skip(f"Missing seed file(s): {', '.join(missing)}")
 
-# Parse
-try:
+    with open(fp, 'rb') as f:
+        raw = f.read()
+    decoded = decode_tcvn3_bytes(raw)
+
+    # Guard: province seed should be parsable and not empty
     df = pd.read_csv(StringIO(decoded), on_bad_lines='skip')
-    print(f"\nShape: {df.shape}, Cols: {list(df.columns)}")
-    print("Sample data:")
-    for _, row in df.head(4).iterrows():
-        print(f"  {list(row.values)}")
-except Exception as e:
-    print(f"Parse error: {e}")
-    # Try tab
-    lines = decoded.replace('\r\n', '\n').replace('\r', '\n').split('\n')
-    for l in lines[:5]:
-        print(f"  LINE: {l[:150]}")
+    assert not df.empty, "Decoded province CSV is empty"
+    assert len(df.columns) > 0, "Decoded province CSV has no columns"
 
-# Test ward file
-print("\n=== Ward file decoded (first 500 chars) ===")
-fp2 = os.path.join(base, 'nso-gov-ward_25_04_2026.csv')
-with open(fp2, 'rb') as f:
-    raw2 = f.read()
-decoded2 = decode_tcvn3_bytes(raw2)
-print(decoded2[:500])
+    with open(fp2, 'rb') as f:
+        raw2 = f.read()
+    decoded2 = decode_tcvn3_bytes(raw2)
+
+    # Guard: ward seed content should decode to non-empty text
+    assert decoded2.strip(), "Decoded ward CSV content is empty"

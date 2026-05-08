@@ -1,8 +1,8 @@
 <!-- ══════ PAGE: LABEL REGISTRY ══════ -->
 <div class="page full-height-page" id="label-registry">
     <div class="page-header">
-        <h2><i class="fa-solid fa-tags"></i> Label Registry</h2>
-        <p>Danh sách đầy đủ các nhãn NER được sử dụng trong hệ thống phân tích địa chỉ</p>
+        <h2><i class="fa-solid fa-tags"></i> Danh sách nhãn địa chỉ</h2>
+        <p>Giải thích từng nhãn bằng ngôn ngữ đơn giản để ai cũng có thể gán đúng.</p>
     </div>
 
     <div class="card lr-search-card">
@@ -29,7 +29,7 @@
 
     <div class="card lr-labels-card">
         <div class="card-header lr-card-header">
-            <span class="card-title">Nhãn NER khả dụng</span>
+            <span class="card-title">10 nhãn đang dùng và cách gán</span>
         </div>
 
         <div class="card-body lr-card-body">
@@ -37,8 +37,10 @@
                 <table class="table table-hover">
                     <thead>
                         <tr>
-                            <th width="100">Mã nhãn</th>
-                            <th width="140">Màu</th>
+                            <th width="92">Mã</th>
+                            <th width="180">Ý nghĩa</th>
+                            <th>Khi nào chọn</th>
+                            <th>Khi nào không chọn</th>
                             <th width="100">Phím tắt</th>
                         </tr>
                     </thead>
@@ -50,35 +52,69 @@
         </div>
     </div>
 
-    <div class="card mt-12" style="display: none;">
-        <div class="card-header">
-            <h3><i class="fa-solid fa-info-circle"></i> Hướng dẫn sử dụng</h3>
+    <div class="card lr-guide-card">
+        <div class="card-header lr-card-header">
+            <span class="card-title"><i class="fa-solid fa-graduation-cap"></i> Hướng dẫn nhanh cho người mới</span>
         </div>
-        <div class="card-body">
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
-                <div>
-                    <h4 style="font-size: 14px; font-weight: 600; margin-bottom: 8px;">
-                        <i class="fa-solid fa-wand-magic-sparkles"></i> Trong Parser
-                    </h4>
-                    <ul style="font-size: 13px; line-height: 1.6; color: var(--text-secondary);">
-                        <li>Các nhãn NER được tự động nhận diện và tô màu</li>
-                        <li>Mỗi thực thể được highlight với màu tương ứng</li>
-                        <li>Hover vào thực thể để xem thông tin chi tiết</li>
+        <div class="card-body lr-card-pad">
+            <div class="lr-guide-grid">
+                <div class="lr-guide-block">
+                    <h4><i class="fa-solid fa-route"></i> Mục tiêu</h4>
+                    <p>Tách địa chỉ thành từng phần rõ ràng. Chỉ bôi phần cần gán, không bôi dư dấu câu hoặc khoảng trắng.</p>
+                </div>
+                <div class="lr-guide-block">
+                    <h4><i class="fa-solid fa-list-check"></i> Làm theo 4 bước</h4>
+                    <ol>
+                        <li>Đọc toàn bộ câu địa chỉ một lần.</li>
+                        <li>Tách từ phần nhỏ đến phần lớn: số nhà/hẻm/đường rồi đến phường, quận, tỉnh.</li>
+                        <li>Nếu có thêm tòa nhà, điểm mốc, khu phố hoặc mã Plus Code thì gán thêm.</li>
+                        <li>Kiểm tra lại để chắc không chồng nhãn và không bỏ sót phần quan trọng.</li>
+                    </ol>
+                </div>
+                <div class="lr-guide-block">
+                    <h4><i class="fa-solid fa-ruler"></i> Quy tắc bôi chữ</h4>
+                    <ul>
+                        <li>Mỗi đoạn bôi chỉ gắn <strong>một</strong> nhãn.</li>
+                        <li>Không gán nhãn cho dấu phẩy, dấu chấm, ký tự trang trí.</li>
+                        <li>Ưu tiên bôi cả cụm có nghĩa: <code>Phường 14</code> tốt hơn chỉ bôi <code>14</code>.</li>
+                        <li>Không đoán nếu thiếu thông tin; để trống còn hơn gán sai.</li>
                     </ul>
                 </div>
-                <div>
-                    <h4 style="font-size: 14px; font-weight: 600; margin-bottom: 8px;">
-                        <i class="fa-solid fa-keyboard"></i> Phím tắt
-                    </h4>
-                    <ul style="font-size: 13px; line-height: 1.6; color: var(--text-secondary);">
-                        <li>Sử dụng phím tắt (0-9) trong chế độ labeling</li>
-                        <li>Tăng tốc quá trình gán nhãn thủ công</li>
-                        <li>Kết hợp Label Studio để huấn luyện model</li>
+                <div class="lr-guide-block">
+                    <h4><i class="fa-solid fa-triangle-exclamation"></i> Lỗi phổ biến cần tránh</h4>
+                    <ul>
+                        <li>Nhầm tên đường với khu phố/ấp/thôn.</li>
+                        <li>Nhầm số hẻm với số nhà chính.</li>
+                        <li>Gán nhãn điểm mốc cho các cụm hành chính như quận, phường.</li>
+                        <li>Gộp nhiều thành phần vào một nhãn duy nhất.</li>
                     </ul>
                 </div>
             </div>
-            <div style="margin-top: 16px; padding: 12px; background: var(--accent-light, rgba(59, 130, 246, 0.1)); border-left: 3px solid var(--accent); border-radius: 4px; font-size: 12px; color: var(--text-secondary);">
-                <strong style="color: var(--accent);">Lưu ý:</strong> Danh sách nhãn tải từ API <code>GET /api/config/ner-labels</code> (nguồn <code>app/ai/constants.py</code>). Label Studio export dùng cùng định nghĩa.
+        </div>
+    </div>
+
+    <div class="card mt-12">
+        <div class="card-header">
+            <h3><i class="fa-solid fa-clipboard-check"></i> Trước khi bấm Gửi</h3>
+        </div>
+        <div class="card-body">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px;">
+                <div>
+                    <h4 style="font-size: 14px; font-weight: 600; margin-bottom: 8px;"><i class="fa-solid fa-eye"></i> Kiểm tra độ đúng</h4>
+                    <ul style="font-size: 13px; line-height: 1.6; color: var(--text-secondary);">
+                        <li>Mỗi thành phần chính trong địa chỉ đã có nhãn phù hợp</li>
+                        <li>Không có đoạn bôi chồng lên nhau hoặc đoạn rỗng</li>
+                        <li>Tên đường/hẻm/phường/quận/tỉnh không bị lệch nhãn</li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 style="font-size: 14px; font-weight: 600; margin-bottom: 8px;"><i class="fa-solid fa-keyboard"></i> Tăng tốc thao tác</h4>
+                    <ul style="font-size: 13px; line-height: 1.6; color: var(--text-secondary);">
+                        <li>Dùng phím tắt 0-9 đúng theo cột “Phím tắt” của từng label</li>
+                        <li>Quét từ trái sang phải để hạn chế bỏ sót cụm</li>
+                        <li>Nếu phân vân giữa 2 nhãn, đọc cột “Khi nào không chọn” trước khi quyết định</li>
+                    </ul>
+                </div>
             </div>
         </div>
     </div>
