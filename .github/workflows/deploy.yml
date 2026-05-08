@@ -1,0 +1,213 @@
+name: Deploy To VPS
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        required: true
+        default: "prod"
+        type: choice
+        options:
+          - prod
+          - staging
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+      SERVICE_NAME: ${{ secrets.SERVICE_NAME }}
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Mark deploy start time
+        shell: bash
+        run: echo "DEPLOY_START_TS=$(date +%s)" >> "$GITHUB_ENV"
+
+      - name: Resolve deploy environment
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_ENV: ${{ github.event.inputs.environment }}
+        run: |
+          DEPLOY_ENV="prod"
+          if [ "$EVENT_NAME" = "workflow_dispatch" ] && [ -n "$INPUT_ENV" ]; then
+            DEPLOY_ENV="$INPUT_ENV"
+          fi
+          echo "DEPLOY_ENV=$DEPLOY_ENV" >> "$GITHUB_ENV"
+
+      - name: Validate required secrets
+        shell: bash
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          SERVICE_NAME: ${{ secrets.SERVICE_NAME }}
+        run: |
+          missing=0
+          for key in VPS_HOST VPS_USER VPS_SSH_KEY DEPLOY_PATH SERVICE_NAME; do
+            if [ -z "${!key}" ]; then
+              echo "::error::Missing required secret: $key"
+              missing=1
+            fi
+          done
+          if [ "$missing" -ne 0 ]; then
+            exit 1
+          fi
+
+      - name: Build release tarball
+        shell: bash
+        run: |
+          tar \
+            --exclude-vcs \
+            --exclude=".venv" \
+            --exclude="publish" \
+            --exclude="__pycache__" \
+            --exclude="*.pyc" \
+            --exclude="*.pyo" \
+            --exclude="*.log" \
+            -czf release.tar.gz .
+
+      - name: Upload release package
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || '22' }}
+          source: "release.tar.gz"
+          target: "/tmp/vnai-deploy/"
+
+      - name: Deploy and restart service
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || '22' }}
+          script_stop: true
+          envs: DEPLOY_PATH,SERVICE_NAME
+          script: |
+            set -euo pipefail
+
+            RELEASE_DIR="$DEPLOY_PATH/releases/$(date +%Y%m%d%H%M%S)"
+            mkdir -p "$RELEASE_DIR"
+            mkdir -p "$DEPLOY_PATH/releases"
+
+            tar -xzf /tmp/vnai-deploy/release.tar.gz -C "$RELEASE_DIR"
+
+            cd "$RELEASE_DIR"
+            python3 -m venv .venv
+            . .venv/bin/activate
+            pip install --upgrade pip
+            pip install -r requirements.txt
+
+            ln -sfn "$RELEASE_DIR" "$DEPLOY_PATH/current"
+
+            sudo systemctl daemon-reload
+            sudo systemctl restart "$SERVICE_NAME"
+            sudo systemctl is-active --quiet "$SERVICE_NAME"
+
+            rm -f /tmp/vnai-deploy/release.tar.gz
+
+      - name: Notify Slack
+        if: always() && secrets.SLACK_WEBHOOK_URL != ''
+        shell: bash
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+        run: |
+          NOW_TS=$(date +%s)
+          START_TS="${DEPLOY_START_TS:-$NOW_TS}"
+          DURATION_SEC=$((NOW_TS - START_TS))
+          DURATION_MIN=$((DURATION_SEC / 60))
+          DURATION_REM=$((DURATION_SEC % 60))
+          DURATION_FMT="${DURATION_MIN}m ${DURATION_REM}s"
+
+          if [ "$DEPLOY_ENV" = "prod" ]; then
+            ENV_ICON=":rocket:"
+          else
+            ENV_ICON=":test_tube:"
+          fi
+
+          if [ "${{ job.status }}" = "success" ]; then
+            ICON="$ENV_ICON"
+            STATUS_TEXT="SUCCESS"
+            COLOR="#2EB67D"
+          else
+            ICON=":rotating_light:"
+            STATUS_TEXT="FAILED"
+            COLOR="#E01E5A"
+          fi
+
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          SHORT_SHA="${GITHUB_SHA::7}"
+          TITLE="$ICON Deploy $STATUS_TEXT (${DEPLOY_ENV^^})"
+
+          payload=$(cat <<EOF
+          {
+            "text": "$TITLE - ${{ github.repository }}",
+            "attachments": [
+              {
+                "color": "$COLOR",
+                "blocks": [
+                  {
+                    "type": "header",
+                    "text": {
+                      "type": "plain_text",
+                      "text": "$TITLE"
+                    }
+                  },
+                  {
+                    "type": "section",
+                    "fields": [
+                      { "type": "mrkdwn", "text": "*Repository:*\\n${{ github.repository }}" },
+                      { "type": "mrkdwn", "text": "*Branch:*\\n${{ github.ref_name }}" },
+                      { "type": "mrkdwn", "text": "*Environment:*\\n${DEPLOY_ENV^^}" },
+                      { "type": "mrkdwn", "text": "*Status:*\\n$STATUS_TEXT" },
+                      { "type": "mrkdwn", "text": "*Server:*\\n$VPS_HOST" },
+                      { "type": "mrkdwn", "text": "*Service:*\\n$SERVICE_NAME" },
+                      { "type": "mrkdwn", "text": "*Commit SHA:*\\n\`$SHORT_SHA\`" },
+                      { "type": "mrkdwn", "text": "*Duration:*\\n$DURATION_FMT" }
+                    ]
+                  },
+                  {
+                    "type": "context",
+                    "elements": [
+                      { "type": "mrkdwn", "text": "*Actor:* ${{ github.actor }}" }
+                    ]
+                  },
+                  {
+                    "type": "actions",
+                    "elements": [
+                      {
+                        "type": "button",
+                        "text": { "type": "plain_text", "text": "View Workflow Run" },
+                        "url": "$RUN_URL"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+          EOF
+          )
+
+          curl -sS -X POST \
+            -H "Content-type: application/json" \
+            --data "$payload" \
+            "$SLACK_WEBHOOK_URL"

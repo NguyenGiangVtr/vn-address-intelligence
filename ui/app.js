@@ -4750,10 +4750,24 @@ async function initEvidenceView() {
       .replace(/"/g, '&quot;');
   }
 
-  function firstExpectedTextForLabel(expected, label) {
+  function expectedTextsForLabel(expected, label) {
     const lab = String(label || '').toUpperCase();
-    const hit = (expected || []).find(e => e && String(e.label || '').toUpperCase() === lab);
-    return hit ? String(hit.text || '') : '';
+    const out = [];
+    const seen = new Set();
+    for (const it of expected || []) {
+      if (!it || String(it.label || '').toUpperCase() !== lab) continue;
+      const txt = String(it.text || '').trim();
+      if (!txt) continue;
+      const key = txt.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(txt);
+    }
+    return out;
+  }
+
+  function firstExpectedTextForLabel(expected, label) {
+    return expectedTextsForLabel(expected, label)[0] || '';
   }
 
   function setExpectedForLabel(label, text) {
@@ -4766,6 +4780,46 @@ async function initEvidenceView() {
     pltSave();
   }
 
+  function addExpectedForLabel(label, text) {
+    const c = cases.find(x => x.id === activeId);
+    if (!c) return false;
+    const lab = String(label || '').toUpperCase();
+    const t = String(text || '').trim();
+    if (!lab || !t) return false;
+    c.expected = Array.isArray(c.expected) ? c.expected : [];
+    const exists = c.expected.some(
+      e =>
+        String(e?.label || '').toUpperCase() === lab &&
+        String(e?.text || '').trim().toLowerCase() === t.toLowerCase()
+    );
+    if (exists) return false;
+    c.expected.push({ label: lab, text: t });
+    pltSave();
+    renderEditor();
+    updateSummary();
+    return true;
+  }
+
+  function removeExpectedForLabel(label, text) {
+    const c = cases.find(x => x.id === activeId);
+    if (!c) return false;
+    const lab = String(label || '').toUpperCase();
+    const t = String(text || '').trim().toLowerCase();
+    const before = Array.isArray(c.expected) ? c.expected.length : 0;
+    c.expected = (c.expected || []).filter(
+      e =>
+        !(
+          String(e?.label || '').toUpperCase() === lab &&
+          String(e?.text || '').trim().toLowerCase() === t
+        )
+    );
+    if (c.expected.length === before) return false;
+    pltSave();
+    renderEditor();
+    updateSummary();
+    return true;
+  }
+
   function renderMergedLabelGrid(c, result) {
     const expected = c.expected;
     if (!nerLabelsOrdered.length) {
@@ -4773,7 +4827,7 @@ async function initEvidenceView() {
     }
     const r = result && !result.error ? result : null;
     return nerLabelsOrdered.map(({ value, hotkey }) => {
-      const val = pltEsc(firstExpectedTextForLabel(expected, value));
+      const expTexts = expectedTextsForLabel(expected, value);
       const hk = pltEsc(hotkey);
       const vEsc = pltEsc(value);
       const vJs = JSON.stringify(value);
@@ -4782,30 +4836,51 @@ async function initEvidenceView() {
       let failTagHtml = '';
 
       if (r) {
-        const expTextRaw = firstExpectedTextForLabel(c.expected, value);
-        const d = detailFor(r, value, expTextRaw);
-
-        if (String(expTextRaw || '').trim()) {
-          const ok = d && d.found;
+        if (expTexts.length) {
+          const missing = expTexts.filter(expText => {
+            const d = detailFor(r, value, expText);
+            return !(d && d.found);
+          });
+          const ok = missing.length === 0;
           if (ok) {
             cellClass += ' plt-label-cell--pass';
           } else {
             cellClass += ' plt-label-cell--fail';
-            const actDisplay = formatPltActualForFail(r, value);
+            const actDisplay = formatPltActualForFail(r, value, missing);
             failTagHtml = `<div class="plt-label-cell__fail-tag" role="status">${actDisplay}</div>`;
           }
         }
       }
+
+      const chipsHtml = expTexts.length
+        ? `<div class="plt-label-cell__chips">
+            ${expTexts
+              .map(
+                txt =>
+                  `<span class="plt-label-chip">
+                    <span class="plt-label-chip__text">${pltEsc(txt)}</span>
+                    <button type="button" class="plt-label-chip__remove"
+                      title="Xóa giá trị này"
+                      onclick='pltRemoveExpectedLabel(${vJs}, ${JSON.stringify(txt)})'>&times;</button>
+                  </span>`
+              )
+              .join('')}
+          </div>`
+        : '';
 
       return `
         <div class="${cellClass}" data-label="${vEsc}">
           <span class="plt-label-cell__hk" title="Hotkey ${hk}">${hk}</span>
           <span class="plt-badge lc-${value}">${vEsc}</span>
           <div class="plt-label-cell__main">
+            ${chipsHtml}
             <div class="plt-label-cell__input-row">
               <input class="form-input plt-label-cell__input" type="text"
-                value="${val}" placeholder="—"
-                oninput='pltSetExpectedLabel(${vJs}, this.value)'>
+                value="" placeholder="Nhập thêm giá trị..."
+                onkeydown='return pltAddExpectedLabelOnKey(event, ${vJs}, this)'>
+              <button type="button" class="btn btn-outline plt-label-cell__add-btn"
+                title="Thêm giá trị"
+                onclick='pltAddExpectedLabel(${vJs}, this.previousElementSibling.value); this.previousElementSibling.value=""'>+</button>
               <span class="plt-label-cell__tick" aria-label="Khớp kỳ vọng"><i class="fa-solid fa-check"></i></span>
             </div>
             ${failTagHtml}
@@ -4946,16 +5021,20 @@ async function initEvidenceView() {
   /**
    * Nội dung thẻ fail: nêu rõ kỳ vọng LỆCH với những gì model trả (hoặc không trả nhãn này).
    */
-  function formatPltActualForFail(r, label) {
+  function formatPltActualForFail(r, label, missingExpected = []) {
     const spans = actualSpansForLabel(r, label);
     const texts = spans
       .map(x => String(x.text || '').trim())
       .filter(t => t.length > 0);
 
     if (!texts.length) {
+      const missingPrefix =
+        missingExpected.length > 0
+          ? `Thiếu: ${missingExpected.map(x => pltEsc(x)).join(' · ')}. `
+          : '';
       return `Không có thực thể nhãn ${pltEsc(
         String(label || '').toUpperCase()
-      )} trong kết quả PreLabeler.`;
+      )} trong kết quả PreLabeler. ${missingPrefix}`.trim();
     }
 
     const seen = new Set();
@@ -4967,7 +5046,29 @@ async function initEvidenceView() {
       uniq.push(t);
     }
     const actualJoined = uniq.map(t => pltEsc(t)).join(' · ');
-    return `Thực tế: ${actualJoined}`;
+    const missingPrefix =
+      missingExpected.length > 0
+        ? `Thiếu: ${missingExpected.map(x => pltEsc(x)).join(' · ')} | `
+        : '';
+    return `${missingPrefix}Thực tế: ${actualJoined}`;
+  }
+
+  function pltAddExpectedLabel(label, rawText) {
+    addExpectedForLabel(label, rawText);
+  }
+
+  function pltRemoveExpectedLabel(label, text) {
+    removeExpectedForLabel(label, text);
+  }
+
+  function pltAddExpectedLabelOnKey(e, label, el) {
+    if (!e || e.key !== 'Enter') return true;
+    e.preventDefault();
+    const txt = el && el.value != null ? String(el.value) : '';
+    if (addExpectedForLabel(label, txt) && el) {
+      el.value = '';
+    }
+    return false;
   }
 
   function renderRunAuxiliary(r) {
@@ -5708,6 +5809,9 @@ async function initEvidenceView() {
   window.pltUpd = pltUpd;
   window.pltUpdInput = pltUpdInput;
   window.pltSetExpectedLabel = (label, text) => setExpectedForLabel(label, text);
+  window.pltAddExpectedLabel = pltAddExpectedLabel;
+  window.pltRemoveExpectedLabel = pltRemoveExpectedLabel;
+  window.pltAddExpectedLabelOnKey = pltAddExpectedLabelOnKey;
   window.pltRunOne = pltRunOne;
   window.pltNew = pltNew;
   window.pltRunAll = pltRunAll;

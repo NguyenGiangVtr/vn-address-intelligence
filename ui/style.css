@@ -5582,7 +5582,7 @@ body.no-scroll {
 }
 
 #prelabeler-test .plt-search-input {
-  flex: 1 1 240px;
+  flex: 1 1;
   min-width: 200px;
 }
 
@@ -5668,6 +5668,46 @@ body.no-scroll {
   min-width: 0;
 }
 
+#prelabeler-test .plt-label-cell__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+#prelabeler-test .plt-label-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 2px 6px;
+  border: 1px solid var(--border-default);
+  border-radius: 999px;
+  background: var(--bg-tertiary);
+}
+
+#prelabeler-test .plt-label-chip__text {
+  font-size: 12px;
+  line-height: 1.2;
+  word-break: break-word;
+}
+
+#prelabeler-test .plt-label-chip__remove {
+  border: 0;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  line-height: 1;
+  padding: 0;
+}
+
+#prelabeler-test .plt-label-chip__remove:hover {
+  color: var(--danger);
+  background: rgba(248, 113, 113, 0.14);
+}
+
 #prelabeler-test .plt-label-cell__input-row {
   display: flex;
   align-items: center;
@@ -5723,6 +5763,14 @@ body.no-scroll {
   height: 34px;
   font-family: ui-monospace, 'JetBrains Mono', monospace;
   font-size: 13px;
+}
+
+#prelabeler-test .plt-label-cell__add-btn {
+  min-width: 30px;
+  height: 30px;
+  padding: 0;
+  font-weight: 700;
+  line-height: 1;
 }
 
 /* Legacy result-only cell (no longer used); kept harmless if referenced */

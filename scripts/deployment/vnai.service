@@ -1,0 +1,24 @@
+[Unit]
+Description=VN Address Intelligence API Service
+After=network.target
+
+[Service]
+Type=simple
+User=vnai
+Group=vnai
+WorkingDirectory=/opt/vnai/current
+EnvironmentFile=/opt/vnai/shared/.env
+ExecStart=/opt/vnai/current/.venv/bin/python -m app.api.server
+Restart=always
+RestartSec=5
+TimeoutStartSec=60
+TimeoutStopSec=30
+
+# Basic hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target
