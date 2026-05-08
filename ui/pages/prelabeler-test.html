@@ -47,6 +47,13 @@
       <div class="plt-list-toolbar">
         <input id="plt-search" class="form-input plt-search-input" placeholder="🔍 Tìm kiếm...">
         <button class="btn btn-primary" id="plt-btn-new">+ Thêm</button>
+        <button class="btn btn-accent" id="plt-btn-random-predict" title="Lấy mẫu ngẫu nhiên và điền label bằng PreLabeler.predict">
+          <i class="fa-solid fa-shuffle"></i> Get random &amp; predict
+        </button>
+        <label title="Bật để ghi đè testcase đang chọn" style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-tertiary);white-space:nowrap;cursor:pointer;">
+          <input type="checkbox" id="plt-random-overwrite-active">
+          Overwrite selected
+        </label>
       </div>
       <div class="plt-list-body" id="plt-list">
         <div class="empty-state"><i class="fa-solid fa-vial"></i>

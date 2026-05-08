@@ -3085,6 +3085,76 @@ def list_prelabeler_tests(current_user=Depends(get_current_user)):
         raise HTTPException(500, f"DB error: {e}")
 
 
+@api_router.get("/prelabeler-tests/random-predict", tags=["PreLabeler Test Suite"])
+def random_prelabeler_predict(current_user=Depends(get_current_user)):
+    """
+    Lấy ngẫu nhiên 1 raw_address trong queue chưa tồn tại ở bộ testcase,
+    sau đó chạy PreLabeler.predict và trả về expected gợi ý.
+    """
+    from app.ai.export_for_annotation import PreLabeler
+
+    try:
+        with engine.connect() as conn:
+            row = conn.execute(text("""
+                SELECT
+                    q.id,
+                    q.raw_address,
+                    q.ward_name,
+                    q.district_name,
+                    q.province_name
+                FROM prq.address_cleansing_queue q
+                WHERE q.raw_address IS NOT NULL
+                  AND LENGTH(BTRIM(q.raw_address)) > 0
+                  AND NOT EXISTS (
+                      SELECT 1
+                      FROM ai.prelabeler_testcases t
+                      WHERE LOWER(BTRIM(COALESCE(t.input::text, ''), '"'))
+                            = LOWER(BTRIM(q.raw_address))
+                  )
+                ORDER BY RANDOM()
+                LIMIT 1
+            """)).mappings().first()
+
+        if not row:
+            raise HTTPException(status_code=404, detail="Không còn dữ liệu ngẫu nhiên chưa có trong testcases")
+
+        raw_address = str(row.get("raw_address") or "").strip()
+        ward_name = str(row.get("ward_name") or "").strip() or None
+        district_name = str(row.get("district_name") or "").strip() or None
+        province_name = str(row.get("province_name") or "").strip() or None
+
+        predictions = PreLabeler.predict(
+            raw_address=raw_address,
+            ward_name=ward_name,
+            district_name=district_name,
+            province_name=province_name,
+        )
+        expected = [
+            {
+                "label": str(p.get("value", {}).get("labels", [""])[0] or "").strip().upper(),
+                "text": str(p.get("value", {}).get("text") or "").strip(),
+            }
+            for p in predictions
+            if isinstance(p, dict)
+        ]
+        expected = [x for x in expected if x["label"] and x["text"]]
+
+        return {
+            "source_id": row.get("id"),
+            "raw_address": raw_address,
+            "expected": expected,
+            "meta": {
+                "ward_name": ward_name,
+                "district_name": district_name,
+                "province_name": province_name,
+            },
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Random predict failed: {e}")
+
+
 @api_router.post("/prelabeler-tests", tags=["PreLabeler Test Suite"])
 def save_prelabeler_tests(cases: List[PreLabelerTestCase], current_user=Depends(get_current_user)):
     """Upsert toàn bộ danh sách test case (replace all strategy)."""

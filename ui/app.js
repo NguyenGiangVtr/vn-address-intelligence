@@ -4814,6 +4814,99 @@ async function initEvidenceView() {
     }).join('');
   }
 
+  function labelColorForPreview(label) {
+    const lab = String(label || '').trim().toUpperCase();
+    const map = {
+      PCD: '#f032e6',
+      NUM: '#e6194b',
+      STR: '#3cb44b',
+      WDS: '#ffe119',
+      DST: '#800000',
+      PRO: '#38bdf8',
+      NHB: '#469990',
+      BLD: '#f58231',
+      POI: '#911eb4',
+      ALY: '#4363d8',
+    };
+    return map[lab] || '#64748b';
+  }
+
+  function hexToRgba(hex, alpha) {
+    const clean = String(hex || '').replace('#', '');
+    const normalized = clean.length === 3
+      ? clean.split('').map(ch => ch + ch).join('')
+      : clean;
+    if (!/^[0-9a-fA-F]{6}$/.test(normalized)) return `rgba(100,116,139,${alpha})`;
+    const r = parseInt(normalized.slice(0, 2), 16);
+    const g = parseInt(normalized.slice(2, 4), 16);
+    const b = parseInt(normalized.slice(4, 6), 16);
+    return `rgba(${r},${g},${b},${alpha})`;
+  }
+
+  function renderAnnotatedRawText(c) {
+    const raw = String(c?.input || '');
+    if (!raw.trim()) {
+      return '<div class="plt-raw-annotated plt-raw-annotated--empty">Chưa có raw address.</div>';
+    }
+
+    const entities = normalizeExpectedItems(c?.expected)
+      .sort((a, b) => b.text.length - a.text.length);
+    if (!entities.length) {
+      return `<div class="plt-raw-annotated">${pltEsc(raw)}</div>`;
+    }
+
+    const rawLower = raw.toLowerCase();
+    const intervals = [];
+    const hits = [];
+    const overlap = (s1, e1, s2, e2) => s1 < e2 && s2 < e1;
+    const isFreeRange = (s, e) => !intervals.some(iv => overlap(s, e, iv.start, iv.end));
+
+    entities.forEach(ent => {
+      const needle = String(ent.text || '').trim();
+      const label = String(ent.label || '').trim().toUpperCase();
+      if (!needle || !label) return;
+      const needleLower = needle.toLowerCase();
+      let from = 0;
+      while (from < raw.length) {
+        const start = rawLower.indexOf(needleLower, from);
+        if (start < 0) break;
+        const end = start + needle.length;
+        if (isFreeRange(start, end)) {
+          intervals.push({ start, end });
+          hits.push({
+            start,
+            end,
+            label,
+            color: labelColorForPreview(label),
+          });
+        }
+        from = start + needle.length;
+      }
+    });
+
+    if (!hits.length) {
+      return `<div class="plt-raw-annotated">${pltEsc(raw)}</div>`;
+    }
+
+    hits.sort((a, b) => a.start - b.start || b.end - a.end);
+    let html = '';
+    let cursor = 0;
+    hits.forEach(hit => {
+      if (cursor < hit.start) html += pltEsc(raw.slice(cursor, hit.start));
+      const text = raw.slice(hit.start, hit.end);
+      const color = hit.color;
+      const bg = hexToRgba(color, 0.20);
+      html += `<span class="plt-raw-ann" style="border-color:${color};background:${bg}">
+        <span class="plt-badge lc-${pltEsc(hit.label)}">${pltEsc(hit.label)}</span>
+        <span class="plt-raw-ann__text">${pltEsc(text)}</span>
+      </span>`;
+      cursor = hit.end;
+    });
+    if (cursor < raw.length) html += pltEsc(raw.slice(cursor));
+
+    return `<div class="plt-raw-annotated">${html}</div>`;
+  }
+
   function detailFor(r, label, expText) {
     const details = r.details || [];
     const lab = String(label || '').toUpperCase();
@@ -5029,6 +5122,93 @@ async function initEvidenceView() {
     pltSave();
   }
 
+  function normalizeExpectedItems(items) {
+    const src = Array.isArray(items) ? items : [];
+    const out = [];
+    const seen = new Set();
+    src.forEach(it => {
+      if (!it || typeof it !== 'object') return;
+      const label = String(it.label || '').trim().toUpperCase();
+      const text = String(it.text || '').trim();
+      if (!label || !text) return;
+      const key = `${label}::${text.toLowerCase()}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      out.push({ label, text });
+    });
+    return out;
+  }
+
+  async function pltGetRandomAndPredict() {
+    const btn = document.getElementById('plt-btn-random-predict');
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Loading...';
+    }
+
+    try {
+      const res = await fetch(`${API}/prelabeler-tests/random-predict`, {
+        headers: authHdr(),
+      });
+      if (res.status === 401) {
+        window.showToast?.('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.', 'warning');
+        return;
+      }
+      if (res.status === 404) {
+        window.showToast?.('Không còn bản ghi mới trong queue để tạo testcase.', 'info');
+        return;
+      }
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+      const data = await res.json();
+      const rawAddress = String(data?.raw_address || '').trim();
+      const expected = normalizeExpectedItems(data?.expected);
+      if (!rawAddress) {
+        window.showToast?.('API không trả về raw_address hợp lệ.', 'warning');
+        return;
+      }
+
+      const sourceId = data?.source_id != null ? String(data.source_id) : '';
+      const overwriteSelected = Boolean(document.getElementById('plt-random-overwrite-active')?.checked);
+      const selectedCase = overwriteSelected ? cases.find(x => x.id === activeId) : null;
+      if (selectedCase) {
+        selectedCase.input = rawAddress;
+        selectedCase.expected = expected;
+        if (!selectedCase.name || String(selectedCase.name).trim().length === 0) {
+          selectedCase.name = sourceId ? `Random #${sourceId}` : 'Random testcase';
+        }
+        pltClearResults([selectedCase.id]);
+        pltSelect(selectedCase.id);
+      } else {
+        const c = {
+          id: uid(),
+          name: sourceId ? `Random #${sourceId}` : 'Random testcase',
+          input: rawAddress,
+          expected,
+          strict: false,
+          created_at: new Date().toISOString(),
+        };
+        cases.push(c);
+        pltSelect(c.id);
+      }
+      pltSave();
+      renderList();
+      renderEditor();
+      updateSummary();
+      window.showToast?.(
+        `${selectedCase ? 'Đã ghi đè testcase đang chọn' : 'Đã tạo testcase nhanh'}${sourceId ? ` (#${sourceId})` : ''}`,
+        'success'
+      );
+    } catch (e) {
+      window.showToast?.(`Lỗi random & predict: ${e.message}`, 'danger');
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-shuffle"></i> Get random & predict';
+      }
+    }
+  }
+
   function pltDup(id) {
     const src = cases.find(c => c.id === id);
     if (!src) return;
@@ -5122,6 +5302,7 @@ async function initEvidenceView() {
               </div>
             </div>
             ${hkHint ? `<p class="plt-hotkey-hint">${pltEsc(hkHint)}</p>` : ''}
+            ${renderAnnotatedRawText(c)}
             <div class="plt-label-grid" id="plt-exp-list">${renderMergedLabelGrid(c, result)}</div>
             ${!result ? `<div class="plt-run-prompt"><i class="fa-solid fa-circle-info"></i> Chạy test để xem tick xanh (khớp) hoặc kết quả thực tế (lệch) theo từng nhãn.</div>` : ''}
             ${renderRunAuxiliary(result)}
@@ -5453,6 +5634,11 @@ async function initEvidenceView() {
           pltNew();
           return;
         }
+        if (t.closest('#plt-btn-random-predict')) {
+          e.preventDefault();
+          void pltGetRandomAndPredict();
+          return;
+        }
         if (t.closest('#plt-btn-run-all')) {
           e.preventDefault();
           void pltRunAll();
@@ -5527,6 +5713,7 @@ async function initEvidenceView() {
   window.pltRunAll = pltRunAll;
   window.pltExport = pltExport;
   window.pltAutoExtract = pltAutoExtract;
+  window.pltGetRandomAndPredict = pltGetRandomAndPredict;
   window.pltInitPage = () => pltInit();
 
   pltBindDelegatedEvents();
