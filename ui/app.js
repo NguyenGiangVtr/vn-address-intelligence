@@ -1454,6 +1454,8 @@ async function runOSMJobFromUI() {
 }
 
 let osmState = {};
+/** Lần onSearch đầu từ loadProvinces() khi init smart filter — không toast (trùng lúc load app). */
+let osmSkipNextSearchToast = false;
 async function initOSMEnrichmentUI() {
   const runButton = document.getElementById("btn-osm-run");
   const previewButton = document.getElementById("btn-osm-preview-counts");
@@ -1470,8 +1472,13 @@ async function initOSMEnrichmentUI() {
     searchPlaceholder: 'Tìm nhanh Tỉnh/Thành...'
   });
 
+  osmSkipNextSearchToast = true;
   osmState = await VNAIControls.initSmartFilter('osm', {
-    onSearch: () => refreshOSMEnrichmentPanel({ silent: false })
+    onSearch: () => {
+      const silent = osmSkipNextSearchToast;
+      osmSkipNextSearchToast = false;
+      return refreshOSMEnrichmentPanel({ silent });
+    }
   });
 
   if (runButton) {
@@ -1501,7 +1508,8 @@ async function initOSMEnrichmentUI() {
     console.warn("Unable to pre-check OSM job status", error);
   });
 
-  refreshOSMEnrichmentPanel({ silent: true });
+  await refreshOSMEnrichmentPanel({ silent: true });
+  osmSkipNextSearchToast = false;
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1945,6 +1953,13 @@ function _updateParserModelStatusBar(status) {
 }
 
 async function _pollParserModelStatus() {
+  // Only poll if we are on the parser page
+  const parserPage = document.getElementById("parser");
+  if (!parserPage || !parserPage.classList.contains("active")) {
+    _parserStatusPollTimer = null;
+    return;
+  }
+
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
@@ -2067,9 +2082,6 @@ function setupParserTool() {
 
   // Build NER legend once
   _buildParserNERLegend();
-
-  // Poll model status on page open
-  _pollParserModelStatus();
 
   // Setup enhanced footer functionality
   _setupParserFooterActions();
@@ -5056,24 +5068,24 @@ async function initEvidenceView() {
             <button class="btn btn-accent" onclick="pltRunOne()"><i class="fa-solid fa-play"></i> Chạy</button>
           </div>
         </div>
-        <div class="plt-field-grid">
-          <div class="plt-field plt-field-full"><label>Raw address *</label>
+        <div class="plt-editor-scroll">
+          <div class="plt-field plt-field-full plt-raw-pin"><label>Raw address *</label>
             <textarea class="form-input plt-raw-address-input" id="plt-raw-address"
               oninput="pltUpdInput(this.value)" onpaste="pltAutoExtract(event)"
               placeholder="Địa chỉ đầy đủ...">${pltEsc(c.input || '')}</textarea>
           </div>
-        </div>
-        <div class="plt-exp-section">
-          <div class="plt-exp-head">
-            <div class="plt-exp-head__title">
-              <span>Nhãn kỳ vọng &amp; đối chiếu</span>
-              ${badge}
+          <div class="plt-exp-section">
+            <div class="plt-exp-head">
+              <div class="plt-exp-head__title">
+                <span>Nhãn kỳ vọng &amp; đối chiếu</span>
+                ${badge}
+              </div>
             </div>
+            ${hkHint ? `<p class="plt-hotkey-hint">${pltEsc(hkHint)}</p>` : ''}
+            <div class="plt-label-grid" id="plt-exp-list">${renderMergedLabelGrid(c, result)}</div>
+            ${!result ? `<div class="plt-run-prompt"><i class="fa-solid fa-circle-info"></i> Chạy test để xem tick xanh (khớp) hoặc kết quả thực tế (lệch) theo từng nhãn.</div>` : ''}
+            ${renderRunAuxiliary(result)}
           </div>
-          ${hkHint ? `<p class="plt-hotkey-hint">${pltEsc(hkHint)}</p>` : ''}
-          <div class="plt-label-grid" id="plt-exp-list">${renderMergedLabelGrid(c, result)}</div>
-          ${!result ? `<div class="plt-run-prompt"><i class="fa-solid fa-circle-info"></i> Chạy test để xem tick xanh (khớp) hoặc kết quả thực tế (lệch) theo từng nhãn.</div>` : ''}
-          ${renderRunAuxiliary(result)}
         </div>
       </div>
     `;

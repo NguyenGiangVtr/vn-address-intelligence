@@ -2838,6 +2838,13 @@ select.form-input {
   cursor: pointer;
   padding: 4px;
   border-radius: 4px;
+  border: none;
+  background: transparent;
+  flex-shrink: 0;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .toast-close:hover {
@@ -5434,6 +5441,11 @@ body.no-scroll {
    ══════════════════════════════════════════════════════════════ */
 
 /* ── PreLabeler Test Suite (#prelabeler-test): header + label grid (hotkey order = GET /api/config/ner-labels / constants.py) ── */
+/* Flex: min-height 0 để .page.active (overflow-y:auto) cuộn đúng trong #page-content — tránh trang “đứng hình” */
+#prelabeler-test.page.active {
+  min-height: 0;
+}
+
 #prelabeler-test > .page-header {
   flex-wrap: wrap;
   align-items: flex-start;
@@ -5951,9 +5963,15 @@ body.no-scroll {
   font-size: 13px;
 }
 
-#prelabeler-test .plt-field-grid {
+#prelabeler-test .plt-editor-scroll {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+#prelabeler-test .plt-editor-scroll > .plt-raw-pin {
+  flex-shrink: 0;
   padding: 12px 16px;
-  gap: 12px;
 }
 
 #prelabeler-test .plt-editor-head {
@@ -6186,6 +6204,11 @@ body.no-scroll {
 }
 
 @media (max-width: 992px) {
+  /* Cho phép sticky raw address; overflow:hidden trên .plt-editor sẽ làm hỏng position:sticky trên một số engine */
+  #prelabeler-test .plt-editor {
+    overflow: visible;
+  }
+
   .plt-main-layout {
     grid-template-columns: 1fr;
     display: flex;
@@ -6209,6 +6232,33 @@ body.no-scroll {
   }
   .plt-editor-head {
     padding: 14px 16px;
+  }
+
+  /* Pin khối raw address… selector con > cụ thể đè padding mặc định của .plt-editor-scroll > .plt-raw-pin */
+  #prelabeler-test .plt-editor-scroll > .plt-raw-pin {
+    position: -webkit-sticky;
+    position: sticky;
+    top: 0;
+    z-index: 35;
+    margin: 0 0 10px;
+    padding: 10px 16px 12px;
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border-subtle);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+  }
+
+  [data-theme='light'] #prelabeler-test .plt-editor-scroll > .plt-raw-pin {
+    box-shadow: 0 6px 20px rgba(15, 23, 42, 0.1);
+  }
+
+  #prelabeler-test .plt-editor-scroll > .plt-raw-pin label {
+    margin-bottom: 6px;
+  }
+
+  #prelabeler-test .plt-editor-scroll > .plt-raw-pin .plt-raw-address-input {
+    max-height: min(220px, 42vh);
   }
 }
 

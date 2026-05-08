@@ -55,10 +55,11 @@
   }
 
   function removeToast(toast) {
+    if (!toast || !toast.isConnected) return;
     toast.classList.add('hiding');
     setTimeout(() => {
       toast.remove();
-    }, 3000);
+    }, 300);
   }
 
   function showToast(message, type = 'success') {
@@ -67,14 +68,24 @@
 
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
+    toast.setAttribute('role', 'status');
 
     const icon = UI_CONTROL_TEMPLATE.icons[type] || UI_CONTROL_TEMPLATE.icons.info;
 
-    toast.innerHTML = `
-      <i class="fa-solid ${icon} toast-icon"></i>
-      <div class="toast-content">${message}</div>
-      <div class="toast-close"><i class="fa-solid fa-xmark"></i></div>
-    `;
+    const iconEl = document.createElement('i');
+    iconEl.className = `fa-solid ${icon} toast-icon`;
+
+    const contentEl = document.createElement('div');
+    contentEl.className = 'toast-content';
+    contentEl.textContent = message == null ? '' : String(message);
+
+    const closeBtn = document.createElement('button');
+    closeBtn.type = 'button';
+    closeBtn.className = 'toast-close';
+    closeBtn.setAttribute('aria-label', 'Đóng');
+    closeBtn.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+
+    toast.append(iconEl, contentEl, closeBtn);
 
     container.appendChild(toast);
 
@@ -82,7 +93,8 @@
       removeToast(toast);
     }, UI_CONTROL_TEMPLATE.notifyDurationMs);
 
-    toast.querySelector('.toast-close').addEventListener('click', () => {
+    closeBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
       clearTimeout(timer);
       removeToast(toast);
     });

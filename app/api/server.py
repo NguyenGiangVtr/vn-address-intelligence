@@ -579,6 +579,13 @@ def _build_parser_runtime_bundle() -> dict:
     }
 
     try:
+        import psutil
+        mem = psutil.virtual_memory()
+        logger.info(f"System Memory before loading models: {mem.available / (1024**3):.2f}GB available of {mem.total / (1024**3):.2f}GB total")
+    except ImportError:
+        logger.warning("psutil not installed, skipping memory check.")
+
+    try:
         with SessionLocal() as db:
             bundle["corpus"] = _load_parser_corpus(db)
     except Exception as e:

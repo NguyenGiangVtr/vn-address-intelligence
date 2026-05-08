@@ -35,12 +35,29 @@ class SiameseMGTE:
         self.device     = "cuda" if (device == "auto" and torch.cuda.is_available()) else ("cpu" if device == "auto" else device)
 
         logger.info(" Loading mGTE: %s (device=%s)", model_name, self.device)
-        self.model = SentenceTransformer(
-            model_name, 
-            device=self.device,
-            trust_remote_code=True
-        )
-        self.model.eval()
+        
+        # VPS Debug: Check for einops which is required by GTE remote code
+        try:
+            import einops
+            logger.info(" Dependency check: 'einops' is installed.")
+        except ImportError:
+            logger.warning(" Dependency check: 'einops' is MISSING. mGTE (Alibaba-NLP) will fail to load!")
+            
+        try:
+            self.model = SentenceTransformer(
+                model_name, 
+                device=self.device,
+                trust_remote_code=True
+            )
+            self.model.eval()
+        except Exception as e:
+            logger.error(f" Failed to initialize SentenceTransformer for mGTE: {e}")
+            # Check for common VPS issues
+            if "out of memory" in str(e).lower():
+                logger.error(" >>> CRITICAL: CUDA/RAM Out of Memory while loading mGTE.")
+            elif "remote code" in str(e).lower():
+                logger.error(" >>> CRITICAL: Failed to load remote code. Check 'trust_remote_code=True' and internet connection.")
+            raise e
 
         self._corpus: List[str]             = []
         self._corpus_emb: Optional[np.ndarray] = None
