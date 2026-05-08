@@ -5586,6 +5586,30 @@ body.no-scroll {
   min-width: 200px;
 }
 
+#prelabeler-test #plt-btn-random-predict {
+  background: linear-gradient(135deg, #7c3aed, #2563eb);
+  border-color: rgba(147, 197, 253, 0.45);
+  color: #fff;
+  box-shadow: 0 6px 14px rgba(37, 99, 235, 0.28);
+}
+
+#prelabeler-test #plt-btn-random-predict i {
+  opacity: 0.95;
+}
+
+#prelabeler-test #plt-btn-random-predict:hover {
+  background: linear-gradient(135deg, #6d28d9, #1d4ed8);
+  border-color: rgba(147, 197, 253, 0.7);
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.35);
+  transform: translateY(-1px);
+}
+
+#prelabeler-test #plt-btn-random-predict:disabled {
+  opacity: 0.8;
+  box-shadow: none;
+  transform: none;
+}
+
 #prelabeler-test .plt-list-body {
   padding: 8px;
   flex: 1;
@@ -5637,10 +5661,7 @@ body.no-scroll {
 }
 
 #prelabeler-test .plt-label-cell {
-  display: grid;
-  grid-template-columns: auto auto minmax(0, 1fr);
-  align-items: start;
-  gap: 8px;
+  display: block;
   padding: 8px 10px;
   background: var(--bg-elevated);
   border: 1px solid var(--border-subtle);
@@ -5656,15 +5677,18 @@ body.no-scroll {
   border-left: 3px solid var(--danger);
 }
 
-#prelabeler-test .plt-label-cell--merged .plt-label-cell__hk,
-#prelabeler-test .plt-label-cell--merged .plt-badge {
-  align-self: center;
-}
-
 #prelabeler-test .plt-label-cell__main {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  min-width: 0;
+}
+
+#prelabeler-test .plt-label-cell__inline-row {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
   min-width: 0;
 }
 
@@ -5766,10 +5790,15 @@ body.no-scroll {
 }
 
 #prelabeler-test .plt-label-cell__add-btn {
-  min-width: 30px;
-  height: 30px;
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
   padding: 0;
-  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 600;
   line-height: 1;
 }
 
@@ -6284,10 +6313,12 @@ body.no-scroll {
   border-radius: var(--radius-md);
   padding: 6px 12px;
   font-size: 12px;
+  color: var(--text-primary);
   display: flex;
   align-items: center;
   gap: 8px;
   transition: all var(--transition);
+  cursor: pointer;
 }
 
 .plt-token:hover {

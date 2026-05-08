@@ -26,30 +26,32 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  deploy:
+  init:
     runs-on: ubuntu-latest
-    env:
-      DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
-      SERVICE_NAME: ${{ secrets.SERVICE_NAME }}
+    outputs:
+      deploy_env: ${{ steps.resolve_env.outputs.deploy_env }}
+      deploy_start_ts: ${{ steps.mark_start.outputs.deploy_start_ts }}
     steps:
       - name: Checkout source
         uses: actions/checkout@v5
 
       - name: Mark deploy start time
+        id: mark_start
         shell: bash
-        run: echo "DEPLOY_START_TS=$(date +%s)" >> "$GITHUB_ENV"
+        run: echo "deploy_start_ts=$(date +%s)" >> "$GITHUB_OUTPUT"
 
       - name: Resolve deploy environment
+        id: resolve_env
         shell: bash
         env:
           EVENT_NAME: ${{ github.event_name }}
           INPUT_ENV: ${{ github.event.inputs.environment }}
         run: |
-          DEPLOY_ENV="prod"
+          deploy_env="prod"
           if [ "$EVENT_NAME" = "workflow_dispatch" ] && [ -n "$INPUT_ENV" ]; then
-            DEPLOY_ENV="$INPUT_ENV"
+            deploy_env="$INPUT_ENV"
           fi
-          echo "DEPLOY_ENV=$DEPLOY_ENV" >> "$GITHUB_ENV"
+          echo "deploy_env=$deploy_env" >> "$GITHUB_OUTPUT"
 
       - name: Validate required secrets
         shell: bash
@@ -71,7 +73,7 @@ jobs:
             exit 1
           fi
 
-      - name: Prepare SSH key file
+      - name: Prepare SSH key for connectivity test
         shell: bash
         env:
           VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
@@ -95,10 +97,43 @@ jobs:
             "$VPS_USER@$VPS_HOST" \
             "echo SSH_OK"
 
+      - name: Cleanup SSH key file
+        if: always()
+        shell: bash
+        run: rm -f ./deploy_key
+
+  package:
+    runs-on: ubuntu-latest
+    needs: init
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v5
+
       - name: Build release tarball
         shell: bash
         run: |
           git archive --format=tar.gz --output=release.tar.gz HEAD
+
+      - name: Upload release artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-tarball
+          path: release.tar.gz
+          if-no-files-found: error
+          retention-days: 1
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [init, package]
+    env:
+      DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+      SERVICE_NAME: ${{ secrets.SERVICE_NAME }}
+    steps:
+      - name: Download release artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: release-tarball
+          path: .
 
       - name: Upload release package
         uses: appleboy/scp-action@v0.1.7
@@ -142,17 +177,19 @@ jobs:
 
             rm -f /tmp/vnai-deploy/release.tar.gz
 
-      - name: Cleanup SSH key file
-        if: always()
-        shell: bash
-        run: rm -f ./deploy_key
-
+  notify:
+    runs-on: ubuntu-latest
+    needs: [init, package, deploy]
+    if: always()
+    env:
+      DEPLOY_ENV: ${{ needs.init.outputs.deploy_env }}
+      DEPLOY_START_TS: ${{ needs.init.outputs.deploy_start_ts }}
+      SERVICE_NAME: ${{ secrets.SERVICE_NAME }}
+      VPS_HOST: ${{ secrets.VPS_HOST }}
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+    steps:
       - name: Notify Slack
-        if: always()
         shell: bash
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-          VPS_HOST: ${{ secrets.VPS_HOST }}
         run: |
           if [ -z "${SLACK_WEBHOOK_URL:-}" ]; then
             echo "SLACK_WEBHOOK_URL is empty. Skip Slack notification."
@@ -172,7 +209,7 @@ jobs:
             ENV_ICON=":test_tube:"
           fi
 
-          if [ "${{ job.status }}" = "success" ]; then
+          if [ "${{ needs.deploy.result }}" = "success" ]; then
             ICON="$ENV_ICON"
             STATUS_TEXT="SUCCESS"
             COLOR="#2EB67D"

@@ -4870,19 +4870,21 @@ async function initEvidenceView() {
 
       return `
         <div class="${cellClass}" data-label="${vEsc}">
-          <span class="plt-label-cell__hk" title="Hotkey ${hk}">${hk}</span>
-          <span class="plt-badge lc-${value}">${vEsc}</span>
           <div class="plt-label-cell__main">
-            ${chipsHtml}
-            <div class="plt-label-cell__input-row">
-              <input class="form-input plt-label-cell__input" type="text"
-                value="" placeholder="Nhập thêm giá trị..."
-                onkeydown='return pltAddExpectedLabelOnKey(event, ${vJs}, this)'>
-              <button type="button" class="btn btn-outline plt-label-cell__add-btn"
-                title="Thêm giá trị"
-                onclick='pltAddExpectedLabel(${vJs}, this.previousElementSibling.value); this.previousElementSibling.value=""'>+</button>
-              <span class="plt-label-cell__tick" aria-label="Khớp kỳ vọng"><i class="fa-solid fa-check"></i></span>
+            <div class="plt-label-cell__inline-row">
+              <span class="plt-label-cell__hk" title="Hotkey ${hk}">${hk}</span>
+              <span class="plt-badge lc-${value}">${vEsc}</span>
+              <div class="plt-label-cell__input-row">
+                <input class="form-input plt-label-cell__input" type="text"
+                  value="" placeholder="Nhập thêm giá trị..."
+                  onkeydown='return pltAddExpectedLabelOnKey(event, ${vJs}, this)'>
+                <button type="button" class="btn btn-outline plt-label-cell__add-btn"
+                  title="Thêm giá trị"
+                  onclick='pltAddExpectedLabel(${vJs}, this.previousElementSibling.value); this.previousElementSibling.value=""'>+</button>
+                <span class="plt-label-cell__tick" aria-label="Khớp kỳ vọng"><i class="fa-solid fa-check"></i></span>
+              </div>
             </div>
+            ${chipsHtml}
             ${failTagHtml}
           </div>
         </div>`;
@@ -5135,18 +5137,20 @@ async function initEvidenceView() {
       console.warn('PreLabeler test: cannot load from DB, trying localStorage', e);
       cases = JSON.parse(localStorage.getItem('plt_cases') || '[]');
     }
-    renderList();
+    const firstVisible = getVisibleCases()[0];
+    if (firstVisible) {
+      // Always default to the first testcase as shown in the current list ordering.
+      pltSelect(firstVisible.id);
+    } else {
+      activeId = null;
+      renderList();
+    }
     updateSummary();
-
-    if (cases.length > 0 && !activeId) pltSelect(cases[0].id);
   }
 
-  function renderList() {
+  function getVisibleCases() {
     const q = (document.getElementById('plt-search')?.value || '').toLowerCase();
-    const el = document.getElementById('plt-list');
-    if (!el) return;
-
-    const filtered = [...cases]
+    return [...cases]
       .filter(c => {
         if ((c.name || '').toLowerCase().includes(q) || String(c.input || '').toLowerCase().includes(q)) {
           if (pltResultFilter === 'all') return true;
@@ -5157,6 +5161,13 @@ async function initEvidenceView() {
         return false;
       })
       .sort((a, b) => getCaseCreatedTs(b) - getCaseCreatedTs(a));
+  }
+
+  function renderList() {
+    const el = document.getElementById('plt-list');
+    if (!el) return;
+
+    const filtered = getVisibleCases();
 
     if (!filtered.length) {
       el.innerHTML =
