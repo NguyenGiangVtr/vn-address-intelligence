@@ -3220,17 +3220,19 @@ def run_prelabeler_tests(payload: PreLabelerRunPayload, current_user=Depends(get
             if not found:
                 all_passed = False
 
+        # Always enforce exact two-way matching:
+        # - expected missing in actual => fail (handled above)
+        # - actual not present in expected => fail (handled here)
         unexpected = []
-        if bool(case.strict):
-            for act in actual:
-                match = any(
-                    e.get("label") == act["label"] and
-                    str(e.get("text", "")).strip().lower() == act["text"].strip().lower()
-                    for e in expected
-                )
-                if not match:
-                    unexpected.append(act)
-                    all_passed = False
+        for act in actual:
+            match = any(
+                e.get("label") == act["label"] and
+                str(e.get("text", "")).strip().lower() == act["text"].strip().lower()
+                for e in expected
+            )
+            if not match:
+                unexpected.append(act)
+                all_passed = False
 
         results.append({
             "id": case_id, "passed": all_passed,

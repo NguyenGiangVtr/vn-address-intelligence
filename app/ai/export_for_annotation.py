@@ -64,11 +64,14 @@ class PreLabeler:
     # Quy tắc Regex cho các đơn vị vi mô (Sắp xếp theo NER_LABELS)
     MICRO_RULES = [
         ("PCD", r'(?i)(?:\b|^)([23456789CFGHJMPQRVWX]{4,8}\+[23456789CFGHJMPQRVWX]{2,3})(?:\b|$)', 0.95),
-        ("BLD", r'(?i)(?:Tòa\s*nhà|Chung\s*cư|CC|Khu\s*tập\s*thể|KTT|Văn\s*phòng|Khu\s*đô\s*thị|KĐT|KCN|CCN|Tầng|Phòng|Lầu|Block)\s+[^,.\n]+', 0.75),
-        ("POI", r'(?i)(?:Trường|Bệnh\s*viện|BV|Cửa\s*hàng|Tạp\s*hóa|ATM|UBND|Chợ|Siêu\s*thị|Công\s*viên|Công\s*ty|Cty|Nhà\s*thờ|Chùa|Khu công nghiệp|KCN|KDC|Studio)\s+[^,.\n]+', 0.7),
+        ("BLD", r'(?i)(?:Tòa\s*nhà|Building|Chung\s*cư|CC|Khu\s*tập\s*thể|KTT|Văn\s*phòng|Khu\s*dân\s*cư|Khu\s*đô\s*thị|KDC|KĐT|KCN|CCN|Tầng|Phòng|Lầu|Block)\s+[^,.\n]+', 0.75),
+        #("POI", r'(?i)(?:Trường|Bệnh\s*viện|BV|Cửa\s*hàng|Tạp\s*hóa|ATM|UBND|Chợ|Siêu\s*thị|Công\s*viên|Công\s*ty|Cty|Nhà\s*thờ|Chùa|Khu công nghiệp|KCN|KDC|Studio)\s+[^,.\n]+', 0.7),
+        ("POI", r'(?i)(?:Trường|Bệnh\s*viện|BV|Trạm\s*y\s*tế|Phòng\s*khám|Nhà\s*thuốc|Quầy\s*thuốc|Vật\s*liệu\s*xây\s*dựng|VLXD|Phân\s*bón|Vựa|Cửa\s*hàng|Tạp\s*hóa|Siêu\s*thị|Chợ|TTTM|Trung\s*tâm\s*thương\s*mại|UBND|Ủy\s*ban|Công\s*an|Bưu\s*điện|Ngân\s*hàng|ATM|Tiệm\s*vàng|Khách\s*sạn|Nhà\s*nghỉ|Hotel|Motel|Quán|Cafe|Cà\s*phê|Spa|Salon|Garage|Kho|Xưởng|Nhà\s*máy|Cơ\s*sở|Công\s*ty|Cty|Doanh\s*nghiệp|Studio|Nhà\s*thờ|Chùa|Đình|Đền|Miếu|Phủ|Am|Giáo\s*xứ|Công\s*viên|Cầu|Bến\s*xe|Cảng|Sân\s*bay)\s+[^,.\n/]+', 0.7),
         ("ALY", r'(?i)(?:Hẻm|Ngõ|Kiệt|Ngách)\s+[^,.\n]+', 0.85),
         ("NUM", r'(?i)(?:Số nhà|Số\s+)?\d+[A-Za-z]?(?:[/\-]\d+[A-Za-z]?)*|(?:\b|^)(?:Lô|Km)\s+[\w\-]+', 0.9),
-        ("STR", r'(?i)(?:Đường|(?<!Thành\s)Phố|Đ\.|QL|Quốc\s*lộ|ĐT|TL|Tỉnh\s*lộ|Đại\s*lộ|Hương\s*lộ|HL)\s+[^,.\n]+', 0.85),
+        # Không bắt "phố" chung chung để tránh nuốt cụm POI như "Vật liệu xây dựng ...".
+        # Chỉ match "Phố" khi có tiền tố đường rõ ràng (Đường/Đ./QL/...)
+        ("STR", r'(?i)(?:Đường|Đ\.|QL|Quốc\s*lộ|ĐT|TL|Tỉnh\s*lộ|Đại\s*lộ|Hương\s*lộ|HL)\s+[^,.\n]+', 0.85),
         ("NHB", r'(?i)(?:Khu\s*phố|KP|Tổ\s*dân\s*phố|Thôn|Ấp|Bản|Tổ|Sóc|Phum|Xóm|Làng|Khóm|Cụm|Buôn|Plei|KDC)\s+[^,.\n]+', 0.8),
     ]
 
@@ -339,7 +342,11 @@ class PreLabeler:
                 r'(?i)^(Phường|Xã|Thị trấn|Quận|Huyện|Thị xã|Thành phố|Tỉnh|TP\.?|Q\.?|H\.?|P\.?|X\.?|'
                 r'Tổ|Khu phố|KP|Thôn|Ấp|Bản|Số|Số nhà|Hẻm|Ngõ|Kiệt|Ngách|Đường|Phố|Đ\.|QL|ĐT|TL)\b'
             )
-            skip_tokens = re.compile(r'(?i)\b(shop|studio|chợ|kdc|cây\s+đa)\b')
+            # Bỏ qua segment có dấu hiệu POI/cửa hàng để tránh gán nhầm STR.
+            skip_tokens = re.compile(
+                r'(?i)\b(shop|studio|chợ|kdc|cây\s+đa|vật\s*liệu\s*xây\s*dựng|'
+                r'cửa\s*hàng|tạp\s*hóa|siêu\s*thị|quán|cafe|cà\s*phê|nhà\s*thuốc)\b'
+            )
             prev_num_re = re.compile(r'(?i)^(?:Số\s+)?(?:K\d+|\d+[A-Za-z]?)(?:[\\/\-]\d+[A-Za-z]?)*\b')
             next_micro_re = re.compile(r'(?i)^(Tổ|Khu phố|KP|Thôn|Ấp|Bản|Phường|Xã|Thị trấn)\b')
 

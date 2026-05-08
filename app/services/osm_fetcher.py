@@ -13,6 +13,7 @@ import requests
 import logging
 import json
 import time
+import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from app.core.database import SessionLocal, OSMStreet, OSMBuilding, OSMPoi, Province, OSMRawEntity
 from app.core.config import Config
@@ -138,31 +139,85 @@ class OSMFetcher:
     def process_and_save(self, elements, province_id, province_name):
         """Luu batch du lieu."""
         raw_entities, streets, buildings, pois = [], [], [], []
+        raw_seen = set()
+        street_seen = set()
+        building_seen = set()
+        poi_seen = set()
+
+        def _normalize_text(value):
+            if value is None:
+                return ""
+            cleaned = re.sub(r"\s+", " ", str(value)).strip().lower()
+            return cleaned
+
+        def _clean_tags(tags):
+            """Chi giu cac tag co gia tri cho bai toan dia chi va loai bo gia tri rong."""
+            if not isinstance(tags, dict):
+                return {}
+            allowed_prefixes = ("addr:",)
+            allowed_keys = {
+                "name", "highway", "building", "amenity", "shop", "tourism", "office",
+                "place", "landuse", "ref", "operator", "brand"
+            }
+            cleaned = {}
+            for k, v in tags.items():
+                if v is None:
+                    continue
+                k_norm = str(k).strip()
+                v_norm = str(v).strip()
+                if not k_norm or not v_norm:
+                    continue
+                if k_norm in allowed_keys or any(k_norm.startswith(prefix) for prefix in allowed_prefixes):
+                    cleaned[k_norm] = v_norm
+            return cleaned
 
         for el in elements:
             tags = el.get("tags", {})
             osm_id = el["id"]
+            osm_type = el["type"]
+            cleaned_tags = _clean_tags(tags)
+            if not cleaned_tags:
+                continue
             
             # Map raw entity
-            raw_entities.append({
-                "id": osm_id, 
-                "osm_type": el["type"], 
-                "tags": json.dumps(tags, ensure_ascii=False),
-                "province_id": province_id,
-                "province_name": province_name
-            })
+            raw_fingerprint = (
+                osm_type,
+                province_id,
+                tuple(sorted((k, _normalize_text(v)) for k, v in cleaned_tags.items()))
+            )
+            if raw_fingerprint not in raw_seen:
+                raw_entities.append({
+                    "id": osm_id,
+                    "osm_type": osm_type,
+                    "tags": json.dumps(cleaned_tags, ensure_ascii=False),
+                    "province_id": province_id,
+                    "province_name": province_name
+                })
+                raw_seen.add(raw_fingerprint)
             
             # Map specialized tables
-            name = tags.get("name") or tags.get("addr:street")
-            if not name: continue
+            name = cleaned_tags.get("name") or cleaned_tags.get("addr:street")
+            normalized_name = _normalize_text(name)
+            if not normalized_name:
+                continue
             
-            if "highway" in tags or "addr:street" in tags:
-                streets.append({"id": osm_id, "name": name, "province_id": province_id, "province_name": province_name})
-            if "building" in tags:
-                buildings.append({"id": osm_id, "name": name, "type": tags.get("building"), "province_id": province_id, "province_name": province_name})
-            poi_type = tags.get("amenity") or tags.get("shop") or tags.get("tourism") or tags.get("office")
+            if "highway" in cleaned_tags or "addr:street" in cleaned_tags:
+                street_key = (province_id, normalized_name)
+                if street_key not in street_seen:
+                    streets.append({"id": osm_id, "name": name.strip(), "province_id": province_id, "province_name": province_name})
+                    street_seen.add(street_key)
+            if "building" in cleaned_tags:
+                building_type = cleaned_tags.get("building")
+                building_key = (province_id, normalized_name, _normalize_text(building_type))
+                if building_key not in building_seen:
+                    buildings.append({"id": osm_id, "name": name.strip(), "type": building_type, "province_id": province_id, "province_name": province_name})
+                    building_seen.add(building_key)
+            poi_type = cleaned_tags.get("amenity") or cleaned_tags.get("shop") or cleaned_tags.get("tourism") or cleaned_tags.get("office")
             if poi_type:
-                pois.append({"id": osm_id, "name": name, "type": poi_type, "province_id": province_id, "province_name": province_name})
+                poi_key = (province_id, normalized_name, _normalize_text(poi_type))
+                if poi_key not in poi_seen:
+                    pois.append({"id": osm_id, "name": name.strip(), "type": poi_type, "province_id": province_id, "province_name": province_name})
+                    poi_seen.add(poi_key)
 
         # DB Persist
         session = SessionLocal()
@@ -171,7 +226,10 @@ class OSMFetcher:
             self._save_batch(session, "osm.streets", streets, ["id", "name", "province_id", "province_name"])
             self._save_batch(session, "osm.buildings", buildings, ["id", "name", "type", "province_id", "province_name"])
             self._save_batch(session, "osm.pois", pois, ["id", "name", "type", "province_id", "province_name"])
-            logger.info(f"[SUCCESS] {province_name}: +{len(raw_entities)} records.")
+            logger.info(
+                f"[SUCCESS] {province_name}: raw={len(raw_entities)}, streets={len(streets)}, "
+                f"buildings={len(buildings)}, pois={len(pois)}"
+            )
         finally:
             session.close()
 

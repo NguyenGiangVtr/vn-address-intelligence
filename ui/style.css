@@ -5505,6 +5505,33 @@ body.no-scroll {
   white-space: nowrap;
 }
 
+#prelabeler-test .plt-sum-item.plt-sum-pass,
+#prelabeler-test .plt-sum-item.plt-sum-fail {
+  cursor: pointer;
+  border-radius: 999px;
+  padding: 2px 8px;
+  border: 1px solid transparent;
+  transition: background var(--transition), border-color var(--transition), transform var(--transition);
+}
+
+#prelabeler-test .plt-sum-item.plt-sum-pass:hover,
+#prelabeler-test .plt-sum-item.plt-sum-fail:hover,
+#prelabeler-test .plt-sum-item.plt-sum-pass:focus-visible,
+#prelabeler-test .plt-sum-item.plt-sum-fail:focus-visible {
+  outline: none;
+  transform: translateY(-1px);
+}
+
+#prelabeler-test .plt-sum-item.plt-sum-pass.active {
+  background: rgba(52, 211, 153, 0.16);
+  border-color: rgba(52, 211, 153, 0.36);
+}
+
+#prelabeler-test .plt-sum-item.plt-sum-fail.active {
+  background: rgba(248, 113, 113, 0.16);
+  border-color: rgba(248, 113, 113, 0.4);
+}
+
 #prelabeler-test .plt-sum-pass {
   color: var(--success);
 }
@@ -5541,7 +5568,8 @@ body.no-scroll {
   display: flex;
   flex-direction: column;
   padding: 0;
-  overflow: visible;
+  overflow: hidden;
+  min-height: 0;
 }
 
 #prelabeler-test .plt-list-toolbar {
@@ -5558,6 +5586,9 @@ body.no-scroll {
 
 #prelabeler-test .plt-list-body {
   padding: 8px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 #prelabeler-test .plt-editor-col {
@@ -5795,6 +5826,12 @@ body.no-scroll {
   align-items: center;
   gap: 8px;
   color: var(--text-primary);
+}
+
+.plt-item-index {
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+  min-width: 2.2ch;
 }
 
 .plt-item-addr {
@@ -6214,6 +6251,9 @@ body.no-scroll {
     display: flex;
     flex-direction: column;
     gap: 20px;
+  }
+  #prelabeler-test .plt-list-card {
+    max-height: 48vh;
   }
   .page-header {
     flex-direction: column;

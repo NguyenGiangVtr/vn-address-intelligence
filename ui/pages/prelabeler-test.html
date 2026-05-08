@@ -9,8 +9,12 @@
       <div id="plt-summary" class="plt-summary-band" aria-label="Tổng kết test và thao tác">
         <div class="plt-summary-metrics">
           <span class="plt-sum-item"><span id="plt-s-total">0</span> test</span>
-          <span class="plt-sum-item plt-sum-pass"><i class="fa-solid fa-check"></i> <span id="plt-s-pass">0</span></span>
-          <span class="plt-sum-item plt-sum-fail"><i class="fa-solid fa-xmark"></i> <span id="plt-s-fail">0</span></span>
+          <span class="plt-sum-item plt-sum-pass" id="plt-filter-pass" role="button" tabindex="0" title="Lọc test PASS">
+            <i class="fa-solid fa-check"></i> <span id="plt-s-pass">0</span>
+          </span>
+          <span class="plt-sum-item plt-sum-fail" id="plt-filter-fail" role="button" tabindex="0" title="Lọc test FAIL">
+            <i class="fa-solid fa-xmark"></i> <span id="plt-s-fail">0</span>
+          </span>
           <div class="plt-summary-bar" title="Tỉ lệ pass (đã chạy)">
             <div id="plt-progress" class="plt-summary-bar-fill"></div>
           </div>

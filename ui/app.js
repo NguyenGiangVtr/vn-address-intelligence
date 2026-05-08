@@ -4666,6 +4666,7 @@ async function initEvidenceView() {
     : '/api';
 
   let cases = [], activeId = null, results = {};
+  let pltResultFilter = 'all';
 
   function sortLabelsByHotkey(rows) {
     return [...rows].sort((a, b) => {
@@ -4888,11 +4889,14 @@ async function initEvidenceView() {
     return `
       <div class="plt-unexpected-block">
         <div class="plt-result-section-title">Dư thừa (strict)</div>
+        <div class="plt-run-prompt"><i class="fa-solid fa-hand-pointer"></i> Click vào từng thực thể để thêm nhanh vào nhãn kỳ vọng.</div>
         <div class="plt-tokens">
           ${(r.unexpected || [])
             .map(
               u =>
-                `<div class="plt-token"><span class="plt-badge lc-${u.label}">${u.label}</span> ${pltEsc(u.text)}</div>`
+                `<button type="button" class="plt-token plt-token-add-exp" data-label="${pltEsc(u.label)}" data-text="${pltEsc(u.text)}" title="Thêm vào expected">
+                  <span class="plt-badge lc-${u.label}">${u.label}</span> ${pltEsc(u.text)}
+                </button>`
             )
             .join('')}
         </div>
@@ -4948,10 +4952,17 @@ async function initEvidenceView() {
     const el = document.getElementById('plt-list');
     if (!el) return;
 
-    const filtered = cases.filter(
-      c =>
-        (c.name || '').toLowerCase().includes(q) || String(c.input || '').toLowerCase().includes(q)
-    );
+    const filtered = [...cases]
+      .filter(c => {
+        if ((c.name || '').toLowerCase().includes(q) || String(c.input || '').toLowerCase().includes(q)) {
+          if (pltResultFilter === 'all') return true;
+          const rr = results[c.id];
+          if (!rr) return false;
+          return pltResultFilter === 'pass' ? Boolean(rr.passed) : !rr.passed;
+        }
+        return false;
+      })
+      .sort((a, b) => getCaseCreatedTs(b) - getCaseCreatedTs(a));
 
     if (!filtered.length) {
       el.innerHTML =
@@ -4960,14 +4971,16 @@ async function initEvidenceView() {
     }
 
     el.innerHTML = filtered
-      .map(c => {
+      .map((c, idx) => {
         const rr = results[c.id];
         const dot = rr == null ? 'plt-dot-none' : rr.passed ? 'plt-dot-pass' : 'plt-dot-fail';
         const cls = rr == null ? '' : rr.passed ? 'pass' : 'fail';
         return `
         <div class="plt-item ${cls}${activeId === c.id ? ' active' : ''}" onclick="pltSelect('${c.id}')">
           <div class="plt-item-name">
-            <span class="plt-dot ${dot}"></span>${pltEsc(c.name || 'Chưa đặt tên')}
+            <span class="plt-dot ${dot}"></span>
+            <span class="plt-item-index">${idx + 1}.</span>
+            ${pltEsc(c.name || 'Chưa đặt tên')}
             <div class="plt-item-actions">
               <button class="btn-icon" onclick="event.stopPropagation();pltDup('${c.id}')" title="Nhân đôi"><i class="fa-solid fa-copy"></i></button>
               <button class="btn-icon" style="color:var(--danger)" onclick="event.stopPropagation();pltDel('${c.id}')" title="Xóa"><i class="fa-solid fa-trash"></i></button>
@@ -4979,12 +4992,38 @@ async function initEvidenceView() {
       .join('');
   }
 
+  function getCaseCreatedTs(c) {
+    const keys = ['created_at', 'createdAt', 'created_date', 'createdDate'];
+    for (const key of keys) {
+      const raw = c && c[key];
+      if (raw == null) continue;
+      if (typeof raw === 'number' && Number.isFinite(raw)) return raw;
+      const parsed = Date.parse(String(raw));
+      if (!Number.isNaN(parsed)) return parsed;
+    }
+    return 0;
+  }
+
+  function pltSetResultFilter(mode) {
+    const nextMode = mode === 'pass' || mode === 'fail' ? mode : 'all';
+    pltResultFilter = pltResultFilter === nextMode ? 'all' : nextMode;
+    renderList();
+    updateSummary();
+  }
+
   function uid() {
     return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   }
 
   function pltNew() {
-    const c = { id: uid(), name: 'Test case mới', input: '', expected: [], strict: false };
+    const c = {
+      id: uid(),
+      name: 'Test case mới',
+      input: '',
+      expected: [],
+      strict: false,
+      created_at: new Date().toISOString(),
+    };
     cases.push(c);
     pltSelect(c.id);
     pltSave();
@@ -4996,6 +5035,7 @@ async function initEvidenceView() {
     const c = JSON.parse(JSON.stringify(src));
     c.id = uid();
     c.name = (src.name || '') + ' (copy)';
+    c.created_at = new Date().toISOString();
     cases.push(c);
     pltSelect(c.id);
     pltSave();
@@ -5106,6 +5146,32 @@ async function initEvidenceView() {
     pltSave();
   }
 
+  function pltAddUnexpectedToExpected(label, text) {
+    const c = cases.find(x => x.id === activeId);
+    if (!c) return;
+    const normLabel = String(label || '').trim().toUpperCase();
+    const normText = String(text || '').trim();
+    if (!normLabel || !normText) return;
+
+    c.expected = Array.isArray(c.expected) ? c.expected : [];
+    const exists = c.expected.some(
+      it =>
+        String(it?.label || '').trim().toUpperCase() === normLabel &&
+        String(it?.text || '').trim().toLowerCase() === normText.toLowerCase()
+    );
+    if (exists) {
+      window.showToast?.(`Đã tồn tại ${normLabel}: ${normText}`, 'info');
+      return;
+    }
+
+    c.expected.push({ label: normLabel, text: normText });
+    pltSave();
+    renderEditor();
+    renderList();
+    updateSummary();
+    window.showToast?.(`Đã thêm ${normLabel} vào expected`, 'success');
+  }
+
   async function pltRunOne() {
     const c = cases.find(x => x.id === activeId);
     if (!c) return;
@@ -5180,6 +5246,8 @@ async function initEvidenceView() {
     const elFail = document.getElementById('plt-s-fail');
     const elProg = document.getElementById('plt-progress');
     const elPct = document.getElementById('plt-pct');
+    const elFilterPass = document.getElementById('plt-filter-pass');
+    const elFilterFail = document.getElementById('plt-filter-fail');
 
     if (elTotal) elTotal.textContent = cases.length;
     if (elPass) elPass.textContent = pass;
@@ -5189,6 +5257,8 @@ async function initEvidenceView() {
       elProg.style.background = fail > 0 ? 'var(--danger)' : 'var(--success)';
     }
     if (elPct) elPct.textContent = ran.length ? `${pct}% · ${ran.length} đã chạy` : 'Chưa chạy';
+    if (elFilterPass) elFilterPass.classList.toggle('active', pltResultFilter === 'pass');
+    if (elFilterFail) elFilterFail.classList.toggle('active', pltResultFilter === 'fail');
   }
 
   function pltExport() {
@@ -5319,10 +5389,39 @@ async function initEvidenceView() {
         if (t.closest('#plt-btn-import')) {
           e.preventDefault();
           document.getElementById('plt-file-input')?.click();
+          return;
+        }
+        if (t.closest('#plt-filter-pass')) {
+          e.preventDefault();
+          pltSetResultFilter('pass');
+          return;
+        }
+        if (t.closest('#plt-filter-fail')) {
+          e.preventDefault();
+          pltSetResultFilter('fail');
+          return;
+        }
+        const addBtn = t.closest('.plt-token-add-exp');
+        if (addBtn) {
+          e.preventDefault();
+          pltAddUnexpectedToExpected(addBtn.getAttribute('data-label'), addBtn.getAttribute('data-text'));
         }
       },
       false
     );
+
+    document.addEventListener('keydown', e => {
+      const t = e.target;
+      if (!(t instanceof Element)) return;
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      if (t.closest('#plt-filter-pass')) {
+        e.preventDefault();
+        pltSetResultFilter('pass');
+      } else if (t.closest('#plt-filter-fail')) {
+        e.preventDefault();
+        pltSetResultFilter('fail');
+      }
+    });
 
     document.addEventListener('input', e => {
       const tgt = e.target;
