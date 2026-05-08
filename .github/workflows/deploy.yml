@@ -124,12 +124,17 @@ jobs:
             rm -f /tmp/vnai-deploy/release.tar.gz
 
       - name: Notify Slack
-        if: always() && ${{ secrets.SLACK_WEBHOOK_URL }} != ''
+        if: always()
         shell: bash
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
           VPS_HOST: ${{ secrets.VPS_HOST }}
         run: |
+          if [ -z "${SLACK_WEBHOOK_URL:-}" ]; then
+            echo "SLACK_WEBHOOK_URL is empty. Skip Slack notification."
+            exit 0
+          fi
+
           NOW_TS=$(date +%s)
           START_TS="${DEPLOY_START_TS:-$NOW_TS}"
           DURATION_SEC=$((NOW_TS - START_TS))
