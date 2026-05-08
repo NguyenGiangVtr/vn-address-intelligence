@@ -18,6 +18,9 @@ on:
 permissions:
   contents: read
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 concurrency:
   group: deploy-production
   cancel-in-progress: true
@@ -30,7 +33,7 @@ jobs:
       SERVICE_NAME: ${{ secrets.SERVICE_NAME }}
     steps:
       - name: Checkout source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Mark deploy start time
         shell: bash
