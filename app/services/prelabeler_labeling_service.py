@@ -4,6 +4,10 @@ Shared service for PreLabeler labeling-case building and validation.
 Muc tieu:
 - DRY: 1 nguon logic cho random-predict va run
 - SOLID: tach domain labeling/validation khoi API endpoint
+
+Bo tien to admin (WDS/DST/PRO) duoc dinh nghia DUY NHAT tai
+`app.ai.constants` (ADMIN_PREFIX_ALTERNATIVES, ADMIN_PRESENCE_ALTERNATIVES).
+File nay KHONG duoc khai bao lai vocabulary admin prefix.
 """
 
 from __future__ import annotations
@@ -11,17 +15,21 @@ from __future__ import annotations
 import re
 from typing import Any, Dict, List, Optional
 
+from app.ai.constants import (
+    ADMIN_PREFIX_ALTERNATIVES,
+    admin_prefix_anchored_pattern,
+    admin_presence_pattern,
+)
 
+
+# Cac bien duoi day chi la pattern compose tu canonical alternatives, KHONG
+# duoc viet lai vocabulary. Sua canonical tai app.ai.constants.
 ADMIN_PREFIX_PATTERNS = {
-    "WDS": r"(Phường|Xã|Thị trấn|P\.|X\.)",
-    "DST": r"(Quận|Huyện|Thị xã|Thành phố|Q\.|H\.)",
-    "PRO": r"(Tỉnh|Thành phố|TP\.?)",
+    label: rf"({alts})" for label, alts in ADMIN_PREFIX_ALTERNATIVES.items()
 }
 
 ADMIN_PRESENCE_PATTERNS = {
-    "WDS": r"(?i)\b(Phường|Xã|Thị trấn|P\.|X\.)\s+",
-    "DST": r"(?i)\b(Quận|Huyện|Thị xã|Thành phố|Q\.|H\.)\s+",
-    "PRO": r"(?i)\b(Tỉnh|TP\.?)\s+",
+    label: admin_presence_pattern(label) for label in ADMIN_PREFIX_ALTERNATIVES
 }
 
 
@@ -167,11 +175,7 @@ def _contains_prefixed_in_raw(raw_text: str, label: str, expected_text: str) -> 
     txt = str(expected_text or "").strip()
     if not txt:
         return False
-    prefix = {
-        "WDS": r"(?i)^(Phường|Xã|Thị trấn|P\.|X\.)\s+",
-        "DST": r"(?i)^(Quận|Huyện|Thị xã|Thành phố|Q\.|H\.)\s+",
-        "PRO": r"(?i)^(Tỉnh|Thành phố|TP\.?)\s+",
-    }.get(label)
+    prefix = admin_prefix_anchored_pattern(label)
     if not prefix:
         return False
     if re.search(prefix, txt):

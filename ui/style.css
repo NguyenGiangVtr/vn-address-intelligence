@@ -5660,6 +5660,23 @@ body.no-scroll {
   min-width: 7.5em;
 }
 
+#prelabeler-cases .plt-sum-last {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  color: var(--text-tertiary);
+  background: rgba(148, 163, 184, 0.12);
+  font-variant-numeric: tabular-nums;
+}
+
+#prelabeler-cases .plt-sum-last i {
+  font-size: 11px;
+  opacity: 0.85;
+}
+
 #prelabeler-cases .plt-list-card {
   display: flex;
   flex-direction: column;

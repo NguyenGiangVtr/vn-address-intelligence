@@ -5,14 +5,30 @@ alwaysApply: true
 
 # PreLabeler DRY/SOLID Rule
 
-- Do not duplicate labeling-case domain logic across endpoints or scripts.
-- `random-predict`, `run`, and regression scripts must call shared functions in `app/services/prelabeler_labeling_service.py`.
+Quy tắc **heuristic labeling** (macro fallback, NHB/NUM/ALY/STR/POI đặc thù) được mô tả chi tiết trong `.cursor/rules/prelabeler-labeling-heuristics.mdc` — cập nhật song song khi đổi `PreLabeler.predict` hoặc bộ case.
+
+## Single Source of Truth
+
+| Concern | Canonical file | Notes |
+|---|---|---|
+| Rule-based predictor (`PreLabeler.predict`, `export_data`) | `app/ai/export_for_annotation.py` | Algorithm layer only. |
+| Build expected, admin Type+Name, two-way validation | `app/services/prelabeler_labeling_service.py` | Domain layer only. |
+| Admin prefix vocabulary (`WDS`, `DST`, `PRO`) + union (`ADMIN_ALL_PREFIXES_ALT`) | `app/ai/constants.py` | Used by both predictor and service via `admin_prefix_anchored_pattern`, `admin_presence_pattern`, `ADMIN_PREFIX_ALTERNATIVES`, `ADMIN_PRESENCE_ALTERNATIVES`, `ADMIN_ALL_PREFIXES_ALT`. |
+| Labeling test cases (data) | `scripts/labeling/prelabeler_labeling_cases.json` | Single canonical dataset. |
+
+## Rules
+
+- Do NOT duplicate labeling-case domain logic across endpoints or scripts.
+- Do NOT redeclare `Phường|Xã|...|Thành phố|Tỉnh|...` regex literals anywhere; always derive from `app/ai/constants.py`.
+- `random-predict`, `run`, refresh and regression scripts must call shared functions in `app/services/prelabeler_labeling_service.py` (`predictions_to_expected`, `enforce_admin_type_name`, `validate_expected_against_actual`, `first_expected_text`).
 - Any change to expected-building or validation rules must be implemented in the shared service first, then consumed by callers.
+- Any change to admin prefix vocabulary must be implemented in `app/ai/constants.py` first, then consumed via the helpers — never via copy/paste.
 - Preserve `Type + Name` for all labels, especially admin units (`WDS`, `DST`, `PRO`) when present in raw text.
 - Keep two-way validation strict: missing expected or unexpected actual must fail.
 
 ## Required Checks After Changes
 
 - Run `python -m py_compile` for edited Python files.
-- Run `python scripts/labeling/run_prelabeler_labeling_cases.py`.
+- Run `python scripts/labeling/run_prelabeler_labeling_cases.py` — must report 100% pass for the current suite size (see JSON array length).
+- Run `python scripts/test/test_prelabeler_regression.py` — must print `OK`.
 - If API behavior changes, verify `/api/prelabeler-cases/random-predict` and `/api/prelabeler-cases/run` are consistent.

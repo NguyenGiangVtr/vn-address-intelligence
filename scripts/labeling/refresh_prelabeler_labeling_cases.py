@@ -2,11 +2,14 @@
 """
 Refresh PreLabeler labeling cases theo logic hien tai va dong bo vao DB.
 
-Tác vụ:
+Tac vu:
 1) Doc scripts/labeling/prelabeler_labeling_cases.json
-2) Chạy PreLabeler.predict cho từng case để cập nhật expected theo chuẩn mới
-3) Ghi lại file JSON (in-place)
-4) (Tuỳ chọn) upsert vào ai.prelabeler_testcases
+2) Chay PreLabeler.predict cho tung case de cap nhat expected theo chuan moi
+3) Ghi lai file JSON (in-place)
+4) (Tuy chon) upsert vao ai.prelabeler_testcases
+
+DRY: Toan bo logic build expected + admin Type+Name enforcement DUNG CHUNG voi
+API /prelabeler-cases/random-predict thong qua app.services.prelabeler_labeling_service.
 """
 
 from __future__ import annotations
@@ -14,7 +17,6 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-import re
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -24,18 +26,11 @@ if str(PROJECT_ROOT) not in sys.path:
 from app.ai.db_connector import DBConnector
 from app.ai.export_for_annotation import PreLabeler
 from app.ai.utils.config_loader import load_config_with_env
-
-
-def _first_expected_text(expected_items: list[dict], label: str) -> str | None:
-    for item in expected_items or []:
-        if not isinstance(item, dict):
-            continue
-        if str(item.get("label") or "").upper() != label:
-            continue
-        text = str(item.get("text") or "").strip()
-        if text:
-            return text
-    return None
+from app.services.prelabeler_labeling_service import (
+    enforce_admin_type_name,
+    first_expected_text,
+    predictions_to_expected,
+)
 
 
 def _predict_expected(case: dict) -> list[dict]:
@@ -53,14 +48,15 @@ def _predict_expected(case: dict) -> list[dict]:
         district_name = None
         province_name = None
 
+    # Fallback: lay admin tu expected cu neu input khong khai bao.
     if not ward_name:
-        ward_name = _first_expected_text(old_expected, "WDS")
+        ward_name = first_expected_text(old_expected, "WDS")
     if not district_name:
-        district_name = _first_expected_text(old_expected, "DST")
+        district_name = first_expected_text(old_expected, "DST")
     if not province_name:
-        province_name = _first_expected_text(old_expected, "PRO")
+        province_name = first_expected_text(old_expected, "PRO")
 
-    preds = PreLabeler.predict(
+    predictions = PreLabeler.predict(
         raw_address=raw_address,
         ward_name=ward_name,
         district_name=district_name,
@@ -68,66 +64,17 @@ def _predict_expected(case: dict) -> list[dict]:
         known_streets=set(),
     )
 
-    # Sắp theo vị trí để output ổn định.
-    preds = sorted(
-        preds,
-        key=lambda x: (
-            int(x.get("value", {}).get("start", 10**9)),
-            -len(str(x.get("value", {}).get("text", ""))),
-            str((x.get("value", {}).get("labels") or [""])[0]),
-        ),
+    expected = predictions_to_expected(predictions)
+    expected = enforce_admin_type_name(
+        expected=expected,
+        raw_address=raw_address,
+        ward_name=ward_name,
+        district_name=district_name,
+        province_name=province_name,
     )
 
-    expected = []
-    seen = set()
-    for p in preds:
-        val = p.get("value", {})
-        labels = val.get("labels") or []
-        text = str(val.get("text") or "").strip()
-        if not labels or not text:
-            continue
-        label = str(labels[0]).upper()
-        key = (label, text.lower())
-        if key in seen:
-            continue
-        seen.add(key)
-        expected.append({"text": text, "label": label})
-
-    # Enforce admin labels WDS/DST/PRO trong expected theo chuẩn strict mới.
-    # Ưu tiên lấy từ raw_address (giữ nguyên type + name), fallback từ expected cũ.
-    def _has_label(items: list[dict], label: str) -> bool:
-        return any(str(x.get("label") or "").upper() == label for x in items if isinstance(x, dict))
-
-    admin_patterns = {
-        "WDS": r"(?i)\b(Phường|Xã|Thị trấn|P\.|X\.)\s+[^,]+",
-        "DST": r"(?i)\b(Quận|Huyện|Thị xã|Thành phố|Q\.|H\.)\s+[^,]+",
-        "PRO": r"(?i)\b(Tỉnh|Thành phố|TP\.?)\s+[^,]+",
-    }
-    fallback_admin = {
-        "WDS": ward_name,
-        "DST": district_name,
-        "PRO": province_name,
-    }
-
-    for admin_label in ("WDS", "DST", "PRO"):
-        if _has_label(expected, admin_label):
-            continue
-
-        chosen = None
-        for m in re.finditer(admin_patterns[admin_label], raw_address or "", flags=re.I):
-            chosen = m.group(0).strip(" ,")
-        if not chosen:
-            chosen = str(fallback_admin.get(admin_label) or "").strip()
-        if not chosen:
-            chosen = _first_expected_text(old_expected, admin_label)
-        if not chosen:
-            continue
-
-        key = (admin_label, str(chosen).strip().lower())
-        if key in seen:
-            continue
-        seen.add(key)
-        expected.append({"text": str(chosen).strip(), "label": admin_label})
+    # Sap theo (label, text) de output JSON on dinh.
+    expected.sort(key=lambda x: (str(x.get("label") or ""), str(x.get("text") or "").lower()))
     return expected
 
 

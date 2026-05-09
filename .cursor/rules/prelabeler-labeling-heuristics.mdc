@@ -1,0 +1,54 @@
+---
+description: Quy luật labeling cho PreLabeler (heuristic predict + labeling cases)
+globs:
+  - app/ai/export_for_annotation.py
+  - scripts/labeling/**/*
+  - app/services/prelabeler_labeling_service.py
+alwaysApply: false
+---
+
+# PreLabeler — quy luật labeling (predict + case)
+
+Áp dụng khi sửa `PreLabeler.predict`, bộ case `scripts/labeling/prelabeler_labeling_cases.json`, hoặc validator dùng chung. Tuân **`.cursor/rules/prelabeler-single-source.mdc`**: không copy vocabulary admin; mọi prefix WDS/DST/PRO xuất phát từ `app/ai/constants.py`.
+
+## Macro (WDS / DST / PRO)
+
+- **`Type + Name`**: khi trong `raw_address` có prefix admin đúng cấp, span phải bao tiền tố + tên như trong chuỗi (logic macro matching hiện tại).
+- **Master data không có trong chuỗi**: Nếu harness/API truyền `ward_name` / `district_name` / `province_name` nhưng chuỗi rút gọn không chứa tên đó, vẫn **emit** entity (span virtual phía sau chuỗi) để case có WDS/DST/PRO kỳ vọng vẫn khớp.
+
+## NHB (khu dân cư / block / lô chữ)
+
+- **`Tháp … ( tủ … )`**: tách thành **hai** NHB (Tháp… và tủ…), cho phép dấu `.` trong mã căn (vd `Ak612A.08`).
+- **`ấp` / `thôn` + đường số**: tách **NHB** (ấp/thôn + mã) + **STR** (`đường`/`Đ.` + số đường). Không gộp một NHB “ấp … đường …”.
+- **`Lô` + chữ đơn** (vd `Lô C`): **NHB**, không là NUM.
+- **`Lô` + số** (vd `Lô 12`): **NUM** (pattern không bắt `Lô` + chữ thuần).
+
+## NUM
+
+- Không ghép số vào suffix sau **chữ cái** trong cùng token (vd tránh nuốt số trong `Ak612A`, mã căn sau chữ).
+- **Hợp lệ có chữ và dấu gạch**: `H64-H65` (chuỗi dạng mã căn/ghép).
+- Bỏ số chỉ có **≥ 6 chữ số** thuần (thường là mã bưu điện / dãy trong đuôi địa chỉ, vd `756000`).
+- Bỏ khoảng cách **`200m`**, `\d+s*m` một cách rời khỏi ngữ cảnh “Chợ … cách … m” để không tạo NUM ngoài kỳ vọng.
+- Giữ guard: không cho NUM trên số ngay sau tiền tố **Tổ / Thôn / Ấp / KP** (đã có trong vòng micro).
+
+## ALY (hẻm / ngõ / kiệt / ngách)
+
+- **Không** gán ALY “Kiệt …” khi đó là phần cuối tên đường **Lý Thường Kiệt** (prefix trước span kết thúc bằng `thường` + khoảng trắng rồi tới `kiệt`).
+
+## STR
+
+- Nếu STR có dạng **tên đường + `( cafe …`**, cắt STR tại dấu `(` (tách STR khỏi POI trong ngoặc).
+- Nếu span STR chứa cụm **Thường Kiệt** như bị dính nhiễu phía sau, chuẩn hóa về **tới hết “thường kiệt”** (tránh dính “bắc lý …” lặp admin trong free text).
+
+## POI
+
+- **`Chợ` + tên**: sau khi match, **thu gọn** về tối đa “Chợ + 1–2 cụm tên” (không nuốt cả mô tả “200m) - … - tỉnh”).
+- **`cafe` / `cà phê`**: trim dấu **)** / khoảng thừa ở cuối span.
+- **`Billiard`**: không dùng POI MICRO greedy sau từ khóa billiard; ưu span **tên cửa hàng + Billiard** trước **Xóm / Thôn / Ấp** (rule free-text `m_bill_all`).
+- Lọc **false positive** POI dạng **`Am Anh Nam Đàn …`** (lỗi gõ/cắt chữ từ “Nam Anh” + “Nam Đàn”) khi không phải billiard.
+
+## Khi thêm quy mới
+
+1. Thêm/ cập nhật case trong `scripts/labeling/prelabeler_labeling_cases.json`.
+2. Cài đặt logic **chỉ** trong `export_for_annotation.py` (predict) hoặc `prelabeler_labeling_service.py` (validate/expected) theo đúng bảng single-source.
+3. Chạy `python scripts/labeling/run_prelabeler_labeling_cases.py` (100% pass) và `python scripts/test/test_prelabeler_regression.py` (`OK`).

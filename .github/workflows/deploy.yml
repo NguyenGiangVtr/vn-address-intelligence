@@ -122,7 +122,11 @@ jobs:
 
       - name: Run prelabeler regression suite
         shell: bash
-        run: python scripts/test/run_prelabeler_testcases.py
+        env:
+          PYTHONIOENCODING: utf-8
+        run: |
+          python scripts/labeling/run_prelabeler_labeling_cases.py \
+            --min-pass-rate "${MIN_PASS_RATE:-1.0}"
 
       - name: Apply cache-busting version to HTML assets
         shell: bash

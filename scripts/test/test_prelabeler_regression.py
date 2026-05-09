@@ -2,8 +2,10 @@
 """
 Regression tests cho PreLabeler.
 
-Mục tiêu: chặn lỗi tái phát khi địa chỉ nhập lặp đơn vị hành chính
-gây detect nhầm STR từ tên tỉnh/huyện/xã.
+Muc tieu: chan loi tai phat khi dia chi nhap lap don vi hanh chinh
+gay detect nham STR tu ten tinh/huyen/xa.
+
+Tuan thu rule "Type + Name" cho admin labels (WDS/DST/PRO).
 """
 
 import sys
@@ -35,13 +37,15 @@ def test_no_false_str_when_admin_units_are_duplicated():
     )
     label_text = _to_label_text_set(predictions)
 
-    # Các nhãn admin đúng vẫn phải tồn tại
-    assert ("WDS", "cư né") in label_text
-    assert ("DST", "krông búk") in label_text
+    # Cac nhan admin dung phai ton tai (giu Type + Name).
+    assert ("WDS", "xã cư né") in label_text
+    assert ("DST", "huyện krông búk") in label_text
     assert ("PRO", "đắk lắk") in label_text
 
-    # Regression guard: không được phát sinh STR từ đơn vị hành chính lặp
+    # Regression guard: khong duoc phat sinh STR tu don vi hanh chinh lap.
     assert ("STR", "đắk lắk") not in label_text
+    assert ("STR", "krông búk") not in label_text
+    assert ("STR", "cư né") not in label_text
 
 
 if __name__ == "__main__":

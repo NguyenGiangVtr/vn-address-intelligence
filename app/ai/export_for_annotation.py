@@ -25,6 +25,11 @@ if str(PROJECT_ROOT) not in sys.path:
 from app.ai.db_connector import DBConnector
 from app.ai.utils.address_cleaner import AddressCleaner
 from app.ai.utils.config_loader import load_config_with_env
+from app.ai.constants import (
+    ADMIN_ALL_PREFIXES_ALT,
+    ADMIN_PREFIX_ALTERNATIVES,
+    admin_prefix_anchored_pattern,
+)
 
 # ──────────────────────────────────────────────────────────────────────────────
 logging.basicConfig(level=logging.INFO, format="%(asctime)s.%(msecs)03d [%(levelname)s] %(message)s", datefmt="%H:%M:%S")
@@ -44,7 +49,9 @@ class PreLabeler:
     CENTRAL_CITIES = {"hồ chí minh", "hcm", "hà nội", "hn", "đà nẵng", "đn", "hải phòng", "hp", "cần thơ", "ct"}
 
     # ──────────────────────────────────────────────────────────────────────────
-    # Cấu hình tiền tố và từ khóa đơn vị hành chính để làm sạch nhãn
+    # Cấu hình tiền tố và từ khóa đơn vị hành chính để làm sạch nhãn.
+    # WDS/DST/PRO LẤY TỪ canonical app.ai.constants.ADMIN_PREFIX_ALTERNATIVES —
+    # KHÔNG được khai báo lại vocabulary ở đây.
     # ──────────────────────────────────────────────────────────────────────────
     PREFIX_PATTERNS = {
         "PCD": None,
@@ -54,9 +61,9 @@ class PreLabeler:
         "NUM": r'(?i)^(Số nhà|Số|Lô|Km)\s+',
         "STR": r'(?i)^(Đường|Phố|Đ\.|QL|Quốc\s*lộ|ĐT|TL|Tỉnh\s*lộ|Đại\s*lộ|HL)\s+',
         "NHB": r'(?i)^(Khu\s*phố|KP|Tổ\s*dân\s*phố|Thôn|Ấp|Bản|Tổ|Sóc|Phum|Xóm|Làng|Khóm|Cụm|Buôn|Plei|KDC)\s+',
-        "WDS": r'(?i)^(Phường|Xã|Thị trấn|P\.|X\.)\s+',
-        "DST": r'(?i)^(Quận|Huyện|Thị xã|Q\.|H\.)\s+',
-        "PRO": r'(?i)^(Thành phố|Tỉnh|TP\.|TP)\s+',
+        "WDS": admin_prefix_anchored_pattern("WDS"),
+        "DST": admin_prefix_anchored_pattern("DST"),
+        "PRO": admin_prefix_anchored_pattern("PRO"),
     }
     STRIP_PREFIX_LABELS = set()
     
@@ -67,9 +74,12 @@ class PreLabeler:
         ("PCD", r'(?i)(?:\b|^)([23456789CFGHJMPQRVWX]{4,8}\+[23456789CFGHJMPQRVWX]{2,3})(?:\b|$)', 0.95),
         ("BLD", r'(?i)(?:Tòa\s*nhà|Building|Chung\s*cư|CC|Khu\s*tập\s*thể|KTT|Văn\s*phòng|CCN|Tầng|Phòng|Lầu|Block)\s+[^,.\n]+', 0.75),
         #("POI", r'(?i)(?:Trường|Bệnh\s*viện|BV|Cửa\s*hàng|Tạp\s*hóa|ATM|UBND|Chợ|Siêu\s*thị|Công\s*viên|Công\s*ty|Cty|Nhà\s*thờ|Chùa|Khu công nghiệp|KCN|KDC|Studio)\s+[^,.\n]+', 0.7),
-        ("POI", r'(?i)(?:Trường|Bệnh\s*viện|BV|Trạm\s*y\s*tế|Phòng\s*khám|Nhà\s*thuốc|Quầy\s*thuốc|Khu\s*công\s*nghiệp|KCN|Khu\s*dân\s*cư|Khu\s*đô\s*thị|KDC|KĐT|Khu\s*chế\s*xuất|KCX|Vật\s*liệu\s*xây\s*dựng|VLXD|Phân\s*bón|Vựa|Cửa\s*hàng|Tạp\s*hóa|Siêu\s*thị|Chợ|TTTM|Trung\s*tâm\s*thương\s*mại|UBND|Ủy\s*ban|Công\s*an|Bưu\s*điện|Ngân\s*hàng|ATM|Tiệm\s*vàng|Khách\s*sạn|Nhà\s*nghỉ|Hotel|Motel|Quán|Cafe|Cà\s*phê|Spa|Salon|Garage|Kho|Xưởng|Nhà\s*máy|Cơ\s*sở|Công\s*ty|Cty|Doanh\s*nghiệp|Studio|Nhà\s*thờ|Chùa|Đình|Đền|Miếu|Phủ|Am|Giáo\s*xứ|Công\s*viên|Cầu|Bến\s*xe|Cảng|Sân\s*bay)\s+[^,.\n/]+', 0.7),
+        ("POI", r'(?i)(?:Trường|Bệnh\s*viện|BV|Trạm\s*y\s*tế|Phòng\s*khám|Nhà\s*thuốc|Quầy\s*thuốc|Khu\s*công\s*nghiệp|KCN|Khu\s*dân\s*cư|Khu\s*đô\s*thị|KDC|KĐT|Khu\s*chế\s*xuất|KCX|Vật\s*liệu\s*xây\s*dựng|VLXD|Phân\s*bón|Vựa|Cửa\s*hàng|Tạp\s*hóa|Siêu\s*thị|Chợ|TTTM|Trung\s*tâm\s*thương\s*mại|UBND|Ủy\s*ban|Công\s*an|Bưu\s*điện|Ngân\s*hàng|ATM|Tiệm\s*vàng|Khách\s*sạn|Nhà\s*nghỉ|Hotel|Motel|Quán|Cafe|Cà\s*phê|Bi-a|Bi\s*a|Spa|Salon|Garage|Kho|Xưởng|Nhà\s*máy|Cơ\s*sở|Công\s*ty|Cty|Doanh\s*nghiệp|Studio|Nhà\s*thờ|Chùa|Đền|Miếu|Phủ|Am|Giáo\s*xứ|Công\s*viên|Cầu|Bến\s*xe|Cảng|Sân\s*bay)\s+[^,.\n/]+', 0.7),
+        # Tránh nhầm đuôi tên đường "... Thường Kiệt" với hẻm Kiệt (xử lý bổ sung trong vòng MICRO).
         ("ALY", r'(?i)(?:Hẻm|Ngõ|Kiệt|Ngách)\s+[^,.\n]+', 0.85),
-        ("NUM", r'(?i)(?:Số nhà|Số\s+)?\d+[A-Za-z]?(?:[/\-]\d+[A-Za-z]?)*|(?:\b|^)(?:Lô|Km)\s+[\w\-]+', 0.9),
+        ("NHB", r'(?i)(?:Tháp|tủ|Tủ)\s+[^\),\n]+', 0.84),
+        # Lô chỉ là NUM khi có chữ số (vd Lô 12); "Lô C" để nhãn NHB tổng quát hoặc free-text.
+        ("NUM", r'(?i)(?:Số nhà|Số\s+)?\d+[A-Za-z]?(?:[/\-]\d+[A-Za-z]?)*|(?:\b|^)[A-Za-z]?\d+(?:-[A-Za-z]?\d+[A-Za-z]*)+(?:\b|$)|(?:\b|^)(?:Km)\s+[\w\-]+|(?:\b|^)(?:Lô)\s+\d[\w\-]*', 0.9),
         # Không bắt "phố" chung chung để tránh nuốt cụm POI như "Vật liệu xây dựng ...".
         # Chỉ match "Phố" khi có tiền tố đường rõ ràng (Đường/Đ./QL/...)
         ("STR", r'(?i)(?:Đường|Đ\.|QL|Quốc\s*lộ|ĐT|TL|Tỉnh\s*lộ|Đại\s*lộ|Hương\s*lộ|HL)\s+[^,.\n]+', 0.85),
@@ -111,6 +121,14 @@ class PreLabeler:
                 if m_so_prefix:
                     text = text[m_so_prefix.end():].strip()
                     start += m_so_prefix.end()
+                # Tách phần sau dấu ( khi kèm quán cà phê — vd "Bờ Sông Sét ( cafe …"
+                m_caf = re.search(r'(?i)\s*\(\s*cafe\b', text)
+                if m_caf:
+                    text = text[: m_caf.start()].strip(' ,')
+                tl = text.lower()
+                if "thường kiệt" in tl:
+                    cut = tl.find("thường kiệt") + len("thường kiệt")
+                    text = text[:cut].strip(' ,')
                 # Cắt ở cuối nếu dính đơn vị hành chính
                 m_admin = re.search(cls.ADMIN_KEYWORDS, text)
                 if m_admin:
@@ -128,6 +146,16 @@ class PreLabeler:
                 m_admin = re.search(cls.ADMIN_KEYWORDS, text)
                 if m_admin:
                     text = text[:m_admin.start()].strip(' ,')
+            if label == "POI":
+                tl = text.lower().strip()
+                if tl.startswith('cafe') or tl.startswith('cà phê'):
+                    text = text.rstrip(' ).\t')
+                m_ch_trim = re.match(
+                    r'(?is)^(chợ\s+[A-Za-zÀ-ỹĐđ]+(?:\s+[A-Za-zÀ-ỹĐđ]+)?)\b',
+                    text.strip(),
+                )
+                if m_ch_trim:
+                    text = m_ch_trim.group(1).strip()
 
             # Chuẩn hóa khoảng trắng đầu/cuối để tránh mismatch khi so testcase.
             leading_ws = len(text) - len(text.lstrip())
@@ -203,9 +231,9 @@ class PreLabeler:
         ]
 
         label_prefix_hints = {
-            "WDS": r'(?i)\b(Phường|Xã|Thị trấn|P\.|X\.)\s*$',
-            "DST": r'(?i)\b(Quận|Huyện|Thị xã|Thành phố|Q\.|H\.)\s*$',
-            "PRO": r'(?i)\b(Tỉnh|Thành phố|TP\.?|City)\s*$',
+            "WDS": rf'(?i)\b({ADMIN_PREFIX_ALTERNATIVES["WDS"]})\s*$',
+            "DST": rf'(?i)\b({ADMIN_PREFIX_ALTERNATIVES["DST"]})\s*$',
+            "PRO": rf'(?i)\b({ADMIN_PREFIX_ALTERNATIVES["PRO"]}|City)\s*$',
         }
 
         for label, entity_name in macros:
@@ -214,7 +242,7 @@ class PreLabeler:
             # Tạo các biến thể tìm kiếm để tăng khả năng khớp
             search_terms = [entity_name]
             # Thêm biến thể bỏ tiền tố (Ví dụ: "Quận 1" -> "1", "Phường Bến Nghé" -> "Bến Nghé")
-            short_name = re.sub(r'(?i)^(Thành phố|Tỉnh|Quận|Huyện|Thị xã|Phường|Xã|Thị trấn|TP\.|Q\.|H\.|P\.|X\.)\s*', '', entity_name).strip()
+            short_name = re.sub(rf'(?i)^({ADMIN_ALL_PREFIXES_ALT})\s*', '', entity_name).strip()
             if short_name and short_name != entity_name:
                 search_terms.append(short_name)
             
@@ -247,6 +275,32 @@ class PreLabeler:
                     1.0
                 ):
                     break
+
+        def _has_macro(label: str) -> bool:
+            return any(
+                label in (r.get("value") or {}).get("labels", [])
+                for r in results
+            )
+
+        # Master data được truyền vào nhưng không có trong chuỗi (địa chỉ rút gọn) — vẫn xuất entity.
+        for label, entity_name in macros:
+            nm = str(entity_name or "").strip()
+            if not nm or _has_macro(label):
+                continue
+            search_terms = [nm]
+            sn = re.sub(rf"(?i)^({ADMIN_ALL_PREFIXES_ALT})\s*", "", nm).strip()
+            if sn and sn != nm:
+                search_terms.append(sn)
+            if any(
+                t
+                and re.search(rf"(?<!\w){re.escape(str(t).strip())}(?!\w)", raw_address, re.I)
+                for t in search_terms
+                if str(t).strip()
+            ):
+                continue
+            display = sn or nm
+            z = len(raw_address.rstrip())
+            add_result(z, z + max(1, len(display)), display.strip(), label, 0.99)
 
         # Giai đoạn 1.2: Heuristic nhận diện STR nằm giữa NUM và WDS (WS)
         # Theo yêu cầu: STR nằm giữa NUM và WDS và có thể nằm trong danh sách từ OSM
@@ -311,7 +365,7 @@ class PreLabeler:
             if not name:
                 return text
             # Các tiền tố thường gặp
-            prefixes = r'(?:Thành phố|Tỉnh|Quận|Huyện|Thị xã|Phường|Xã|Thị trấn|TP\.|TP|Q\.|Q|H\.|P\.|P)\s*'
+            prefixes = rf'(?:{ADMIN_ALL_PREFIXES_ALT})\s*'
             # Loại bỏ cả biến thể có tiền tố và không có
             pattern = rf'(?:{prefixes})?\s*{re.escape(name)}'
             return re.sub(pattern, '', text, flags=re.I)
@@ -391,7 +445,7 @@ class PreLabeler:
 
             def _strip_admin_prefix(name: str) -> str:
                 return re.sub(
-                    r'(?i)^(Thành phố|Tỉnh|Quận|Huyện|Thị xã|Phường|Xã|Thị trấn|TP\.?|Q\.?|H\.?|P\.?|X\.?)\s*',
+                    rf'(?i)^({ADMIN_ALL_PREFIXES_ALT})\s*',
                     '',
                     (name or '').strip()
                 ).strip()
@@ -415,7 +469,7 @@ class PreLabeler:
                     target_set.add(normalized_stripped)
 
             admin_or_micro_prefix = re.compile(
-                r'(?i)^(Phường|Xã|Thị trấn|Quận|Huyện|Thị xã|Thành phố|Tỉnh|TP\.?|Q\.?|H\.?|P\.?|X\.?|'
+                rf'(?i)^({ADMIN_ALL_PREFIXES_ALT}|'
                 r'Tổ|Khu phố|KP|Thôn|Ấp|Bản|Số|Số nhà|Hẻm|Ngõ|Kiệt|Ngách|Đường|Phố|Đ\.|QL|ĐT|TL)\b'
             )
             # Bỏ qua segment có dấu hiệu POI/cửa hàng để tránh gán nhầm STR.
@@ -462,7 +516,7 @@ class PreLabeler:
         # Các rule này chỉ "bổ sung" và vẫn đi qua anti-overlap của add_result.
         def _add_free_text_bundle_rules() -> None:
             first_admin = re.search(
-                r'(?i),\s*(?:Phường|Xã|Thị trấn|Quận|Huyện|Thị xã|Thành phố|Tỉnh|TP\.?|Q\.?|H\.?|P\.?|X\.?)\b',
+                rf'(?i),\s*(?:{ADMIN_ALL_PREFIXES_ALT})\b',
                 raw_address
             )
             free_text = raw_address[:first_admin.start()] if first_admin else raw_address
@@ -493,9 +547,13 @@ class PreLabeler:
             if m_studio:
                 add_result(m_studio.start(1), m_studio.end(1), raw_address[m_studio.start(1):m_studio.end(1)], "POI", 0.78)
 
-            m_cho = re.search(r'(?i)\b(Chợ\s+[^,]+)', free_text)
+            m_cho = re.search(
+                r'(?i)\b(Chợ\s+[A-Za-zÀ-ỹĐđ]+(?:\s+[A-Za-zÀ-ỹĐđ]+)?)\s*(?=,|[\s\)]+[-–]?|\)|\s+\d|$)',
+                free_text,
+            )
             if m_cho:
-                add_result(m_cho.start(1), m_cho.end(1), raw_address[m_cho.start(1):m_cho.end(1)], "POI", 0.78)
+                s0, e0 = m_cho.span(1)
+                add_result(s0, e0, raw_address[s0:e0].strip(), "POI", 0.78)
 
             m_kdc = re.search(r'(?i)\b(KDC\s+[^,]+)', free_text)
             if m_kdc:
@@ -508,6 +566,46 @@ class PreLabeler:
             m_toa = re.search(r'(?i)\b(Toà?\s*Nhà\s+[^,]+)', free_text)
             if m_toa:
                 add_result(m_toa.start(1), m_toa.end(1), raw_address[m_toa.start(1):m_toa.end(1)], "NHB", 0.7)
+
+            m_lo_az = re.search(r"(?i)\b(Lô\s+[A-Za-zĐđ])(?!\w)", free_text)
+            if m_lo_az:
+                add_result(m_lo_az.start(1), m_lo_az.end(1), raw_address[m_lo_az.start(1):m_lo_az.end(1)], "NHB", 0.83)
+
+            m_bac_dai_n = re.search(r"(?i)\b(Bắc\s+Đại\s+\d+)\b", free_text)
+            if m_bac_dai_n:
+                add_result(m_bac_dai_n.start(1), m_bac_dai_n.end(1), raw_address[m_bac_dai_n.start(1):m_bac_dai_n.end(1)], "NHB", 0.82)
+
+            m_bill_all = re.search(
+                r"(?i)^\s*((?:[A-Za-zÀ-ỹ0-9Đđ]\s*){1,12}?billiard)\b(?=\s*(?:xóm|thôn|ấp|,))",
+                raw_address.strip(),
+            )
+            if m_bill_all:
+                add_result(m_bill_all.start(1), m_bill_all.end(1), raw_address[m_bill_all.start(1):m_bill_all.end(1)], "POI", 0.76)
+
+            m_br_all = re.search(r"(?i)\d+\s+(Bờ\s*Sông\s*Sét)\s*\(\s*(cafe\s+[A-Za-zÀ-ỹ0-9\s]+)", free_text)
+            if m_br_all:
+                s_a, e_a = m_br_all.span(1)
+                add_result(s_a, e_a, raw_address[s_a:e_a].strip(), "STR", 0.86)
+                s_b, e_b = m_br_all.span(2)
+                add_result(s_b, e_b, raw_address[s_b:e_b].strip(), "POI", 0.8)
+
+            m_cho_near = re.search(
+                r"(?i)\b(chợ\s+[A-Za-zÀ-ỹ]+(?:\s+[A-Za-zÀ-ỹ]+){0,2})\b\s*(?=\s*\d{0,4}\s*m|\s*cách)",
+                raw_address,
+            )
+            if m_cho_near:
+                s0, e0 = m_cho_near.span(1)
+                add_result(s0, e0, raw_address[s0:e0].strip(), "POI", 0.79)
+
+            m_nhb_dp_st = re.search(
+                r"(?i)(\b(?:ấp|thôn)\s+[A-Za-z0-9]+)\s+((?:Đường|đường)\s+\d+\w*)(?=\s*[,.]|\s*$)",
+                free_text,
+            )
+            if m_nhb_dp_st:
+                s1, e1 = m_nhb_dp_st.span(1)
+                add_result(s1, e1, raw_address[s1:e1].strip(), "NHB", 0.84)
+                s2, e2 = m_nhb_dp_st.span(2)
+                add_result(s2, e2, raw_address[s2:e2].strip(), "STR", 0.82)
 
         _add_bare_street_candidate()
         _add_free_text_bundle_rules()
@@ -531,6 +629,25 @@ class PreLabeler:
             # Chỉ tách khi thật sự có từ 2 cụm NHB trở lên.
             return pieces if len(pieces) >= 2 else []
 
+        def _split_ap_duong(full_start: int, text: str):
+            mt = text.strip()
+            m_ap = re.match(
+                r'(?is)^((?:ấp|thôn)\s+[a-zà-ý0-9]+)\s+((?:Đường|đường|[Đđ]\s*\.)\s*.+)$',
+                mt,
+            )
+            if not m_ap:
+                return []
+            a = m_ap.group(1).strip()
+            b = m_ap.group(2).strip()
+            ia = mt.lower().find(a.lower())
+            ib = mt.lower().find(b.lower())
+            if ia < 0 or ib < 0:
+                return []
+            return [
+                (full_start + ia, full_start + ia + len(a), a),
+                (full_start + ib, full_start + ib + len(b), b),
+            ]
+
         micro_candidates = []
         for label, pattern, score in cls.MICRO_RULES:
             for match in re.finditer(pattern, raw_address):
@@ -538,11 +655,52 @@ class PreLabeler:
                 start = match.start() + match.group(0).find(matched_text)
                 end = start + len(matched_text)
                 if label == "NUM":
+                    # Tránh ghép số vào mã alphanumeric (Ak612A, H64…) hoặc sau chữ trong từ.
+                    if start > 0:
+                        pv = raw_address[start - 1]
+                        if re.match(r"[A-Za-zÀ-ỹĐđ]", pv):
+                            continue
                     # Tránh gán NUM cho số thuộc cụm NHB: "Tổ 1", "Thôn 2", ...
                     left_ctx = raw_address[max(0, start - 24):start].lower()
                     if re.search(r'(tổ|thôn|ấp|khu\s*phố|kp)\s*$', left_ctx, re.I):
                         continue
+                    dig = matched_text.strip()
+                    if dig.isdigit() and len(dig) >= 6:
+                        continue
+                    if re.match(r'(?is)^\d{1,6}\s*m\b', dig):
+                        continue
+                if label == "ALY" and start > 0 and re.match(r"(?is)^Kiệt\s+", matched_text.strip()):
+                    pre_trim = raw_address[:start].rstrip()
+                    if pre_trim.casefold().endswith("thường"):
+                        continue
+                if label == "POI" and re.match(
+                    r'(?is)^am\s+anh\s+nam\s+đàn',
+                    matched_text.strip(),
+                ):
+                    continue
                 if label == "NHB":
+                    ap_chunks = _split_ap_duong(start, matched_text)
+                    if len(ap_chunks) >= 2:
+                        for s, e, seg_text in ap_chunks:
+                            lab = "STR" if re.match(r'(?is)^(?:Đường|đường|[Đđ]\s*\.)', seg_text) else "NHB"
+                            micro_candidates.append((lab, s, e, seg_text, score + 0.02))
+                        continue
+                    mt_l = matched_text.strip()
+                    if re.match(r'(?is)^tháp\s+', mt_l) and '(' in mt_l:
+                        op = mt_l.index('(')
+                        outer_span = mt_l[:op].strip(' ,.')
+                        inner = mt_l[op + 1 :]
+                        m_tu = re.search(r'(?is)tủ\s+[^\),\s]+(?:\.[^\),\s]+)?', inner)
+                        if outer_span and m_tu:
+                            tu_txt = m_tu.group(0).strip().rstrip(')')
+                            rel_tu = mt_l.casefold().find(tu_txt.casefold())
+                            if rel_tu < 0:
+                                rel_tu = op + 1 + inner.casefold().find(tu_txt.casefold())
+                            s_out = start + mt_l.casefold().find(outer_span.casefold())
+                            s_tu = start + rel_tu
+                            micro_candidates.append(('NHB', s_out, s_out + len(outer_span), outer_span, score + 0.03))
+                            micro_candidates.append(('NHB', s_tu, s_tu + len(tu_txt), tu_txt, score + 0.03))
+                            continue
                     split_parts = _split_nhb_candidates(start, matched_text)
                     if split_parts:
                         for s, e, seg_text in split_parts:

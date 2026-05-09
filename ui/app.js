@@ -5232,6 +5232,14 @@ async function initEvidenceView() {
               : '',
         expected: typeof c.expected === 'string' ? JSON.parse(c.expected) : (c.expected || []),
       }));
+      // Hydrate persisted run results so summary + indicators survive page reload.
+      results = {};
+      for (const c of cases) {
+        const tr = c.test_result;
+        if (!tr) continue;
+        const parsed = typeof tr === 'string' ? (() => { try { return JSON.parse(tr); } catch { return null; } })() : tr;
+        if (parsed && typeof parsed === 'object') results[c.id] = parsed;
+      }
     } catch (e) {
       console.warn('PreLabeler labeling: cannot load from DB, trying localStorage', e);
       cases = JSON.parse(localStorage.getItem('plt_cases') || '[]');
@@ -5618,6 +5626,7 @@ async function initEvidenceView() {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       results[c.id] = data[0];
+      c.tested_at = new Date().toISOString();
     } catch (e) {
       window.showToast?.('Lỗi server: ' + e.message, 'danger');
     } finally {
@@ -5653,10 +5662,13 @@ async function initEvidenceView() {
       }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
+      const nowIso = new Date().toISOString();
       data.forEach((rr, i) => {
         const rid = rr && rr.id != null ? String(rr.id) : null;
         if (rid) results[rid] = rr;
         else if (cases[i]) results[cases[i].id] = rr;
+        const target = rid ? cases.find(c => c.id === rid) : cases[i];
+        if (target) target.tested_at = nowIso;
       });
       window.showToast?.(`Đã đối chiếu xong ${data.length} mẫu`, 'success');
     } catch (e) {
@@ -5685,6 +5697,8 @@ async function initEvidenceView() {
     const elPct = document.getElementById('plt-pct');
     const elFilterPass = document.getElementById('plt-filter-pass');
     const elFilterFail = document.getElementById('plt-filter-fail');
+    const elLast = document.getElementById('plt-last-tested');
+    const elLastText = document.getElementById('plt-last-tested-text');
 
     if (elTotal) elTotal.textContent = cases.length;
     if (elPass) elPass.textContent = pass;
@@ -5696,6 +5710,38 @@ async function initEvidenceView() {
     if (elPct) elPct.textContent = ran.length ? `${pct}% · đã đối chiếu ${ran.length} mẫu` : 'Chưa đối chiếu';
     if (elFilterPass) elFilterPass.classList.toggle('active', pltResultFilter === 'pass');
     if (elFilterFail) elFilterFail.classList.toggle('active', pltResultFilter === 'fail');
+
+    if (elLast && elLastText) {
+      let maxTs = 0;
+      for (const c of cases) {
+        const t = c?.tested_at ? Date.parse(c.tested_at) : 0;
+        if (Number.isFinite(t) && t > maxTs) maxTs = t;
+      }
+      if (maxTs > 0) {
+        const d = new Date(maxTs);
+        const rel = pltFormatRelativeTime(maxTs);
+        const abs = d.toLocaleString('vi-VN', { hour12: false });
+        elLastText.textContent = `Lần cuối đối chiếu ${rel}`;
+        elLast.title = `Lần cuối đối chiếu: ${abs}`;
+        elLast.hidden = false;
+      } else {
+        elLast.hidden = true;
+      }
+    }
+  }
+
+  function pltFormatRelativeTime(ts) {
+    const diffSec = Math.max(0, Math.round((Date.now() - ts) / 1000));
+    if (diffSec < 60) return 'vừa xong';
+    const diffMin = Math.round(diffSec / 60);
+    if (diffMin < 60) return `${diffMin} phút trước`;
+    const diffHour = Math.round(diffMin / 60);
+    if (diffHour < 24) return `${diffHour} giờ trước`;
+    const diffDay = Math.round(diffHour / 24);
+    if (diffDay < 30) return `${diffDay} ngày trước`;
+    const diffMonth = Math.round(diffDay / 30);
+    if (diffMonth < 12) return `${diffMonth} tháng trước`;
+    return `${Math.round(diffMonth / 12)} năm trước`;
   }
 
   function pltExport() {

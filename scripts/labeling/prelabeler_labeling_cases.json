@@ -1,5 +1,2103 @@
 [
   {
+    "id": "mox4uao3ydua",
+    "name": "Random #190894",
+    "input": "5756+G3 Hàm Thuận Bắc, Bình Thuận, Việt Nam",
+    "expected": [
+      {
+        "text": "Hàm Thuận Bắc",
+        "label": "DST"
+      },
+      {
+        "text": "Bình Thuận",
+        "label": "PRO"
+      },
+      {
+        "text": "5756+G3",
+        "label": "PCD"
+      }
+    ],
+    "strict": false,
+    "test_result": {
+      "id": "mox4uao3ydua",
+      "actual": [
+        {
+          "text": "Hàm Thuận Bắc",
+          "label": "DST"
+        },
+        {
+          "text": "Bình Thuận",
+          "label": "PRO"
+        },
+        {
+          "text": "5756+G3",
+          "label": "PCD"
+        }
+      ],
+      "passed": true,
+      "details": [
+        {
+          "found": true,
+          "expected": {
+            "text": "Hàm Thuận Bắc",
+            "label": "DST"
+          }
+        },
+        {
+          "found": true,
+          "expected": {
+            "text": "Bình Thuận",
+            "label": "PRO"
+          }
+        },
+        {
+          "found": true,
+          "expected": {
+            "text": "5756+G3",
+            "label": "PCD"
+          }
+        }
+      ],
+      "expected": [
+        {
+          "text": "Hàm Thuận Bắc",
+          "label": "DST"
+        },
+        {
+          "text": "Bình Thuận",
+          "label": "PRO"
+        },
+        {
+          "text": "5756+G3",
+          "label": "PCD"
+        }
+      ],
+      "unexpected": [],
+      "validation_errors": []
+    },
+    "tested_at": "2026-05-08T18:31:16.298Z",
+    "created_at": "2026-05-08T23:31:42.887767+07:00",
+    "updated_at": "2026-05-09T01:28:56.173915+07:00"
+  },
+  {
+    "id": "mox4uo86mrbo",
+    "name": "Random #193571",
+    "input": "Tháp Ak 6 (tủ Ak612A.08) Chung Cư Akari City, Số 77, Võ Văn Kiệt, Phường An Lạc, Quận Bình Tân, TP. Hồ Chí Minh",
+    "expected": [
+      {
+        "text": "Võ Văn Kiệt",
+        "label": "STR"
+      },
+      {
+        "text": "Chung Cư Akari City",
+        "label": "BLD"
+      },
+      {
+        "text": "Số 77",
+        "label": "NUM"
+      },
+      {
+        "text": "TP. Hồ Chí Minh",
+        "label": "PRO"
+      },
+      {
+        "text": "Quận Bình Tân",
+        "label": "DST"
+      },
+      {
+        "text": "Phường An Lạc",
+        "label": "WDS"
+      },
+      {
+        "text": "Tháp Ak 6",
+        "label": "NHB"
+      },
+      {
+        "text": "tủ Ak612A.08",
+        "label": "NHB"
+      }
+    ],
+    "strict": false,
+    "test_result": {
+      "id": "mox4uo86mrbo",
+      "actual": [
+        {
+          "text": "Phường An Lạc",
+          "label": "WDS"
+        },
+        {
+          "text": "Quận Bình Tân",
+          "label": "DST"
+        },
+        {
+          "text": "TP. Hồ Chí Minh",
+          "label": "PRO"
+        },
+        {
+          "text": "Võ Văn Kiệt",
+          "label": "STR"
+        },
+        {
+          "text": "Chung Cư Akari City",
+          "label": "BLD"
+        },
+        {
+          "text": "Số 77",
+          "label": "NUM"
+        },
+        {
+          "text": "612A",
+          "label": "NUM"
+        },
+        {
+          "text": "08",
+          "label": "NUM"
+        },
+        {
+          "text": "6",
+          "label": "NUM"
+        }
+      ],
+      "passed": false,
+      "details": [
+        {
+          "found": true,
+          "expected": {
+            "text": "Võ Văn Kiệt",
+            "label": "STR"
+          }
+        },
+        {
+          "found": true,
+          "expected": {
+            "text": "Chung Cư Akari City",
+            "label": "BLD"
+          }
+        },
+        {
+          "found": true,
+          "expected": {
+            "text": "Số 77",
+            "label": "NUM"
+          }
+        },
+        {
+          "found": true,
+          "expected": {
+            "text": "TP. Hồ Chí Minh",
+            "label": "PRO"
+          }
+        },
+        {
+          "found": true,
+          "expected": {
+            "text": "Quận Bình Tân",
+            "label": "DST"
+          }
+        },
+        {
+          "found": true,
+          "expected": {
+            "text": "Phường An Lạc",
+            "label": "WDS"
+          }
+        },
+        {
+          "found": false,
+          "expected": {
+            "text": "Tháp Ak 6",
+            "label": "NHB"
+          }
+        },
+        {
+          "found": false,
+          "expected": {
+            "text": "tủ Ak612A.08",
+            "label": "NHB"
+          }
+        }
+      ],
+      "expected": [
+        {
+          "text": "Võ Văn Kiệt",
+          "label": "STR"
+        },
+        {
+          "text": "Chung Cư Akari City",
+          "label": "BLD"
+        },
+        {
+          "text": "Số 77",
+          "label": "NUM"
+        },
+        {
+          "text": "TP. Hồ Chí Minh",
+          "label": "PRO"
+        },
+        {
+          "text": "Quận Bình Tân",
+          "label": "DST"
+        },
+        {
+          "text": "Phường An Lạc",
+          "label": "WDS"
+        },
+        {
+          "text": "Tháp Ak 6",
+          "label": "NHB"
+        },
+        {
+          "text": "tủ Ak612A.08",
+          "label": "NHB"
+        }
+      ],
+      "unexpected": [
+        {
+          "text": "612a",
+          "label": "NUM"
+        },
+        {
+          "text": "08",
+          "label": "NUM"
+        },
+        {
+          "text": "6",
+          "label": "NUM"
+        }
+      ],
+      "validation_errors": []
+    },
+    "tested_at": "2026-05-08T18:31:16.298Z",
+    "created_at": "2026-05-08T23:32:00.462777+07:00",
+    "updated_at": "2026-05-09T01:28:56.173915+07:00"
+  },
+  {
+    "id": "mox4z0yxbu5o",
+    "name": "Random #98929",
+    "input": "45 Nguyễn Hoành, Phường Vĩnh Trường, Thành Phố Nha Trang, Khánh Hòa",
+    "expected": [
+      {
+        "text": "Nguyễn Hoành",
+        "label": "STR"
+      },
+      {
+        "text": "45",
+        "label": "NUM"
+      },
+      {
+        "text": "Khánh Hòa",
+        "label": "PRO"
+      },
+      {
+        "text": "Thành Phố Nha Trang",
+        "label": "DST"
+      },
+      {
+        "text": "Phường Vĩnh Trường",
+        "label": "WDS"
+      }
+    ],
+    "strict": false,
+    "test_result": {
+      "id": "mox4z0yxbu5o",
+      "actual": [
+        {
+          "text": "Phường Vĩnh Trường",
+          "label": "WDS"
+        },
+        {
+          "text": "Thành Phố Nha Trang",
+          "label": "DST"
+        },
+        {
+          "text": "Khánh Hòa",
+          "label": "PRO"
+        },
+        {
+          "text": "Nguyễn Hoành",
+          "label": "STR"
+        },
+        {
+          "text": "45",
+          "label": "NUM"
+        }
+      ],
+      "passed": true,
+      "details": [
+        {
+          "found": true,
+          "expected": {
+            "text": "Nguyễn Hoành",
+            "label": "STR"
+          }
+        },
+        {
+          "found": true,
+          "expected": {
+            "text": "45",
+            "label": "NUM"
+          }
+        },
+        {
+          "found": true,
+          "expected": {
+            "text": "Khánh Hòa",
+            "label": "PRO"
+          }
+        },
+        {
+          "found": true,
+          "expected": {
+            "text": "Thành Phố Nha Trang",
+            "label": "DST"
+          }
+        },
+        {
+          "found": true,
+          "expected": {
+            "text": "Phường Vĩnh Trường",
+            "label": "WDS"
+          }
+        }
+      ],
+      "expected": [
+        {
+          "text": "Nguyễn Hoành",
+          "label": "STR"
+        },
+        {
+          "text": "45",
+          "label": "NUM"
+        },
+        {
+          "text": "Khánh Hòa",
+          "label": "PRO"
+        },
+        {
+          "text": "Thành Phố Nha Trang",
+          "label": "DST"
+        },
+        {
+          "text": "Phường Vĩnh Trường",
+          "label": "WDS"
+        }
+      ],
+      "unexpected": [],
+      "validation_errors": []
+    },
+    "tested_at": "2026-05-08T18:31:16.298Z",
+    "created_at": "2026-05-08T23:35:23.607454+07:00",
+    "updated_at": "2026-05-09T01:28:56.173915+07:00"
+  },
+  {
+    "id": "mox509dxryr6",
+    "name": "Random #405244",
+    "input": "Số 100 Nguyễn Sáng, Phường Tây Thạnh, Quận Tân Phú, TP. Hồ Chí Minh",
+    "expected": [
+      {
+        "text": "Số 100",
+        "label": "NUM"
+      },
+      {
+        "text": "TP. Hồ Chí Minh",
+        "label": "PRO"
+      },
+      {
+        "text": "Quận Tân Phú",
+        "label": "DST"
+      },
+      {
+        "text": "Phường Tây Thạnh",
+        "label": "WDS"
+      },
+      {
+        "text": "Nguyễn Sáng",
+        "label": "STR"
+      }
+    ],
+    "strict": false,
+    "test_result": {
+      "id": "mox509dxryr6",
+      "actual": [
+        {
+          "text": "Phường Tây Thạnh",
+          "label": "WDS"
+        },
+        {
+          "text": "Quận Tân Phú",
+          "label": "DST"
+        },
+        {
+          "text": "TP. Hồ Chí Minh",
+          "label": "PRO"
+        },
+        {
+          "text": "Nguyễn Sáng",
+          "label": "STR"
+        },
+        {
+          "text": "Số 100",
+          "label": "NUM"
+        }
+      ],
+      "passed": true,
+      "details": [
+        {
+          "found": true,
+          "expected": {
+            "text": "Số 100",
+            "label": "NUM"
+          }
+        },
+        {
+          "found": true,
+          "expected": {
+            "text": "TP. Hồ Chí Minh",
+            "label": "PRO"
+          }
+        },
+        {
+          "found": true,
+          "expected": {
+            "text": "Quận Tân Phú",
+            "label": "DST"
+          }
+        },
+        {
+          "found": true,
+          "expected": {
+            "text": "Phường Tây Thạnh",
+            "label": "WDS"
+          }
+        },
+        {
+          "found": true,
+          "expected": {
+            "text": "Nguyễn Sáng",
+            "label": "STR"
+          }
+        }
+      ],
+      "expected": [
+        {
+          "text": "Số 100",
+          "label": "NUM"
+        },
+        {
+          "text": "TP. Hồ Chí Minh",
+          "label": "PRO"
+        },
+        {
+          "text": "Quận Tân Phú",
+          "label": "DST"
+        },
+        {
+          "text": "Phường Tây Thạnh",
+          "label": "WDS"
+        },
+        {
+          "text": "Nguyễn Sáng",
+          "label": "STR"
+        }
+      ],
+      "unexpected": [],
+      "validation_errors": []
+    },
+    "tested_at": "2026-05-08T18:31:16.298Z",
+    "created_at": "2026-05-08T23:36:21.174363+07:00",
+    "updated_at": "2026-05-09T01:28:56.173915+07:00"
+  },
+  {
+    "id": "mox52y9qsr1n",
+    "name": "Random #19750",
+    "input": "69 Bờ Sông Sét ( cafe Đắc Nông ), Phường Tương Mai, Quận Hoàng Mai, Hà Nội",
+    "expected": [
+      {
+        "text": "Hà Nội",
+        "label": "PRO"
+      },
+      {
+        "text": "69",
+        "label": "NUM"
+      },
+      {
+        "text": "cafe Đắc Nông",
+        "label": "POI"
+      },
+      {
+        "text": "Bờ Sông Sét",
+        "label": "STR"
+      },
+      {
+        "text": "Quận Hoàng Mai",
+        "label": "DST"
+      },
+      {
+        "text": "Phường Tương Mai",
+        "label": "WDS"
+      }
+    ],
+    "strict": false,
+    "test_result": {
+      "id": "mox52y9qsr1n",
+      "actual": [
+        {
+          "text": "Phường Tương Mai",
+          "label": "WDS"
+        },
+        {
+          "text": "Quận Hoàng Mai",
+          "label": "DST"
+        },
+        {
+          "text": "Hà Nội",
+          "label": "PRO"
+        },
+        {
+          "text": "Bờ Sông Sét ( cafe Đắc Nông )",
+          "label": "STR"
+        },
+        {
+          "text": "69",
+          "label": "NUM"
+        }
+      ],
+      "passed": false,
+      "details": [
+        {
+          "found": true,
+          "expected": {
+            "text": "Hà Nội",
+            "label": "PRO"
+          }
+        },
+        {
+          "found": true,
+          "expected": {
+            "text": "69",
+            "label": "NUM"
+          }
+        },
+        {
+          "found": false,
+          "expected": {
+            "text": "cafe Đắc Nông",
+            "label": "POI"
+          }
+        },
+        {
+          "found": false,
+          "expected": {
+            "text": "Bờ Sông Sét",
+            "label": "STR"
+          }
+        },
+        {
+          "found": true,
+          "expected": {
+            "text": "Quận Hoàng Mai",
+            "label": "DST"
+          }
+        },
+        {
+          "found": true,
+          "expected": {
+            "text": "Phường Tương Mai",
+            "label": "WDS"
+          }
+        }
+      ],
+      "expected": [
+        {
+          "text": "Hà Nội",
+          "label": "PRO"
+        },
+        {
+          "text": "69",
+          "label": "NUM"
+        },
+        {
+          "text": "cafe Đắc Nông",
+          "label": "POI"
+        },
+        {
+          "text": "Bờ Sông Sét",
+          "label": "STR"
+        },
+        {
+          "text": "Quận Hoàng Mai",
+          "label": "DST"
+        },
+        {
+          "text": "Phường Tương Mai",
+          "label": "WDS"
+        }
+      ],
+      "unexpected": [
+        {
+          "text": "bờ sông sét ( cafe đắc nông )",
+          "label": "STR"
+        }
+      ],
+      "validation_errors": []
+    },
+    "tested_at": "2026-05-08T18:31:16.298Z",
+    "created_at": "2026-05-08T23:38:26.725506+07:00",
+    "updated_at": "2026-05-09T01:28:56.173915+07:00"
+  },
+  {
+    "id": "mox58lpw70p0",
+    "name": "Random #374045",
+    "input": "Chung cư Bộ Công An, Lô C, 83 Đ. Số 3, Phường An Khánh, Thủ Đức, Hồ Chí Minh",
+    "expected": [
+      {
+        "text": "Thủ Đức",
+        "label": "DST"
+      },
+      {
+        "text": "Hồ Chí Minh",
+        "label": "PRO"
+      },
+      {
+        "text": "Đ. Số 3",
+        "label": "STR"
+      },
+      {
+        "text": "83",
+        "label": "NUM"
+      },
+      {
+        "text": "Chung cư Bộ Công An",
+        "label": "BLD"
+      },
+      {
+        "text": "Lô C",
+        "label": "NHB"
+      },
+      {
+        "text": "Phường An Khánh",
+        "label": "WDS"
+      }
+    ],
+    "strict": false,
+    "test_result": {
+      "id": "mox58lpw70p0",
+      "actual": [
+        {
+          "text": "Phường An Khánh",
+          "label": "WDS"
+        },
+        {
+          "text": "Thủ Đức",
+          "label": "DST"
+        },
+        {
+          "text": "Hồ Chí Minh",
+          "label": "PRO"
+        },
+        {
+          "text": "Đ. Số 3",
+          "label": "STR"
+        },
+        {
+          "text": "83",
+          "label": "NUM"
+        },
+        {
+          "text": "Chung cư Bộ Công An",
+          "label": "BLD"
+        },
+        {
+          "text": "Lô C",
+          "label": "NUM"
+        }
+      ],
+      "passed": false,
+      "details": [
+        {
+          "found": true,
+          "expected": {
+            "text": "Thủ Đức",
+            "label": "DST"
+          }
+        },
+        {
+          "found": true,
+          "expected": {
+            "text": "Hồ Chí Minh",
+            "label": "PRO"
+          }
+        },
+        {
+          "found": true,
+          "expected": {
+            "text": "Đ. Số 3",
+            "label": "STR"
+          }
+        },
+        {
+          "found": true,
+          "expected": {
+            "text": "83",
+            "label": "NUM"
+          }
+        },
+        {
+          "found": true,
+          "expected": {
+            "text": "Chung cư Bộ Công An",
+            "label": "BLD"
+          }
+        },
+        {
+          "found": false,
+          "expected": {
+            "text": "Lô C",
+            "label": "NHB"
+          }
+        },
+        {
+          "found": true,
+          "expected": {
+            "text": "Phường An Khánh",
+            "label": "WDS"
+          }
+        }
+      ],
+      "expected": [
+        {
+          "text": "Thủ Đức",
+          "label": "DST"
+        },
+        {
+          "text": "Hồ Chí Minh",
+          "label": "PRO"
+        },
+        {
+          "text": "Đ. Số 3",
+          "label": "STR"
+        },
+        {
+          "text": "83",
+          "label": "NUM"
+        },
+        {
+          "text": "Chung cư Bộ Công An",
+          "label": "BLD"
+        },
+        {
+          "text": "Lô C",
+          "label": "NHB"
+        },
+        {
+          "text": "Phường An Khánh",
+          "label": "WDS"
+        }
+      ],
+      "unexpected": [
+        {
+          "text": "lô c",
+          "label": "NUM"
+        }
+      ],
+      "validation_errors": []
+    },
+    "tested_at": "2026-05-08T18:31:16.298Z",
+    "created_at": "2026-05-08T23:42:50.396059+07:00",
+    "updated_at": "2026-05-09T01:28:56.173915+07:00"
+  },
+  {
+    "id": "mox5x5du2anr",
+    "name": "Random #285399",
+    "input": "455A lý thường kiệt bắc lý đồng hới quảng bình, Phường Bắc Lý, Thành Phố Đồng Hới, Quảng Bình",
+    "expected": [
+      {
+        "text": "455A",
+        "label": "NUM"
+      },
+      {
+        "text": "Phường Bắc Lý",
+        "label": "WDS"
+      },
+      {
+        "text": "Thành Phố Đồng Hới",
+        "label": "DST"
+      },
+      {
+        "text": "Quảng Bình",
+        "label": "PRO"
+      },
+      {
+        "text": "lý thường kiệt",
+        "label": "STR"
+      }
+    ],
+    "strict": false,
+    "test_result": {
+      "id": "mox5x5du2anr",
+      "actual": [
+        {
+          "text": "Phường Bắc Lý",
+          "label": "WDS"
+        },
+        {
+          "text": "Thành Phố Đồng Hới",
+          "label": "DST"
+        },
+        {
+          "text": "Quảng Bình",
+          "label": "PRO"
+        },
+        {
+          "text": "455A",
+          "label": "NUM"
+        },
+        {
+          "text": "kiệt bắc lý đồng hới quảng bình",
+          "label": "ALY"
+        }
+      ],
+      "passed": false,
+      "details": [
+        {
+          "found": true,
+          "expected": {
+            "text": "455A",
+            "label": "NUM"
+          }
+        },
+        {
+          "found": true,
+          "expected": {
+            "text": "Phường Bắc Lý",
+            "label": "WDS"
+          }
+        },
+        {
+          "found": true,
+          "expected": {
+            "text": "Thành Phố Đồng Hới",
+            "label": "DST"
+          }
+        },
+        {
+          "found": true,
+          "expected": {
+            "text": "Quảng Bình",
+            "label": "PRO"
+          }
+        },
+        {
+          "found": false,
+          "expected": {
+            "text": "lý thường kiệt",
+            "label": "STR"
+          }
+        }
+      ],
+      "expected": [
+        {
+          "text": "455A",
+          "label": "NUM"
+        },
+        {
+          "text": "Phường Bắc Lý",
+          "label": "WDS"
+        },
+        {
+          "text": "Thành Phố Đồng Hới",
+          "label": "DST"
+        },
+        {
+          "text": "Quảng Bình",
+          "label": "PRO"
+        },
+        {
+          "text": "lý thường kiệt",
+          "label": "STR"
+        }
+      ],
+      "unexpected": [
+        {
+          "text": "kiệt bắc lý đồng hới quảng bình",
+          "label": "ALY"
+        }
+      ],
+      "validation_errors": []
+    },
+    "tested_at": "2026-05-08T18:31:16.298Z",
+    "created_at": "2026-05-09T00:01:55.641507+07:00",
+    "updated_at": "2026-05-09T01:28:56.173915+07:00"
+  },
+  {
+    "id": "mox5yr1gyvoc",
+    "name": "Random #194671",
+    "input": "939 Hùng Vương, TT. Plêi Cần, Ngọc Hồi, Kon Tum, Việt Nam",
+    "expected": [
+      {
+        "text": "Hùng Vương",
+        "label": "STR"
+      },
+      {
+        "text": "939",
+        "label": "NUM"
+      },
+      {
+        "text": "Ngọc Hồi",
+        "label": "DST"
+      },
+      {
+        "text": "Kon Tum",
+        "label": "PRO"
+      },
+      {
+        "text": "TT. Plêi Cần",
+        "label": "WDS"
+      }
+    ],
+    "strict": false,
+    "test_result": {
+      "id": "mox5yr1gyvoc",
+      "actual": [
+        {
+          "text": "TT. Plêi Cần",
+          "label": "WDS"
+        },
+        {
+          "text": "Ngọc Hồi",
+          "label": "DST"
+        },
+        {
+          "text": "Kon Tum",
+          "label": "PRO"
+        },
+        {
+          "text": "Hùng Vương",
+          "label": "STR"
+        },
+        {
+          "text": "939",
+          "label": "NUM"
+        }
+      ],
+      "passed": true,
+      "details": [
+        {
+          "found": true,
+          "expected": {
+            "text": "Hùng Vương",
+            "label": "STR"
+          }
+        },
+        {
+          "found": true,
+          "expected": {
+            "text": "939",
+            "label": "NUM"
+          }
+        },
+        {
+          "found": true,
+          "expected": {
+            "text": "Ngọc Hồi",
+            "label": "DST"
+          }
+        },
+        {
+          "found": true,
+          "expected": {
+            "text": "Kon Tum",
+            "label": "PRO"
+          }
+        },
+        {
+          "found": true,
+          "expected": {
+            "text": "TT. Plêi Cần",
+            "label": "WDS"
+          }
+        }
+      ],
+      "expected": [
+        {
+          "text": "Hùng Vương",
+          "label": "STR"
+        },
+        {
+          "text": "939",
+          "label": "NUM"
+        },
+        {
+          "text": "Ngọc Hồi",
+          "label": "DST"
+        },
+        {
+          "text": "Kon Tum",
+          "label": "PRO"
+        },
+        {
+          "text": "TT. Plêi Cần",
+          "label": "WDS"
+        }
+      ],
+      "unexpected": [],
+      "validation_errors": []
+    },
+    "tested_at": "2026-05-08T18:31:16.298Z",
+    "created_at": "2026-05-09T00:03:10.356272+07:00",
+    "updated_at": "2026-05-09T01:28:56.173915+07:00"
+  },
+  {
+    "id": "mox5zmfucdd1",
+    "name": "Random #168042",
+    "input": "Hồ Đình Tiên ( cách chợ Hương Canh 200m) - Hương Canh- Bình Xuyên- Vĩnh Phúc, Thị Trấn Hương Canh, Huyện Bình Xuyên, Vĩnh Phúc",
+    "expected": [
+      {
+        "text": "Thị Trấn Hương Canh",
+        "label": "WDS"
+      },
+      {
+        "text": "Huyện Bình Xuyên",
+        "label": "DST"
+      },
+      {
+        "text": "Vĩnh Phúc",
+        "label": "PRO"
+      },
+      {
+        "text": "chợ Hương Canh",
+        "label": "POI"
+      }
+    ],
+    "strict": false,
+    "test_result": {
+      "id": "mox5zmfucdd1",
+      "actual": [
+        {
+          "text": "Thị Trấn Hương Canh",
+          "label": "WDS"
+        },
+        {
+          "text": "Huyện Bình Xuyên",
+          "label": "DST"
+        },
+        {
+          "text": "Vĩnh Phúc",
+          "label": "PRO"
+        },
+        {
+          "text": "Đình Tiên ( cách chợ Hương Canh 200m) - Hương Canh- Bình Xuyên- Vĩnh Phúc",
+          "label": "POI"
+        }
+      ],
+      "passed": false,
+      "details": [
+        {
+          "found": true,
+          "expected": {
+            "text": "Thị Trấn Hương Canh",
+            "label": "WDS"
+          }
+        },
+        {
+          "found": true,
+          "expected": {
+            "text": "Huyện Bình Xuyên",
+            "label": "DST"
+          }
+        },
+        {
+          "found": true,
+          "expected": {
+            "text": "Vĩnh Phúc",
+            "label": "PRO"
+          }
+        },
+        {
+          "found": false,
+          "expected": {
+            "text": "chợ Hương Canh",
+            "label": "POI"
+          }
+        }
+      ],
+      "expected": [
+        {
+          "text": "Thị Trấn Hương Canh",
+          "label": "WDS"
+        },
+        {
+          "text": "Huyện Bình Xuyên",
+          "label": "DST"
+        },
+        {
+          "text": "Vĩnh Phúc",
+          "label": "PRO"
+        },
+        {
+          "text": "chợ Hương Canh",
+          "label": "POI"
+        }
+      ],
+      "unexpected": [
+        {
+          "text": "đình tiên ( cách chợ hương canh 200m) - hương canh- bình xuyên- vĩnh phúc",
+          "label": "POI"
+        }
+      ],
+      "validation_errors": []
+    },
+    "tested_at": "2026-05-08T18:31:16.298Z",
+    "created_at": "2026-05-09T00:03:51.055984+07:00",
+    "updated_at": "2026-05-09T01:28:56.173915+07:00"
+  },
+  {
+    "id": "mox6lgnkzscq",
+    "name": "Random #455870",
+    "input": "75/15/10/9 Đường TL28, Phường Thạnh Lộc, Quận 12, TP. Hồ Chí Minh",
+    "expected": [
+      {
+        "text": "Đường TL28",
+        "label": "STR"
+      },
+      {
+        "text": "75/15/10/9",
+        "label": "NUM"
+      },
+      {
+        "text": "Phường Thạnh Lộc",
+        "label": "WDS"
+      },
+      {
+        "text": "Quận 12",
+        "label": "DST"
+      },
+      {
+        "text": "TP. Hồ Chí Minh",
+        "label": "PRO"
+      }
+    ],
+    "strict": false,
+    "test_result": {
+      "id": "mox6lgnkzscq",
+      "actual": [
+        {
+          "text": "Phường Thạnh Lộc",
+          "label": "WDS"
+        },
+        {
+          "text": "Quận 12",
+          "label": "DST"
+        },
+        {
+          "text": "TP. Hồ Chí Minh",
+          "label": "PRO"
+        },
+        {
+          "text": "Đường TL28",
+          "label": "STR"
+        },
+        {
+          "text": "75/15/10/9",
+          "label": "NUM"
+        }
+      ],
+      "passed": true,
+      "details": [
+        {
+          "found": true,
+          "expected": {
+            "text": "Đường TL28",
+            "label": "STR"
+          }
+        },
+        {
+          "found": true,
+          "expected": {
+            "text": "75/15/10/9",
+            "label": "NUM"
+          }
+        },
+        {
+          "found": true,
+          "expected": {
+            "text": "Phường Thạnh Lộc",
+            "label": "WDS"
+          }
+        },
+        {
+          "found": true,
+          "expected": {
+            "text": "Quận 12",
+            "label": "DST"
+          }
+        },
+        {
+          "found": true,
+          "expected": {
+            "text": "TP. Hồ Chí Minh",
+            "label": "PRO"
+          }
+        }
+      ],
+      "expected": [
+        {
+          "text": "Đường TL28",
+          "label": "STR"
+        },
+        {
+          "text": "75/15/10/9",
+          "label": "NUM"
+        },
+        {
+          "text": "Phường Thạnh Lộc",
+          "label": "WDS"
+        },
+        {
+          "text": "Quận 12",
+          "label": "DST"
+        },
+        {
+          "text": "TP. Hồ Chí Minh",
+          "label": "PRO"
+        }
+      ],
+      "unexpected": [],
+      "validation_errors": []
+    },
+    "tested_at": "2026-05-08T18:31:16.298Z",
+    "created_at": "2026-05-09T00:20:49.999465+07:00",
+    "updated_at": "2026-05-09T01:28:56.173915+07:00"
+  },
+  {
+    "id": "mox6lygwwz04",
+    "name": "Random #330352",
+    "input": "Thôn 3 Tân Hương, Xã Tân Hương, Huyện Ninh Giang, Hải Dương",
+    "expected": [
+      {
+        "text": "Thôn 3 Tân Hương",
+        "label": "NHB"
+      },
+      {
+        "text": "Xã Tân Hương",
+        "label": "WDS"
+      },
+      {
+        "text": "Huyện Ninh Giang",
+        "label": "DST"
+      },
+      {
+        "text": "Hải Dương",
+        "label": "PRO"
+      }
+    ],
+    "strict": false,
+    "test_result": {
+      "id": "mox6lygwwz04",
+      "actual": [
+        {
+          "text": "Xã Tân Hương",
+          "label": "WDS"
+        },
+        {
+          "text": "Huyện Ninh Giang",
+          "label": "DST"
+        },
+        {
+          "text": "Hải Dương",
+          "label": "PRO"
+        },
+        {
+          "text": "Thôn 3 Tân Hương",
+          "label": "NHB"
+        }
+      ],
+      "passed": true,
+      "details": [
+        {
+          "found": true,
+          "expected": {
+            "text": "Thôn 3 Tân Hương",
+            "label": "NHB"
+          }
+        },
+        {
+          "found": true,
+          "expected": {
+            "text": "Xã Tân Hương",
+            "label": "WDS"
+          }
+        },
+        {
+          "found": true,
+          "expected": {
+            "text": "Huyện Ninh Giang",
+            "label": "DST"
+          }
+        },
+        {
+          "found": true,
+          "expected": {
+            "text": "Hải Dương",
+            "label": "PRO"
+          }
+        }
+      ],
+      "expected": [
+        {
+          "text": "Thôn 3 Tân Hương",
+          "label": "NHB"
+        },
+        {
+          "text": "Xã Tân Hương",
+          "label": "WDS"
+        },
+        {
+          "text": "Huyện Ninh Giang",
+          "label": "DST"
+        },
+        {
+          "text": "Hải Dương",
+          "label": "PRO"
+        }
+      ],
+      "unexpected": [],
+      "validation_errors": []
+    },
+    "tested_at": "2026-05-08T18:31:16.298Z",
+    "created_at": "2026-05-09T00:21:13.068858+07:00",
+    "updated_at": "2026-05-09T01:28:56.173915+07:00"
+  },
+  {
+    "id": "mox7keuv84kg",
+    "name": "Mẫu ngẫu nhiên · 414163",
+    "input": "1020 ấp tân quới đông, Phường Trường An, Thành Phố Vĩnh Long, Vĩnh Long",
+    "expected": [
+      {
+        "text": "ấp tân quới đông",
+        "label": "STR"
+      },
+      {
+        "text": "1020",
+        "label": "NUM"
+      },
+      {
+        "text": "Phường Trường An",
+        "label": "WDS"
+      },
+      {
+        "text": "Thành Phố Vĩnh Long",
+        "label": "DST"
+      },
+      {
+        "text": "Vĩnh Long",
+        "label": "PRO"
+      }
+    ],
+    "strict": false,
+    "test_result": {
+      "id": "mox7keuv84kg",
+      "actual": [
+        {
+          "text": "Phường Trường An",
+          "label": "WDS"
+        },
+        {
+          "text": "Thành Phố Vĩnh Long",
+          "label": "DST"
+        },
+        {
+          "text": "Vĩnh Long",
+          "label": "PRO"
+        },
+        {
+          "text": "ấp tân quới đông",
+          "label": "STR"
+        },
+        {
+          "text": "1020",
+          "label": "NUM"
+        }
+      ],
+      "passed": true,
+      "details": [
+        {
+          "found": true,
+          "expected": {
+            "text": "ấp tân quới đông",
+            "label": "STR"
+          }
+        },
+        {
+          "found": true,
+          "expected": {
+            "text": "1020",
+            "label": "NUM"
+          }
+        },
+        {
+          "found": true,
+          "expected": {
+            "text": "Phường Trường An",
+            "label": "WDS"
+          }
+        },
+        {
+          "found": true,
+          "expected": {
+            "text": "Thành Phố Vĩnh Long",
+            "label": "DST"
+          }
+        },
+        {
+          "found": true,
+          "expected": {
+            "text": "Vĩnh Long",
+            "label": "PRO"
+          }
+        }
+      ],
+      "expected": [
+        {
+          "text": "ấp tân quới đông",
+          "label": "STR"
+        },
+        {
+          "text": "1020",
+          "label": "NUM"
+        },
+        {
+          "text": "Phường Trường An",
+          "label": "WDS"
+        },
+        {
+          "text": "Thành Phố Vĩnh Long",
+          "label": "DST"
+        },
+        {
+          "text": "Vĩnh Long",
+          "label": "PRO"
+        }
+      ],
+      "unexpected": [],
+      "validation_errors": []
+    },
+    "tested_at": "2026-05-08T18:31:16.298Z",
+    "created_at": "2026-05-09T00:48:00.632603+07:00",
+    "updated_at": "2026-05-09T01:28:56.173915+07:00"
+  },
+  {
+    "id": "mox7l8ypsjev",
+    "name": "Mẫu ngẫu nhiên · 473355",
+    "input": "Khu đô thị Ecolakes, Bến Cát, Bình Dương, Việt Nam",
+    "expected": [
+      {
+        "text": "Khu đô thị Ecolakes",
+        "label": "POI"
+      },
+      {
+        "text": "Thới Hòa",
+        "label": "WDS"
+      },
+      {
+        "text": "Bến Cát",
+        "label": "DST"
+      },
+      {
+        "text": "Bình Dương",
+        "label": "PRO"
+      }
+    ],
+    "strict": false,
+    "test_result": {
+      "id": "mox7l8ypsjev",
+      "actual": [
+        {
+          "text": "Bến Cát",
+          "label": "DST"
+        },
+        {
+          "text": "Bình Dương",
+          "label": "PRO"
+        },
+        {
+          "text": "Khu đô thị Ecolakes",
+          "label": "POI"
+        }
+      ],
+      "passed": false,
+      "details": [
+        {
+          "found": true,
+          "expected": {
+            "text": "Khu đô thị Ecolakes",
+            "label": "POI"
+          }
+        },
+        {
+          "found": false,
+          "expected": {
+            "text": "Thới Hòa",
+            "label": "WDS"
+          }
+        },
+        {
+          "found": true,
+          "expected": {
+            "text": "Bến Cát",
+            "label": "DST"
+          }
+        },
+        {
+          "found": true,
+          "expected": {
+            "text": "Bình Dương",
+            "label": "PRO"
+          }
+        }
+      ],
+      "expected": [
+        {
+          "text": "Khu đô thị Ecolakes",
+          "label": "POI"
+        },
+        {
+          "text": "Thới Hòa",
+          "label": "WDS"
+        },
+        {
+          "text": "Bến Cát",
+          "label": "DST"
+        },
+        {
+          "text": "Bình Dương",
+          "label": "PRO"
+        }
+      ],
+      "unexpected": [],
+      "validation_errors": []
+    },
+    "tested_at": "2026-05-08T18:31:16.298Z",
+    "created_at": "2026-05-09T00:48:39.639269+07:00",
+    "updated_at": "2026-05-09T01:28:56.173915+07:00"
+  },
+  {
+    "id": "mox7ll2t4myu",
+    "name": "Mẫu ngẫu nhiên · 445663",
+    "input": "Cầu Sắt, Bắc Đại 1, Thị Trấn Cát Thành, Huyện Trực Ninh, Nam Định",
+    "expected": [
+      {
+        "text": "Cầu Sắt",
+        "label": "POI"
+      },
+      {
+        "text": "Thị Trấn Cát Thành",
+        "label": "WDS"
+      },
+      {
+        "text": "Huyện Trực Ninh",
+        "label": "DST"
+      },
+      {
+        "text": "Nam Định",
+        "label": "PRO"
+      },
+      {
+        "text": "Bắc Đại 1",
+        "label": "NHB"
+      }
+    ],
+    "strict": false,
+    "test_result": {
+      "id": "mox7ll2t4myu",
+      "actual": [
+        {
+          "text": "Thị Trấn Cát Thành",
+          "label": "WDS"
+        },
+        {
+          "text": "Huyện Trực Ninh",
+          "label": "DST"
+        },
+        {
+          "text": "Nam Định",
+          "label": "PRO"
+        },
+        {
+          "text": "Cầu Sắt",
+          "label": "POI"
+        },
+        {
+          "text": "1",
+          "label": "NUM"
+        }
+      ],
+      "passed": false,
+      "details": [
+        {
+          "found": true,
+          "expected": {
+            "text": "Cầu Sắt",
+            "label": "POI"
+          }
+        },
+        {
+          "found": true,
+          "expected": {
+            "text": "Thị Trấn Cát Thành",
+            "label": "WDS"
+          }
+        },
+        {
+          "found": true,
+          "expected": {
+            "text": "Huyện Trực Ninh",
+            "label": "DST"
+          }
+        },
+        {
+          "found": true,
+          "expected": {
+            "text": "Nam Định",
+            "label": "PRO"
+          }
+        },
+        {
+          "found": false,
+          "expected": {
+            "text": "Bắc Đại 1",
+            "label": "NHB"
+          }
+        }
+      ],
+      "expected": [
+        {
+          "text": "Cầu Sắt",
+          "label": "POI"
+        },
+        {
+          "text": "Thị Trấn Cát Thành",
+          "label": "WDS"
+        },
+        {
+          "text": "Huyện Trực Ninh",
+          "label": "DST"
+        },
+        {
+          "text": "Nam Định",
+          "label": "PRO"
+        },
+        {
+          "text": "Bắc Đại 1",
+          "label": "NHB"
+        }
+      ],
+      "unexpected": [
+        {
+          "text": "1",
+          "label": "NUM"
+        }
+      ],
+      "validation_errors": []
+    },
+    "tested_at": "2026-05-08T18:31:16.298Z",
+    "created_at": "2026-05-09T00:48:55.340241+07:00",
+    "updated_at": "2026-05-09T01:28:56.173915+07:00"
+  },
+  {
+    "id": "mox7o1j23kk6",
+    "name": "Mẫu ngẫu nhiên · 30918",
+    "input": "Số 82 ấp 3A đường 835, Xã Phước Lợi, Huyện Bến Lức, Long An",
+    "expected": [
+      {
+        "text": "Số 82",
+        "label": "NUM"
+      },
+      {
+        "text": "Xã Phước Lợi",
+        "label": "WDS"
+      },
+      {
+        "text": "Huyện Bến Lức",
+        "label": "DST"
+      },
+      {
+        "text": "Long An",
+        "label": "PRO"
+      },
+      {
+        "text": "đường 835",
+        "label": "STR"
+      },
+      {
+        "text": "ấp 3A",
+        "label": "NHB"
+      }
+    ],
+    "strict": false,
+    "test_result": {
+      "id": "mox7o1j23kk6",
+      "actual": [
+        {
+          "text": "Xã Phước Lợi",
+          "label": "WDS"
+        },
+        {
+          "text": "Huyện Bến Lức",
+          "label": "DST"
+        },
+        {
+          "text": "Long An",
+          "label": "PRO"
+        },
+        {
+          "text": "Số 82",
+          "label": "NUM"
+        },
+        {
+          "text": "ấp 3A đường 835",
+          "label": "NHB"
+        }
+      ],
+      "passed": false,
+      "details": [
+        {
+          "found": true,
+          "expected": {
+            "text": "Số 82",
+            "label": "NUM"
+          }
+        },
+        {
+          "found": true,
+          "expected": {
+            "text": "Xã Phước Lợi",
+            "label": "WDS"
+          }
+        },
+        {
+          "found": true,
+          "expected": {
+            "text": "Huyện Bến Lức",
+            "label": "DST"
+          }
+        },
+        {
+          "found": true,
+          "expected": {
+            "text": "Long An",
+            "label": "PRO"
+          }
+        },
+        {
+          "found": false,
+          "expected": {
+            "text": "đường 835",
+            "label": "STR"
+          }
+        },
+        {
+          "found": false,
+          "expected": {
+            "text": "ấp 3A",
+            "label": "NHB"
+          }
+        }
+      ],
+      "expected": [
+        {
+          "text": "Số 82",
+          "label": "NUM"
+        },
+        {
+          "text": "Xã Phước Lợi",
+          "label": "WDS"
+        },
+        {
+          "text": "Huyện Bến Lức",
+          "label": "DST"
+        },
+        {
+          "text": "Long An",
+          "label": "PRO"
+        },
+        {
+          "text": "đường 835",
+          "label": "STR"
+        },
+        {
+          "text": "ấp 3A",
+          "label": "NHB"
+        }
+      ],
+      "unexpected": [
+        {
+          "text": "ấp 3a đường 835",
+          "label": "NHB"
+        }
+      ],
+      "validation_errors": []
+    },
+    "tested_at": "2026-05-08T18:31:16.298Z",
+    "created_at": "2026-05-09T00:50:49.967481+07:00",
+    "updated_at": "2026-05-09T01:28:56.173915+07:00"
+  },
+  {
+    "id": "mox7oxi503tg",
+    "name": "Mẫu ngẫu nhiên · 411091",
+    "input": "H64-H65 Dương Thị Giang, Phường Tân Thới Nhất, Quận 12, TP. Hồ Chí Minh",
+    "expected": [
+      {
+        "text": "Phường Tân Thới Nhất",
+        "label": "WDS"
+      },
+      {
+        "text": "Quận 12",
+        "label": "DST"
+      },
+      {
+        "text": "TP. Hồ Chí Minh",
+        "label": "PRO"
+      },
+      {
+        "text": "H64-H65",
+        "label": "NUM"
+      },
+      {
+        "text": "Dương Thị Giang",
+        "label": "STR"
+      }
+    ],
+    "strict": false,
+    "test_result": {
+      "id": "mox7oxi503tg",
+      "actual": [
+        {
+          "text": "Phường Tân Thới Nhất",
+          "label": "WDS"
+        },
+        {
+          "text": "Quận 12",
+          "label": "DST"
+        },
+        {
+          "text": "TP. Hồ Chí Minh",
+          "label": "PRO"
+        },
+        {
+          "text": "Dương Thị Giang",
+          "label": "STR"
+        },
+        {
+          "text": "64",
+          "label": "NUM"
+        },
+        {
+          "text": "65",
+          "label": "NUM"
+        }
+      ],
+      "passed": false,
+      "details": [
+        {
+          "found": true,
+          "expected": {
+            "text": "Phường Tân Thới Nhất",
+            "label": "WDS"
+          }
+        },
+        {
+          "found": true,
+          "expected": {
+            "text": "Quận 12",
+            "label": "DST"
+          }
+        },
+        {
+          "found": true,
+          "expected": {
+            "text": "TP. Hồ Chí Minh",
+            "label": "PRO"
+          }
+        },
+        {
+          "found": false,
+          "expected": {
+            "text": "H64-H65",
+            "label": "NUM"
+          }
+        },
+        {
+          "found": true,
+          "expected": {
+            "text": "Dương Thị Giang",
+            "label": "STR"
+          }
+        }
+      ],
+      "expected": [
+        {
+          "text": "Phường Tân Thới Nhất",
+          "label": "WDS"
+        },
+        {
+          "text": "Quận 12",
+          "label": "DST"
+        },
+        {
+          "text": "TP. Hồ Chí Minh",
+          "label": "PRO"
+        },
+        {
+          "text": "H64-H65",
+          "label": "NUM"
+        },
+        {
+          "text": "Dương Thị Giang",
+          "label": "STR"
+        }
+      ],
+      "unexpected": [
+        {
+          "text": "64",
+          "label": "NUM"
+        },
+        {
+          "text": "65",
+          "label": "NUM"
+        }
+      ],
+      "validation_errors": []
+    },
+    "tested_at": "2026-05-08T18:31:16.298Z",
+    "created_at": "2026-05-09T00:51:31.412365+07:00",
+    "updated_at": "2026-05-09T01:28:56.173915+07:00"
+  },
+  {
+    "id": "mox91u6sdhqy",
+    "name": "Mẫu ngẫu nhiên · 439931",
+    "input": "33 Đ.Nguyễn Hữu Thọ, Tân Hưng, Quận 7, Thành phố Hồ Chí Minh, Việt Nam",
+    "expected": [
+      {
+        "label": "STR",
+        "text": "Đ.Nguyễn Hữu Thọ"
+      },
+      {
+        "label": "NUM",
+        "text": "33"
+      },
+      {
+        "label": "WDS",
+        "text": "Tân Hưng"
+      },
+      {
+        "label": "DST",
+        "text": "Quận 7"
+      },
+      {
+        "label": "PRO",
+        "text": "Thành phố Hồ Chí Minh"
+      }
+    ],
+    "strict": false,
+    "created_at": "2026-05-08T18:29:32.308Z",
+    "tested_at": "2026-05-08T18:31:16.298Z"
+  },
+  {
+    "id": "mox92cw6dsxn",
+    "name": "Mẫu ngẫu nhiên · 260432",
+    "input": "38 Đặng Nhữ Lâm, TT. Nhà Bè, Nhà Bè, Hồ Chí Minh 756000, Việt Nam",
+    "expected": [
+      {
+        "label": "STR",
+        "text": "Đặng Nhữ Lâm"
+      },
+      {
+        "label": "NUM",
+        "text": "38"
+      },
+      {
+        "label": "NUM",
+        "text": "756000"
+      },
+      {
+        "label": "DST",
+        "text": "Nhà Bè"
+      },
+      {
+        "label": "PRO",
+        "text": "Hồ Chí Minh"
+      },
+      {
+        "label": "WDS",
+        "text": "TT. Nhà Bè"
+      }
+    ],
+    "strict": false,
+    "created_at": "2026-05-08T18:29:56.550Z",
+    "tested_at": "2026-05-08T18:31:16.298Z"
+  },
+  {
+    "id": "mox932h0qagk",
+    "name": "Mẫu ngẫu nhiên · 197748",
+    "input": "18/4 Đường Kênh Đông, Tân An Hội, Củ Chi, Thành phố Hồ Chí Minh, Việt Nam",
+    "expected": [
+      {
+        "label": "STR",
+        "text": "Đường Kênh Đông"
+      },
+      {
+        "label": "NUM",
+        "text": "18/4"
+      },
+      {
+        "label": "WDS",
+        "text": "Tân An Hội"
+      },
+      {
+        "label": "DST",
+        "text": "Củ Chi"
+      },
+      {
+        "label": "PRO",
+        "text": "Thành phố Hồ Chí Minh"
+      }
+    ],
+    "strict": false,
+    "created_at": "2026-05-08T18:30:29.700Z",
+    "tested_at": "2026-05-08T18:31:16.298Z"
+  },
+  {
+    "id": "mox93e16sydu",
+    "name": "Mẫu ngẫu nhiên · 391202",
+    "input": "KIM CƯƠNG BILLIARD Xóm 3 xã nam anh nam đàn nghệ an, Xã Nam Anh, Huyện Nam Đàn, Nghệ An",
+    "expected": [
+      {
+        "label": "NHB",
+        "text": "Xóm 3"
+      },
+      {
+        "label": "WDS",
+        "text": "Xã Nam Anh"
+      },
+      {
+        "label": "DST",
+        "text": "Huyện Nam Đàn"
+      },
+      {
+        "label": "PRO",
+        "text": "Nghệ An"
+      },
+      {
+        "label": "POI",
+        "text": "KIM CƯƠNG BILLIARD"
+      }
+    ],
+    "strict": false,
+    "created_at": "2026-05-08T18:30:44.682Z",
+    "tested_at": "2026-05-08T18:31:16.298Z"
+  },
+  {
     "id": "movp2swc36ar",
     "name": "Chợ Liên Thạch, Thôn Liên Thạch, ",
     "input": "Chợ Liên Thạch, Thôn Liên Thạch, Xã Hòa Phú, Huyện Tây Hòa, Phú Yên",
