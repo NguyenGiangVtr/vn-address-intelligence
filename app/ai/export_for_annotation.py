@@ -61,7 +61,7 @@ class PreLabeler:
         "ALY": r'(?i)^(Hẻm|Ngõ|Kiệt|Ngách)\s+',
         "NUM": r'(?i)^(Số nhà|Số|Lô|Km)\s+',
         "STR": r'(?i)^(Đường|Phố|Đ\.|QL|Quốc\s*lộ|ĐT|TL|Tỉnh\s*lộ|Đại\s*lộ|HL)\s+',
-        "NHB": r'(?i)^(Khu\s*phố|KP|Tổ\s*dân\s*phố|TDP|Thôn|Ấp|Bản|Tổ|Sóc|Phum|Xóm|Làng|Khóm|Cụm|Buôn|Plei|KDC|Sảnh)\s*',
+        "NHB": r'(?i)^(Khu\s*phố|KP|Tổ\s*dân\s*phố|TDP|Thôn|Ấp|Bản|Tổ|Đội|Sóc|Phum|Xóm|Làng|Khóm|Cụm|Buôn|Plei|KDC|Sảnh)\s*',
         "WDS": admin_prefix_anchored_pattern("WDS"),
         "DST": admin_prefix_anchored_pattern("DST"),
         "PRO": admin_prefix_anchored_pattern("PRO"),
@@ -83,8 +83,8 @@ class PreLabeler:
         ("NUM", r'(?i)(?:Số\s*nhà|Số)\s+[0-9A-Za-z./\-]+|(?:\b|^)[A-Za-z]?\d+(?:-[A-Za-z]?\d+[A-Za-z]*)+(?:\b|$)|(?:\b|^)\d+[A-Za-z]?(?:[/\-]\d+[A-Za-z]?)*(?:[/\.]+[0-9A-Za-z.]+)*|(?:\b|^)[A-Za-z]\d{1,6}[A-Za-z]?(?:\.\d+)?(?:\b|$)|(?:\b|^)(?:Km)\s+[\w\-]+|(?:\b|^)(?:Lô)\s+\d[\w\-]*', 0.9),
         # Không bắt "phố" chung chung để tránh nuốt cụm POI như "Vật liệu xây dựng ...".
         # Chỉ match "Phố" khi có tiền tố đường rõ ràng (Đường/Đ./QL/...)
-        ("STR", r'(?i)(?:Đường|Đ\.|QL|Quốc\s*lộ|ĐT|TL|Tỉnh\s*lộ|Đại\s*lộ|Hương\s*lộ|HL)\s+[^,.\n]+', 0.85),
-        ("NHB", r'(?i)(?:Khu\s*phố|KP|Tổ\s*dân\s*phố|TDP|Thôn|Ấp|Bản|Tổ|Sóc|Phum|Xóm|Làng|Khóm|Cụm|Buôn|Plei|KDC|Sảnh)\s*[^,.\n]+|(?:\bKhu\s*\d+[A-Za-z]?\b)', 0.8),
+        ("STR", r'(?i)(?:Đường|Đ\.|QL|Quốc\s*lộ|ĐT|DT|TL|Tỉnh\s*lộ|Đại\s*lộ|Hương\s*lộ|HL)\s+[^,.\n]+', 0.85),
+        ("NHB", r'(?i)(?:Khu\s*phố|KP|Tổ\s*dân\s*phố|TDP|Thôn|Ấp|Bản|Tổ|Đội|Sóc|Phum|Xóm|Làng|Khóm|Cụm|Buôn|Plei|KDC|Sảnh)\s*[^,.\n]+|(?:\bKhu\s*\d+[A-Za-z]?\b)', 0.8),
     ]
 
     @classmethod
@@ -118,6 +118,8 @@ class PreLabeler:
 
             # 2. Sửa lỗi STR tham lam: Loại bỏ phần đơn vị hành chính hoặc đơn vị khác dính vào ở cuối
             if label == "STR":
+                if re.match(r'(?is)^\s*(?:trường|bệnh\s*viện|trạm\s*y\s*tế|phòng\s*khám|nhà\s*thuốc|chợ)\b', text.strip()):
+                    return False
                 if re.match(r'(?is)^\s*(?:khu\s*dân\s*cư|kdc|khu\s*công\s*nghiệp|kcn)\b', text.strip()):
                     return False
                 if re.match(r'(?is)^\s*(?:tổ|khu\s*phố|kp|tdp|thôn|ấp|xóm|làng|khóm|khu\s*\d+)\b', text.strip()):
@@ -697,6 +699,10 @@ class PreLabeler:
             if m_dot:
                 add_result(m_dot.start(1), m_dot.end(1), raw_address[m_dot.start(1):m_dot.end(1)], "STR", 0.84)
 
+            m_dt = re.search(r'(?i)\b(DT\s*\d+[A-Za-z]?)\b', free_text)
+            if m_dt:
+                add_result(m_dt.start(1), m_dt.end(1), raw_address[m_dt.start(1):m_dt.end(1)], "STR", 0.84)
+
             # Nhóm POI/PCD tự do
             m_cay_da = re.search(r'(?i)\b(cây\s+đa)\b', free_text)
             if m_cay_da:
@@ -782,7 +788,7 @@ class PreLabeler:
         # Giai đoạn 2: Regex Heuristics cho các cấp Vi mô
         # Thu thập ứng viên rồi sort để ưu tiên span dài hơn trước.
         nhb_piece_re = re.compile(
-            r'(?i)(Khu\s*phố|KP|Tổ\s*dân\s*phố|TDP|Thôn|Ấp|Bản|Tổ|Sóc|Phum|Xóm|Làng|Khóm|Cụm|Buôn|Plei|KDC|Sảnh)\s*[^,.;\n\-\/]+|(?:\bKhu\s*\d+[A-Za-z]?\b)'
+            r'(?i)(Khu\s*phố|KP|Tổ\s*dân\s*phố|TDP|Thôn|Ấp|Bản|Tổ|Đội|Sóc|Phum|Xóm|Làng|Khóm|Cụm|Buôn|Plei|KDC|Sảnh)\s*[^,.;\n\-\/]+|(?:\bKhu\s*\d+[A-Za-z]?\b)'
         )
         nhb_anchor_re = re.compile(
             r'(?i)(?:\bKhu\s*phố\b|\bKP\b|\bTổ\s*dân\s*phố\b|\bTDP\b|\bẤp\b|\bBản\b|\bTổ\b|\bSóc\b|\bPhum\b|\bCụm\b|\bBuôn\b|\bPlei\b|\bKDC\b|\bSảnh\b|\bKhu\s*\d+[A-Za-z]?\b)'
@@ -848,7 +854,7 @@ class PreLabeler:
                             continue
                     # Tránh gán NUM cho số thuộc cụm NHB: "Tổ 1", "Thôn 2", ...
                     left_ctx = raw_address[max(0, start - 24):start].lower()
-                    if re.search(r'(tổ|thôn|ấp|khu\s*phố|kp)\s*$', left_ctx, re.I):
+                    if re.search(r'(tổ|đội|thôn|ấp|khu\s*phố|kp)\s*$', left_ctx, re.I):
                         continue
                     # Tránh gán NUM cho số thuộc admin unit: "Quận 8", "Phường 13", ...
                     if re.search(rf'(?i)({ADMIN_ALL_PREFIXES_ALT})\s*$', left_ctx):
@@ -869,6 +875,22 @@ class PreLabeler:
                     if pre_trim.casefold().endswith("thường"):
                         continue
                 if label == "ALY":
+                    m_bare_tail = re.match(
+                        r'(?is)^((?:Hẻm|Ngõ|Kiệt|Ngách)\s+\d+[A-Za-z]?)\s+([A-Za-zÀ-ỹĐđ][^,\n]+)$',
+                        matched_text.strip(),
+                    )
+                    if m_bare_tail:
+                        aly_part = m_bare_tail.group(1).strip(" ,")
+                        str_part = m_bare_tail.group(2).strip(" ,")
+                        if re.match(r'(?is)^(?:xóm|thôn|ấp|khu\s*phố|kp|tổ|đội|phòng|tầng|dãy|block)\b', str_part):
+                            micro_candidates.append((label, start, end, matched_text, score))
+                            continue
+                        if aly_part:
+                            micro_candidates.append((label, start, start + len(aly_part), aly_part, score + 0.02))
+                        if str_part and not re.match(rf'(?i)^(?:{ADMIN_ALL_PREFIXES_ALT})\b', str_part):
+                            s_str = start + matched_text.lower().find(str_part.lower())
+                            micro_candidates.append(("STR", s_str, s_str + len(str_part), str_part, score + 0.01))
+                        continue
                     m_str_tail = re.search(
                         r'(?is)\s+((?:Đường|đường|Phố|phố|[Đđ]\s*\.)\s+.+)$',
                         matched_text.strip(),
@@ -894,6 +916,12 @@ class PreLabeler:
                     and raw_address[start - 1] == "-"
                 ):
                     continue
+                if (
+                    label == "NHB"
+                    and re.match(r"(?is)^tháp\s+[a-zà-ỹ]{2,}(?:\s+[a-zà-ỹ]{2,})?$", matched_text.strip())
+                    and not re.search(r"(?is)\b(tủ|block|tầng|phòng)\b", matched_text.strip())
+                ):
+                    label = "POI"
                 if label == "NHB":
                     ap_chunks = _split_ap_duong(start, matched_text)
                     if len(ap_chunks) >= 2:
@@ -918,6 +946,15 @@ class PreLabeler:
                     if m_xom_thon and m_xom_thon.group(2).lstrip()[:1].islower():
                         for gi in (1, 2):
                             g = m_xom_thon.group(gi).strip()
+                            ofs = mt_l.casefold().find(g.casefold())
+                            if ofs >= 0:
+                                s = start + ofs
+                                micro_candidates.append(("NHB", s, s + len(g), g, score + 0.03))
+                        continue
+                    m_doi_thon = re.match(r"(?i)^(Đội\s+\d+)\s+((?:thôn|Thôn)\s+[^,\n]+)$", mt_l)
+                    if m_doi_thon:
+                        for gi in (1, 2):
+                            g = m_doi_thon.group(gi).strip()
                             ofs = mt_l.casefold().find(g.casefold())
                             if ofs >= 0:
                                 s = start + ofs

@@ -5879,11 +5879,15 @@ async function initEvidenceView() {
       updateSummary();
     }
 
-    pltScheduleTypingAdminSuggest(c);
+    // Khong tu dong them WDS/DST/PRO vao expected khi user dang go.
+    // Tru tranh tao "ky vong ao" khi user chua chu dong ap dung de xuat.
     pltSave();
   }
 
   function pltScheduleTypingAdminSuggest(c) {
+    // Deprecated behavior: truoc day tu dong goi parser va push WDS/DST/PRO vao expected.
+    // Giu ham de tranh vo call-site cu, nhung khong con mutate expected ngam.
+    return;
     if (!c) return;
     if (pltTypingSuggestTimer) {
       clearTimeout(pltTypingSuggestTimer);
@@ -6280,6 +6284,8 @@ async function initEvidenceView() {
   }
 
   async function pltAutoExtract(ev) {
+    // Khong auto inject expected tren paste; user se chu dong add qua hotkey/Apply all.
+    return;
     const text = (ev.clipboardData || window.clipboardData).getData('text');
     if (!text || text.length < 5) return;
 
