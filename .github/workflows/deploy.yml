@@ -140,8 +140,12 @@ jobs:
       - name: Build release tarball
         shell: bash
         run: |
-          # Exclude output archive: writing release.tar.gz into `.` while archiving `.`
-          # makes GNU tar warn "file changed as we read it" and exit 1.
+          # Archive from ${GITHUB_WORKSPACE} but write the .tar.gz outside the tree first.
+          # Writing release.tar.gz into the same dir tar is reading yields "file changed as we read it"
+          # (and --exclude output name is flaky across tar versions/patterns).
+          OUT="${GITHUB_WORKSPACE}/release.tar.gz"
+          TMP="$(mktemp)"
+          trap 'rm -f "$TMP"' EXIT
           tar \
             --exclude-vcs \
             --exclude=".venv" \
@@ -150,8 +154,11 @@ jobs:
             --exclude="*.pyc" \
             --exclude="*.pyo" \
             --exclude="*.log" \
-            --exclude="./release.tar.gz" \
-            -czf release.tar.gz .
+            -czf "$TMP" \
+            -C "${GITHUB_WORKSPACE}" \
+            .
+          mv -f "$TMP" "$OUT"
+          trap - EXIT
 
       - name: Upload release artifact
         uses: actions/upload-artifact@v4
