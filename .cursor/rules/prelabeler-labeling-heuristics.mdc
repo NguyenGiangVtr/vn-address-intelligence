@@ -19,6 +19,7 @@ alwaysApply: false
 ## NHB (khu dân cư / block / lô chữ)
 
 - **`Tháp … ( tủ … )`**: tách thành **hai** NHB (Tháp… và tủ…), cho phép dấu `.` trong mã căn (vd `Ak612A.08`).
+- **`Tháp` sau `-` trong tên địa danh ghép**: không gán NHB (vd `Phan Rang-Tháp Chàm` — không tách riêng `Tháp Chàm`).
 - **`ấp` / `thôn` + đường số**: tách **NHB** (ấp/thôn + mã) + **STR** (`đường`/`Đ.` + số đường). Không gộp một NHB “ấp … đường …”.
 - **`Lô` + chữ đơn** (vd `Lô C`): **NHB**, không là NUM.
 - **`Lô` + số** (vd `Lô 12`): **NUM** (pattern không bắt `Lô` + chữ thuần).

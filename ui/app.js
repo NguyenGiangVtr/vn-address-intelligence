@@ -4770,6 +4770,211 @@ async function initEvidenceView() {
   let cases = [], activeId = null, results = {};
   let pltResultFilter = 'all';
 
+  /** Click-selected span under `.plt-raw-annotated` (keydown relabel/remove). Cleared whenever the editor subtree is replaced. */
+  let pltAnnBlockSelection = null; // { label, text, rangeKey }
+
+  /** True if text belongs to flattened preview (badge labels inside `.plt-raw-ann` are excluded). */
+  function pltIsCountedAnnotatedTextNode(tn) {
+    if (!tn || tn.nodeType !== Node.TEXT_NODE || !tn.parentElement) return false;
+    const p = tn.parentElement;
+    return !p.closest('.plt-badge');
+  }
+
+  /** Start offset in flattened annotated string (excluding badge text) inside `annRoot`, or NaN when not found. */
+  function pltAnnotatedGlobBeforeTextNodeStart(annRoot, targetTextNode) {
+    let acc = 0;
+    const w = document.createTreeWalker(annRoot, NodeFilter.SHOW_TEXT, null);
+    let tn;
+    while ((tn = w.nextNode())) {
+      if (!pltIsCountedAnnotatedTextNode(tn)) continue;
+      if (tn === targetTextNode) return acc;
+      acc += tn.nodeValue.length;
+    }
+    return NaN;
+  }
+
+  /** Map a DOM boundary (within `annRoot`) to a global offset along flattened annotated/raw text (0-length allowed). */
+  function pltAnnotatedBoundaryToGlob(annRoot, node, offset) {
+    if (!(annRoot instanceof Element) || !annRoot.contains(node)) return NaN;
+    const ntyp = node.nodeType;
+    if (ntyp === Node.TEXT_NODE) {
+      const base = pltAnnotatedGlobBeforeTextNodeStart(annRoot, node);
+      if (!Number.isFinite(base)) return NaN;
+      const len = node.nodeValue.length;
+      const o = Math.min(Math.max(0, offset), len);
+      if (!pltIsCountedAnnotatedTextNode(node)) return NaN;
+      return base + o;
+    }
+    if (ntyp !== Node.ELEMENT_NODE) return NaN;
+    const el = node;
+    let sum = 0;
+    const max = Math.min(offset, el.childNodes.length);
+    for (let i = 0; i < max; i++) {
+      sum += pltAnnotatedSubtreeCountedTextLen(el.childNodes[i]);
+    }
+    return sum;
+  }
+
+  function pltAnnotatedSubtreeCountedTextLen(node) {
+    if (!node) return 0;
+    if (node.nodeType === Node.TEXT_NODE)
+      return pltIsCountedAnnotatedTextNode(node) ? node.nodeValue.length : 0;
+    let sum = 0;
+    for (let i = 0; i < node.childNodes.length; i++)
+      sum += pltAnnotatedSubtreeCountedTextLen(node.childNodes[i]);
+    return sum;
+  }
+
+  /** @returns {{ start: number, end: number } | null} */
+  function pltAnnotGetGlobRangeFromSelection(annRoot) {
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed || !sel.rangeCount) return null;
+    const rng = sel.getRangeAt(0);
+    if (!annRoot.contains(rng.commonAncestorContainer)) return null;
+
+    let startGlob = pltAnnotatedBoundaryToGlob(annRoot, rng.startContainer, rng.startOffset);
+    let endGlob = pltAnnotatedBoundaryToGlob(annRoot, rng.endContainer, rng.endOffset);
+    if (!Number.isFinite(startGlob) || !Number.isFinite(endGlob)) return null;
+    if (startGlob > endGlob) [startGlob, endGlob] = [endGlob, startGlob];
+    if (startGlob === endGlob) return null;
+    return { start: startGlob, end: endGlob };
+  }
+
+  function pltAnnotatedPlainMatchesRaw(annRoot, rawStr) {
+    const w = document.createTreeWalker(annRoot, NodeFilter.SHOW_TEXT, null);
+    let tn;
+    let acc = '';
+    while ((tn = w.nextNode())) {
+      if (!pltIsCountedAnnotatedTextNode(tn)) continue;
+      acc += tn.nodeValue;
+    }
+    return acc === rawStr;
+  }
+
+  function pltAnnotHasUsableSubstringSelection() {
+    const annRoot = document.querySelector(
+      '#prelabeler-cases .plt-raw-annotated:not(.plt-raw-annotated--empty)'
+    );
+    const c = cases.find(x => x.id === activeId);
+    if (!annRoot || !c) return false;
+    const raw = String(c.input ?? '');
+    const glob = pltAnnotGetGlobRangeFromSelection(annRoot);
+    return Boolean(glob && pltAnnotatedPlainMatchesRaw(annRoot, raw));
+  }
+
+  function pltClearAnnBlockUi() {
+    pltAnnBlockSelection = null;
+    document.querySelectorAll('#prelabeler-cases .plt-raw-ann--selected').forEach(el => {
+      el.classList.remove('plt-raw-ann--selected');
+    });
+  }
+
+  function pltAnnounceAnnBlock(selEl) {
+    document.querySelectorAll('#prelabeler-cases .plt-raw-ann--selected').forEach(el => {
+      el.classList.remove('plt-raw-ann--selected');
+    });
+    if (!(selEl instanceof HTMLElement) || !selEl.classList.contains('plt-raw-ann')) return;
+    const label = String(selEl.getAttribute('data-plt-ann-label') || '').trim().toUpperCase();
+    const textEl = selEl.querySelector('.plt-raw-ann__text');
+    const text = textEl instanceof HTMLElement ? textEl.textContent.trim() : '';
+    const rangeKey = String(selEl.getAttribute('data-plt-ann-range') || '');
+    pltAnnBlockSelection = label && text && rangeKey ? { label, text, rangeKey } : null;
+    if (pltAnnBlockSelection) selEl.classList.add('plt-raw-ann--selected');
+  }
+
+  /** @returns {{ label: string } | null} */
+  function pltLabelFromHotkeyKey(keyStr) {
+    const k = String(keyStr ?? '');
+    if (!/^[0-9]$/.test(k)) return null;
+    const row = nerLabelsOrdered.find(x => String(x.hotkey) === k);
+    return row?.value ? { label: String(row.value).trim().toUpperCase() } : null;
+  }
+
+  function pltIsPrelabelerCasesPageVisible() {
+    const p = document.getElementById('prelabeler-cases');
+    return Boolean(p?.classList.contains('active'));
+  }
+
+  /** Do not steal digit keys while typing elsewhere in the SPA. */
+  function pltAnnHotkeyIgnoreTypingTarget(activeEl) {
+    if (!(activeEl instanceof HTMLElement)) return true;
+    if (activeEl.isContentEditable) return true;
+    const tag = (activeEl.tagName || '').toLowerCase();
+    if (tag === 'textarea' || tag === 'select') return false;
+
+    const nameField = activeEl.closest?.('.plt-editor-head input[type="text"]');
+    if (nameField instanceof HTMLInputElement) return true;
+
+    if (tag === 'input') {
+      const t = activeEl.type || '';
+      if (activeEl.closest('.plt-editor-scroll')) {
+        const idOk = activeEl.id === 'plt-raw-address';
+        if (!idOk && activeEl.closest?.('.plt-label-cell__input-row')) return true;
+        return !idOk;
+      }
+      if (activeEl.closest?.('#plt-search')) return true;
+      return !(t === 'button' || t === 'checkbox' || t === 'radio' || t === 'submit' || !t || t === 'text');
+    }
+
+    return false;
+  }
+
+  function pltAnnApplyLabelFromChoice(labelChoice) {
+    const c = cases.find(x => x.id === activeId);
+    if (!c) return false;
+    const raw = String(c.input ?? '');
+    const ta = document.getElementById('plt-raw-address');
+
+    /** 1 — Click-selected annotated block (relabels or same-label refresh) */
+    if (pltAnnBlockSelection?.text && labelChoice?.label) {
+      const newLab = labelChoice.label;
+      const oldLab = pltAnnBlockSelection.label;
+      const blkText = String(pltAnnBlockSelection.text || '').trim();
+      if (!blkText) return false;
+      removeExpectedForLabel(oldLab, blkText);
+      addExpectedForLabel(newLab, blkText);
+      pltClearAnnBlockUi();
+      return true;
+    }
+
+    /** 2 — Explicit text selection (#plt-raw-address or `.plt-raw-annotated`) */
+    const activeFocus = document.activeElement;
+    const annRoot = document.querySelector(
+      '#prelabeler-cases .plt-raw-annotated:not(.plt-raw-annotated--empty)'
+    );
+
+    let selText = '';
+    if (activeFocus === ta && ta.selectionStart !== ta.selectionEnd) {
+      const a = Math.min(ta.selectionStart, ta.selectionEnd);
+      const b = Math.max(ta.selectionStart, ta.selectionEnd);
+      selText = String(ta.value).slice(a, b).trim();
+    } else if (annRoot) {
+      const glob = pltAnnotGetGlobRangeFromSelection(annRoot);
+      if (glob && pltAnnotatedPlainMatchesRaw(annRoot, raw))
+        selText = raw.slice(glob.start, glob.end).trim();
+    }
+
+    if (!selText) return false;
+    addExpectedForLabel(labelChoice.label, selText);
+    pltClearAnnBlockUi();
+    if (ta === activeFocus) {
+      ta.focus();
+      const start = ta.selectionStart;
+      const end = ta.selectionEnd;
+      if (start !== end) ta.setSelectionRange(start, end);
+    }
+    return true;
+  }
+
+  function pltAnnRemoveSelectedBlock() {
+    if (!pltAnnBlockSelection?.label || !pltAnnBlockSelection?.text) return false;
+    const lab = pltAnnBlockSelection.label;
+    const txt = pltAnnBlockSelection.text;
+    const ok = removeExpectedForLabel(lab, txt);
+    pltClearAnnBlockUi();
+    return ok;
+  }
+
   function sortLabelsByHotkey(rows) {
     return [...rows].sort((a, b) => {
       const na = parseInt(String(a.hotkey), 10);
@@ -5072,12 +5277,16 @@ async function initEvidenceView() {
     hits.sort((a, b) => a.start - b.start || b.end - a.end);
     let html = '';
     let cursor = 0;
-    hits.forEach(hit => {
+      hits.forEach(hit => {
       if (cursor < hit.start) html += pltEsc(raw.slice(cursor, hit.start));
       const text = raw.slice(hit.start, hit.end);
       const color = hit.color;
       const bg = hexToRgba(color, 0.20);
-      html += `<span class="plt-raw-ann" style="border-color:${color};background:${bg}">
+      const rangeKey = `${hit.start}:${hit.end}`;
+      html += `<span class="plt-raw-ann" tabindex="0"
+        role="button" title="Khối có nhãn — nhấp để chọn, phím số đổi nhãn, Backspace/Xóa để gỡ"
+        data-plt-ann-range="${pltEsc(rangeKey)}" data-plt-ann-label="${pltEsc(hit.label)}"
+        style="border-color:${color};background:${bg}">
         <span class="plt-badge lc-${pltEsc(hit.label)}">${pltEsc(hit.label)}</span>
         <span class="plt-raw-ann__text">${pltEsc(text)}</span>
       </span>`;
@@ -5502,6 +5711,7 @@ async function initEvidenceView() {
   function renderEditor() {
     const surface = document.getElementById('plt-editor-surface');
     if (!surface) return;
+    pltClearAnnBlockUi();
     const c = cases.find(x => x.id === activeId);
     if (!c) {
       surface.innerHTML = pltEditorEmptyInnerHtml();
@@ -5900,6 +6110,35 @@ async function initEvidenceView() {
     if (pltDelegatedEventsBound) return;
     pltDelegatedEventsBound = true;
 
+    document.addEventListener('focusin', e => {
+      const t = e.target;
+      if (!(t instanceof Element)) return;
+      if (!pltIsPrelabelerCasesPageVisible()) return;
+      if (t.closest('#plt-raw-address')) {
+        pltClearAnnBlockUi();
+        return;
+      }
+      const chip = t.closest('.plt-raw-ann');
+      if (chip instanceof HTMLElement) pltAnnounceAnnBlock(chip);
+    });
+
+    document.addEventListener('mousedown', e => {
+      const t = e.target;
+      if (!(t instanceof Element)) return;
+      if (!pltIsPrelabelerCasesPageVisible()) return;
+      const chip = t.closest('.plt-raw-ann');
+      const annWrap = t.closest('.plt-raw-annotated');
+      if (chip instanceof HTMLElement) {
+        pltAnnounceAnnBlock(chip);
+        return;
+      }
+      if (t.closest('#plt-raw-address')) {
+        pltClearAnnBlockUi();
+        return;
+      }
+      if (annWrap instanceof HTMLElement) pltClearAnnBlockUi();
+    });
+
     document.addEventListener(
       'click',
       e => {
@@ -5957,6 +6196,59 @@ async function initEvidenceView() {
     document.addEventListener('keydown', e => {
       const t = e.target;
       if (!(t instanceof Element)) return;
+
+      if (pltIsPrelabelerCasesPageVisible()) {
+        const aeHot = document.activeElement;
+        /** Delete / Backspace removes label from a click-selected annotated block (not while editing text fields). */
+        if (
+          !e.repeat &&
+          (e.key === 'Delete' || e.key === 'Backspace') &&
+          pltAnnBlockSelection &&
+          nerLabelsOrdered.length
+        ) {
+          const ae = aeHot instanceof HTMLElement ? aeHot : null;
+          if (ae?.id !== 'plt-raw-address') {
+            const blockTypingDelete =
+              ae?.isContentEditable ||
+              ae?.closest('#plt-search') ||
+              ae?.closest('.plt-editor-head input') ||
+              ae?.closest('.plt-label-cell__input');
+            if (!blockTypingDelete) {
+              e.preventDefault();
+              pltAnnRemoveSelectedBlock();
+              return;
+            }
+          }
+        }
+
+        /** Digit hotkeys mirror Label Studio chip order (aligned with ô nhãn bên dưới). */
+        if (!e.repeat && !e.altKey && !e.ctrlKey && !e.metaKey && nerLabelsOrdered.length) {
+          const hkDigit = pltLabelFromHotkeyKey(e.key);
+          if (
+            hkDigit &&
+            aeHot instanceof HTMLElement &&
+            !pltAnnHotkeyIgnoreTypingTarget(aeHot)
+          ) {
+            const ta = document.getElementById('plt-raw-address');
+            const hasTaSel =
+              aeHot === ta &&
+              ta &&
+              ta.selectionStart != null &&
+              ta.selectionEnd != null &&
+              ta.selectionStart !== ta.selectionEnd;
+            const scopedDigit =
+              Boolean(pltAnnBlockSelection) ||
+              hasTaSel ||
+              pltAnnotHasUsableSubstringSelection();
+            if (scopedDigit) {
+              e.preventDefault();
+              pltAnnApplyLabelFromChoice(hkDigit);
+              return;
+            }
+          }
+        }
+      }
+
       if (e.key !== 'Enter' && e.key !== ' ') return;
       if (t.closest('#plt-filter-pass')) {
         e.preventDefault();

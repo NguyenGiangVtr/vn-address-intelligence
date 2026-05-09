@@ -678,6 +678,13 @@ class PreLabeler:
                     matched_text.strip(),
                 ):
                     continue
+                if (
+                    label == "NHB"
+                    and re.match(r"(?is)^tháp\s+", matched_text.strip())
+                    and start > 0
+                    and raw_address[start - 1] == "-"
+                ):
+                    continue
                 if label == "NHB":
                     ap_chunks = _split_ap_duong(start, matched_text)
                     if len(ap_chunks) >= 2:

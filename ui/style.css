@@ -6072,6 +6072,16 @@ body.no-scroll {
   border: 1px solid transparent;
   border-radius: 8px;
   vertical-align: baseline;
+  outline-offset: 2px;
+  cursor: pointer;
+}
+
+#prelabeler-cases .plt-raw-ann:focus-visible {
+  outline: 2px solid var(--accent, #3b82f6);
+}
+
+#prelabeler-cases .plt-raw-ann--selected {
+  outline: 2px solid var(--accent, #3b82f6);
 }
 
 #prelabeler-cases .plt-raw-ann .plt-badge {
