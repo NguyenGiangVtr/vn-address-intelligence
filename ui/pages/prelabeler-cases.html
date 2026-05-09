@@ -6,7 +6,7 @@
     <div class="plt-header-main">
       <div class="plt-header-intro">
         <h2 class="page-title-inner">🏷️ Address Label Studio</h2>
-        <p class="page-subtitle plt-header-sub">Thiết lập nhãn kỳ vọng, đối chiếu với kết quả suy luận và tinh chỉnh dữ liệu địa chỉ</p>
+        <p class="page-subtitle plt-header-sub">Thiết lập nhãn kỳ vọng, đối chiếu với <strong>gợi ý rule</strong> (PreLabeler) và tinh chỉnh dữ liệu địa chỉ</p>
       </div>
       <div id="plt-summary" class="plt-summary-band" aria-label="Tổng quan kết quả và thao tác dữ liệu">
         <div class="plt-summary-metrics">
@@ -62,13 +62,13 @@
     <div class="plt-editor-col">
       <div class="plt-run-cluster card" id="plt-run-cluster" role="toolbar" aria-label="Đối chiếu và xử lý mẫu">
         <button type="button" class="btn plt-btn-run plt-btn-run-one" id="plt-btn-run-one" onclick="pltRunOne()" disabled title="Đối chiếu mẫu đang chọn với nhãn kỳ vọng (chỉ F8, không giữ Ctrl/Alt/Shift)" aria-keyshortcuts="F8">
-          <i class="fa-solid fa-play"></i> Đối chiếu (F8)
+          <i class="fa-solid fa-play"></i> Đối chiếu <span class="plt-btn-kbd">F8</span>
         </button>
         <button type="button" class="btn plt-btn-run plt-btn-run-all" id="plt-btn-run-all" title="Đối chiếu lần lượt tất cả mẫu trong danh sách (chỉ F9, không giữ Ctrl/Alt/Shift)" aria-keyshortcuts="F9">
-          <i class="fa-solid fa-forward-fast"></i> Đối chiếu tất cả (F9)
+          <i class="fa-solid fa-forward-fast"></i> Đối chiếu tất cả <span class="plt-btn-kbd">F9</span>
         </button>
         <button type="button" class="btn plt-btn-random" id="plt-btn-random-predict" title="Lấy một địa chỉ ngẫu nhiên từ hàng đợi và điền gợi ý nhãn (chỉ F10, không giữ Ctrl/Alt/Shift)" aria-keyshortcuts="F10">
-          <i class="fa-solid fa-shuffle"></i> Lấy mẫu ngẫu nhiên và gợi ý nhãn (F10)
+          <i class="fa-solid fa-shuffle"></i> Lấy mẫu ngẫu nhiên và gợi ý nhãn <span class="plt-btn-kbd">F10</span>
         </button>
         <label class="plt-overwrite-label" title="Khi bật: cập nhật mẫu đang chọn thay vì tạo mẫu mới">
           <input type="checkbox" id="plt-random-overwrite-active">

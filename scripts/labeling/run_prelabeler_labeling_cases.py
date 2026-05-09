@@ -102,11 +102,23 @@ def run_suite(test_file: Path, min_pass_rate: float) -> int:
             district_name = None
             province_name = None
 
+        qh = {}
+        md = case.get("meta") if isinstance(case.get("meta"), dict) else None
+        if isinstance(md, dict):
+            qh = md
+
+        def _meta_hint(key: str):
+            raw = qh.get(key)
+            if raw is None:
+                return None
+            s = str(raw).strip()
+            return s or None
+
         # Dong bo voi API /prelabeler-cases/run:
         # Nếu không có admin trong input thì suy ra từ expected để đảm bảo cùng hành vi.
-        ward_name = ward_name or first_expected_text(expected, "WDS")
-        district_name = district_name or first_expected_text(expected, "DST")
-        province_name = province_name or first_expected_text(expected, "PRO")
+        ward_name = ward_name or first_expected_text(expected, "WDS") or _meta_hint("ward_name")
+        district_name = district_name or first_expected_text(expected, "DST") or _meta_hint("district_name")
+        province_name = province_name or first_expected_text(expected, "PRO") or _meta_hint("province_name")
 
         predictions = PreLabeler.predict(
             raw_address=raw_address,

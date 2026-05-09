@@ -244,7 +244,7 @@ const PAGE_META = {
   },
   'prelabeler-cases': {
     title: 'Address Label Studio - Vietnamese Address Intelligence',
-    description: 'Thiết lập nhãn kỳ vọng, đối chiếu với kết quả suy luận và tinh chỉnh dữ liệu địa chỉ',
+    description: 'Thiết lập nhãn kỳ vọng, đối chiếu với gợi ý nhãn rule (PreLabeler) và tinh chỉnh dữ liệu địa chỉ',
     keywords: 'address labeling, vietnam address, ner, annotation, expected labels'
   }
 };
@@ -1821,6 +1821,7 @@ function renderOverviewChart(stats) {
 // LABEL REGISTRY
 // ═══════════════════════════════════════════════════════════
 let _labelRegistrySearchBound = false;
+let _lrAiCoachPromptCopyBound = false;
 const _labelRegistryMediaCompact = window.matchMedia("(max-width: 1180px)");
 
 function _shortenLabelRegistryText(text, maxLen) {
@@ -1885,6 +1886,87 @@ const LABEL_REGISTRY_RULES = {
     avoidWhen: "Không dùng cho quận, huyện, phường hoặc tên cửa hàng."
   }
 };
+
+const _LR_AI_COACH_FALLBACK_ORDER = ["PCD", "BLD", "POI", "ALY", "NUM", "STR", "NHB", "WDS", "DST", "PRO"];
+
+/**
+ * Prompt “system / developer” một lần để đưa vào Gemini, ChatGPT, Copilot.
+ * Luôn ghép đúng LABEL_REGISTRY_RULES và (nếu đã có) NER_LABELS trên UI.
+ */
+function buildLabelRegistryAiCoachPrompt() {
+  const rows = [];
+
+  if (Array.isArray(NER_LABELS) && NER_LABELS.length > 0) {
+    NER_LABELS.forEach(row => {
+      const code = String(row?.value || "").trim().toUpperCase();
+      if (!code) return;
+      const hk = row?.hotkey != null && row.hotkey !== "" ? String(row.hotkey) : "—";
+      rows.push({ code, hk, rule: LABEL_REGISTRY_RULES[code] || {} });
+    });
+  } else {
+    _LR_AI_COACH_FALLBACK_ORDER.forEach(code => {
+      rows.push({ code, hk: "—", rule: LABEL_REGISTRY_RULES[code] || {} });
+    });
+  }
+
+  const labelCatalog = rows
+    .map(
+      r =>
+        `- ${r.code}\n   Phím tắt trong UI PreLabeler (để đồng bộ nhãn tay): ${r.hk}\n   Tóm tắt vai trò: ${r.rule.title || "—"}\n   Gán khi: ${r.rule.whenToUse || "—"}\n   Tránh nhầm (không gán khi): ${r.rule.avoidWhen || "—"}`
+    )
+    .join("\n\n");
+
+  return [
+    "Bạn là trợ lý gán nhãn Named Entity Recognition (NER) cho ĐỊA CHỈ TIẾNG VIỆT trong dự án Address Label Studio (định danh vn-address-intelligence).",
+    "",
+    "## NHIỆM VỤ VÀ NGUYÊN TẮC",
+    "Người dùng gửi chuỗi địa chỉ thô (raw_address). Bạn CHỈ gợi ý các span và mã nhãn theo đúng quy tắc bên dưới.",
+    "Quyết định cuối cùng do người dùng/con người: họ có thể bỏ, sửa hoặc không dùng từng gợi ý.",
+    "Với MỖI nhãn gợi ý bạn PHẢI viết một dòng hoặc cột «Lý do / gợi ý» ngắn gàng, tiếng Việt đời thường — người dùng có thể sao chép phần đó vào ô **ghi chú / note** của trang mẫu trong PreLabeler.",
+    "",
+    "## BẢNG MÃ NHÃN ĐANG DÙNG (không được thêm mã khác)",
+    labelCatalog || "(Chưa tải danh mục — tham khảo các mã tối đa: PCD, BLD, POI, ALY, NUM, STR, NHB, WDS, DST, PRO.)",
+    "",
+    "## QUY TẮC CĂN VỚI HỆ THỐNG (bắt buộc tuân thủ)",
+    "1) CHỈ sử dụng đúng các mã nhãn được liệt kê trong mục 'Bảng mã nhãn' ở trên. Không bịa thêm ENTITY ngoài 10 nhãn này.",
+    "2) Mỗi span gắn đúng MỘT nhãn. Không chồng span không giao nhau; text trong mỗi span là đoạn trích LIÊN TỤC từ đúng chuỗi địa chỉ đầu vào (verbatim, giữ đúng dấu, hoa/thường như trong câu gốc hoặc tối thiểu không thay đổi tiếng Việt).",
+    '3) WDS / DST / PRO ("admin"): nếu trong chuỗi có cả TIỀN TỐ hành chính và tên đơn vị (vd "Phường 1", "Quận 10", "Hà Nội") thì span phải bao luôn phần "Loại + Tên", không chỉ ghép có tên mà không tiền tố khi chuỗi đã ghi đủ.',
+    "4) Ưu tiên tách các thành phần vi mô khác loại: ví dụ số nhà (NUM) tách khỏi tên đường (STR); hẻm/ngõ (ALY) tách khỏi đường nếu trong câu có hai phần khác nhau.",
+    "5) KHÔNG gán nhãn cho dấu phẩy, dấu chấm, khoảng trắng rời; không ghép nhiều thành phần không liên tục thành một span.",
+    '6) Nếu không chắc: không bịa span; trong cùng câu trả lời hãy thêm mục văn bản có tiêu đề «Những chỗ chưa chắc» (bullet), mỗi bullet nêu đoạn gây khó và 1–2 phương án nhãn có thể cân nhắc.',
+    "",
+    "## ĐỊNH DẠNG TRẢ LỜI — BẮT BUỘC (KHÔNG JSON)",
+    "",
+    "— KHÔNG dùng JSON, YAML hay khối mã ba dấu huyền (```) chứa cấu trúc máy đọc. Việc dùng các dòng bảng chỉ chứa ký tự và dấu | (Markdown table) là BÌNH THƯỜNG và được khuyến khích.",
+
+    "— Chỉ được dùng MỘT trong hai kiểu sau (ưu tiên bảng trước, nếu mô hình lỗi bảng thì dùng kiểu 2):",
+    "",
+    "### Kiểu 1 — Bảng Markdown hoặc bảng dùng TAB (dễ copy sang Note / vào ô chữ trong tool)",
+    "Dòng tiêu đề bắt buộc 3 cột:",
+    "| Mã nhãn | Đoạn bôi (trích NGUYÊN VĂN từ địa chỉ) | Lý do / gợi ý (copy được sang ô note) |",
+    "| :--- | :--- | :--- |",
+    '| NUM | ví dụ: 268 | Đây là số nhà chính ở đầu cụm, tách khỏi đường. |',
+    "",
+    "### Kiểu 2 — Chữ thuần, mỗi nhãn một khối 3 dòng (khi không gõ được Markdown table)",
+    "Mã nhãn: NUM",
+    "Đoạn bôi: 268",
+    "Lý do (note): đây là số nhà chính…",
+    "— (lặp lại khối 3 dòng cho từng gợi ý khác)",
+    "",
+    "### Cuối câu trả lời (tùy thực tế địa chỉ)",
+    "Nếu có chỗ không chắc, sau bảng/hoặc khối 3-dòng gợi ý bằng tiêu đề văn bản:",
+    "**Những chỗ chưa chắc**",
+    "- (bullet có thể copy)",
+    "",
+    "## Luồng cuộc hội thoại đề xuất",
+    "Luồng 1 — Tin đầu: người dùng dán nguyên văn toàn bộ prompt này (hoặc hệ đã được cấu hình với các quy tắc tương đương); sau đó chờ họ gửi địa chỉ cụ thể.",
+    'Luồng 2 — Tin kế tiếp: một hoặc nhiều dòng địa chỉ thô (raw_address).',
+    "",
+    "> Lưu ý: các mô hình (Gemini, ChatGPT, Copilot) không truy cập trực tiếp cơ sở dữ liệu của dự án; nếu trong chuỗi không đủ tên đơn vị hành chính đừng bịa — hãy ghi vào mục «Những chỗ chưa chắc» bằng văn bản tiếng Việt đơn giản.",
+
+    "",
+  ].join("\n");
+}
 
 function populateLabelRegistry() {
   const tbody = document.getElementById("label-registry-body");
@@ -2007,6 +2089,51 @@ function populateLabelRegistry() {
       if (labelCountEl) {
         labelCountEl.textContent = visibleCount;
       }
+    });
+  }
+
+  const lrPromptTa = document.getElementById("lr-ai-coach-prompt");
+  if (lrPromptTa instanceof HTMLTextAreaElement) {
+    lrPromptTa.value = buildLabelRegistryAiCoachPrompt();
+    lrPromptTa.placeholder = "";
+  }
+
+  const lrPromptCopyBtn = document.getElementById("lr-ai-prompt-copy");
+  if (lrPromptCopyBtn instanceof HTMLButtonElement && !_lrAiCoachPromptCopyBound) {
+    _lrAiCoachPromptCopyBound = true;
+    lrPromptCopyBtn.addEventListener("click", () => {
+      const el = document.getElementById("lr-ai-coach-prompt");
+      const text =
+        el instanceof HTMLTextAreaElement ? el.value : buildLabelRegistryAiCoachPrompt();
+      const s = String(text || "").trim();
+      if (!s) {
+        window.showToast?.("Chưa có nội dung prompt để copy", "warning");
+        return;
+      }
+      const done = () => window.showToast?.("Đã copy prompt vào clipboard", "success");
+      const fail = () =>
+        window.showToast?.("Không thể copy (kiểm tra quyền clipboard hoặc HTTPS)", "warning");
+      if (navigator.clipboard?.writeText) {
+        navigator.clipboard.writeText(s).then(done).catch(fail);
+        return;
+      }
+      try {
+        const sink = lrPromptTa instanceof HTMLTextAreaElement ? lrPromptTa : el;
+        if (sink instanceof HTMLTextAreaElement) {
+          sink.removeAttribute("readonly");
+          sink.focus();
+          sink.select();
+          sink.setSelectionRange(0, s.length);
+          const ok = document.execCommand("copy");
+          sink.setAttribute("readonly", "");
+          if (ok) done();
+          else fail();
+          return;
+        }
+      } catch (_) {
+        /* fall through */
+      }
+      fail();
     });
   }
 }
@@ -5680,6 +5807,14 @@ async function initEvidenceView() {
     overlay.setAttribute('aria-hidden', show ? 'false' : 'true');
   }
 
+  /** Khớp với `prelabeler-cases.html`: giữ nhãn + phím F8/F9/F10 sau spinner/loading */
+  const PLT_HTML_BTN_RUN_ONE_IDLE =
+    '<i class="fa-solid fa-play"></i> Đối chiếu <span class="plt-btn-kbd">F8</span>';
+  const PLT_HTML_BTN_RUN_ALL_IDLE =
+    '<i class="fa-solid fa-forward-fast"></i> Đối chiếu tất cả <span class="plt-btn-kbd">F9</span>';
+  const PLT_HTML_BTN_RANDOM_PREDICT_IDLE =
+    '<i class="fa-solid fa-shuffle"></i> Lấy mẫu ngẫu nhiên và gợi ý nhãn <span class="plt-btn-kbd">F10</span>';
+
   async function pltGetRandomAndPredict() {
     const btn = document.getElementById('plt-btn-random-predict');
     pltSetRandomPredictLoadingOverlay(true);
@@ -5711,11 +5846,35 @@ async function initEvidenceView() {
       }
 
       const sourceId = data?.source_id != null ? String(data.source_id) : '';
+      const queueMetaRaw = data?.meta && typeof data.meta === 'object' ? data.meta : null;
+      const queueMeta =
+        queueMetaRaw &&
+        ['ward_name', 'district_name', 'province_name'].some(
+          k => queueMetaRaw[k] != null && String(queueMetaRaw[k]).trim().length > 0
+        )
+          ? {
+              ward_name:
+                queueMetaRaw.ward_name != null && String(queueMetaRaw.ward_name).trim()
+                  ? String(queueMetaRaw.ward_name).trim()
+                  : null,
+              district_name:
+                queueMetaRaw.district_name != null && String(queueMetaRaw.district_name).trim()
+                  ? String(queueMetaRaw.district_name).trim()
+                  : null,
+              province_name:
+                queueMetaRaw.province_name != null && String(queueMetaRaw.province_name).trim()
+                  ? String(queueMetaRaw.province_name).trim()
+                  : null,
+            }
+          : null;
+
       const overwriteSelected = Boolean(document.getElementById('plt-random-overwrite-active')?.checked);
       const selectedCase = overwriteSelected ? cases.find(x => x.id === activeId) : null;
       if (selectedCase) {
         selectedCase.input = rawAddress;
         selectedCase.expected = expected;
+        if (queueMeta) selectedCase.meta = queueMeta;
+        else delete selectedCase.meta;
         selectedCase.note = String(selectedCase.note || '');
         if (typeof selectedCase.strict !== 'boolean') selectedCase.strict = true;
         if (!selectedCase.name || String(selectedCase.name).trim().length === 0) {
@@ -5732,6 +5891,7 @@ async function initEvidenceView() {
           expected,
           strict: true,
           created_at: new Date().toISOString(),
+          ...(queueMeta ? { meta: queueMeta } : {}),
         };
         cases.push(c);
         pltSelect(c.id);
@@ -5750,7 +5910,7 @@ async function initEvidenceView() {
       pltSetRandomPredictLoadingOverlay(false);
       if (btn) {
         btn.disabled = false;
-        btn.innerHTML = '<i class="fa-solid fa-shuffle"></i> Lấy mẫu ngẫu nhiên và gợi ý nhãn';
+        btn.innerHTML = PLT_HTML_BTN_RANDOM_PREDICT_IDLE;
       }
     }
   }
@@ -6172,7 +6332,7 @@ async function initEvidenceView() {
       window.showToast?.('Lỗi server: ' + e.message, 'danger');
     } finally {
       if (btn) {
-        btn.innerHTML = '<i class="fa-solid fa-play"></i> Đối chiếu';
+        btn.innerHTML = PLT_HTML_BTN_RUN_ONE_IDLE;
       }
       syncPltRunCluster();
     }
@@ -6217,7 +6377,7 @@ async function initEvidenceView() {
     } finally {
       if (btn) {
         btn.disabled = false;
-        btn.innerHTML = '<i class="fa-solid fa-forward-fast"></i> Đối chiếu tất cả';
+        btn.innerHTML = PLT_HTML_BTN_RUN_ALL_IDLE;
       }
     }
     if (activeId) renderEditor();
@@ -6426,7 +6586,7 @@ async function initEvidenceView() {
       }))
       .filter(e => e.label && e.text);
 
-    return {
+    const out = {
       id: String(c?.id || `case_${idx}`),
       name: String(c?.name || ''),
       input,
@@ -6434,6 +6594,20 @@ async function initEvidenceView() {
       expected,
       strict: c?.strict !== false,
     };
+    const md = c?.meta && typeof c.meta === 'object' ? c.meta : null;
+    if (
+      md &&
+      ['ward_name', 'district_name', 'province_name'].some(k => md[k] != null && String(md[k]).trim().length > 0)
+    ) {
+      out.meta = {
+        ward_name: md.ward_name != null && String(md.ward_name).trim() ? String(md.ward_name).trim() : null,
+        district_name:
+          md.district_name != null && String(md.district_name).trim() ? String(md.district_name).trim() : null,
+        province_name:
+          md.province_name != null && String(md.province_name).trim() ? String(md.province_name).trim() : null,
+      };
+    }
+    return out;
   }
 
   /**

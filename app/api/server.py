@@ -2987,6 +2987,7 @@ def _ensure_prelabeler_testcases_table():
         ALTER TABLE ai.prelabeler_testcases ADD COLUMN IF NOT EXISTS note TEXT NOT NULL DEFAULT '';
         ALTER TABLE ai.prelabeler_testcases ADD COLUMN IF NOT EXISTS test_result JSONB NULL;
         ALTER TABLE ai.prelabeler_testcases ADD COLUMN IF NOT EXISTS tested_at TIMESTAMPTZ NULL;
+        ALTER TABLE ai.prelabeler_testcases ADD COLUMN IF NOT EXISTS predict_meta JSONB NULL;
     """)
     try:
         with engine.connect() as conn:
@@ -3071,6 +3072,8 @@ class PreLabelerLabelingCase(BaseModel):
     note: Optional[Any] = ""
     expected: Optional[List[Dict[str, Any]]] = None
     strict: Optional[Any] = True
+    # Gợi ý queue (Đồng bộ GET /random-predict “meta”) — fallback khi /run không còn WDS/DST/PRO trong expected.
+    meta: Optional[Dict[str, Any]] = None
 
 
 class PreLabelerLabelingRunPayload(BaseModel):
@@ -3088,10 +3091,17 @@ def list_prelabeler_cases(current_user=Depends(get_current_user)):
     try:
         with engine.connect() as conn:
             rows = conn.execute(text(
-                "SELECT id, name, input, note, expected, strict, test_result, tested_at, created_at, updated_at "
+                "SELECT id, name, input, note, expected, strict, predict_meta, test_result, tested_at, created_at, updated_at "
                 "FROM ai.prelabeler_testcases ORDER BY created_at ASC"
             )).mappings().all()
-        return [dict(r) for r in rows]
+        out = []
+        for r in rows:
+            row = dict(r)
+            pm = row.pop("predict_meta", None)
+            if isinstance(pm, dict) and pm:
+                row["meta"] = pm
+            out.append(row)
+        return out
     except Exception as e:
         raise HTTPException(500, f"DB error: {e}")
 
@@ -3250,15 +3260,19 @@ def save_prelabeler_cases(cases: List[PreLabelerLabelingCase], current_user=Depe
                     seen.add(k)
                     normalized_expected.append({"label": label, "text": text_val})
 
+                pmd = getattr(c, "meta", None)
+                predict_meta_json = json.dumps(pmd if isinstance(pmd, dict) and pmd else {}, ensure_ascii=False)
+
                 conn.execute(text("""
-                    INSERT INTO ai.prelabeler_testcases (id, name, input, note, expected, strict, test_result, tested_at, updated_at)
-                    VALUES (:id, :name, CAST(:input AS JSONB), :note, CAST(:expected AS JSONB), :strict, NULL, NULL, NOW())
+                    INSERT INTO ai.prelabeler_testcases (id, name, input, note, expected, strict, predict_meta, test_result, tested_at, updated_at)
+                    VALUES (:id, :name, CAST(:input AS JSONB), :note, CAST(:expected AS JSONB), :strict, CAST(:predict_meta AS JSONB), NULL, NULL, NOW())
                     ON CONFLICT (id) DO UPDATE SET
                         name = EXCLUDED.name,
                         input = EXCLUDED.input,
                         note = EXCLUDED.note,
                         expected = EXCLUDED.expected,
                         strict = EXCLUDED.strict,
+                        predict_meta = EXCLUDED.predict_meta,
                         test_result = NULL,
                         tested_at = NULL,
                         updated_at = NOW()
@@ -3269,6 +3283,7 @@ def save_prelabeler_cases(cases: List[PreLabelerLabelingCase], current_user=Depe
                     "note": str(c.note or "").strip(),
                     "expected": json.dumps(normalized_expected, ensure_ascii=False),
                     "strict": bool(c.strict),
+                    "predict_meta": predict_meta_json,
                 })
         return {"ok": True, "count": len(cases)}
     except Exception as e:
@@ -3295,6 +3310,16 @@ def run_prelabeler_cases(payload: PreLabelerLabelingRunPayload, current_user=Dep
     """Chay PreLabeler.predict() cho tung labeling case va so sanh voi expected."""
     from app.ai.export_for_annotation import PreLabeler
 
+    def _queue_hint(case_obj: PreLabelerLabelingCase, key: str):
+        md = getattr(case_obj, "meta", None)
+        if not isinstance(md, dict):
+            return None
+        raw = md.get(key)
+        if raw is None:
+            return None
+        s = str(raw).strip()
+        return s or None
+
     results = []
     for idx, case in enumerate(payload.cases):
         expected = case.expected or []  # [{"label": "STR", "text": "Tam Bình"}]
@@ -3304,9 +3329,9 @@ def run_prelabeler_cases(payload: PreLabelerLabelingRunPayload, current_user=Dep
         if isinstance(case.input, dict):
             raw_address = str(case.input.get("raw_address") or "")
         raw_address = str(raw_address or "").strip()
-        ward_name = first_expected_text(expected, "WDS")
-        district_name = first_expected_text(expected, "DST")
-        province_name = first_expected_text(expected, "PRO")
+        ward_name = first_expected_text(expected, "WDS") or _queue_hint(case, "ward_name")
+        district_name = first_expected_text(expected, "DST") or _queue_hint(case, "district_name")
+        province_name = first_expected_text(expected, "PRO") or _queue_hint(case, "province_name")
 
         try:
             predictions = PreLabeler.predict(

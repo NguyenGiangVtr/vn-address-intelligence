@@ -6,7 +6,7 @@
 
 ## 📌 Version
 
-- **Current:** `v2.3.0`
+- **Current:** `v2.3.1`
 - **Status:** Production
 - **Single source references:**
   - Predictor: `app/ai/export_for_annotation.py`
@@ -20,6 +20,10 @@
 ---
 
 ## 🎯 Mục đích
+
+**Thuật toán gán nhãn ở đây là rule-based (heuristic) duy nhất:** `PreLabeler.predict` chỉ dùng luật khớp chuỗi, regex, và (khi có) ngữ cảnh hành chính từ DB/queue — **không** gọi mô hình NER/LLM trong pipeline Labeling Suite (`/prelabeler-cases/*`). Tên method `predict` mang nghĩa “suy ra tập nhãn theo luật”, không phải inference deep learning.
+
+Trang **Address Label Studio** (UI) và các API `random-predict` / `run` đều chỉ chạy engine này; mô hình học máy (vd PhoBERT) là tuyến khác, phục vụ huấn luyện/đánh giá sau khi dữ liệu đã được gợi ý hoặc hiệu đính tay.
 
 Tự động gợi ý nhãn cho địa chỉ thô bằng **Hybrid approach** (String Matching + Regex), giúp:
 - ⏱️ Giảm công sức annotation từ 2h → 30min cho 1000 samples

@@ -9,9 +9,9 @@ Quy tắc **heuristic labeling** (macro fallback, NHB/NUM/ALY/STR/POI đặc th�
 
 ## Version
 
-- **Current:** `v2.3.0`
+- **Current:** `v2.3.1`
 - **Updated:** `2026-05-09`
-- **Scope:** Predictor/service/UI strict behavior + random-predict consistency
+- **Scope:** Predictor/service/UI strict behavior + random-predict consistency; **Labeling Suite chỉ dùng rule engine `PreLabeler.predict`**, không gọi ML trong cùng luồng.
 
 ## Single Source of Truth
 
@@ -43,6 +43,9 @@ Quy tắc **heuristic labeling** (macro fallback, NHB/NUM/ALY/STR/POI đặc th�
 - If API behavior changes, verify `/api/prelabeler-cases/random-predict` and `/api/prelabeler-cases/run` are consistent.
 
 ## Changelog
+
+### v2.3.1 - 2026-05-09
+- Documented that `/prelabeler-cases` và UI Address Label Studio chỉ áp dụng rule-based `PreLabeler.predict` (tránh nhầm với inference mô hình).
 
 ### v2.3.0 - 2026-05-09
 - Added strict-mode semantics as first-class domain rule (`strict=true/false`).

@@ -75,7 +75,7 @@ class PreLabeler:
         ("PCD", r'(?i)(?:\b|^)([23456789CFGHJMPQRVWX]{4,8}\+[23456789CFGHJMPQRVWX]{2,3})(?:\b|$)', 0.95),
         ("BLD", r'(?i)(?:Tòa\s*nhà|Building|Chung\s*cư|CC|Khu\s*tập\s*thể|KTT|Văn\s*phòng|CCN|Tầng|Phòng|Lầu|Block)\s+[^,.\n]+', 0.75),
         #("POI", r'(?i)(?:Trường|Bệnh\s*viện|BV|Cửa\s*hàng|Tạp\s*hóa|ATM|UBND|Chợ|Siêu\s*thị|Công\s*viên|Công\s*ty|Cty|Nhà\s*thờ|Chùa|Khu công nghiệp|KCN|KDC|Studio)\s+[^,.\n]+', 0.7),
-        ("POI", r'(?i)(?:Trường|Bệnh\s*viện|BV|Trạm\s*y\s*tế|Phòng\s*khám|Nhà\s*thuốc|Quầy\s*thuốc|Khu\s*công\s*nghiệp|KCN|Khu\s*dân\s*cư|Khu\s*đô\s*thị|KDC|KĐT|Khu\s*chế\s*xuất|KCX|Vật\s*liệu\s*xây\s*dựng|VLXD|Phân\s*bón|Vựa|Cửa\s*hàng|Tạp\s*hóa|Siêu\s*thị|Chợ|TTTM|Trung\s*tâm\s*thương\s*mại|UBND|Ủy\s*ban|Công\s*an|Bưu\s*điện|Ngân\s*hàng|ATM|Tiệm\s*vàng|Khách\s*sạn|Nhà\s*nghỉ|Hotel|Motel|Quán|Cafe|Cà\s*phê|Bi-a|Bi\s*a|Spa|Salon|Garage|Kho|Xưởng|Nhà\s*máy|Cơ\s*sở|Công\s*ty|Cty|Doanh\s*nghiệp|Studio|Nhà\s*thờ|Chùa|Đền|Miếu|Phủ|Am|Giáo\s*xứ|Công\s*viên|Cầu|Bến\s*xe|Cảng|Sân\s*bay)\s+[^,.\n/]+', 0.7),
+        ("POI", r'(?i)(?:Trường|Bệnh\s*viện|BV|Trạm\s*y\s*tế|Phòng\s*khám|Nhà\s*thuốc|Quầy\s*thuốc|Thẩm\s*mỹ\s*viện|Khu\s*công\s*nghiệp|KCN|Khu\s*dân\s*cư|Khu\s*đô\s*thị|KDC|KĐT|Khu\s*chế\s*xuất|KCX|Vật\s*liệu\s*xây\s*dựng|VLXD|Phân\s*bón|Vựa|Cửa\s*hàng|Tạp\s*hóa|Siêu\s*thị|Chợ|TTTM|Trung\s*tâm\s*thương\s*mại|UBND|Ủy\s*ban|Công\s*an|Bưu\s*điện|Ngân\s*hàng|ATM|Tiệm\s*vàng|Khách\s*sạn|Nhà\s*nghỉ|Hotel|Motel|Quán|Cafe|Cà\s*phê|Bi-a|Bi\s*a|Spa|Salon|Garage|Kho|Xưởng|Nhà\s*máy|Cơ\s*sở|Công\s*ty|Cty|Doanh\s*nghiệp|Studio|Nhà\s*thờ|Chùa|Đền|Miếu|Phủ|Am|Giáo\s*xứ|Công\s*viên|Cầu|Bến\s*xe|Cảng|Sân\s*bay)\s+[^,.\n/]+', 0.7),
         # Tránh nhầm đuôi tên đường "... Thường Kiệt" với hẻm Kiệt (xử lý bổ sung trong vòng MICRO).
         ("ALY", r'(?i)(?:Hẻm|Ngõ|Kiệt|Ngách)\s+[^,.\n]+', 0.85),
         ("NHB", r'(?i)(?:Tháp|tủ|Tủ)\s+[^\),\n]+', 0.84),
@@ -83,6 +83,7 @@ class PreLabeler:
         ("NUM", r'(?i)(?:Số\s*nhà|Số)\s+[0-9A-Za-z./\-]+|(?:\b|^)[A-Za-z]?\d+(?:-[A-Za-z]?\d+[A-Za-z]*)+(?:\b|$)|(?:\b|^)\d+[A-Za-z]?(?:[/\-]\d+[A-Za-z]?)*(?:[/\.]+[0-9A-Za-z.]+)*|(?:\b|^)[A-Za-z]\d{1,6}[A-Za-z]?(?:\.\d+)?(?:\b|$)|(?:\b|^)(?:Km)\s+[\w\-]+|(?:\b|^)(?:Lô)\s+\d[\w\-]*', 0.9),
         # Không bắt "phố" chung chung để tránh nuốt cụm POI như "Vật liệu xây dựng ...".
         # Chỉ match "Phố" khi có tiền tố đường rõ ràng (Đường/Đ./QL/...)
+        ("STR", r'(?is)(?:^|[\s,])(?:QL\s*\d+[A-Za-z]?|Đ\s*T\s*\d+[A-Za-z]?|[Dd][Tt]\s*\d+[A-Za-z]?)\b', 0.88),
         ("STR", r'(?i)(?:Đường|Đ\.|QL|Quốc\s*lộ|ĐT|DT|TL|Tỉnh\s*lộ|Đại\s*lộ|Hương\s*lộ|HL)\s+[^,.\n]+', 0.85),
         ("NHB", r'(?i)(?:Khu\s*phố|KP|Tổ\s*dân\s*phố|TDP|Thôn|Ấp|Bản|Tổ|Đội|Sóc|Phum|Xóm|Làng|Khóm|Cụm|Buôn|Plei|KDC|Sảnh)\s*[^,.\n]+|(?:\bKhu\s*\d+[A-Za-z]?\b)', 0.8),
     ]
@@ -99,6 +100,34 @@ class PreLabeler:
             return []
 
         results = []
+
+        def _collapse_duplicate_word_run(s: str) -> str:
+            """Thu gọn chuỗi khi có lặp lại hai nửa cạnh nhau ('A B A B' -> 'A B')."""
+            parts = str(s or '').strip().split()
+            if len(parts) < 4:
+                return str(s or '').strip()
+            changed = True
+            while changed and len(parts) >= 4:
+                changed = False
+                nlen = len(parts)
+                for k in range(nlen // 2, 0, -1):
+                    if 2 * k <= nlen and parts[:k] == parts[k : 2 * k]:
+                        parts = parts[:k] + parts[2 * k :]
+                        changed = True
+                        break
+            return ' '.join(parts).strip()
+
+        def _strip_interleaved_street_echo(s: str) -> str:
+            """Thu gọn 'Đường X 36 Đường X' (lặp tên xen số nhà trong cùng segment)."""
+            t = str(s or '').strip()
+            m_echo = re.match(r'(?is)^(.+?)\s+\d+[A-Za-z]?\s+(\1)\s*$', t)
+            if m_echo:
+                cand = (m_echo.group(1) or '').strip()
+                ws = cand.split()
+                if len(ws) >= 2 and len(cand) >= 6:
+                    return cand
+            return t
+
         def add_result(start: int, end: int, text: str, label: str, score: float):
             # Lấy bản gốc để tính offset nếu bị cắt tiền tố
             original_text = text
@@ -415,17 +444,24 @@ class PreLabeler:
         # Chi kich hoat khi chua co macro nao, tranh tao WDS/DST du thua
         # trong cac case ma PRO da duoc nhan dien tu tien to ro rang.
         if not (_has_macro("WDS") or _has_macro("DST") or _has_macro("PRO")):
+            def _bare_admin_segment(seg_text: str) -> str:
+                """Chuẩn hóa segment cho fallback 3 cấp không tiền tố (vd đuôi tỉnh + mã bưu điện)."""
+                seg_norm = str(seg_text or "").strip(" ,")
+                if not seg_norm or _is_country_segment(seg_norm) or _is_pluscode_segment(seg_norm):
+                    return ""
+                # VD: Đà Nẵng 550000 → Đà Nẵng (mã ZIP 5–7 chữ số ghép đuôi).
+                trimmed = re.sub(r"\s+\d{5,7}\s*$", "", seg_norm).strip(" ,")
+                if trimmed and trimmed != seg_norm and not re.search(r"\d", trimmed):
+                    return trimmed
+                if re.search(r"\d", seg_norm):
+                    return ""
+                return seg_norm
+
             bare_admin = []
             for seg in raw_segments:
-                seg_norm = str(seg or "").strip(" ,")
-                if not seg_norm:
-                    continue
-                if _is_country_segment(seg_norm) or _is_pluscode_segment(seg_norm):
-                    continue
-                # Uu tien segment khong chua so de tranh NUM/ma chen vao fallback.
-                if re.search(r"\d", seg_norm):
-                    continue
-                bare_admin.append(seg_norm)
+                seg_use = _bare_admin_segment(seg)
+                if seg_use:
+                    bare_admin.append(seg_use)
 
             if len(bare_admin) >= 3:
                 wds_seg, dst_seg, pro_seg = bare_admin[-3], bare_admin[-2], bare_admin[-1]
@@ -480,53 +516,88 @@ class PreLabeler:
 
         # Giai đoạn 1.2: Heuristic nhận diện STR nằm giữa NUM và WDS (WS)
         # Theo yêu cầu: STR nằm giữa NUM và WDS và có thể nằm trong danh sách từ OSM
-        num_regex = r'(?i)(?:Số\s+)?\d+[A-Za-z]?(?:[/\-]\d+[A-Za-z]?)*|(?:\b|^)(?:Lô|Km)\s+[\w\-]+'
-        
+        # Hậu tố ASCII (vd `a1`) gắn sau số / phân đoạn số nhà — không đụng vào các token tiếng Việt có dấu (vd `ấp`).
+        num_regex = (
+            r'(?i)(?:Số\s+)?\d+[A-Za-z]?(?:[/\-]\d+[A-Za-z]?)*(?:\s+[a-z]\d{1,4}[a-z]?)?'
+            r'|(?:\b|^)(?:Lô|Km)\s+[\w\-]+'
+        )
+        olc_pat = re.compile(
+            r'(?:\b|^)(?:[23456789CFGHJMPQRVWX]{4,8}\+[23456789CFGHJMPQRVWX]{2,3})(?:\b|$)',
+            re.I,
+        )
+
         # Lấy các mốc WDS đã tìm thấy ở Giai đoạn 1
-        wds_spans = [ (r['value']['start'], r['value']['end']) for r in results if 'WDS' in r['value']['labels'] ]
-        
+        wds_spans = [(r['value']['start'], r['value']['end']) for r in results if 'WDS' in r['value']['labels']]
+
+        def _span_fully_inside_any_range(s: int, e: int, ranges: list) -> bool:
+            """Chỉ bỏ mốc số nhà để 1.2 khi khớp số FULL nằm trong plus-code (overlap làm mất STR ngoại vi kiểu QL15)."""
+            for rs, rend in ranges:
+                if rs <= s and e <= rend:
+                    return True
+            return False
+
         if wds_spans:
-            # Tìm tất cả các số nhà tiềm năng
-            for n_match in re.finditer(num_regex, raw_address):
+            pc_spans = [(m.start(), m.end()) for m in olc_pat.finditer(raw_address)]
+            num_candidates = sorted(
+                list(re.finditer(num_regex, raw_address)),
+                key=lambda m: ((m.end() - m.start()), -m.start()),
+                reverse=True,
+            )
+            picked_num_spans = []
+            for n_match in num_candidates:
                 n_end = n_match.end()
+                n_start = n_match.start()
+                if pc_spans and _span_fully_inside_any_range(n_start, n_end, pc_spans):
+                    continue
+                if any(p[0] < n_end and p[1] > n_start for p in picked_num_spans):
+                    continue
                 # Tìm WDS gần nhất phía sau NUM này
                 after_wds = [s for s in wds_spans if s[0] >= n_end]
-                if after_wds:
-                    w_start, _ = min(after_wds, key=lambda x: x[0])
-                    # Đoạn văn bản ở giữa NUM và WDS
-                    gap_text = raw_address[n_end:w_start].strip(' ,')
-                    
-                    # Tiền xử lý gap_text: Nếu chứa tiền tố đường, chỉ lấy từ đó (Sửa lỗi dính "Số nhà" vào STR)
-                    str_pref_match = re.search(cls.PREFIX_PATTERNS["STR"], gap_text)
-                    if str_pref_match:
-                        gap_text = gap_text[str_pref_match.start():]
-                    
-                    # Nếu gap_text chứa tiền tố của các đơn vị khác (BLD, POI, ALY) -> Loại bỏ phần đó
-                    for stop_label in ["BLD", "POI", "ALY"]:
-                        stop_pat = cls.PREFIX_PATTERNS.get(stop_label)
-                        if stop_pat:
-                            m_stop = re.search(stop_pat, gap_text)
-                            if m_stop:
-                                gap_text = gap_text[:m_stop.start()].strip(' ,')
+                if not after_wds:
+                    continue
+                picked_num_spans.append((n_start, n_end))
+                w_start, _ = min(after_wds, key=lambda x: x[0])
+                # Đoạn văn bản ở giữa NUM và WDS
+                gap_text = raw_address[n_end:w_start].strip(' ,')
 
-                    if gap_text and len(gap_text.split()) <= 6: # Tên đường thường không quá dài
-                        is_match = False
-                        if known_streets and gap_text.lower() in known_streets:
-                            is_match = True
-                        
-                        # Heuristic bổ sung: Nếu bắt đầu bằng chữ hoa và không chứa dấu phẩy/chấm
-                        elif re.match(r'^[A-ZĐ][^,.\n]+$', gap_text):
-                            is_match = True
-                            
-                        if is_match:
-                            # Tìm vị trí chính xác trong raw_address để add_result
-                            m_gap = re.search(re.escape(gap_text), raw_address[n_end:w_start])
-                            if m_gap:
-                                g_start = n_end + m_gap.start()
-                                g_end = g_start + len(gap_text)
-                                # Ưu tiên điểm cao hơn nếu khớp trong list OSM
-                                score = 0.92 if (known_streets and gap_text.lower() in known_streets) else 0.8
-                                add_result(g_start, g_end, gap_text, 'STR', score)
+                gap_text = _collapse_duplicate_word_run(_strip_interleaved_street_echo(gap_text))
+
+                # Bỏ hậu tố dạng lô/ngõ ASCII trước tên đường FULL CAPS ('a1 ÂU CƠ' → 'ÂU CƠ')
+                gap_strip = re.match(r'(?i)^([a-z]\d{1,5})\s+(.{2,})$', gap_text)
+                if gap_strip and re.match(r'(?ms)^[^\n]*[À-ỸA-ZĐ]', gap_strip.group(2)):
+                    gap_text = gap_strip.group(2).strip(' ,')
+
+                # Tiền xử lý gap_text: Nếu chứa tiền tố đường, chỉ lấy từ đó (Sửa lỗi dính "Số nhà" vào STR)
+                str_pref_match = re.search(cls.PREFIX_PATTERNS["STR"], gap_text)
+                if str_pref_match:
+                    gap_text = gap_text[str_pref_match.start():]
+
+                # Nếu gap_text chứa tiền tố của các đơn vị khác (BLD, POI, ALY) -> Loại bỏ phần đó
+                for stop_label in ["BLD", "POI", "ALY"]:
+                    stop_pat = cls.PREFIX_PATTERNS.get(stop_label)
+                    if stop_pat:
+                        m_stop = re.search(stop_pat, gap_text)
+                        if m_stop:
+                            gap_text = gap_text[:m_stop.start()].strip(' ,')
+
+                if gap_text and len(gap_text.split()) <= 6:  # Tên đường thường không quá dài
+                    is_match = False
+                    if known_streets and gap_text.lower() in known_streets:
+                        is_match = True
+
+                    # Heuristic bổ sung: Nếu bắt đầu bằng chữ hoa và không chứa dấu phẩy/chấm
+                    elif re.match(r'^[A-ZĐ][^,.\n]+$', gap_text):
+                        is_match = True
+
+                    if is_match:
+                        # Tìm vị trí chính xác trong raw_address để add_result
+                        m_gap = re.search(re.escape(gap_text), raw_address[n_end:w_start])
+                        if m_gap:
+                            g_start = n_end + m_gap.start()
+                            g_end = g_start + len(gap_text)
+                            # Ưu tiên điểm cao hơn nếu khớp trong list OSM
+                            score = 0.92 if (known_streets and gap_text.lower() in known_streets) else 0.8
+                            add_result(g_start, g_end, gap_text, 'STR', score)
 
         # Giai đoạn 1.5: Cố gắng trích xuất STR (Tên đường) khi PRO/DST/WDS đã biết
         # Chiến lược:
@@ -567,14 +638,17 @@ class PreLabeler:
                 return lo, lo + len(sub), raw_address[lo:lo + len(sub)]
             return None
 
-        # Pattern for house numbers (supports 74/26, 927/1, 11B, K814)
-        num_pattern = re.compile(r'(?i)^(?P<num>(?:K\d+|\d+[A-Za-z]?)(?:[\\/\-]\d+[A-Za-z]?)*)(?:\s+)(?P<rest>.+)$')
+        # Pattern cho segment đầu: số nhà + đuôi ASCII (vd 51/17 a1) + tên đường/rest.
+        num_pattern = re.compile(
+            r'(?i)^(?P<num>(?:Số\s+)?(?:K\d+|\d+[A-Za-z]?)(?:[\\/\-]\d+[A-Za-z]?)*(?:\s+[a-z]\d{1,4}[a-z]?)?)'
+            r'(?:\s+)(?P<rest>.+)$'
+        )
 
         for i, seg in enumerate(segments[:3]):
             # Try to match number + rest
             m = num_pattern.match(seg)
             if m:
-                num = m.group('num').strip()
+                num = m.group('num').strip().lstrip(',').strip()
                 rest = m.group('rest').strip()
                 if re.match(r'(?i)^(Tổ|Khu\s*phố|KP|TDP|Thôn|Ấp|Bản|Xóm|Làng|Khóm|Khu\s*\d+)\b', rest):
                     found_num = _find_in_raw(num)
@@ -584,9 +658,13 @@ class PreLabeler:
                     continue
                 # Attempt to isolate street name from rest by removing leading POI/building words
                 rest_clean = re.sub(r'^(?:Tòa nhà|Chung cư|Khu|Khu dân cư|Block|Tầng|Phòng|Lầu|Topaz Home|Chung Cư)\b[,\s]*', '', rest, flags=re.I)
-
-                # If rest contains additional separators (like '-') take full rest as street candidate
-                street_candidate = rest_clean
+                street_candidate = _collapse_duplicate_word_run(_strip_interleaved_street_echo(rest_clean))
+                sc_trim = re.match(r'(?i)^([a-z]\d{1,5})\s+(.{2,})$', street_candidate)
+                if (
+                    sc_trim
+                    and re.match(r'(?ms)^[^\n]*[À-ỸA-ZĐ]', sc_trim.group(2))
+                ):
+                    street_candidate = sc_trim.group(2).strip(' ,')
 
                 # Locate in original and add labels
                 found = _find_in_raw(street_candidate)
@@ -621,7 +699,7 @@ class PreLabeler:
                 return
 
             def _normalize_name(text: str) -> str:
-                return re.sub(r'\s+', ' ', (text or '').strip().lower())
+                return re.sub(r'\s+', ' ', (text or '').strip().casefold())
 
             def _strip_admin_prefix(name: str) -> str:
                 return re.sub(
@@ -648,6 +726,22 @@ class PreLabeler:
                 if normalized_stripped:
                     target_set.add(normalized_stripped)
 
+            for r_macro in results:
+                v = r_macro.get("value") or {}
+                lbls = list(v.get("labels") or [])
+                mtx = str(v.get("text") or "").strip()
+                if not mtx:
+                    continue
+                if "WDS" in lbls:
+                    ward_name_variants.add(_normalize_name(mtx))
+                    ward_name_variants.add(_normalize_name(_strip_admin_prefix(mtx)))
+                if "DST" in lbls:
+                    district_province_variants.add(_normalize_name(mtx))
+                    district_province_variants.add(_normalize_name(_strip_admin_prefix(mtx)))
+                if "PRO" in lbls:
+                    district_province_variants.add(_normalize_name(mtx))
+                    district_province_variants.add(_normalize_name(_strip_admin_prefix(mtx)))
+
             admin_or_micro_prefix = re.compile(
                 rf'(?i)^({ADMIN_ALL_PREFIXES_ALT}|'
                 r'Tổ|Khu phố|Khu\s*\d+|KP|TDP|Thôn|Ấp|Bản|Làng|Xóm|Khóm|Sảnh|Số|Số nhà|Hẻm|Ngõ|Kiệt|Ngách|Đường|Phố|Đ\.|QL|ĐT|TL)\b'
@@ -659,6 +753,12 @@ class PreLabeler:
             )
             prev_num_re = re.compile(r'(?i)^(?:Số\s+)?(?:K\d+|\d+[A-Za-z]?)(?:[\\/\-]\d+[A-Za-z]?)*\b')
             next_micro_re = re.compile(r'(?i)^(Tổ|Khu phố|KP|Thôn|Ấp|Bản|Phường|Xã|Thị trấn)\b')
+
+            def _segment_is_olc(seg: str) -> bool:
+                t = str(seg or "").strip().upper().replace(" ", "")
+                return bool(
+                    re.fullmatch(r"[23456789CFGHJMPQRVWX]{4,8}\+[23456789CFGHJMPQRVWX]{2,3}", t)
+                )
 
             for i, seg in enumerate(raw_segments):
                 seg_clean = seg.strip(" ,")
@@ -677,6 +777,16 @@ class PreLabeler:
                 )
                 next_is_micro = bool(next_micro_re.match(next_seg.strip()))
 
+                # Tránh STR cho "thôn/xóm" đứng trước Phường/Xã (VD: "Lạc an, Xã …"),
+                # để bundle / NHB gán trước (hoặc không gán STR vô nghĩa).
+                if (
+                    i == 0
+                    and next_is_micro
+                    and not prev_has_num
+                    and not prev_is_nhb_like
+                ):
+                    continue
+
                 seg_norm = _normalize_name(seg_clean)
                 # Tránh nhận diện nhầm STR cho tỉnh/huyện bị nhập lặp dạng "trần".
                 if seg_norm in district_province_variants:
@@ -686,7 +796,12 @@ class PreLabeler:
                 if seg_norm in ward_name_variants and (not prev_has_num or prev_is_nhb_like):
                     continue
 
-                if not (prev_has_num or next_is_micro):
+                prev_is_olc = bool(i > 0 and _segment_is_olc(prev_seg.strip()))
+                next_matches_hint_ward = bool(
+                    next_seg.strip()
+                    and _normalize_name(next_seg.strip()) in ward_name_variants
+                )
+                if not (prev_has_num or next_is_micro or (prev_is_olc and next_matches_hint_ward)):
                     continue
 
                 found = _find_in_raw(seg_clean)
@@ -703,6 +818,55 @@ class PreLabeler:
                 raw_address
             )
             free_text = raw_address[:first_admin.start()] if first_admin else raw_address
+
+            def _nf_plain(s: str) -> str:
+                return re.sub(r'\s+', ' ', (s or '').strip().lower())
+
+            dst_stripped_bases = set()
+            for rr in results:
+                vv = rr.get("value") or {}
+                lv = list(vv.get("labels") or [])
+                tt = str(vv.get("text") or "").strip()
+                if not tt or "DST" not in lv:
+                    continue
+                naked = re.sub(rf'(?i)^(?:{ADMIN_ALL_PREFIXES_ALT})\s*', '', tt).strip()
+                dst_stripped_bases.add(_nf_plain(naked))
+                dst_stripped_bases.add(_nf_plain(tt))
+
+            head_admin_seg = re.compile(
+                rf'(?i)^(Phường|Xã|Thị trấn|Quận|Huyện|Thị xã|Thành phố|Tỉnh|TP|P\.|Q\.|H\.|X\.)\b'
+            )
+            lac_head_exclude = re.compile(
+                r'(?i)[+]|\b(?:shop|barber|boss|cafe|cà\s*phê|quán|studio)\b'
+            )
+            if len(raw_segments) >= 2:
+                h0 = raw_segments[0].strip()
+                h1 = raw_segments[1].strip()
+                h0_words = len(h0.split())
+                if (
+                    2 <= h0_words <= 3
+                    and not lac_head_exclude.search(h0)
+                    and not re.search(r'\d', h0)
+                    and '+' not in h0
+                    and head_admin_seg.match(h1)
+                    and not re.match(rf'(?i)^(?:{ADMIN_ALL_PREFIXES_ALT})\b', h0)
+                ):
+                    fh_nb = _find_in_raw(h0)
+                    if fh_nb:
+                        hs, he, htxt = fh_nb
+                        add_result(hs, he, htxt.strip(), 'NHB', 0.8)
+
+            head0 = raw_segments[0].strip() if raw_segments else ''
+            m_pct = re.match(
+                r'(?i)^(?P<pcd>[23456789CFGHJMPQRVWX]{4,8}\+[23456789CFGHJMPQRVWX]{2,3})\s+(?P<tail>.+)$',
+                head0,
+            )
+            if m_pct and dst_stripped_bases:
+                tail_pl = m_pct.group('tail').strip(' ,')
+                if _nf_plain(tail_pl) in dst_stripped_bases:
+                    pos = raw_address.lower().find(tail_pl.lower())
+                    if pos >= 0:
+                        add_result(pos, pos + len(tail_pl), raw_address[pos : pos + len(tail_pl)], 'NHB', 0.83)
 
             # Nhóm đặc thù: "Số N" -> NUM; "đường số N", "Đ. Tên Đường 11" -> STR
             m_so = re.search(r'(?i)^\s*(Số(?:\s*nhà)?\s+[0-9A-Za-z./\-]+)\b', free_text)
@@ -838,7 +1002,7 @@ class PreLabeler:
                 add_result(s0, e0, raw_address[s0:e0].strip(), "NHB", 0.81)
 
             m_num_street_bare = re.search(
-                r"(?i)\b\d+(?:/\d+)+\s+([A-Za-zÀ-ỹĐđ][^,\]\n]{2,40})",
+                r"(?i)\b\d+(?:/\d+)+\s+(?:[a-z]\d{1,4}[a-z]?\s+)?([A-Za-zÀ-ỹĐđ][^,\]\n]{2,40})",
                 free_text,
             )
             if m_num_street_bare:
@@ -933,6 +1097,18 @@ class PreLabeler:
                 (full_start + ib, full_start + ib + len(b), b),
             ]
 
+        dst_naked_micro_block = set()
+        for rr in results:
+            v = rr.get("value") or {}
+            lbls = list(v.get("labels") or [])
+            if "DST" not in lbls:
+                continue
+            ttx = str(v.get("text") or "").strip()
+            nk = re.sub(rf"(?i)^(?:{ADMIN_ALL_PREFIXES_ALT})\s*", "", ttx).strip()
+            if nk:
+                dst_naked_micro_block.add(re.sub(r"\s+", " ", nk.casefold()))
+            dst_naked_micro_block.add(re.sub(r"\s+", " ", ttx.casefold()))
+
         micro_candidates = []
         for label, pattern, score in cls.MICRO_RULES:
             for match in re.finditer(pattern, raw_address):
@@ -949,6 +1125,10 @@ class PreLabeler:
                     left_ctx = raw_address[max(0, start - 24):start].lower()
                     if re.search(r'(tổ|đội|thôn|ấp|khu\s*phố|kp)\s*$', left_ctx, re.I):
                         continue
+                    # Tránh nhầm NUM trên "C1"/mã sau "Phòng 102 …"
+                    left_wide_raw = raw_address[max(0, start - 40):start]
+                    if re.search(r'(?i)phòng\s+\d+\s*$', left_wide_raw):
+                        continue
                     # Tránh gán NUM cho số thuộc admin unit: "Quận 8", "Phường 13", ...
                     if re.search(rf'(?i)({ADMIN_ALL_PREFIXES_ALT})\s*$', left_ctx):
                         continue
@@ -961,6 +1141,24 @@ class PreLabeler:
                             continue
                     if re.match(r'(?is)^\d{1,6}\s*m\b', dig):
                         continue
+                if label == "BLD":
+                    mtb = matched_text.strip()
+                    m_ph_tower = re.match(
+                        r'(?is)^(Phòng\s+\d+)\s+([A-Za-zĐđ][A-Za-z0-9]{0,5})\s*$',
+                        mtb,
+                    )
+                    if m_ph_tower:
+                        g1, g2 = m_ph_tower.group(1), m_ph_tower.group(2)
+                        ib1 = mtb.lower().find(g1.lower())
+                        ib2 = mtb.lower().find(g2.lower())
+                        if ib1 >= 0 and ib2 >= 0:
+                            micro_candidates.append(
+                                ("NUM", start + ib1, start + ib1 + len(g1), g1, score + 0.04)
+                            )
+                            micro_candidates.append(
+                                ("NHB", start + ib2, start + ib2 + len(g2), g2, score + 0.04)
+                            )
+                            continue
                 if label == "BLD" and re.match(r'(?is)^block\s+[A-Za-z0-9]+$', matched_text.strip()):
                     label = "NHB"
                 if label == "ALY" and start > 0 and re.match(r"(?is)^Kiệt\s+", matched_text.strip()):
@@ -1089,6 +1287,10 @@ class PreLabeler:
                     if split_parts:
                         for s, e, seg_text in split_parts:
                             micro_candidates.append((label, s, e, seg_text, score))
+                        continue
+                if label == "STR":
+                    mx = re.sub(r"\s+", " ", matched_text.strip().casefold())
+                    if len(matched_text.split()) <= 5 and mx in dst_naked_micro_block:
                         continue
                 micro_candidates.append((label, start, end, matched_text, score))
 

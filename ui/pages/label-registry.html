@@ -52,6 +52,53 @@
         </div>
     </div>
 
+    <div class="card lr-guide-card lr-ai-coach-card" id="lr-ai-coach-card">
+        <div class="card-header lr-card-header">
+            <span class="card-title"><i class="fa-solid fa-robot"></i> Khung cuộc hội thoại AI (Gemini · ChatGPT · Copilot)</span>
+        </div>
+        <div class="card-body lr-card-pad">
+            <p class="lr-ai-coach-intro">
+                Dùng khung sau làm tin nhắn <strong>mở đầu luồng chat</strong> với Gemini, ChatGPT hoặc Copilot: AI nắm bối cảnh dự án và
+                <strong>gợi ý</strong> cách bôi nhãn theo đúng 10 mã — <strong>bạn là người quyết định cuối cùng</strong> trong công cụ.
+                Prompt yêu cầu AI trả kết quả chỉ dưới dạng <strong>bảng hoặc văn bản thường</strong> (không JSON); cột «Lý do» có thể
+                <strong>bôi và copy sang ô ghi chú (note)</strong> của từng mẫu trong PreLabeler khi muốn lưu căn cứ nhãn.
+            </p>
+            <div class="lr-ai-coach-steps" role="region" aria-label="Cách dùng prompt với AI">
+                <h4><i class="fa-solid fa-list-ol"></i> Cách dùng trong 4 bước</h4>
+                <ol>
+                    <li>Nhấn <strong>Copy prompt hệ thống</strong> rồi dán vào cửa sổ chat mới của mô hình đang dùng.</li>
+                    <li>Trả lời ngắn xác nhận (vd: “Đã hiểu. Hãy gợi ý nhãn và lý do đúng như trong prompt (bảng hoặc văn thường, không JSON).”).</li>
+                    <li>Gửi địa chỉ thật trong tin kế tiếp; có thể thêm một dòng giải thích ngữ cảnh nếu cần.</li>
+                    <li>Đọc bảng / văn bản AI trả về, tự chỉnh trên PreLabeler: áp nhãn tay theo đoạn đề xuất; nếu muốn, copy cột hoặc dòng «Lý do» sang ô <strong>note</strong> của mẫu để lưu lại.</li>
+                    <li>Luôn tự kiểm tra không chồng span, chỉ nhãn trong danh mục, và không nhầm với chỗ AI ghi «Những chỗ chưa chắc».</li>
+                </ol>
+                <p class="lr-ai-coach-meta">
+                    <i class="fa-solid fa-circle-info"></i> Nội dung ô prompt bên dưới được tạo từ cùng bảng quy tắc và danh nhãn trên UI;
+                    trong trình duyệt sẽ tự làm mới khi bạn vào lại trang này.
+                </p>
+            </div>
+            <div class="lr-ai-prompt-toolbar">
+                <button type="button" class="btn btn-primary" id="lr-ai-prompt-copy" title="Sao chép prompt vào clipboard">
+                    <i class="fa-regular fa-copy"></i> Copy prompt hệ thống
+                </button>
+            </div>
+            <textarea
+                id="lr-ai-coach-prompt"
+                class="form-input lr-ai-coach-textarea"
+                spellcheck="false"
+                autocomplete="off"
+                rows="22"
+                readonly
+                aria-label="Prompt khung để paste vào chat AI"
+                placeholder="Nội dung prompt sẽ được điền tự động khi tải trang…"></textarea>
+            <div class="lr-ai-coach-followup">
+                <h4><i class="fa-solid fa-comments"></i> Gợi ý tin nhắn thứ hai (tin người — gửi sau prompt)</h4>
+                <code class="lr-ai-coach-followup-code">Đây là địa chỉ thô. Hãy trả kết quả CHỈ bằng bảng 3 cột (Mã nhãn | Đoạn bôi | Lý do/note) HOẶC văn bản thường từng khối 3 dòng; không dùng JSON. Sau bảng, nếu có chỗ lưỡng lự ghi tiêu đề «Những chỗ chưa chắc» bằng bullet có thể copy:
+«DÁN_ĐỊA_CHỈ_VÀO_ĐÂY»</code>
+            </div>
+        </div>
+    </div>
+
     <div class="card lr-guide-card">
         <div class="card-header lr-card-header">
             <span class="card-title"><i class="fa-solid fa-graduation-cap"></i> Hướng dẫn nhanh cho người mới</span>

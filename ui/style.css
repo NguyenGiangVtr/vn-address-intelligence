@@ -5529,6 +5529,105 @@ body.no-scroll {
   }
 }
 
+/* Label registry — khung prompt chat AI (Gemini / ChatGPT / Copilot) */
+#page-content #label-registry .lr-ai-coach-intro {
+  margin: 0 0 10px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+#page-content #label-registry .lr-ai-coach-steps {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border-subtle, var(--border-default, rgba(0, 0, 0, 0.08)));
+  background: var(--bg-muted);
+}
+
+#page-content #label-registry .lr-ai-coach-steps h4 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+#page-content #label-registry .lr-ai-coach-steps ol {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12px;
+  line-height: 1.58;
+  color: var(--text-secondary);
+}
+
+#page-content #label-registry .lr-ai-coach-steps li + li {
+  margin-top: 4px;
+}
+
+#page-content #label-registry .lr-ai-coach-meta {
+  margin: 10px 0 0;
+  padding: 8px 0 0;
+  border-top: 1px dashed var(--border-subtle, var(--border-default, rgba(0, 0, 0, 0.1)));
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-tertiary);
+}
+
+#page-content #label-registry .lr-ai-prompt-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0 8px;
+}
+
+/* Ghi đè .form-input: overflow:hidden + white-space:nowrap làm textarea không cuộn được */
+#page-content #label-registry textarea.lr-ai-coach-textarea,
+#page-content #label-registry #lr-ai-coach-prompt.form-input {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 240px;
+  max-height: min(72vh, 640px);
+  resize: vertical;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  word-break: break-word;
+  font-family: ui-monospace, "Cascadia Code", Consolas, "SF Mono", Menlo, monospace;
+  font-size: 12px;
+  line-height: 1.45;
+  tab-size: 2;
+  -webkit-overflow-scrolling: touch;
+}
+
+#page-content #label-registry .lr-ai-coach-followup {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-subtle, var(--border-default, rgba(0, 0, 0, 0.08)));
+}
+
+#page-content #label-registry .lr-ai-coach-followup h4 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+#page-content #label-registry .lr-ai-coach-followup-code {
+  display: block;
+  margin: 0;
+  padding: 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.52;
+  color: var(--text-primary);
+  background: var(--bg-muted);
+  border: 1px solid var(--border-subtle, var(--border-default, rgba(0, 0, 0, 0.1)));
+}
+
 /* Ensure sidebar always appears above everything on mobile */
 /* ══════════════════════════════════════════════════════════════
    PreLabeler labeling cases — UI styles
@@ -5822,6 +5921,23 @@ body.no-scroll {
   cursor: pointer;
   white-space: nowrap;
   user-select: none;
+}
+
+/* Phím tắt hiển thị sau nhãn nút (toolbar đối chiếu / random) */
+#prelabeler-cases .plt-run-cluster .btn .plt-btn-kbd {
+  margin-left: 0.45em;
+  padding-left: 0.55em;
+  border-left: 1px solid rgba(255, 255, 255, 0.38);
+  font-size: 0.78em;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  opacity: 0.92;
+  white-space: nowrap;
+  vertical-align: baseline;
+}
+
+#prelabeler-cases #plt-btn-run-one:disabled .plt-btn-kbd {
+  opacity: 0.8;
 }
 
 /* Run single case — emerald, distinct from run-all / random */
