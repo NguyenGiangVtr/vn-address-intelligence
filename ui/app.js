@@ -4841,21 +4841,26 @@ async function initEvidenceView() {
   /** Map a DOM boundary (within `annRoot`) to a global offset along flattened annotated/raw text (0-length allowed). */
   function pltAnnotatedBoundaryToGlob(annRoot, node, offset) {
     if (!(annRoot instanceof Element) || !annRoot.contains(node)) return NaN;
-    const ntyp = node.nodeType;
-    if (ntyp === Node.TEXT_NODE) {
-      const base = pltAnnotatedGlobBeforeTextNodeStart(annRoot, node);
-      if (!Number.isFinite(base)) return NaN;
-      const len = node.nodeValue.length;
-      const o = Math.min(Math.max(0, offset), len);
-      if (!pltIsCountedAnnotatedTextNode(node)) return NaN;
-      return base + o;
+    const prefix = document.createRange();
+    try {
+      prefix.setStart(annRoot, 0);
+      prefix.setEnd(node, offset);
+    } catch (_) {
+      return NaN;
     }
-    if (ntyp !== Node.ELEMENT_NODE) return NaN;
-    const el = node;
+
     let sum = 0;
-    const max = Math.min(offset, el.childNodes.length);
-    for (let i = 0; i < max; i++) {
-      sum += pltAnnotatedSubtreeCountedTextLen(el.childNodes[i]);
+    const w = document.createTreeWalker(annRoot, NodeFilter.SHOW_TEXT, null);
+    let tn;
+    while ((tn = w.nextNode())) {
+      if (!pltIsCountedAnnotatedTextNode(tn)) continue;
+      if (!prefix.intersectsNode(tn)) continue;
+      const len = tn.nodeValue.length;
+      let s = 0;
+      let e = len;
+      if (prefix.startContainer === tn) s = Math.max(0, Math.min(len, prefix.startOffset));
+      if (prefix.endContainer === tn) e = Math.max(0, Math.min(len, prefix.endOffset));
+      if (e > s) sum += (e - s);
     }
     return sum;
   }
@@ -4904,7 +4909,16 @@ async function initEvidenceView() {
     if (!annRoot || !c) return false;
     const raw = String(c.input ?? '');
     const glob = pltAnnotGetGlobRangeFromSelection(annRoot);
-    return Boolean(glob && pltAnnotatedPlainMatchesRaw(annRoot, raw));
+    if (glob && pltAnnotatedPlainMatchesRaw(annRoot, raw)) return true;
+
+    // Fallback: neu khong map duoc boundary->offset, van chap nhan selection text
+    // mien la selection nam trong annRoot va text co ton tai trong raw.
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed || !sel.rangeCount) return false;
+    const rng = sel.getRangeAt(0);
+    if (!annRoot.contains(rng.commonAncestorContainer)) return false;
+    const txt = String(sel.toString() || '').trim();
+    return Boolean(txt && raw.toLowerCase().includes(txt.toLowerCase()));
   }
 
   function pltClearAnnBlockUi() {
@@ -4997,6 +5011,15 @@ async function initEvidenceView() {
       const glob = pltAnnotGetGlobRangeFromSelection(annRoot);
       if (glob && pltAnnotatedPlainMatchesRaw(annRoot, raw))
         selText = raw.slice(glob.start, glob.end).trim();
+      if (!selText) {
+        const sel = window.getSelection();
+        const rng = sel && sel.rangeCount ? sel.getRangeAt(0) : null;
+        const inAnn = Boolean(rng && annRoot.contains(rng.commonAncestorContainer));
+        const txt = String(sel?.toString() || '').trim();
+        if (inAnn && txt && raw.toLowerCase().includes(txt.toLowerCase())) {
+          selText = txt;
+        }
+      }
     }
 
     if (!selText) return false;
@@ -5436,7 +5459,8 @@ async function initEvidenceView() {
     }
     if (!(r.unexpected || []).length) return '';
     const activeCase = cases.find(x => x.id === activeId);
-    const unexpected = Array.isArray(r.unexpected) ? r.unexpected : [];
+    const strictMode = activeCase?.strict !== false;
+    const unexpected = pltUnexpectedSuggestions(activeCase, r);
     const canApplyCount = unexpected.filter(u => !pltHasExpectedPair(activeCase, u?.label, u?.text)).length;
     const applyAllDisabled = canApplyCount <= 0;
     const applyAllTitle = applyAllDisabled
@@ -5444,7 +5468,7 @@ async function initEvidenceView() {
       : 'Thêm tất cả nhãn ngoài kỳ vọng vào danh sách nhãn kỳ vọng hiện tại';
     return `
       <div class="plt-unexpected-block">
-        <div class="plt-result-section-title">Nhãn ngoài kỳ vọng (chế độ nghiêm)</div>
+        <div class="plt-result-section-title">${strictMode ? 'Nhãn ngoài kỳ vọng (chế độ nghiêm)' : 'Nhãn đề xuất thêm (chế độ thường)'}</div>
         <div class="plt-run-prompt">
           <i class="fa-solid fa-hand-pointer"></i> Chọn từng mục hoặc áp dụng toàn bộ đề xuất vào nhãn kỳ vọng.
           <button type="button" class="btn btn-outline btn-sm plt-unexpected-apply-all" title="${pltEsc(applyAllTitle)}" ${applyAllDisabled ? 'disabled aria-disabled="true"' : ''}>
@@ -5452,7 +5476,7 @@ async function initEvidenceView() {
           </button>
         </div>
         <div class="plt-tokens">
-          ${(r.unexpected || [])
+          ${unexpected
             .map(
               u =>
                 `<button type="button" class="plt-token plt-token-add-exp" data-label="${pltEsc(u.label)}" data-text="${pltEsc(u.text)}" title="Thêm vào nhãn kỳ vọng">
@@ -5498,6 +5522,7 @@ async function initEvidenceView() {
               : '',
         note: String((c && c.note != null) ? c.note : ''),
         expected: typeof c.expected === 'string' ? JSON.parse(c.expected) : (c.expected || []),
+        strict: c?.strict !== false,
       }));
       // Hydrate persisted run results so summary + indicators survive page reload.
       results = {};
@@ -5511,6 +5536,7 @@ async function initEvidenceView() {
       console.warn('PreLabeler labeling: cannot load from DB, trying localStorage', e);
       cases = JSON.parse(localStorage.getItem('plt_cases') || '[]');
     }
+    cases = (cases || []).map(c => ({ ...c, strict: c?.strict !== false }));
     const firstVisible = getVisibleCases()[0];
     if (firstVisible) {
       // Always default to the first case as shown in current list ordering.
@@ -5610,7 +5636,7 @@ async function initEvidenceView() {
       input: '',
       note: '',
       expected: [],
-      strict: false,
+      strict: true,
       created_at: new Date().toISOString(),
     };
     cases.push(c);
@@ -5679,6 +5705,7 @@ async function initEvidenceView() {
         selectedCase.input = rawAddress;
         selectedCase.expected = expected;
         selectedCase.note = String(selectedCase.note || '');
+        if (typeof selectedCase.strict !== 'boolean') selectedCase.strict = true;
         if (!selectedCase.name || String(selectedCase.name).trim().length === 0) {
           selectedCase.name = sourceId ? `Mẫu ngẫu nhiên · ${sourceId}` : 'Mẫu ngẫu nhiên';
         }
@@ -5691,7 +5718,7 @@ async function initEvidenceView() {
           input: rawAddress,
           note: '',
           expected,
-          strict: false,
+          strict: true,
           created_at: new Date().toISOString(),
         };
         cases.push(c);
@@ -6019,11 +6046,51 @@ async function initEvidenceView() {
     );
   }
 
+  function pltLabelHotkeyRank(label) {
+    const lab = String(label || '').trim().toUpperCase();
+    const row = nerLabelsOrdered.find(x => String(x?.value || '').trim().toUpperCase() === lab);
+    const hk = row ? parseInt(String(row.hotkey), 10) : NaN;
+    return Number.isNaN(hk) ? Number.POSITIVE_INFINITY : hk;
+  }
+
+  function pltResolveTextByRawCasing(rawAddress, text) {
+    const raw = String(rawAddress || '');
+    const needle = String(text || '').trim();
+    if (!raw || !needle) return needle;
+    const idx = raw.toLowerCase().indexOf(needle.toLowerCase());
+    if (idx < 0) return needle;
+    return raw.slice(idx, idx + needle.length);
+  }
+
+  function pltUnexpectedSuggestions(caseObj, runResult) {
+    const raw = String(caseObj?.input || '');
+    const src = Array.isArray(runResult?.unexpected) ? runResult.unexpected : [];
+    const out = [];
+    const seen = new Set();
+    src.forEach(item => {
+      const label = String(item?.label || '').trim().toUpperCase();
+      const textNorm = String(item?.text || '').trim();
+      if (!label || !textNorm) return;
+      const text = pltResolveTextByRawCasing(raw, textNorm);
+      const key = `${label}::${String(text).trim().toLowerCase()}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      out.push({ label, text: String(text).trim() });
+    });
+    out.sort((a, b) => {
+      const ra = pltLabelHotkeyRank(a.label);
+      const rb = pltLabelHotkeyRank(b.label);
+      if (ra !== rb) return ra - rb;
+      return a.text.localeCompare(b.text, 'vi');
+    });
+    return out;
+  }
+
   function pltAddAllUnexpectedToExpected() {
     const c = cases.find(x => x.id === activeId);
     if (!c) return;
     const runResult = results[c.id];
-    const unexpected = Array.isArray(runResult?.unexpected) ? runResult.unexpected : [];
+    const unexpected = pltUnexpectedSuggestions(c, runResult);
     if (!unexpected.length) {
       window.showToast?.('Không có đề xuất nào để áp dụng', 'info');
       return;
@@ -6353,7 +6420,7 @@ async function initEvidenceView() {
       input,
       note: String(c?.note || ''),
       expected,
-      strict: Boolean(c?.strict),
+      strict: c?.strict !== false,
     };
   }
 
@@ -6503,10 +6570,9 @@ async function initEvidenceView() {
               Boolean(pltAnnBlockSelection) ||
               hasTaSel ||
               hasAnnSel;
-            const shouldIgnoreForTyping =
-              aeHot instanceof HTMLElement &&
-              pltAnnHotkeyIgnoreTypingTarget(aeHot);
-            if (scopedDigit && !(shouldIgnoreForTyping && !hasTaSel && !hasAnnSel && !pltAnnBlockSelection)) {
+            // Khi da co "scope" ro rang (block duoc click / text duoc boi o raw textarea
+            // hoac preview annotated), luon uu tien hotkey va khong phu thuoc focus hien tai.
+            if (scopedDigit) {
               e.preventDefault();
               pltAnnApplyLabelFromChoice(hkDigit);
               return;

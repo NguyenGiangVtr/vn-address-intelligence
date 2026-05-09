@@ -3070,7 +3070,7 @@ class PreLabelerLabelingCase(BaseModel):
     input: Optional[Any] = None
     note: Optional[Any] = ""
     expected: Optional[List[Dict[str, Any]]] = None
-    strict: Optional[Any] = False
+    strict: Optional[Any] = True
 
 
 class PreLabelerLabelingRunPayload(BaseModel):
@@ -3298,6 +3298,7 @@ def run_prelabeler_cases(payload: PreLabelerLabelingRunPayload, current_user=Dep
     results = []
     for idx, case in enumerate(payload.cases):
         expected = case.expected or []  # [{"label": "STR", "text": "Tam Bình"}]
+        strict_mode = bool(case.strict) if case.strict is not None else True
         case_id = str(case.id or f"case_{idx}")
         raw_address = case.input if isinstance(case.input, str) else ""
         if isinstance(case.input, dict):
@@ -3331,13 +3332,26 @@ def run_prelabeler_cases(payload: PreLabelerLabelingRunPayload, current_user=Dep
             expected=expected,
             actual=actual,
         )
+        unexpected_items = validation.get("unexpected", [])
+        validation_errors = validation.get("validation_errors", [])
+        details = validation.get("details", [])
+        passed = bool(validation.get("passed"))
+        if not strict_mode:
+            # Non-strict: chỉ kiểm tra expected có mặt hay không; bỏ qua unexpected.
+            unexpected_items = []
+            passed = (
+                not any(not bool(d.get("found")) for d in details)
+                and not any(str(err).startswith("missing_expected_admin:") for err in validation_errors)
+                and not any(str(err).startswith("admin_expected_missing_type:") for err in validation_errors)
+            )
 
         results.append({
-            "id": case_id, "passed": bool(validation.get("passed")),
+            "id": case_id, "passed": passed,
             "actual": actual, "expected": expected,
-            "details": validation.get("details", []),
-            "unexpected": validation.get("unexpected", []),
-            "validation_errors": validation.get("validation_errors", []),
+            "details": details,
+            "unexpected": unexpected_items,
+            "validation_errors": validation_errors,
+            "strict": strict_mode,
         })
 
     # Persist latest run result and time.
