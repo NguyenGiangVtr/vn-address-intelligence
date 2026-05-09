@@ -93,6 +93,38 @@
         </div>
     </div>
 
+    <div class="card lr-guide-card">
+        <div class="card-header lr-card-header">
+            <span class="card-title"><i class="fa-solid fa-shield-check"></i> Checkbox “Chế độ nghiêm” nghĩa là gì?</span>
+        </div>
+        <div class="card-body lr-card-pad">
+            <div class="lr-guide-grid">
+                <div class="lr-guide-block">
+                    <h4><i class="fa-solid fa-toggle-on"></i> Khi bật Chế độ nghiêm</h4>
+                    <p>Hệ thống sẽ kiểm tra <strong>2 chiều</strong>:</p>
+                    <ul>
+                        <li><strong>Thiếu nhãn kỳ vọng</strong>: bạn đã kỳ vọng nhưng model không tìm thấy.</li>
+                        <li><strong>Nhãn ngoài kỳ vọng</strong>: model tìm thêm nhãn mà bạn chưa khai báo.</li>
+                    </ul>
+                    <p>Dùng khi bạn muốn kiểm tra thật chặt, không bỏ sót và không dư nhãn.</p>
+                </div>
+                <div class="lr-guide-block">
+                    <h4><i class="fa-solid fa-toggle-off"></i> Khi tắt Chế độ nghiêm</h4>
+                    <p>Hệ thống chỉ ưu tiên kiểm tra <strong>đủ nhãn bạn đã kỳ vọng</strong>. Nếu model có nhãn thêm thì không tính là lỗi fail.</p>
+                    <p>Phù hợp khi bạn đang tạo nháp nhanh hoặc muốn tập trung rà soát phần nhãn chính trước.</p>
+                </div>
+                <div class="lr-guide-block">
+                    <h4><i class="fa-solid fa-lightbulb"></i> Gợi ý thực tế</h4>
+                    <ul>
+                        <li>Ban đầu có thể tắt để lên bộ nhãn cơ bản nhanh.</li>
+                        <li>Trước khi chốt dữ liệu, nên bật lại để lọc kỹ các nhãn dư/thiếu.</li>
+                        <li>Dự án hiện đặt mặc định <strong>bật Chế độ nghiêm</strong> để đảm bảo chất lượng dữ liệu.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="card mt-12">
         <div class="card-header">
             <h3><i class="fa-solid fa-clipboard-check"></i> Trước khi bấm Gửi</h3>

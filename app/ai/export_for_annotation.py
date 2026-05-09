@@ -118,7 +118,26 @@ class PreLabeler:
 
             # 2. Sửa lỗi STR tham lam: Loại bỏ phần đơn vị hành chính hoặc đơn vị khác dính vào ở cuối
             if label == "STR":
-                if re.match(r'(?is)^\s*(?:trường|bệnh\s*viện|trạm\s*y\s*tế|phòng\s*khám|nhà\s*thuốc|chợ)\b', text.strip()):
+                ward_short = re.sub(rf"(?i)^({ADMIN_ALL_PREFIXES_ALT})\s*", "", str(ward_name or "")).strip()
+                if ward_short and str(text or "").strip().lower() == ward_short.strip().lower():
+                    if re.search(rf"(?i)\b(?!số\b|số\s*nhà\b)[A-Za-zÀ-ỹĐđ]+(?:\s+[A-Za-zÀ-ỹĐđ]+)?\s+\d+[A-Za-z]?\s*[,.-]?\s*{re.escape(ward_short)}\b", raw_address):
+                        return False
+                m_nhb_hint = re.search(r'(?is)\(\s*(cuối\s+hẻm)\s*\)', text.strip())
+                if m_nhb_hint:
+                    nhb_txt = m_nhb_hint.group(1).strip()
+                    if nhb_txt:
+                        rel = text.lower().find(nhb_txt.lower())
+                        if rel >= 0:
+                            add_result(start + rel, start + rel + len(nhb_txt), text[rel:rel + len(nhb_txt)], "NHB", score - 0.01)
+                    text = re.sub(r'(?is)\s*\(\s*cuối\s+hẻm\s*\)\s*', '', text).strip()
+                if re.match(r'(?is)^\s*(?:nhà)\b', text.strip()):
+                    return False
+                if re.match(r'(?is)^\s*(?:trường)\b', text.strip()):
+                    # "Trường Chinh", "Trường Lưu"... là tên đường hợp lệ;
+                    # chỉ chặn các cụm rõ là trường học/cơ sở giáo dục.
+                    if re.match(r'(?is)^\s*trường\s+(?:tiểu\s*học|trung\s*học|thcs|thpt|mầm\s*non|đại\s*học|cao\s*đẳng)\b', text.strip()):
+                        return False
+                if re.match(r'(?is)^\s*(?:bệnh\s*viện|trạm\s*y\s*tế|phòng\s*khám|nhà\s*thuốc|chợ)\b', text.strip()):
                     return False
                 if re.match(r'(?is)^\s*(?:khu\s*dân\s*cư|kdc|khu\s*công\s*nghiệp|kcn)\b', text.strip()):
                     return False
@@ -653,6 +672,9 @@ class PreLabeler:
                 prev_seg = raw_segments[i - 1] if i > 0 else ""
                 next_seg = raw_segments[i + 1] if i + 1 < len(raw_segments) else ""
                 prev_has_num = bool(prev_num_re.match(prev_seg.strip()))
+                prev_is_nhb_like = bool(
+                    re.match(r'(?i)^(?!số\b|số\s*nhà\b)[A-Za-zÀ-ỹĐđ]+(?:\s+[A-Za-zÀ-ỹĐđ]+){0,3}\s+\d+[A-Za-z]?$', prev_seg.strip())
+                )
                 next_is_micro = bool(next_micro_re.match(next_seg.strip()))
 
                 seg_norm = _normalize_name(seg_clean)
@@ -661,7 +683,7 @@ class PreLabeler:
                     continue
                 # Nếu trùng tên phường thì chỉ cho phép khi có ngữ cảnh số nhà ở phía trước
                 # (ví dụ: "Số 112, Nguyễn Thị Minh Khai, ...").
-                if seg_norm in ward_name_variants and not prev_has_num:
+                if seg_norm in ward_name_variants and (not prev_has_num or prev_is_nhb_like):
                     continue
 
                 if not (prev_has_num or next_is_micro):
@@ -782,6 +804,77 @@ class PreLabeler:
                 s2, e2 = m_nhb_dp_st.span(2)
                 add_result(s2, e2, raw_address[s2:e2].strip(), "STR", 0.82)
 
+            m_st_nhb_tail = re.search(
+                r"(?i)\b([A-Za-zÀ-ỹĐđ][A-Za-zÀ-ỹĐđ\s]{1,40})\s*\(\s*(cuối\s+hẻm)\s*\)",
+                free_text,
+            )
+            if m_st_nhb_tail:
+                s1, e1 = m_st_nhb_tail.span(1)
+                add_result(s1, e1, raw_address[s1:e1].strip(), "STR", 0.83)
+                s2, e2 = m_st_nhb_tail.span(2)
+                add_result(s2, e2, raw_address[s2:e2].strip(), "NHB", 0.82)
+
+            m_landmark = re.search(r"(?i)\b(đối\s+diện\s+(?!của\b)[^,\.\]\n]+)", free_text)
+            if m_landmark:
+                s0, e0 = m_landmark.span(1)
+                add_result(s0, e0, raw_address[s0:e0].strip(), "POI", 0.8)
+
+            m_nha_landmark = re.search(r"(?i)\b(nhà\s+đối\s+diện)\b", free_text)
+            if m_nha_landmark:
+                s0, e0 = m_nha_landmark.span(1)
+                add_result(s0, e0, raw_address[s0:e0].strip(), "POI", 0.82)
+
+            m_nha_named = re.search(r"(?i)\b(nhà\s+[A-Za-zÀ-ỹĐđ][^,\.\]\n]{2,40})", free_text)
+            if m_nha_named and not re.search(r"(?i)\bnhà\s+đối\s+diện\b", m_nha_named.group(1)):
+                s0, e0 = m_nha_named.span(1)
+                add_result(s0, e0, raw_address[s0:e0].strip(), "POI", 0.79)
+
+            m_khu_name = re.search(
+                r"(?i)\b(khu\s+(?!phố\b|dân\s*cư\b|công\s*nghiệp\b|đô\s*thị\b)[A-Za-zÀ-ỹ0-9]+(?:\s+[A-Za-zÀ-ỹ0-9]+){0,3})",
+                free_text,
+            )
+            if m_khu_name:
+                s0, e0 = m_khu_name.span(1)
+                add_result(s0, e0, raw_address[s0:e0].strip(), "NHB", 0.81)
+
+            m_num_street_bare = re.search(
+                r"(?i)\b\d+(?:/\d+)+\s+([A-Za-zÀ-ỹĐđ][^,\]\n]{2,40})",
+                free_text,
+            )
+            if m_num_street_bare:
+                st = m_num_street_bare.group(1).strip()
+                if st and not re.match(rf'(?i)^(?:{ADMIN_ALL_PREFIXES_ALT})\b', st):
+                    s0 = m_num_street_bare.start(1)
+                    e0 = m_num_street_bare.end(1)
+                    add_result(s0, e0, raw_address[s0:e0].strip(), "STR", 0.81)
+
+            ward_short = re.sub(rf"(?i)^({ADMIN_ALL_PREFIXES_ALT})\s*", "", str(ward_name or "")).strip()
+            if ward_short:
+                m_nhb_w = re.search(
+                    rf"(?i)\b([A-Za-zÀ-ỹĐđ]+(?:\s+[A-Za-zÀ-ỹĐđ]+){{0,3}}\s+\d+[A-Za-z]?)\s+{re.escape(ward_short)}\b",
+                    free_text,
+                )
+                if m_nhb_w:
+                    cand = m_nhb_w.group(1).strip()
+                    if not re.match(r"(?i)^(?:thôn|xóm|ấp|tổ|đội|khu\s*phố|kp|kdc)\b", cand):
+                        s0, e0 = m_nhb_w.span(1)
+                        add_result(s0, e0, raw_address[s0:e0].strip(), "NHB", 0.82)
+
+            for seg in raw_segments:
+                seg_clean = seg.strip(" ,")
+                if not seg_clean:
+                    continue
+                if re.match(rf'(?i)^(?:{ADMIN_ALL_PREFIXES_ALT})\b', seg_clean):
+                    continue
+                if re.match(r'(?i)^(?:Đường|Phố|Đ\.|QL|Quốc\s*lộ|ĐT|DT|TL|Hẻm|Ngõ|Kiệt|Ngách|Số|Số\s*nhà)\b', seg_clean):
+                    continue
+                if re.match(r'(?i)^[A-Za-zÀ-ỹĐđ]+(?:\s+[A-Za-zÀ-ỹĐđ]+){0,3}\s+\d+[A-Za-z]?$', seg_clean):
+                    if re.match(r'(?i)^vùng\b', seg_clean):
+                        continue
+                    m_seg = re.search(re.escape(seg_clean), raw_address, re.I)
+                    if m_seg:
+                        add_result(m_seg.start(), m_seg.end(), raw_address[m_seg.start():m_seg.end()].strip(), "NHB", 0.81)
+
         _add_bare_street_candidate()
         _add_free_text_bundle_rules()
 
@@ -882,7 +975,7 @@ class PreLabeler:
                     if m_bare_tail:
                         aly_part = m_bare_tail.group(1).strip(" ,")
                         str_part = m_bare_tail.group(2).strip(" ,")
-                        if re.match(r'(?is)^(?:xóm|thôn|ấp|khu\s*phố|kp|tổ|đội|phòng|tầng|dãy|block)\b', str_part):
+                        if re.match(r'(?is)^(?:xóm|thôn|ấp|kp|tổ|đội|phòng|tầng|dãy|block)\b', str_part):
                             micro_candidates.append((label, start, end, matched_text, score))
                             continue
                         if aly_part:
@@ -909,6 +1002,23 @@ class PreLabeler:
                     matched_text.strip(),
                 ):
                     continue
+                if label == "POI":
+                    mt_poi = matched_text.strip()
+                    if re.match(r'(?is)^trường\s+', mt_poi):
+                        if not re.match(r'(?is)^trường\s+(?:tiểu\s*học|trung\s*học|thcs|thpt|mầm\s*non|đại\s*học|cao\s*đẳng)\b', mt_poi):
+                            m_tail = re.search(r'(?is)\(\s*(cuối\s+hẻm)\s*\)', mt_poi)
+                            if m_tail:
+                                str_part = re.sub(r'(?is)\s*\(\s*cuối\s+hẻm\s*\)\s*', '', mt_poi).strip()
+                                nhb_part = m_tail.group(1).strip()
+                                if str_part:
+                                    micro_candidates.append(("STR", start, start + len(str_part), str_part, score))
+                                if nhb_part:
+                                    rel = mt_poi.lower().find(nhb_part.lower())
+                                    if rel >= 0:
+                                        s_n = start + rel
+                                        micro_candidates.append(("NHB", s_n, s_n + len(nhb_part), nhb_part, score - 0.01))
+                                continue
+                            continue
                 if (
                     label == "NHB"
                     and re.match(r"(?is)^tháp\s+", matched_text.strip())

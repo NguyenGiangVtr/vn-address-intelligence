@@ -31,6 +31,9 @@ ADMIN_PREFIX_PATTERNS = {
 ADMIN_PRESENCE_PATTERNS = {
     label: admin_presence_pattern(label) for label in ADMIN_PREFIX_ALTERNATIVES
 }
+ADMIN_ALL_PREFIXES_ALT = "|".join(
+    f"(?:{alts})" for alts in ADMIN_PREFIX_ALTERNATIVES.values() if str(alts).strip()
+)
 
 
 def normalize_text(text: str) -> str:
@@ -84,20 +87,78 @@ def enforce_admin_type_name(
     }
 
     items = list(expected or [])
+
+    def _resolve_prefixed_from_raw(label: str, text_val: str) -> Optional[str]:
+        txt = str(text_val or "").strip()
+        if not txt:
+            return None
+        # Neu text da co prefix dung nhan va xuat hien trong raw -> giu nguyen.
+        # Rieng PRO: can di tiep qua disambiguation khi trung ten DST/PRO.
+        pref_pat = admin_prefix_anchored_pattern(label)
+        if label != "PRO" and pref_pat and re.search(pref_pat, txt, flags=re.I):
+            return txt
+
+        base_name = re.sub(rf"(?i)^{ADMIN_PREFIX_PATTERNS[label]}\s*", "", txt).strip()
+        if label == "PRO" and ADMIN_ALL_PREFIXES_ALT:
+            # Bo them cac tien to admin cap khac de xu ly ten trung cap (DST ~ PRO).
+            base_name = re.sub(rf"(?i)^(?:{ADMIN_ALL_PREFIXES_ALT})\s*", "", base_name).strip() or base_name
+        if not base_name:
+            return None
+
+        # Disambiguation cho PRO khi ten thanh pho trung ten tinh:
+        # vd "... Thành Phố Trà Vinh, Trà Vinh" -> PRO phai la "Trà Vinh".
+        if label == "PRO":
+            bare_seg_pat = rf"(?i)(?:^|,)\s*({re.escape(base_name)})\s*(?=,|$)"
+            bare_matches = list(re.finditer(bare_seg_pat, raw))
+            if bare_matches:
+                # Lay segment phai nhat (thuong la phan tinh o cuoi dia chi).
+                m = bare_matches[-1]
+                return (m.group(1) or "").strip() or txt
+
+        pat = rf"(?i)\b{ADMIN_PREFIX_PATTERNS[label]}\s+{re.escape(base_name)}(?!\w)"
+        matched_full = None
+        for m in re.finditer(pat, raw):
+            matched_full = raw[m.start():m.end()].strip(" ,")
+        if matched_full:
+            return matched_full
+
+        # Fallback quan trong cho random-predict:
+        # Neu metadata tra ve ma ngan (vd "01") hoac ten khong match raw,
+        # nhung raw co cum admin prefixed ro rang, uu tien cum trong raw.
+        generic_pat = rf"(?i)\b{ADMIN_PREFIX_PATTERNS[label]}\s+[^,\n]+"
+        generic_matches = [raw[m.start():m.end()].strip(" ,") for m in re.finditer(generic_pat, raw)]
+        if generic_matches:
+            txt_norm = txt.strip().lower()
+            is_code_like = bool(re.fullmatch(r"[0-9A-Za-z]{1,3}", txt_norm))
+            if is_code_like:
+                return generic_matches[-1]
+            # Kể cả không phải mã, nếu text hiện tại không chứa prefix mà raw có prefix rõ,
+            # ưu tiên chuẩn Type+Name từ raw để đồng nhất hiển thị/annotated.
+            if not (pref_pat and re.search(pref_pat, txt, flags=re.I)):
+                return generic_matches[-1]
+
+        return txt
     for label in ("WDS", "DST", "PRO"):
         name = admin_meta[label]
         if not name:
             continue
-
-        base_name = re.sub(rf"(?i)^{ADMIN_PREFIX_PATTERNS[label]}\s*", "", name).strip()
-        pat = rf"(?i)\b{ADMIN_PREFIX_PATTERNS[label]}\s+{re.escape(base_name or name)}(?!\w)"
-        matched_full = None
-        for m in re.finditer(pat, raw):
-            matched_full = raw[m.start():m.end()].strip(" ,")
-
-        chosen = matched_full or name
+        chosen = _resolve_prefixed_from_raw(label, name) or str(name).strip()
         items = [it for it in items if str(it.get("label") or "").upper() != label]
         items.append({"label": label, "text": chosen})
+
+    # Truong hop random-predict khong co admin metadata day du (hoac metadata khong co prefix):
+    # van nang cap expected admin hien co len "Type + Name" neu raw co chuoi prefixed.
+    for label in ("WDS", "DST", "PRO"):
+        has_meta = bool(admin_meta.get(label))
+        if has_meta:
+            continue
+        for it in items:
+            if str(it.get("label") or "").upper() != label:
+                continue
+            txt = str(it.get("text") or "").strip()
+            resolved = _resolve_prefixed_from_raw(label, txt)
+            if resolved and normalize_text(resolved) != normalize_text(txt):
+                it["text"] = resolved
 
     out: List[Dict[str, str]] = []
     seen = set()

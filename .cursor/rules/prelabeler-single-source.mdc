@@ -7,6 +7,12 @@ alwaysApply: true
 
 Quy tắc **heuristic labeling** (macro fallback, NHB/NUM/ALY/STR/POI đặc thù) được mô tả chi tiết trong `.cursor/rules/prelabeler-labeling-heuristics.mdc` — cập nhật song song khi đổi `PreLabeler.predict` hoặc bộ case.
 
+## Version
+
+- **Current:** `v2.3.0`
+- **Updated:** `2026-05-09`
+- **Scope:** Predictor/service/UI strict behavior + random-predict consistency
+
 ## Single Source of Truth
 
 | Concern | Canonical file | Notes |
@@ -24,7 +30,10 @@ Quy tắc **heuristic labeling** (macro fallback, NHB/NUM/ALY/STR/POI đặc th�
 - Any change to expected-building or validation rules must be implemented in the shared service first, then consumed by callers.
 - Any change to admin prefix vocabulary must be implemented in `app/ai/constants.py` first, then consumed via the helpers — never via copy/paste.
 - Preserve `Type + Name` for all labels, especially admin units (`WDS`, `DST`, `PRO`) when present in raw text.
-- Keep two-way validation strict: missing expected or unexpected actual must fail.
+- `strict=true`: two-way validation strict (missing expected OR unexpected actual => fail).
+- `strict=false`: only enforce missing-expected/admin-validation; unexpected is informational.
+- UI default strict must be `true` for newly created/random cases unless user explicitly turns it off.
+- `random-predict` and `run` must stay consistent for admin normalization (`Type + Name`) and same-name DST/PRO disambiguation.
 
 ## Required Checks After Changes
 
@@ -32,3 +41,17 @@ Quy tắc **heuristic labeling** (macro fallback, NHB/NUM/ALY/STR/POI đặc th�
 - Run `python scripts/labeling/run_prelabeler_labeling_cases.py` — must report 100% pass for the current suite size (see JSON array length).
 - Run `python scripts/test/test_prelabeler_regression.py` — must print `OK`.
 - If API behavior changes, verify `/api/prelabeler-cases/random-predict` and `/api/prelabeler-cases/run` are consistent.
+
+## Changelog
+
+### v2.3.0 - 2026-05-09
+- Added strict-mode semantics as first-class domain rule (`strict=true/false`).
+- Locked UI default strict to enabled for new/random cases.
+- Clarified random-predict/run consistency requirement for admin `Type + Name`.
+
+### v2.2.0 - 2026-05-09
+- Added shared-service enforcement for code-like admin metadata (e.g. `01`) -> prefixed admin text from raw.
+- Added same-name DST/PRO disambiguation requirement (e.g. `Thành Phố Trà Vinh` vs `Trà Vinh`).
+
+### v2.1.0 - 2026-05-09
+- Consolidated predictor/service responsibilities and required checks after broad heuristic expansion.

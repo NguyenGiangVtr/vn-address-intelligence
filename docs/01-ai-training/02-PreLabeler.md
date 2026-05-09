@@ -2,7 +2,20 @@
 
 **File:** `02-PreLabeler.md`  
 **Thành phần:** `PreLabeler` (app/ai/export_for_annotation.py)  
-**Cập nhật:** 2026-05-06 - **Fixed admin_version=2 support**
+**Cập nhật:** 2026-05-09 - **Rule refresh + strict/disambiguation alignment**
+
+## 📌 Version
+
+- **Current:** `v2.3.0`
+- **Status:** Production
+- **Single source references:**
+  - Predictor: `app/ai/export_for_annotation.py`
+  - Expected/validation service: `app/services/prelabeler_labeling_service.py`
+  - Canonical admin vocab: `app/ai/constants.py`
+  - Canonical case data: `scripts/labeling/prelabeler_labeling_cases.json`
+
+> Lưu ý quan trọng: mọi thay đổi rule phải cập nhật song song với  
+> `.cursor/rules/prelabeler-single-source.mdc` và `.cursor/rules/prelabeler-labeling-heuristics.mdc`.
 
 ---
 
@@ -141,6 +154,15 @@ PREFIX_PATTERNS = {
 ### B. MICRO Level (Street Address)
 
 **Strategy: Regex + Heuristics**
+
+### Rule highlights (v2.3.0)
+
+- Admin labels (`WDS/DST/PRO`) ưu tiên chuẩn `Type + Name` theo raw khi có prefix hợp lệ.
+- `NHB` mở rộng cho `TDP`, `Đội`, `Sảnh`, một số mẫu tên+ký hiệu khu dân cư.
+- `NUM` hỗ trợ token chữ+số/phân đoạn như `B2206`, `G11`, `H64-H65`, `Số nhà 574/1/...`.
+- `ALY` hỗ trợ tách `Hẻm/Ngõ ... Đường/Phố ...` thành 2 nhãn `ALY + STR`.
+- `POI`/`STR` giảm false-positive (ví dụ ngữ nghĩa `Trường` là tên đường vs cơ sở giáo dục).
+- Bỏ hậu tố số thuần quá dài (thường postcode) để tránh NUM ngoài kỳ vọng.
 
 | Label | Regex Pattern | Confidence | Example |
 |-------|---------------|------------|---------|
@@ -497,22 +519,31 @@ for record in export_data:
 
 ---
 
-**Version:** 1.1 (Admin Version Fix)  
+**Version:** 2.3.0  
 **Status:** Production  
-**Last Updated:** 2026-05-06  
-**Maintenance:** Monthly audit of regex patterns (accuracy check)
+**Last Updated:** 2026-05-09  
+**Maintenance:** Weekly suite audit (`run_prelabeler_labeling_cases.py`, `test_prelabeler_regression.py`)
 
 ---
 
 ## 🔧 CHANGELOG
 
+### Version 2.3.0 (2026-05-09)
+- **UPDATED**: Strict mode semantics are explicit (`strict=true` two-way; `strict=false` focus missing-expected).
+- **UPDATED**: Random-predict and run share stricter admin normalization (`Type + Name` from raw).
+- **FIXED**: Code-like admin metadata (`01`) no longer overrides prefixed admin text in raw.
+- **FIXED**: Same-name DST/PRO disambiguation (`Thành Phố Trà Vinh, Trà Vinh` => `PRO=Trà Vinh`).
+- **UPDATED**: Labeling heuristics synced to latest 120-case suite.
+
+### Version 2.2.0 (2026-05-09)
+- Expanded NHB/ALY/POI/STR edge rules for free-text mixed patterns.
+- Improved casing/sorting behavior for unexpected suggestions in UI strict block.
+
+### Version 2.1.0 (2026-05-09)
+- Consolidated single-source responsibilities between predictor and labeling service.
+
 ### Version 1.1 (2026-05-06)
-- **FIXED**: PreLabeler now prioritizes admin_version=2 (post-2025 administrative units)
-- **ADDED**: Admin version tracking in export metadata  
-- **IMPROVED**: Database query with proper fallback mechanism (v2 → v1)
-- **RESULT**: 78% of province names now use current admin_version=2
-- **IMPACT**: Better address parsing accuracy for modern administrative boundaries
+- PreLabeler prioritized `admin_version=2` with `v2 -> v1` fallback for admin joins.
 
 ### Version 1.0 (2026-05-05)
-- Initial implementation with hybrid string matching + regex approach
-- Basic admin unit integration (admin_version=1 only)
+- Initial hybrid implementation (string matching + regex heuristics).
