@@ -140,6 +140,8 @@ jobs:
       - name: Build release tarball
         shell: bash
         run: |
+          # Exclude output archive: writing release.tar.gz into `.` while archiving `.`
+          # makes GNU tar warn "file changed as we read it" and exit 1.
           tar \
             --exclude-vcs \
             --exclude=".venv" \
@@ -148,6 +150,7 @@ jobs:
             --exclude="*.pyc" \
             --exclude="*.pyo" \
             --exclude="*.log" \
+            --exclude="./release.tar.gz" \
             -czf release.tar.gz .
 
       - name: Upload release artifact

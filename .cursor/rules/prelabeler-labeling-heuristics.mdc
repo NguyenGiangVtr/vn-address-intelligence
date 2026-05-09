@@ -16,10 +16,19 @@ alwaysApply: false
 - **`Type + Name`**: khi trong `raw_address` có prefix admin đúng cấp, span phải bao tiền tố + tên như trong chuỗi (logic macro matching hiện tại).
 - **Master data không có trong chuỗi**: Nếu harness/API truyền `ward_name` / `district_name` / `province_name` nhưng chuỗi rút gọn không chứa tên đó, vẫn **emit** entity (span virtual phía sau chuỗi) để case có WDS/DST/PRO kỳ vọng vẫn khớp.
 
+### Địa danh cấp tỉnh / thành phố có `-` trong tên (Việt Nam)
+
+Việt Nam có **đúng hai** đơn vị có tên hành chính ghép hai vế bằng dấu gạch (`-`; trên địa chỉ thực tế thường là `Phan Rang-Tháp Chàm` / `Phan Rang - Tháp Chàm`, `Bà Rịa-Vũng Tàu` / `Bà Rịa - Vũng Tàu`, có hoặc không khoảng trắng quanh gạch):
+
+- **Phan Rang - Tháp Chàm** — thành phố trực thuộc tỉnh Ninh Thuận.
+- **Bà Rịa - Vũng Tàu** — tỉnh.
+
+Đây **không** phải gạch tách hai cấp hành chính độc lập trong cùng cụm: phải coi là **một** địa danh khi chỉnh macro/micro (tránh bẻ một vế làm nhãn vi mô riêng; ví dụ NHB không bẻ `Tháp Chàm` sau `-` của Phan Rang — xem bullet NHB ngay dưới).
+
 ## NHB (khu dân cư / block / lô chữ)
 
 - **`Tháp … ( tủ … )`**: tách thành **hai** NHB (Tháp… và tủ…), cho phép dấu `.` trong mã căn (vd `Ak612A.08`).
-- **`Tháp` sau `-` trong tên địa danh ghép**: không gán NHB (vd `Phan Rang-Tháp Chàm` — không tách riêng `Tháp Chàm`).
+- **`Tháp` sau `-` trong tên địa danh ghép một thể** (đặc biệt **Phan Rang - Tháp Chàm**): không gán NHB riêng cho vế sau gạch (vd `Phan Rang-Tháp Chàm` — không tách riêng `Tháp Chàm`). Với **Bà Rịa - Vũng Tàu**, cần cẩn trọng nếu thêm pattern micro trùng từ con trong tên hai vế (**Vũng Tàu**, **Bà Rịa** có thể dính rule khác khi không nằm sau `-` của đúng cụm tỉnh).
 - **`ấp` / `thôn` + đường số**: tách **NHB** (ấp/thôn + mã) + **STR** (`đường`/`Đ.` + số đường). Không gộp một NHB “ấp … đường …”.
 - **`Lô` + chữ đơn** (vd `Lô C`): **NHB**, không là NUM.
 - **`Lô` + số** (vd `Lô 12`): **NUM** (pattern không bắt `Lô` + chữ thuần).
