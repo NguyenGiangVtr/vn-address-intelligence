@@ -4954,6 +4954,18 @@ async function initEvidenceView() {
     return Boolean(p?.classList.contains('active'));
   }
 
+  /** When true, `#plt-run-cluster` F8–F10 shortcuts must not fire (typing context). */
+  function pltRunClusterHotkeyConsumeBlocked(activeEl) {
+    if (!(activeEl instanceof HTMLElement)) return false;
+    if (activeEl.isContentEditable) return true;
+    const tag = (activeEl.tagName || '').toLowerCase();
+    if (tag === 'textarea' || tag === 'select') return true;
+    if (tag !== 'input') return false;
+    const t = String(activeEl.type || '').toLowerCase();
+    const nonText = ['button', 'checkbox', 'radio', 'submit', 'reset', 'file', 'image', 'color', 'range', 'hidden'];
+    return !nonText.includes(t);
+  }
+
   /** Do not steal digit keys while typing elsewhere in the SPA. */
   function pltAnnHotkeyIgnoreTypingTarget(activeEl) {
     if (!(activeEl instanceof HTMLElement)) return true;
@@ -6531,7 +6543,45 @@ async function initEvidenceView() {
       if (!(t instanceof Element)) return;
 
       if (pltIsPrelabelerCasesPageVisible()) {
-        const aeHot = document.activeElement;
+        const aeHot = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+
+        /**
+         * `#plt-run-cluster`: chỉ một phím F (không kèm Ctrl/Alt/Shift/Meta) để tránh xung đột tổ hợp browser.
+         * F8/F9/F10 thường ít bị trình duyệt chiếm hơn F5–F7, F11–F12.
+         */
+        const runClusterKey = /^F(8|9|10)$/i.test(String(e.key || ''))
+          ? String(e.key).toUpperCase()
+          : null;
+        if (
+          runClusterKey &&
+          !e.repeat &&
+          !e.ctrlKey &&
+          !e.altKey &&
+          !e.metaKey &&
+          !e.shiftKey
+        ) {
+          if (!(aeHot && pltRunClusterHotkeyConsumeBlocked(aeHot))) {
+            if (runClusterKey === 'F8') {
+              const b = document.getElementById('plt-btn-run-one');
+              if (b instanceof HTMLButtonElement && !b.disabled) {
+                e.preventDefault();
+                void pltRunOne();
+                return;
+              }
+            }
+            if (runClusterKey === 'F9') {
+              e.preventDefault();
+              void pltRunAll();
+              return;
+            }
+            if (runClusterKey === 'F10') {
+              e.preventDefault();
+              void pltGetRandomAndPredict();
+              return;
+            }
+          }
+        }
+
         /** Delete / Backspace removes label from a click-selected annotated block (not while editing text fields). */
         if (
           !e.repeat &&

@@ -61,14 +61,14 @@
     <!-- Right column: run toolbar + editor surface -->
     <div class="plt-editor-col">
       <div class="plt-run-cluster card" id="plt-run-cluster" role="toolbar" aria-label="Đối chiếu và xử lý mẫu">
-        <button type="button" class="btn plt-btn-run plt-btn-run-one" id="plt-btn-run-one" onclick="pltRunOne()" disabled title="Đối chiếu mẫu đang chọn với nhãn kỳ vọng">
-          <i class="fa-solid fa-play"></i> Đối chiếu
+        <button type="button" class="btn plt-btn-run plt-btn-run-one" id="plt-btn-run-one" onclick="pltRunOne()" disabled title="Đối chiếu mẫu đang chọn với nhãn kỳ vọng (chỉ F8, không giữ Ctrl/Alt/Shift)" aria-keyshortcuts="F8">
+          <i class="fa-solid fa-play"></i> Đối chiếu (F8)
         </button>
-        <button type="button" class="btn plt-btn-run plt-btn-run-all" id="plt-btn-run-all" title="Đối chiếu lần lượt tất cả mẫu trong danh sách">
-          <i class="fa-solid fa-forward-fast"></i> Đối chiếu tất cả
+        <button type="button" class="btn plt-btn-run plt-btn-run-all" id="plt-btn-run-all" title="Đối chiếu lần lượt tất cả mẫu trong danh sách (chỉ F9, không giữ Ctrl/Alt/Shift)" aria-keyshortcuts="F9">
+          <i class="fa-solid fa-forward-fast"></i> Đối chiếu tất cả (F9)
         </button>
-        <button type="button" class="btn plt-btn-random" id="plt-btn-random-predict" title="Lấy một địa chỉ ngẫu nhiên từ hàng đợi và điền gợi ý nhãn">
-          <i class="fa-solid fa-shuffle"></i> Lấy mẫu ngẫu nhiên và gợi ý nhãn
+        <button type="button" class="btn plt-btn-random" id="plt-btn-random-predict" title="Lấy một địa chỉ ngẫu nhiên từ hàng đợi và điền gợi ý nhãn (chỉ F10, không giữ Ctrl/Alt/Shift)" aria-keyshortcuts="F10">
+          <i class="fa-solid fa-shuffle"></i> Lấy mẫu ngẫu nhiên và gợi ý nhãn (F10)
         </button>
         <label class="plt-overwrite-label" title="Khi bật: cập nhật mẫu đang chọn thay vì tạo mẫu mới">
           <input type="checkbox" id="plt-random-overwrite-active">
