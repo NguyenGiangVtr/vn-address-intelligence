@@ -98,6 +98,49 @@ function getAuthHeader() {
   return token ? { 'Authorization': `Bearer ${token}` } : {};
 }
 
+/** Any 401 from this app’s API clears the session and opens the login page (covers all fetch call sites). */
+(function installFetchUnauthorizedRedirect() {
+  const nativeFetch = window.fetch.bind(window);
+
+  function requestUrlString(input) {
+    if (typeof input === 'string') return input;
+    if (input instanceof Request) return input.url;
+    if (input != null && typeof input === 'object' && typeof input.url === 'string') return input.url;
+    return '';
+  }
+
+  function isAppApiRequest(input) {
+    const urlStr = requestUrlString(input);
+    if (!urlStr) return false;
+    let resolved;
+    try {
+      resolved = new URL(urlStr, window.location.href);
+    } catch (_err) {
+      return false;
+    }
+    const path = resolved.pathname || '';
+    if (path === '/api' || path.startsWith('/api/')) return true;
+    const normalizedHref = resolved.href.split(/[?#]/)[0].replace(/\/+$/, '');
+    for (const base of getApiBaseCandidates()) {
+      const prefix = String(base || '').replace(/\/+$/, '');
+      if (!prefix) continue;
+      if (normalizedHref === prefix || normalizedHref.startsWith(`${prefix}/`)) return true;
+    }
+    return false;
+  }
+
+  window.fetch = async function fetchWithUnauthorizedRedirect(input, init) {
+    const response = await nativeFetch(input, init);
+    if (response.status === 401 && isAppApiRequest(input)) {
+      try {
+        localStorage.removeItem('vnai_token');
+      } catch (_e) {}
+      window.location.href = 'login.html';
+    }
+    return response;
+  };
+})();
+
 async function logoutAndRedirect() {
   try {
     await fetch(`${API_BASE}/logout`, {
@@ -5360,9 +5403,9 @@ async function initEvidenceView() {
     const exp = missingReadable || '—';
 
     if (missingReadable || !actualReadable) {
-      return `Không khớp: Thuật toán: ${algo}, Kỳ vọng: ${exp}.`;
+      return `[Không khớp] Thuật toán: ${algo}, Kỳ vọng: ${exp}.`;
     }
-    return `Không khớp: Thuật toán: ${algo}.`;
+    return `[Không khớp] Thuật toán: ${algo}.`;
   }
 
   function pltAddExpectedLabel(label, rawText) {
@@ -5392,10 +5435,29 @@ async function initEvidenceView() {
       </div>`;
     }
     if (!(r.unexpected || []).length) return '';
+    const activeCase = cases.find(x => x.id === activeId);
+    const unexpected = Array.isArray(r.unexpected) ? r.unexpected : [];
+    const canApplyCount = unexpected.filter(u => !pltHasExpectedPair(activeCase, u?.label, u?.text)).length;
+    const applyAllDisabled = canApplyCount <= 0;
+    const clearAllDisabled = !Array.isArray(activeCase?.expected) || activeCase.expected.length <= 0;
+    const applyAllTitle = applyAllDisabled
+      ? 'Tất cả đề xuất đã có sẵn trong nhãn kỳ vọng'
+      : 'Thêm tất cả nhãn ngoài kỳ vọng vào danh sách nhãn kỳ vọng hiện tại';
+    const clearAllTitle = clearAllDisabled
+      ? 'Không có nhãn kỳ vọng để xóa'
+      : 'Xóa toàn bộ nhãn kỳ vọng hiện tại của mẫu này';
     return `
       <div class="plt-unexpected-block">
         <div class="plt-result-section-title">Nhãn ngoài kỳ vọng (chế độ nghiêm)</div>
-        <div class="plt-run-prompt"><i class="fa-solid fa-hand-pointer"></i> Chọn từng mục sau để thêm nhanh vào nhãn kỳ vọng.</div>
+        <div class="plt-run-prompt">
+          <i class="fa-solid fa-hand-pointer"></i> Chọn từng mục hoặc áp dụng toàn bộ đề xuất vào nhãn kỳ vọng.
+          <button type="button" class="btn btn-outline btn-sm plt-unexpected-apply-all" title="${pltEsc(applyAllTitle)}" ${applyAllDisabled ? 'disabled aria-disabled="true"' : ''}>
+            <i class="fa-solid fa-bolt"></i> Apply all đề xuất
+          </button>
+          <button type="button" class="btn btn-outline btn-sm plt-unexpected-clear-all" title="${pltEsc(clearAllTitle)}" ${clearAllDisabled ? 'disabled aria-disabled="true"' : ''}>
+            <i class="fa-solid fa-trash"></i> Xóa all nhãn
+          </button>
+        </div>
         <div class="plt-tokens">
           ${(r.unexpected || [])
             .map(
@@ -5441,6 +5503,7 @@ async function initEvidenceView() {
             : c.input && c.input.raw_address
               ? String(c.input.raw_address)
               : '',
+        note: String((c && c.note != null) ? c.note : ''),
         expected: typeof c.expected === 'string' ? JSON.parse(c.expected) : (c.expected || []),
       }));
       // Hydrate persisted run results so summary + indicators survive page reload.
@@ -5502,14 +5565,17 @@ async function initEvidenceView() {
         const rr = results[c.id];
         const dot = rr == null ? 'plt-dot-none' : rr.passed ? 'plt-dot-pass' : 'plt-dot-fail';
         const cls = rr == null ? '' : rr.passed ? 'pass' : 'fail';
+        const noteText = String(c?.note || '').trim();
+        const noteTitle = noteText ? `Ghi chú: ${noteText}` : '';
         /** Newest first (idx 0) gets largest rank = visibleCount — reads like “mẫu cao = mới hơn”. */
         const rank = visibleCount - idx;
         return `
-        <div class="plt-item ${cls}${activeId === c.id ? ' active' : ''}" onclick="pltSelect('${c.id}')">
+        <div class="plt-item ${cls}${activeId === c.id ? ' active' : ''}" onclick="pltSelect('${c.id}')" ${noteTitle ? `title="${pltEsc(noteTitle)}"` : ''}>
           <div class="plt-item-name">
             <span class="plt-dot ${dot}"></span>
             <span class="plt-item-index">${rank}.</span>
             ${pltEsc(c.name || 'Chưa đặt tên')}
+            ${noteText ? `<span class="plt-item-note-tip" title="${pltEsc(noteTitle)}"><i class="fa-regular fa-note-sticky"></i></span>` : ''}
             <div class="plt-item-actions">
               <button class="btn-icon" onclick="event.stopPropagation();pltDup('${c.id}')" title="Nhân đôi"><i class="fa-solid fa-copy"></i></button>
               <button class="btn-icon" style="color:var(--danger)" onclick="event.stopPropagation();pltDel('${c.id}')" title="Xóa"><i class="fa-solid fa-trash"></i></button>
@@ -5549,6 +5615,7 @@ async function initEvidenceView() {
       id: uid(),
       name: 'Mẫu địa chỉ mới',
       input: '',
+      note: '',
       expected: [],
       strict: false,
       created_at: new Date().toISOString(),
@@ -5618,6 +5685,7 @@ async function initEvidenceView() {
       if (selectedCase) {
         selectedCase.input = rawAddress;
         selectedCase.expected = expected;
+        selectedCase.note = String(selectedCase.note || '');
         if (!selectedCase.name || String(selectedCase.name).trim().length === 0) {
           selectedCase.name = sourceId ? `Mẫu ngẫu nhiên · ${sourceId}` : 'Mẫu ngẫu nhiên';
         }
@@ -5628,6 +5696,7 @@ async function initEvidenceView() {
           id: uid(),
           name: sourceId ? `Mẫu ngẫu nhiên · ${sourceId}` : 'Mẫu ngẫu nhiên',
           input: rawAddress,
+          note: '',
           expected,
           strict: false,
           created_at: new Date().toISOString(),
@@ -5706,6 +5775,9 @@ async function initEvidenceView() {
 
   let saveTimer = null;
   let pltDelegatedEventsBound = false;
+  let pltTypingSuggestTimer = null;
+  let pltTypingSuggestAbort = null;
+  let pltTypingSuggestSeq = 0;
 
   async function pltSave() {
     localStorage.setItem('plt_cases', JSON.stringify(cases));
@@ -5758,6 +5830,11 @@ async function initEvidenceView() {
               oninput="pltUpdInput(this.value)" onpaste="pltAutoExtract(event)"
               placeholder="Địa chỉ đầy đủ...">${pltEsc(c.input || '')}</textarea>
           </div>
+          <div class="plt-field plt-field-full">
+            <textarea class="form-input" id="plt-note"
+              oninput="pltUpd('note',this.value)"
+              placeholder="Ghi chú lý do gán nhãn (ví dụ: vì raw có tiền tố admin rõ ràng, hoặc case ngoại lệ cần giữ nguyên)...">${pltEsc(c.note || '')}</textarea>
+          </div>
           <div class="plt-exp-section">
             <div class="plt-exp-head">
               <div class="plt-exp-head__title">
@@ -5766,8 +5843,10 @@ async function initEvidenceView() {
               </div>
             </div>
             ${renderAnnotatedRawText(c)}
-            <div class="plt-label-grid" id="plt-exp-list">${renderMergedLabelGrid(c, result)}</div>
-            ${renderRunAuxiliary(result)}
+            <div class="plt-exp-layout">
+              <div class="plt-label-grid" id="plt-exp-list">${renderMergedLabelGrid(c, result)}</div>
+              ${renderRunAuxiliary(result)}
+            </div>
           </div>
         </div>
       </div>
@@ -5786,8 +5865,98 @@ async function initEvidenceView() {
   function pltUpdInput(val) {
     const c = cases.find(x => x.id === activeId);
     if (!c) return;
-    c.input = String(val || '');
+    const nextInput = String(val || '');
+    const prevInput = String(c.input || '');
+    c.input = nextInput;
+
+    // Khi raw text thay đổi, kết quả run trước đó không còn hợp lệ.
+    if (nextInput !== prevInput && Object.prototype.hasOwnProperty.call(results, c.id)) {
+      delete results[c.id];
+      renderEditor();
+      renderList();
+      updateSummary();
+    }
+
+    pltScheduleTypingAdminSuggest(c);
     pltSave();
+  }
+
+  function pltScheduleTypingAdminSuggest(c) {
+    if (!c) return;
+    if (pltTypingSuggestTimer) {
+      clearTimeout(pltTypingSuggestTimer);
+      pltTypingSuggestTimer = null;
+    }
+    if (pltTypingSuggestAbort) {
+      try { pltTypingSuggestAbort.abort(); } catch (_) {}
+      pltTypingSuggestAbort = null;
+    }
+
+    const text = String(c.input || '').trim();
+    // Tránh gọi API khi text còn quá ngắn/chưa có cấu trúc địa chỉ.
+    if (text.length < 10 || !text.includes(',')) return;
+
+    const seq = ++pltTypingSuggestSeq;
+    const caseId = String(c.id || '');
+    pltTypingSuggestTimer = setTimeout(async () => {
+      if (!pltIsPrelabelerCasesPageVisible()) return;
+      const target = cases.find(x => String(x.id) === caseId);
+      if (!target) return;
+      const latestText = String(target.input || '').trim();
+      if (!latestText || latestText !== text) return;
+
+      const expected = Array.isArray(target.expected) ? target.expected : [];
+      const hasAllAdmin = ['WDS', 'DST', 'PRO'].every(label =>
+        expected.some(it => String(it?.label || '').trim().toUpperCase() === label && String(it?.text || '').trim())
+      );
+      if (hasAllAdmin) return;
+
+      try {
+        const ctrl = new AbortController();
+        pltTypingSuggestAbort = ctrl;
+        const res = await fetch(`${API}/parser/analyze?model=prelabeler`, {
+          method: 'POST',
+          headers: authHdr(),
+          body: JSON.stringify({ raw_address: latestText }),
+          signal: ctrl.signal,
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (seq !== pltTypingSuggestSeq) return;
+        const entities = data?.outputs?.prelabeler?.result || [];
+
+        let updated = false;
+        ['WDS', 'DST', 'PRO'].forEach(label => {
+          const hit = entities.find(e => e?.label === label && e?.text);
+          if (!hit) return;
+          const hitText = String(hit.text).trim();
+          if (!hitText) return;
+          const exists = (target.expected || []).some(
+            it =>
+              String(it?.label || '').trim().toUpperCase() === label &&
+              String(it?.text || '').trim().toLowerCase() === hitText.toLowerCase()
+          );
+          if (!exists) {
+            target.expected = target.expected || [];
+            target.expected.push({ label, text: hitText });
+            updated = true;
+          }
+        });
+
+        if (updated && String(activeId) === caseId) {
+          renderEditor();
+          renderList();
+          updateSummary();
+          pltSave();
+        } else if (updated) {
+          pltSave();
+        }
+      } catch (e) {
+        if (e?.name !== 'AbortError') console.warn('Typing admin suggest failed', e);
+      } finally {
+        if (seq === pltTypingSuggestSeq) pltTypingSuggestAbort = null;
+      }
+    }, 380);
   }
 
   function pltClearResults(caseIds) {
@@ -5803,27 +5972,89 @@ async function initEvidenceView() {
   function pltAddUnexpectedToExpected(label, text) {
     const c = cases.find(x => x.id === activeId);
     if (!c) return;
-    const normLabel = String(label || '').trim().toUpperCase();
-    const normText = String(text || '').trim();
-    if (!normLabel || !normText) return;
-
-    c.expected = Array.isArray(c.expected) ? c.expected : [];
-    const exists = c.expected.some(
-      it =>
-        String(it?.label || '').trim().toUpperCase() === normLabel &&
-        String(it?.text || '').trim().toLowerCase() === normText.toLowerCase()
-    );
-    if (exists) {
-      window.showToast?.(`Đã tồn tại ${normLabel}: ${normText}`, 'info');
+    const added = pltAddExpectedPair(c, label, text);
+    if (!added) {
+      const normLabel = String(label || '').trim().toUpperCase();
+      const normText = String(text || '').trim();
+      if (normLabel && normText) window.showToast?.(`Đã tồn tại ${normLabel}: ${normText}`, 'info');
       return;
     }
 
-    c.expected.push({ label: normLabel, text: normText });
     pltSave();
     renderEditor();
     renderList();
     updateSummary();
-    window.showToast?.(`Đã thêm ${normLabel} vào nhãn kỳ vọng`, 'success');
+    window.showToast?.(`Đã thêm ${String(label || '').trim().toUpperCase()} vào nhãn kỳ vọng`, 'success');
+  }
+
+  function pltAddExpectedPair(caseObj, label, text) {
+    if (!caseObj) return false;
+    const normLabel = String(label || '').trim().toUpperCase();
+    const normText = String(text || '').trim();
+    if (!normLabel || !normText) return false;
+
+    caseObj.expected = Array.isArray(caseObj.expected) ? caseObj.expected : [];
+    if (pltHasExpectedPair(caseObj, normLabel, normText)) return false;
+
+    caseObj.expected.push({ label: normLabel, text: normText });
+    return true;
+  }
+
+  function pltHasExpectedPair(caseObj, label, text) {
+    if (!caseObj) return false;
+    const normLabel = String(label || '').trim().toUpperCase();
+    const normText = String(text || '').trim();
+    if (!normLabel || !normText) return false;
+    const expected = Array.isArray(caseObj.expected) ? caseObj.expected : [];
+    return expected.some(
+      it =>
+        String(it?.label || '').trim().toUpperCase() === normLabel &&
+        String(it?.text || '').trim().toLowerCase() === normText.toLowerCase()
+    );
+  }
+
+  function pltAddAllUnexpectedToExpected() {
+    const c = cases.find(x => x.id === activeId);
+    if (!c) return;
+    const runResult = results[c.id];
+    const unexpected = Array.isArray(runResult?.unexpected) ? runResult.unexpected : [];
+    if (!unexpected.length) {
+      window.showToast?.('Không có đề xuất nào để áp dụng', 'info');
+      return;
+    }
+
+    let addedCount = 0;
+    unexpected.forEach(item => {
+      if (pltAddExpectedPair(c, item?.label, item?.text)) addedCount += 1;
+    });
+
+    if (!addedCount) {
+      window.showToast?.('Tất cả đề xuất đã tồn tại trong nhãn kỳ vọng', 'info');
+      return;
+    }
+
+    pltSave();
+    renderEditor();
+    renderList();
+    updateSummary();
+    window.showToast?.(`Đã thêm ${addedCount}/${unexpected.length} đề xuất vào nhãn kỳ vọng`, 'success');
+  }
+
+  function pltClearAllExpectedLabels() {
+    const c = cases.find(x => x.id === activeId);
+    if (!c) return;
+    const before = Array.isArray(c.expected) ? c.expected.length : 0;
+    if (!before) {
+      window.showToast?.('Không có nhãn kỳ vọng để xóa', 'info');
+      return;
+    }
+
+    c.expected = [];
+    pltSave();
+    renderEditor();
+    renderList();
+    updateSummary();
+    window.showToast?.(`Đã xóa ${before} nhãn kỳ vọng`, 'success');
   }
 
   async function pltRunOne() {
@@ -6112,6 +6343,7 @@ async function initEvidenceView() {
       id: String(c?.id || `case_${idx}`),
       name: String(c?.name || ''),
       input,
+      note: String(c?.note || ''),
       expected,
       strict: Boolean(c?.strict),
     };
@@ -6203,6 +6435,17 @@ async function initEvidenceView() {
         if (addBtn) {
           e.preventDefault();
           pltAddUnexpectedToExpected(addBtn.getAttribute('data-label'), addBtn.getAttribute('data-text'));
+          return;
+        }
+        if (t.closest('.plt-unexpected-apply-all')) {
+          e.preventDefault();
+          pltAddAllUnexpectedToExpected();
+          return;
+        }
+        if (t.closest('.plt-unexpected-clear-all')) {
+          e.preventDefault();
+          pltClearAllExpectedLabels();
+          return;
         }
       },
       false

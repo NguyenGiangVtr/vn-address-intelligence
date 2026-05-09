@@ -5550,6 +5550,15 @@ body.no-scroll {
 #prelabeler-cases .plt-header-main {
   flex: 1;
   min-width: 200px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px 14px;
+}
+
+#prelabeler-cases .plt-header-intro {
+  flex: 1;
+  min-width: 260px;
 }
 
 #prelabeler-cases .plt-header-sub {
@@ -5566,6 +5575,8 @@ body.no-scroll {
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   color: var(--text-secondary);
+  margin-left: auto;
+  flex: 1 1 520px;
 }
 
 #prelabeler-cases .plt-summary-metrics {
@@ -5583,6 +5594,17 @@ body.no-scroll {
   align-items: center;
   gap: 8px;
   margin-left: auto;
+}
+
+@media (max-width: 1180px) {
+  #prelabeler-cases .plt-header-main {
+    flex-wrap: wrap;
+  }
+
+  #prelabeler-cases .plt-summary-band {
+    margin-left: 0;
+    flex-basis: 100%;
+  }
 }
 
 /* PreLabeler button size normalization (same feel as other pages) */
@@ -5872,6 +5894,12 @@ body.no-scroll {
   max-width: 920px;
 }
 
+#prelabeler-cases .plt-exp-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+}
+
 #prelabeler-cases .plt-label-grid-empty {
   grid-column: 1 / -1;
   padding: 16px;
@@ -6142,6 +6170,32 @@ body.no-scroll {
   border-top: 1px solid var(--border-subtle);
 }
 
+@media (min-width: 1660px) {
+  #prelabeler-cases .plt-exp-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
+    align-items: start;
+    gap: 14px;
+  }
+
+  #prelabeler-cases .plt-exp-layout .plt-label-grid {
+    max-width: none;
+  }
+
+  #prelabeler-cases .plt-exp-layout .plt-unexpected-block {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
+    padding: 12px;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    background: var(--bg-elevated);
+  }
+
+  #prelabeler-cases .plt-exp-layout .plt-run-prompt {
+    margin-top: 0;
+  }
+}
+
 /* ── Test Case List Item ── */
 .plt-item {
   background: var(--bg-elevated);
@@ -6187,6 +6241,13 @@ body.no-scroll {
   color: var(--text-tertiary);
   font-variant-numeric: tabular-nums;
   min-width: 2.2ch;
+}
+
+.plt-item-note-tip {
+  color: var(--text-tertiary);
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
 }
 
 .plt-item-addr {
@@ -6240,7 +6301,7 @@ body.no-scroll {
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
-  overflow: hidden;
+  overflow-y: auto;
   box-shadow: var(--shadow-md);
 }
 
@@ -6290,7 +6351,8 @@ body.no-scroll {
   display: block;
 }
 
-#prelabeler-cases .plt-raw-address-input {
+#prelabeler-cases .plt-raw-address-input, 
+#prelabeler-cases #plt-note {
   min-height: 45px;
   resize: vertical;
   line-height: 1.45;
@@ -6359,11 +6421,11 @@ body.no-scroll {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  padding: 8px;
 }
 
 #prelabeler-cases .plt-editor-scroll > .plt-raw-pin {
   flex-shrink: 0;
-  padding: 12px 16px;
 }
 
 #prelabeler-cases .plt-editor-head {
@@ -6371,7 +6433,7 @@ body.no-scroll {
 }
 
 #prelabeler-cases .plt-exp-section {
-  padding: 0 16px 16px;
+  padding: 8px 0px;
 }
 
 #prelabeler-cases .plt-exp-head {

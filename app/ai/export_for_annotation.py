@@ -231,6 +231,8 @@ class PreLabeler:
             ("PRO", province_name),
         ]
 
+        raw_segments = [s.strip() for s in raw_address.split(',') if s.strip()]
+
         label_prefix_hints = {
             "WDS": rf'(?i)\b({ADMIN_PREFIX_ALTERNATIVES["WDS"]})\s*$',
             "DST": rf'(?i)\b({ADMIN_PREFIX_ALTERNATIVES["DST"]})\s*$',
@@ -302,6 +304,75 @@ class PreLabeler:
             display = sn or nm
             z = len(raw_address.rstrip())
             add_result(z, z + max(1, len(display)), display.strip(), label, 0.99)
+
+        def _extract_admin_from_segment(seg_text: str, label: str) -> str:
+            seg = str(seg_text or "").strip(" ,")
+            if not seg:
+                return ""
+            alt = ADMIN_PREFIX_ALTERNATIVES.get(label) or ""
+            if not alt:
+                return ""
+            m = re.match(rf"(?i)^\s*({alt})\s+(.+)$", seg)
+            if not m:
+                return ""
+            prefix = m.group(1).strip()
+            name = (m.group(2) or "").strip(" ,")
+            if not name:
+                return ""
+            return f"{prefix} {name}".strip()
+
+        # Fallback: khi không có master-data context (ward/district/province),
+        # vẫn trích xuất WDS/DST/PRO trực tiếp từ raw theo segment có tiền tố admin.
+        # Mục tiêu giữ hành vi nhất quán giữa lần run đầu tiên và các lần run sau.
+        if not _has_macro("WDS"):
+            for seg in raw_segments:
+                cand = _extract_admin_from_segment(seg, "WDS")
+                if not cand:
+                    continue
+                mseg = re.search(re.escape(seg), raw_address, re.I)
+                if not mseg:
+                    continue
+                rel = seg.lower().find(cand.lower())
+                s0 = mseg.start() + (rel if rel >= 0 else 0)
+                add_result(s0, s0 + len(cand), raw_address[s0:s0 + len(cand)], "WDS", 0.96)
+                break
+
+        if not _has_macro("DST"):
+            for seg in raw_segments:
+                cand = _extract_admin_from_segment(seg, "DST")
+                if not cand:
+                    continue
+                mseg = re.search(re.escape(seg), raw_address, re.I)
+                if not mseg:
+                    continue
+                rel = seg.lower().find(cand.lower())
+                s0 = mseg.start() + (rel if rel >= 0 else 0)
+                add_result(s0, s0 + len(cand), raw_address[s0:s0 + len(cand)], "DST", 0.96)
+                break
+
+        # Với PRO: cho phép cụm "Tỉnh/TP/Thành phố ..."; ngoài ra nếu đã có DST mà
+        # segment cuối không có prefix nhưng giống tên tỉnh/thành phố phổ biến, cũng lấy.
+        if not _has_macro("PRO"):
+            for seg in reversed(raw_segments):
+                cand = _extract_admin_from_segment(seg, "PRO")
+                if cand:
+                    mseg = re.search(re.escape(seg), raw_address, re.I)
+                    if not mseg:
+                        continue
+                    rel = seg.lower().find(cand.lower())
+                    s0 = mseg.start() + (rel if rel >= 0 else 0)
+                    if add_result(s0, s0 + len(cand), raw_address[s0:s0 + len(cand)], "PRO", 0.96):
+                        break
+                elif _has_macro("DST"):
+                    # Trường hợp hay gặp: "... , Quận 8, Hồ Chí Minh" (không có tiền tố PRO).
+                    # Chỉ lấy segment cuối khi không chứa số để tránh nhiễu.
+                    if re.search(r"\d", seg):
+                        continue
+                    mseg = re.search(re.escape(seg), raw_address, re.I)
+                    if not mseg:
+                        continue
+                    if add_result(mseg.start(), mseg.end(), raw_address[mseg.start():mseg.end()], "PRO", 0.9):
+                        break
 
         # Giai đoạn 1.15: Bổ sung WDS khi cùng tên địa giới (chuẩn hóa sau khi strip tiền tố)
         # đứng trong **hai segment** có tiền tố khác nhau — vd "Xã Năm Căn, Thị trấn Năm Căn".
@@ -467,8 +538,6 @@ class PreLabeler:
                         s0, e0, txt = found
                         add_result(s0, e0, txt, 'STR', max(0.85, score))
                         break
-
-        raw_segments = [s.strip() for s in raw_address.split(',') if s.strip()]
 
         # Giai đoạn 1.6: Heuristic STR theo segment "trần" (không tiền tố),
         # ưu tiên đoạn nằm giữa NUM và NHB/WDS.
@@ -706,6 +775,9 @@ class PreLabeler:
                     # Tránh gán NUM cho số thuộc cụm NHB: "Tổ 1", "Thôn 2", ...
                     left_ctx = raw_address[max(0, start - 24):start].lower()
                     if re.search(r'(tổ|thôn|ấp|khu\s*phố|kp)\s*$', left_ctx, re.I):
+                        continue
+                    # Tránh gán NUM cho số thuộc admin unit: "Quận 8", "Phường 13", ...
+                    if re.search(rf'(?i)({ADMIN_ALL_PREFIXES_ALT})\s*$', left_ctx):
                         continue
                     dig = matched_text.strip()
                     if dig.isdigit() and len(dig) >= 6:

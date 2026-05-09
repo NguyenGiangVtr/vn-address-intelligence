@@ -2976,6 +2976,7 @@ def _ensure_prelabeler_testcases_table():
             id          TEXT PRIMARY KEY,
             name        TEXT NOT NULL DEFAULT '',
             input       JSONB NOT NULL DEFAULT '{}',
+            note        TEXT NOT NULL DEFAULT '',
             expected    JSONB NOT NULL DEFAULT '[]',
             strict      BOOLEAN NOT NULL DEFAULT FALSE,
             test_result JSONB NULL,
@@ -2983,6 +2984,7 @@ def _ensure_prelabeler_testcases_table():
             created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
             updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
         );
+        ALTER TABLE ai.prelabeler_testcases ADD COLUMN IF NOT EXISTS note TEXT NOT NULL DEFAULT '';
         ALTER TABLE ai.prelabeler_testcases ADD COLUMN IF NOT EXISTS test_result JSONB NULL;
         ALTER TABLE ai.prelabeler_testcases ADD COLUMN IF NOT EXISTS tested_at TIMESTAMPTZ NULL;
     """)
@@ -2993,7 +2995,7 @@ def _ensure_prelabeler_testcases_table():
             # - input: JSON object -> raw_address string
             # - expected: merge old expected + admin labels from input object
             rows = conn.execute(text(
-                "SELECT id, input, expected FROM ai.prelabeler_testcases"
+                "SELECT id, input, note, expected FROM ai.prelabeler_testcases"
             )).mappings().all()
             for r in rows:
                 inp = r.get("input")
@@ -3042,12 +3044,14 @@ def _ensure_prelabeler_testcases_table():
                 conn.execute(text("""
                     UPDATE ai.prelabeler_testcases
                     SET input = CAST(:input AS JSONB),
+                        note = :note,
                         expected = CAST(:expected AS JSONB),
                         updated_at = NOW()
                     WHERE id = :id
                 """), {
                     "id": r["id"],
                     "input": json.dumps(raw_address, ensure_ascii=False),
+                    "note": str(r.get("note") or "").strip(),
                     "expected": json.dumps(merged_expected, ensure_ascii=False),
                 })
             conn.commit()
@@ -3064,6 +3068,7 @@ class PreLabelerLabelingCase(BaseModel):
     id: Optional[Any] = None
     name: Optional[Any] = ""
     input: Optional[Any] = None
+    note: Optional[Any] = ""
     expected: Optional[List[Dict[str, Any]]] = None
     strict: Optional[Any] = False
 
@@ -3083,7 +3088,7 @@ def list_prelabeler_cases(current_user=Depends(get_current_user)):
     try:
         with engine.connect() as conn:
             rows = conn.execute(text(
-                "SELECT id, name, input, expected, strict, test_result, tested_at, created_at, updated_at "
+                "SELECT id, name, input, note, expected, strict, test_result, tested_at, created_at, updated_at "
                 "FROM ai.prelabeler_testcases ORDER BY created_at ASC"
             )).mappings().all()
         return [dict(r) for r in rows]
@@ -3246,11 +3251,12 @@ def save_prelabeler_cases(cases: List[PreLabelerLabelingCase], current_user=Depe
                     normalized_expected.append({"label": label, "text": text_val})
 
                 conn.execute(text("""
-                    INSERT INTO ai.prelabeler_testcases (id, name, input, expected, strict, test_result, tested_at, updated_at)
-                    VALUES (:id, :name, CAST(:input AS JSONB), CAST(:expected AS JSONB), :strict, NULL, NULL, NOW())
+                    INSERT INTO ai.prelabeler_testcases (id, name, input, note, expected, strict, test_result, tested_at, updated_at)
+                    VALUES (:id, :name, CAST(:input AS JSONB), :note, CAST(:expected AS JSONB), :strict, NULL, NULL, NOW())
                     ON CONFLICT (id) DO UPDATE SET
                         name = EXCLUDED.name,
                         input = EXCLUDED.input,
+                        note = EXCLUDED.note,
                         expected = EXCLUDED.expected,
                         strict = EXCLUDED.strict,
                         test_result = NULL,
@@ -3260,6 +3266,7 @@ def save_prelabeler_cases(cases: List[PreLabelerLabelingCase], current_user=Depe
                     "id": case_id,
                     "name": c.name or "",
                     "input": json.dumps(str(raw_input or "").strip(), ensure_ascii=False),
+                    "note": str(c.note or "").strip(),
                     "expected": json.dumps(normalized_expected, ensure_ascii=False),
                     "strict": bool(c.strict),
                 })
