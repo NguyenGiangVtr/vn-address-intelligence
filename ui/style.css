@@ -6128,6 +6128,33 @@ body.no-scroll {
   word-break: break-word;
 }
 
+#prelabeler-cases .plt-raw-annotated-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+#prelabeler-cases .plt-raw-annotated-row .plt-raw-annotated {
+  flex: 1;
+  margin: 8px 0 10px;
+}
+
+#prelabeler-cases .plt-raw-annotated-row .plt-unexpected-clear-all {
+  margin-top: 8px;
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  #prelabeler-cases .plt-raw-annotated-row {
+    flex-direction: column;
+  }
+
+  #prelabeler-cases .plt-raw-annotated-row .plt-unexpected-clear-all {
+    margin-top: 0;
+    align-self: flex-start;
+  }
+}
+
 #prelabeler-cases .plt-raw-annotated--empty {
   color: var(--text-tertiary);
   font-style: italic;

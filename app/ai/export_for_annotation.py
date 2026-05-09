@@ -380,6 +380,47 @@ class PreLabeler:
                     if add_result(mseg.start(), mseg.end(), raw_address[mseg.start():mseg.end()], "PRO", 0.9):
                         break
 
+        # Fallback chuoi "tran" khong co tien to admin:
+        # Vi du: "H4VR+86C, Chau Pha, Tan Thanh, Ba Ria - Vung Tau, Viet Nam"
+        # => WDS, DST, PRO theo 3 segment cuoi hop le (bo qua plus-code / quoc gia).
+        def _is_country_segment(seg_text: str) -> bool:
+            s = str(seg_text or "").strip().lower()
+            return bool(re.fullmatch(r"vi[eệ]t\s*nam", s))
+
+        def _is_pluscode_segment(seg_text: str) -> bool:
+            s = str(seg_text or "").strip().upper().replace(" ", "")
+            return bool(re.fullmatch(r"[23456789CFGHJMPQRVWX]{4,8}\+[23456789CFGHJMPQRVWX]{2,3}", s))
+
+        # Chi kich hoat khi chua co macro nao, tranh tao WDS/DST du thua
+        # trong cac case ma PRO da duoc nhan dien tu tien to ro rang.
+        if not (_has_macro("WDS") or _has_macro("DST") or _has_macro("PRO")):
+            bare_admin = []
+            for seg in raw_segments:
+                seg_norm = str(seg or "").strip(" ,")
+                if not seg_norm:
+                    continue
+                if _is_country_segment(seg_norm) or _is_pluscode_segment(seg_norm):
+                    continue
+                # Uu tien segment khong chua so de tranh NUM/ma chen vao fallback.
+                if re.search(r"\d", seg_norm):
+                    continue
+                bare_admin.append(seg_norm)
+
+            if len(bare_admin) >= 3:
+                wds_seg, dst_seg, pro_seg = bare_admin[-3], bare_admin[-2], bare_admin[-1]
+                if not _has_macro("WDS"):
+                    m_w = re.search(re.escape(wds_seg), raw_address, re.I)
+                    if m_w:
+                        add_result(m_w.start(), m_w.end(), raw_address[m_w.start():m_w.end()], "WDS", 0.88)
+                if not _has_macro("DST"):
+                    m_d = re.search(re.escape(dst_seg), raw_address, re.I)
+                    if m_d:
+                        add_result(m_d.start(), m_d.end(), raw_address[m_d.start():m_d.end()], "DST", 0.88)
+                if not _has_macro("PRO"):
+                    m_p = re.search(re.escape(pro_seg), raw_address, re.I)
+                    if m_p:
+                        add_result(m_p.start(), m_p.end(), raw_address[m_p.start():m_p.end()], "PRO", 0.9)
+
         # Giai đoạn 1.15: Bổ sung WDS khi cùng tên địa giới (chuẩn hóa sau khi strip tiền tố)
         # đứng trong **hai segment** có tiền tố khác nhau — vd "Xã Năm Căn, Thị trấn Năm Căn".
         # Không bắt mọi WDS có tiền tố (tránh trùng mẫu master data + test kỳ vọng chỉ có tên gốc).

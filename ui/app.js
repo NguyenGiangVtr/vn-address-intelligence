@@ -5439,13 +5439,9 @@ async function initEvidenceView() {
     const unexpected = Array.isArray(r.unexpected) ? r.unexpected : [];
     const canApplyCount = unexpected.filter(u => !pltHasExpectedPair(activeCase, u?.label, u?.text)).length;
     const applyAllDisabled = canApplyCount <= 0;
-    const clearAllDisabled = !Array.isArray(activeCase?.expected) || activeCase.expected.length <= 0;
     const applyAllTitle = applyAllDisabled
       ? 'Tất cả đề xuất đã có sẵn trong nhãn kỳ vọng'
       : 'Thêm tất cả nhãn ngoài kỳ vọng vào danh sách nhãn kỳ vọng hiện tại';
-    const clearAllTitle = clearAllDisabled
-      ? 'Không có nhãn kỳ vọng để xóa'
-      : 'Xóa toàn bộ nhãn kỳ vọng hiện tại của mẫu này';
     return `
       <div class="plt-unexpected-block">
         <div class="plt-result-section-title">Nhãn ngoài kỳ vọng (chế độ nghiêm)</div>
@@ -5453,9 +5449,6 @@ async function initEvidenceView() {
           <i class="fa-solid fa-hand-pointer"></i> Chọn từng mục hoặc áp dụng toàn bộ đề xuất vào nhãn kỳ vọng.
           <button type="button" class="btn btn-outline btn-sm plt-unexpected-apply-all" title="${pltEsc(applyAllTitle)}" ${applyAllDisabled ? 'disabled aria-disabled="true"' : ''}>
             <i class="fa-solid fa-bolt"></i> Apply all đề xuất
-          </button>
-          <button type="button" class="btn btn-outline btn-sm plt-unexpected-clear-all" title="${pltEsc(clearAllTitle)}" ${clearAllDisabled ? 'disabled aria-disabled="true"' : ''}>
-            <i class="fa-solid fa-trash"></i> Xóa all nhãn
           </button>
         </div>
         <div class="plt-tokens">
@@ -5807,6 +5800,10 @@ async function initEvidenceView() {
     }
     const result = results[c.id];
     const hkHint = hotkeyRangeHint();
+    const clearAllDisabled = !Array.isArray(c.expected) || c.expected.length <= 0;
+    const clearAllTitle = clearAllDisabled
+      ? 'Không có nhãn kỳ vọng để xóa'
+      : 'Xóa toàn bộ nhãn kỳ vọng hiện tại của mẫu này';
     const badge =
       result && !result.error
         ? `<span class="plt-overall-badge plt-overall-badge--${result.passed ? 'pass' : 'fail'}" title="Kết quả đối chiếu mẫu hiện tại">
@@ -5842,7 +5839,12 @@ async function initEvidenceView() {
                 ${badge}
               </div>
             </div>
-            ${renderAnnotatedRawText(c)}
+            <div class="plt-raw-annotated-row">
+              ${renderAnnotatedRawText(c)}
+              <button type="button" class="btn btn-outline btn-sm plt-unexpected-clear-all" title="${pltEsc(clearAllTitle)}" ${clearAllDisabled ? 'disabled aria-disabled="true"' : ''}>
+                <i class="fa-solid fa-trash"></i> Xóa all nhãn
+              </button>
+            </div>
             <div class="plt-exp-layout">
               <div class="plt-label-grid" id="plt-exp-list">${renderMergedLabelGrid(c, result)}</div>
               ${renderRunAuxiliary(result)}
@@ -6482,11 +6484,7 @@ async function initEvidenceView() {
         /** Digit hotkeys mirror Label Studio chip order (aligned with ô nhãn bên dưới). */
         if (!e.repeat && !e.altKey && !e.ctrlKey && !e.metaKey && nerLabelsOrdered.length) {
           const hkDigit = pltLabelFromHotkeyKey(e.key);
-          if (
-            hkDigit &&
-            aeHot instanceof HTMLElement &&
-            !pltAnnHotkeyIgnoreTypingTarget(aeHot)
-          ) {
+          if (hkDigit) {
             const ta = document.getElementById('plt-raw-address');
             const hasTaSel =
               aeHot === ta &&
@@ -6494,11 +6492,15 @@ async function initEvidenceView() {
               ta.selectionStart != null &&
               ta.selectionEnd != null &&
               ta.selectionStart !== ta.selectionEnd;
+            const hasAnnSel = pltAnnotHasUsableSubstringSelection();
             const scopedDigit =
               Boolean(pltAnnBlockSelection) ||
               hasTaSel ||
-              pltAnnotHasUsableSubstringSelection();
-            if (scopedDigit) {
+              hasAnnSel;
+            const shouldIgnoreForTyping =
+              aeHot instanceof HTMLElement &&
+              pltAnnHotkeyIgnoreTypingTarget(aeHot);
+            if (scopedDigit && !(shouldIgnoreForTyping && !hasTaSel && !hasAnnSel && !pltAnnBlockSelection)) {
               e.preventDefault();
               pltAnnApplyLabelFromChoice(hkDigit);
               return;
