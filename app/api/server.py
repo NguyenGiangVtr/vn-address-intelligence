@@ -3099,27 +3099,65 @@ def random_prelabeler_predict(current_user=Depends(get_current_user)):
     """
     from app.ai.export_for_annotation import PreLabeler
 
+    fast_random_sql = text("""
+        WITH used AS (
+            SELECT DISTINCT
+                t.input_raw_address_norm AS raw_norm
+            FROM ai.prelabeler_testcases t
+            WHERE t.input_raw_address_norm IS NOT NULL
+        )
+        SELECT
+            q.id,
+            q.raw_address,
+            q.ward_name,
+            q.district_name,
+            q.province_name
+        FROM prq.address_cleansing_queue q TABLESAMPLE SYSTEM (:sample_pct)
+        LEFT JOIN used u
+            ON q.raw_address_norm = u.raw_norm
+        WHERE q.raw_address_norm IS NOT NULL
+          AND u.raw_norm IS NULL
+        ORDER BY RANDOM()
+        LIMIT 1
+    """)
+
+    fallback_sql = text("""
+        WITH used AS (
+            SELECT DISTINCT
+                t.input_raw_address_norm AS raw_norm
+            FROM ai.prelabeler_testcases t
+            WHERE t.input_raw_address_norm IS NOT NULL
+        )
+        SELECT
+            q.id,
+            q.raw_address,
+            q.ward_name,
+            q.district_name,
+            q.province_name
+        FROM prq.address_cleansing_queue q
+        LEFT JOIN used u
+            ON q.raw_address_norm = u.raw_norm
+        WHERE q.raw_address_norm IS NOT NULL
+          AND u.raw_norm IS NULL
+        ORDER BY RANDOM()
+        LIMIT 1
+    """)
+
     try:
         with engine.connect() as conn:
-            row = conn.execute(text("""
-                SELECT
-                    q.id,
-                    q.raw_address,
-                    q.ward_name,
-                    q.district_name,
-                    q.province_name
-                FROM prq.address_cleansing_queue q
-                WHERE q.raw_address IS NOT NULL
-                  AND LENGTH(BTRIM(q.raw_address)) > 0
-                  AND NOT EXISTS (
-                      SELECT 1
-                      FROM ai.prelabeler_testcases t
-                      WHERE LOWER(BTRIM(COALESCE(t.input::text, ''), '"'))
-                            = LOWER(BTRIM(q.raw_address))
-                  )
-                ORDER BY RANDOM()
-                LIMIT 1
-            """)).mappings().first()
+            row = None
+            # Ưu tiên chiến lược nhanh: quét mẫu ngẫu nhiên nhỏ trước, tăng dần nếu chưa trúng.
+            for pct in (0.1, 0.3, 0.7, 1.5, 3.0):
+                row = conn.execute(
+                    fast_random_sql,
+                    {"sample_pct": pct},
+                ).mappings().first()
+                if row:
+                    break
+
+            # Fallback để giữ behavior đúng ngay cả khi sample quá nhỏ.
+            if not row:
+                row = conn.execute(fallback_sql).mappings().first()
 
         if not row:
             raise HTTPException(status_code=404, detail="Khong con du lieu ngau nhien chua co trong cases")

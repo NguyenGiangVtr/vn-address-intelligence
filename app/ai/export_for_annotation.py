@@ -11,6 +11,7 @@ python app/ai/export_for_annotation.py --limit 1000 --config app/ai/config.yaml
 
 import json
 import logging
+from collections import defaultdict
 import argparse
 import sys
 import re
@@ -302,6 +303,42 @@ class PreLabeler:
             z = len(raw_address.rstrip())
             add_result(z, z + max(1, len(display)), display.strip(), label, 0.99)
 
+        # Giai đoạn 1.15: Bổ sung WDS khi cùng tên địa giới (chuẩn hóa sau khi strip tiền tố)
+        # đứng trong **hai segment** có tiền tố khác nhau — vd "Xã Năm Căn, Thị trấn Năm Căn".
+        # Không bắt mọi WDS có tiền tố (tránh trùng mẫu master data + test kỳ vọng chỉ có tên gốc).
+        wds_supplement_alt = ADMIN_PREFIX_ALTERNATIVES.get("WDS") or ""
+        if wds_supplement_alt.strip():
+            seg_wds_pat = rf"(?i)(?:^|(?<=,))\s*({wds_supplement_alt})\s+([^,\n]+?)(?=\s*,|\s*$)"
+            occurrences = defaultdict(list)
+            for m in re.finditer(seg_wds_pat, raw_address or ""):
+                span_txt = raw_address[m.start(1) : m.end(2)].strip(" ,")
+                if len(span_txt) < 3 or re.search(
+                    r"(?is)(?:viet\s*nam|việt\s*nam)\s*$",
+                    span_txt.strip(),
+                ):
+                    continue
+                base_strip = re.sub(rf"(?i)^(?:{wds_supplement_alt})\s+", "", span_txt).strip()
+                if not base_strip:
+                    continue
+                pref_cf = str(m.group(1)).strip().casefold()
+                occurrences[base_strip.casefold()].append(
+                    (m.start(1), m.end(2), span_txt, pref_cf)
+                )
+
+            for lst in occurrences.values():
+                if len(lst) < 2:
+                    continue
+                prefs = {t[3] for t in lst}
+                if len(prefs) < 2:
+                    continue
+                seen_spans = set()
+                for s_head, e_tail, span_txt, _pr in lst:
+                    key = (s_head, e_tail)
+                    if key in seen_spans:
+                        continue
+                    seen_spans.add(key)
+                    add_result(s_head, e_tail, span_txt, "WDS", 0.97)
+
         # Giai đoạn 1.2: Heuristic nhận diện STR nằm giữa NUM và WDS (WS)
         # Theo yêu cầu: STR nằm giữa NUM và WDS và có thể nằm trong danh sách từ OSM
         num_regex = r'(?i)(?:Số\s+)?\d+[A-Za-z]?(?:[/\-]\d+[A-Za-z]?)*|(?:\b|^)(?:Lô|Km)\s+[\w\-]+'
@@ -567,6 +604,12 @@ class PreLabeler:
             if m_toa:
                 add_result(m_toa.start(1), m_toa.end(1), raw_address[m_toa.start(1):m_toa.end(1)], "NHB", 0.7)
 
+            head_adm = raw_address[: first_admin.start()] if first_admin else raw_address
+            m_toa_blk = re.search(r"(?i)\b(Tòa\s+[A-ZĐđ]?\d+)\b(?=\s*[,，]|\s*$)", head_adm)
+            if m_toa_blk:
+                s_tb, e_tb = m_toa_blk.span(1)
+                add_result(s_tb, e_tb, raw_address[s_tb:e_tb].strip(), "NHB", 0.82)
+
             m_lo_az = re.search(r"(?i)\b(Lô\s+[A-Za-zĐđ])(?!\w)", free_text)
             if m_lo_az:
                 add_result(m_lo_az.start(1), m_lo_az.end(1), raw_address[m_lo_az.start(1):m_lo_az.end(1)], "NHB", 0.83)
@@ -693,6 +736,27 @@ class PreLabeler:
                             micro_candidates.append((lab, s, e, seg_text, score + 0.02))
                         continue
                     mt_l = matched_text.strip()
+                    m_tkp_shop = re.match(
+                        r"(?is)^(Tổ\s+\d+)\s+(Khu\s+Phố\s+[^\(\n,]+?)\s*\(\s*([^)]+?)\s*\)",
+                        mt_l,
+                    )
+                    if m_tkp_shop:
+                        for gi, slab in ((1, "NHB"), (2, "NHB"), (3, "POI")):
+                            g = m_tkp_shop.group(gi).strip()
+                            ofs = mt_l.casefold().find(g.casefold())
+                            if ofs >= 0:
+                                s = start + ofs
+                                micro_candidates.append((slab, s, s + len(g), g, score + 0.04))
+                        continue
+                    m_xom_thon = re.match(r"(?i)^(Xóm\s+\d+)\s+(thôn\s+[^,\n]+)$", mt_l)
+                    if m_xom_thon and m_xom_thon.group(2).lstrip()[:1].islower():
+                        for gi in (1, 2):
+                            g = m_xom_thon.group(gi).strip()
+                            ofs = mt_l.casefold().find(g.casefold())
+                            if ofs >= 0:
+                                s = start + ofs
+                                micro_candidates.append(("NHB", s, s + len(g), g, score + 0.03))
+                        continue
                     if re.match(r'(?is)^tháp\s+', mt_l) and '(' in mt_l:
                         op = mt_l.index('(')
                         outer_span = mt_l[:op].strip(' ,.')
