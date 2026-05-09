@@ -6132,7 +6132,7 @@ async function initEvidenceView() {
     } finally {
       if (btn) {
         btn.disabled = false;
-        btn.innerHTML = '<i class="fa-solid fa-forward-fast"></i> Đối chiếu mọi mẫu';
+        btn.innerHTML = '<i class="fa-solid fa-forward-fast"></i> Đối chiếu tất cả';
       }
     }
     if (activeId) renderEditor();
