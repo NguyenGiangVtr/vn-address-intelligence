@@ -83,4 +83,12 @@
     </div>
 
   </div>
+
+  <!-- Full-viewport loading veil for random-predict only; `hidden` keeps it out of layout/paint when idle -->
+  <div id="plt-random-loading-overlay" class="plt-random-loading-overlay" hidden aria-hidden="true">
+    <div class="plt-random-loading-overlay__panel" role="status" aria-live="polite">
+      <i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i>
+      <span>Đang lấy mẫu ngẫu nhiên…</span>
+    </div>
+  </div>
 </div>

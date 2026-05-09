@@ -292,6 +292,8 @@ function navigateToPage(pageId, shouldUpdateURL = true) {
       page.classList.toggle('active', page.id === pageId);
     });
 
+    if (pageId !== 'prelabeler-cases') window.pltDismissRandomPredictLoadingOverlay?.();
+
     // Update title
     const titleEl = document.getElementById('page-title');
     if (titleEl) {
@@ -5493,16 +5495,20 @@ async function initEvidenceView() {
       return;
     }
 
+    const visibleCount = filtered.length;
+
     el.innerHTML = filtered
       .map((c, idx) => {
         const rr = results[c.id];
         const dot = rr == null ? 'plt-dot-none' : rr.passed ? 'plt-dot-pass' : 'plt-dot-fail';
         const cls = rr == null ? '' : rr.passed ? 'pass' : 'fail';
+        /** Newest first (idx 0) gets largest rank = visibleCount — reads like “mẫu cao = mới hơn”. */
+        const rank = visibleCount - idx;
         return `
         <div class="plt-item ${cls}${activeId === c.id ? ' active' : ''}" onclick="pltSelect('${c.id}')">
           <div class="plt-item-name">
             <span class="plt-dot ${dot}"></span>
-            <span class="plt-item-index">${idx + 1}.</span>
+            <span class="plt-item-index">${rank}.</span>
             ${pltEsc(c.name || 'Chưa đặt tên')}
             <div class="plt-item-actions">
               <button class="btn-icon" onclick="event.stopPropagation();pltDup('${c.id}')" title="Nhân đôi"><i class="fa-solid fa-copy"></i></button>
@@ -5569,8 +5575,16 @@ async function initEvidenceView() {
     return out;
   }
 
+  function pltSetRandomPredictLoadingOverlay(show) {
+    const overlay = document.getElementById('plt-random-loading-overlay');
+    if (!(overlay instanceof HTMLElement)) return;
+    overlay.hidden = !show;
+    overlay.setAttribute('aria-hidden', show ? 'false' : 'true');
+  }
+
   async function pltGetRandomAndPredict() {
     const btn = document.getElementById('plt-btn-random-predict');
+    pltSetRandomPredictLoadingOverlay(true);
     if (btn) {
       btn.disabled = true;
       btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang xử lý…';
@@ -5632,6 +5646,7 @@ async function initEvidenceView() {
     } catch (e) {
       window.showToast?.(`Lỗi khi lấy mẫu ngẫu nhiên: ${e.message}`, 'danger');
     } finally {
+      pltSetRandomPredictLoadingOverlay(false);
       if (btn) {
         btn.disabled = false;
         btn.innerHTML = '<i class="fa-solid fa-shuffle"></i> Lấy mẫu ngẫu nhiên và gợi ý nhãn';
@@ -6285,6 +6300,7 @@ async function initEvidenceView() {
   window.pltExport = pltExport;
   window.pltAutoExtract = pltAutoExtract;
   window.pltGetRandomAndPredict = pltGetRandomAndPredict;
+  window.pltDismissRandomPredictLoadingOverlay = () => pltSetRandomPredictLoadingOverlay(false);
   window.pltInitPage = () => pltInit();
 
   pltBindDelegatedEvents();
