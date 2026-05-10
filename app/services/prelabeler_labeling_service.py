@@ -13,6 +13,7 @@ File nay KHONG duoc khai bao lai vocabulary admin prefix.
 from __future__ import annotations
 
 import re
+import unicodedata
 from typing import Any, Dict, List, Optional
 
 from app.ai.constants import (
@@ -37,7 +38,9 @@ ADMIN_ALL_PREFIXES_ALT = "|".join(
 
 
 def normalize_text(text: str) -> str:
-    return str(text or "").strip().lower()
+    """Chuỗi so khớp nhất quán (UI vs thuật toán): NFC + strip + lower — tránh NFD/NFC không khớp dù nhìn giống."""
+    s = unicodedata.normalize("NFC", str(text or "").strip())
+    return s.lower()
 
 
 def admin_entity_text_equivalent(label: str, expected_text: str, actual_text: str) -> bool:
@@ -237,9 +240,9 @@ def validate_expected_against_actual(
                 all_passed = False
 
         found = any(
-            a.get("label") == label
+            str(a.get("label") or "").strip().upper() == label
             and (
-                normalize_text(a.get("text")) == normalize_text(text)
+                normalize_text(str(a.get("text") or "")) == normalize_text(text)
                 or admin_entity_text_equivalent(label, text, str(a.get("text") or ""))
             )
             for a in actual

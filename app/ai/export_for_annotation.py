@@ -48,7 +48,30 @@ class PreLabeler:
     """
     
     # Danh sách các thành phố trực thuộc trung ương
-    CENTRAL_CITIES = {"hồ chí minh", "hcm", "hà nội", "hn", "đà nẵng", "đn", "hải phòng", "hp", "cần thơ", "ct"}
+    CENTRAL_CITIES = {"hồ chí minh", "hcm", "sài gòn", "sg", "hà nội", "hn", "đà nẵng", "đn", "hải phòng", "hp", "cần thơ", "ct"}
+
+    # Alias đuôi chuỗi (không dấu phẩy) → nhận PRO; thứ tự dài trước để khớp “tp hồ chí minh” trước “hcm”.
+    METRO_PRO_TAIL_PATTERNS = (
+        r"(?:tp\.?\s+|thành\s*phố\s+)hồ\s*ch[íi]\s*minh",
+        r"hồ\s*ch[íi]\s*minh",
+        r"(?:tp\.?\s+|thành\s*phố\s+)s[àa]i\s*g[òo]n",
+        r"s[àa]i\s*g[òo]n",
+        r"tp\.?\s*hcm",
+        r"(?:tp\.?\s+|thành\s*phố\s+)h[àa]\s*n[ộo]i",
+        r"h[àa]\s*n[ộo]i",
+        r"tp\.?\s*hn\b",
+        r"(?:tp\.?\s+|thành\s*phố\s+)đ[àa]\s*n[ẵa]ng",
+        r"đ[àa]\s*n[ẵa]ng",
+        r"tp\.?\s*đn\b",
+        r"(?:tp\.?\s+|thành\s*phố\s+)hải\s*phòng",
+        r"hải\s*phòng",
+        r"(?:tp\.?\s+|thành\s*phố\s+)cần\s*thơ",
+        r"cần\s*thơ",
+        r"\bhcm\b",
+        r"\btp\.?\s*sg\b",
+        r"\bsg\b",
+        r"\bhn\b",
+    )
 
     # ──────────────────────────────────────────────────────────────────────────
     # Cấu hình tiền tố và từ khóa đơn vị hành chính để làm sạch nhãn.
@@ -472,6 +495,46 @@ class PreLabeler:
             if not name:
                 return ""
             return f"{prefix} {name}".strip()
+
+        def _apply_single_segment_metro_tail() -> None:
+            """Một khối không có dấu phẩy: đuôi alias TP lớn → PRO; phần còn lại → WDS (Phường/…) hoặc DST (Quận/…) ở đuôi."""
+            if len(raw_segments) != 1:
+                return
+            t = raw_address.rstrip()
+            if not t:
+                return
+
+            our_pro = None
+            if not _has_macro("PRO"):
+                for pat in cls.METRO_PRO_TAIL_PATTERNS:
+                    m = re.search(rf"(?i)(?:{pat})\s*$", t)
+                    if m:
+                        our_pro = (m.start(), m.end())
+                        break
+                if our_pro:
+                    s0, e0 = our_pro
+                    add_result(s0, e0, t[s0:e0], "PRO", 0.94)
+
+            cut = our_pro[0] if our_pro else len(t)
+            head = t[:cut].rstrip()
+            if not head:
+                return
+
+            wds_alt = ADMIN_PREFIX_ALTERNATIVES.get("WDS") or ""
+            dst_alt = ADMIN_PREFIX_ALTERNATIVES.get("DST") or ""
+            if not _has_macro("WDS") and wds_alt:
+                mw = re.search(rf"(?i)({wds_alt})\s+(.+)\s*$", head)
+                if mw:
+                    s0, e0 = mw.start(), mw.end()
+                    add_result(s0, e0, t[s0:e0], "WDS", 0.93)
+                    return
+            if not _has_macro("DST") and dst_alt:
+                md = re.search(rf"(?i)({dst_alt})\s+(.+)\s*$", head)
+                if md:
+                    s0, e0 = md.start(), md.end()
+                    add_result(s0, e0, t[s0:e0], "DST", 0.92)
+
+        _apply_single_segment_metro_tail()
 
         # Fallback: khi không có master-data context (ward/district/province),
         # vẫn trích xuất WDS/DST/PRO trực tiếp từ raw theo segment có tiền tố admin.
