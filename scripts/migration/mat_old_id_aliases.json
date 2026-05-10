@@ -1,0 +1,13 @@
+{
+  "_doc": "Manual name aliases để map mat.<level>.old_id từ mat.<level>_old khi tên đã đổi giữa OLD snapshot và CURRENT master. Áp dụng PRE-cascade trong refresh_mat_old_id.py: cập nhật cấp tỉnh trước, sau đó cascade district/ward sẽ tự cải thiện theo. Chỉ ghi vào dòng đang `old_id IS NULL` -> không bao giờ ghi đè.",
+  "province": [
+    {
+      "comment": "Sáp nhập 2025: tỉnh 'Thừa Thiên Huế' đổi thành 'Huế' (TP trực thuộc TW).",
+      "admin_version": 1,
+      "cur_name": "Huế",
+      "old_name": "Thừa Thiên Huế"
+    }
+  ],
+  "district": [],
+  "ward": []
+}

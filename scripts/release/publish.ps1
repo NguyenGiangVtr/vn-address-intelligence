@@ -1,121 +1,155 @@
 # --------------------------------------------------------------
-# Publish Script for VN Address Intelligence
-# Create a clean 'publish' folder for VPS upload
-# Usage: .\scripts\release\publish.ps1 [-CleanupAfter]
+# Publish folder — aligned with .github/workflows/deploy.yml (job: package)
+#
+# Parity (local manual pack):
+#   - Optional prelabeler regression (same command as CI)
+#   - Asset version = Unix epoch seconds (CI: ASSET_VERSION from deploy_start_ts)
+#   - Cache bust: only ui/*.html and ui/pages/*.html (sed-equivalent replace)
+#   - Tree: mirror repo with same exclusions as "Build release tarball" tar step
+#
+# Usage: .\scripts\release\publish.ps1 [-SkipTests] [-NoPipInstall] [-AssetVersion "1736..."] [-CleanupAfter]
+# Run from repository root.
 # --------------------------------------------------------------
 
 param(
-    [switch]$CleanupAfter  # Delete publish folder after completion (security)
+    [string]$AssetVersion = "",
+    [switch]$SkipTests,
+    [switch]$NoPipInstall,
+    [switch]$CleanupAfter
 )
 
 $ErrorActionPreference = "Stop"
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $OutputEncoding = [System.Text.Encoding]::UTF8
-$PublishDir = "publish"
 
-Write-Host "--------------------------------------------------------------" -ForegroundColor Cyan
-Write-Host "  Building Publish Folder with Versioning..."
-Write-Host "--------------------------------------------------------------" -ForegroundColor Cyan
+$RepoRoot = (Get-Location).Path
+$PublishDir = Join-Path $RepoRoot "publish"
 
-# 0. Run version build first (NEW)
-Write-Host "[0/5] Updating versions for cache busting..."
-try {
-    $timestamp = Get-Date -Format "yyyyMMddHHmm"
-    
-    # Check if Node.js build script exists
-    if (Test-Path "build-version.js") {
-        Write-Host "  - Running Node.js build script..." -ForegroundColor Yellow
-        node build-version.js
-        Write-Host "  [OK] Version build completed: $timestamp" -ForegroundColor Green
-    } else {
-        # Fallback to PowerShell version
-        Write-Host "  - Running PowerShell fallback..." -ForegroundColor Yellow
-        $uiPath = "ui"
-        if (Test-Path $uiPath) {
-            $htmlFiles = Get-ChildItem -Path $uiPath -Filter "*.html" -Recurse
-            foreach ($file in $htmlFiles) {
-                $content = Get-Content $file.FullName -Raw -Encoding UTF8
-                $content = $content -replace 'style\.css\?v=\d+', "style.css?v=$timestamp"
-                $content = $content -replace 'app\.js(\?v=\d+)?', "app.js?v=$timestamp"
-                Set-Content -Path $file.FullName -Value $content -Encoding UTF8
-            }
-            Write-Host "  [OK] Updated $($htmlFiles.Count) files with version: $timestamp" -ForegroundColor Green
+function Get-UnixEpochSeconds {
+    [Math]::Floor([decimal]([DateTimeOffset]::UtcNow.UtcDateTime - [datetime]'1970-01-01T00:00:00Z').TotalSeconds)
+}
+
+function Invoke-CacheBustDeployParity {
+    param([string]$Root, [string]$Version)
+    # Mirrors: sed on ui/*.html and ui/pages/*.html only (deploy.yml "Apply cache-busting")
+    $utf8 = New-Object System.Text.UTF8Encoding $false
+    $paths = @(
+        (Join-Path $Root "ui"),
+        (Join-Path $Root "ui\pages")
+    )
+    foreach ($dir in $paths) {
+        if (-not (Test-Path $dir)) { continue }
+        Get-ChildItem -Path $dir -Filter "*.html" -File -ErrorAction SilentlyContinue | ForEach-Object {
+            $c = Get-Content $_.FullName -Raw -Encoding UTF8
+            $c = $c -replace 'style\.css(\?v=\d+)?', "style.css?v=$Version"
+            $c = $c -replace 'app\.js(\?v=\d+)?', "app.js?v=$Version"
+            [System.IO.File]::WriteAllText($_.FullName, $c, $utf8)
         }
     }
-} catch {
-    Write-Warning "  [WARN] Version build failed: $($_.Exception.Message)"
-    Write-Host "  Continuing publish..." -ForegroundColor Yellow
 }
 
-# 1. Clean old publish folder
+function Test-RobocopySuccess {
+    param([int]$ExitCode)
+    # Robocopy: 0–7 = OK (MS docs)
+    if ($ExitCode -ge 8) {
+        throw "robocopy failed with exit code $ExitCode"
+    }
+}
+
+Write-Host "--------------------------------------------------------------" -ForegroundColor Cyan
+Write-Host "  Publish (CI parity: .github/workflows/deploy.yml package)"
+Write-Host "--------------------------------------------------------------" -ForegroundColor Cyan
+
+if (-not $AssetVersion) {
+    $AssetVersion = "$(Get-UnixEpochSeconds)"
+}
+Write-Host "[info] ASSET_VERSION (epoch) = $AssetVersion" -ForegroundColor Gray
+
+# 0 — Same tests as CI "Run prelabeler regression suite" (after deps installed on dev machine)
+if (-not $SkipTests) {
+    Write-Host "[0/4] Prelabeler regression (deploy.yml package job)..." -ForegroundColor Cyan
+    if (-not (Get-Command python -ErrorAction SilentlyContinue)) {
+        throw "python not found on PATH. Install Python 3.11 or use -SkipTests."
+    }
+    $reqProd = Join-Path $RepoRoot "requirements-prod.txt"
+    if (-not (Test-Path $reqProd)) {
+        throw "Missing $reqProd"
+    }
+    if (-not $NoPipInstall) {
+        Write-Host "  pip install -r requirements-prod.txt (same as CI)..." -ForegroundColor Gray
+        & python -m pip install --no-cache-dir -r $reqProd
+        if ($LASTEXITCODE -ne 0) {
+            throw "pip install failed (exit $LASTEXITCODE)"
+        }
+    }
+    else {
+        Write-Host "  [skip] -NoPipInstall -- ensure deps match CI" -ForegroundColor Yellow
+    }
+    $env:PYTHONIOENCODING = "utf-8"
+    $regScript = Join-Path $RepoRoot "scripts\labeling\run_prelabeler_labeling_cases.py"
+    if (-not (Test-Path $regScript)) {
+        throw "Missing $regScript"
+    }
+    & python $regScript --min-pass-rate 1.0
+    if ($LASTEXITCODE -ne 0) {
+        throw "Prelabeler regression failed (exit $LASTEXITCODE). Fix or use -SkipTests."
+    }
+    Write-Host "  [OK] Regression passed" -ForegroundColor Green
+} else {
+    Write-Host "[0/4] Skipped tests (-SkipTests)" -ForegroundColor Yellow
+}
+
+# 1 — Clean output dir
 if (Test-Path $PublishDir) {
-    Write-Host "[1/5] Removing old publish folder..."
+    Write-Host "[1/4] Removing old publish folder..."
     Remove-Item -Path $PublishDir -Recurse -Force
 }
-
-# 2. Create directory structure
-Write-Host "[2/5] Creating directory structure..."
 New-Item -ItemType Directory -Path $PublishDir | Out-Null
-$SubDirs = @("app", "ui", "data", "scripts", "models", "reports", "logs")
-foreach ($dir in $SubDirs) {
-    New-Item -ItemType Directory -Path "$PublishDir\$dir" | Out-Null
+
+# 2 — Mirror tree like "tar -czf" excludes (deploy.yml "Build release tarball")
+Write-Host "[2/4] Mirroring repo into publish\ (tar exclusions)..." -ForegroundColor Cyan
+$excludeDirs = @(".git", ".venv", "publish", "__pycache__")
+$excludeFiles = @("*.pyc", "*.pyo", "*.log")
+# robocopy: destination must exist; /E all subdirs; /XD /XF match CI intent
+$robolog = Join-Path $env:TEMP "robocopy-publish.log"
+$args = @(
+    $RepoRoot, $PublishDir,
+    "/E",
+    "/NFL", "/NDL", "/NJH", "/NJS", "/NP"
+)
+foreach ($d in $excludeDirs) { $args += "/XD", $d }
+foreach ($f in $excludeFiles) { $args += "/XF", $f }
+
+& robocopy @args | Out-Null
+Test-RobocopySuccess $LASTEXITCODE
+
+# Optional: keep production env next to artifact (like old script; not in git on CI)
+if (Test-Path (Join-Path $RepoRoot ".env")) {
+    Copy-Item -Path (Join-Path $RepoRoot ".env") -Destination (Join-Path $PublishDir ".env") -Force
+    Write-Host "  [OK] Copied .env into publish (local only; CI artifact uses repo checkout)" -ForegroundColor Green
+} elseif (Test-Path (Join-Path $RepoRoot ".env.example")) {
+    Copy-Item -Path (Join-Path $RepoRoot ".env.example") -Destination (Join-Path $PublishDir ".env.example") -Force
+    Write-Host "  [INFO] Copied .env.example (no .env)" -ForegroundColor Gray
 }
 
-# 3. Copy files with versioned assets
-Write-Host "[3/5] Copying files (excluding junk files)..."
-Copy-Item -Path "app\*" -Destination "$PublishDir\app" -Recurse -Exclude "__pycache__", "*.pyc"
-Copy-Item -Path "ui\*" -Destination "$PublishDir\ui" -Recurse
-Copy-Item -Path "ui\login.html" -Destination "$PublishDir\ui" # Explicit copy
-Copy-Item -Path "scripts\deployment\vnai-vps-setup.sh" -Destination "$PublishDir\scripts"
-Copy-Item -Path "requirements.txt" -Destination "$PublishDir"
-Copy-Item -Path "start.py" -Destination "$PublishDir"
-# Copy actual .env file for production
-if (Test-Path ".env") {
-    Copy-Item -Path ".env" -Destination "$PublishDir"
-    Write-Host "  [OK] Copied .env file" -ForegroundColor Green
-} else {
-    Copy-Item -Path ".env.example" -Destination "$PublishDir"
-    Write-Warning "  [WARN] .env not found, using .env.example"
-}
+# 3 — Cache bust on *copies* only (under publish); matches CI sed scope
+Write-Host "[3/4] Cache bust: publish\ui\*.html + publish\ui\pages\*.html (v=$AssetVersion)..." -ForegroundColor Cyan
+Invoke-CacheBustDeployParity -Root $PublishDir -Version $AssetVersion
+Write-Host "  [OK] HTML query strings updated" -ForegroundColor Green
 
-# Copy seed data only
-if (Test-Path "data\seed") {
-    New-Item -ItemType Directory -Path "$PublishDir\data\seed" | Out-Null
-    Copy-Item -Path "data\seed\*" -Destination "$PublishDir\data\seed" -Recurse
-}
-
-# 4. Copy version info for reference
-Write-Host "[4/5] Copying version info..."
-if (Test-Path "version-info.json") {
-    Copy-Item -Path "version-info.json" -Destination "$PublishDir"
-    $versionInfo = Get-Content "version-info.json" | ConvertFrom-Json
-    Write-Host "  [OK] Version: $($versionInfo.version) - Timestamp: $($versionInfo.timestamp)" -ForegroundColor Green
-}
-
-# 5. Success
+# 4 — Done
+Write-Host "[4/4] ------------------------------------------------------" -ForegroundColor Green
+Write-Host "  PUBLISH READY: $PublishDir"
+Write-Host "  VPS install (same as deploy job):"
+Write-Host "    cd <release_dir>; python3 -m venv .venv; . .venv/bin/activate"
+Write-Host "    pip install --upgrade pip"
+Write-Host "    pip install --no-cache-dir -r requirements-prod.txt"
 Write-Host "--------------------------------------------------------------" -ForegroundColor Green
-Write-Host "  [OK] PUBLISH FOLDER IS READY!"
-Write-Host "  Location: $PWD\$PublishDir"
-Write-Host "  "
-if (Test-Path "version-info.json") {
-    $versionInfo = Get-Content "version-info.json" | ConvertFrom-Json
-    Write-Host "  Version: $($versionInfo.version)" -ForegroundColor Cyan
-    Write-Host "  Build time: $($versionInfo.timestamp)" -ForegroundColor Gray
-    Write-Host "  "
-}
-Write-Host "  You can zip the 'publish' folder and upload to your VPS,"
-Write-Host "  or use MobaXterm to drag-and-drop content to /opt/vnai/"
-Write-Host "  "
-Write-Host "  CSS and JS were updated with a new version; browser cache will refresh." -ForegroundColor Yellow
 
-# Optional cleanup for security
 if ($CleanupAfter) {
-    Write-Host "  "
-    Write-Host "  [SECURITY] Auto-cleanup enabled. Folder will be deleted in 30 seconds..."
-    Write-Host "  Press Ctrl+C to cancel cleanup."
+    Write-Host ""
+    Write-Host "  [SECURITY] Cleanup in 30s (Ctrl+C to keep folder)..." -ForegroundColor Yellow
     Start-Sleep -Seconds 30
     Remove-Item -Path $PublishDir -Recurse -Force
-    Write-Host "  [OK] Publish folder cleaned up for security." -ForegroundColor Yellow
+    Write-Host "  Removed publish folder." -ForegroundColor Yellow
 }
-
-Write-Host "--------------------------------------------------------------" -ForegroundColor Green

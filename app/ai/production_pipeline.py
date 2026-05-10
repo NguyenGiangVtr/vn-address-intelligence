@@ -116,7 +116,9 @@ def run_pipeline(config_path: str, limit: int = None):
     # Lấy những bản ghi đang PENDING hoặc chưa có address_standardized
     query = f"""
         SELECT id, raw_address, street_address, ward_name, district_name, province_name,
-               ward_id, district_id, province_id, latitude, longitude
+               ward_id, district_id, province_id,
+               old_ward_id, old_district_id, old_province_id,
+               latitude, longitude
         FROM prq.address_cleansing_queue
         WHERE processing_status = 'PENDING' OR address_standardized IS NULL
     """

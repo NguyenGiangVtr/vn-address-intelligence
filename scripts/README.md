@@ -1,86 +1,77 @@
-# VN Address Intelligence - Deploy Scripts
+# Scripts & deploy
 
-## Quick Start
+## Deploy nhanh (PowerShell)
 
-### 🚀 One-Command Deploy (Recommended)
 ```powershell
-# Deploy everything to VPS
+# Deploy lên VPS (wrapper → scripts/release/deploy.ps1)
 .\scripts\deploy.ps1
 
-# Deploy to custom VPS
-.\scripts\deploy.ps1 -VpsIp "1.2.3.4" -VpsUser "ubuntu"
-
-# Just restart services (no build/upload)
+# Chỉ restart service
 .\scripts\deploy.ps1 -RestartOnly
 ```
 
-### 📦 Build Only
+## Build publish (đồng bộ CI)
+
 ```powershell
-# Build publish folder (includes .env file)
+# Canonical: CI-parity bundle
+.\scripts\release\publish.ps1
+
+# Wrapper từ gốc repo
 .\scripts\publish.ps1
-
-# Build with auto-cleanup after 30 seconds
-.\scripts\publish.ps1 -CleanupAfter
 ```
 
-## What's Changed
+Chi tiết publish: xem comment đầu file `scripts/release/publish.ps1` và [`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml).
 
-### ✅ Environment Variables Fixed
-- **Before**: Only copied `.env.example`, needed manual setup on VPS
-- **After**: Automatically copies actual `.env` file with real credentials
-- **Security**: Local publish folder auto-cleaned after deploy
+---
 
-### ✅ Automated Deploy Process
-1. **Build** - Creates clean publish folder
-2. **Upload** - Uses rsync (fast) or scp (fallback) 
-3. **Setup** - Installs dependencies on VPS
-4. **Restart** - Restarts API service and nginx
-5. **Test** - Verifies API health
-6. **Cleanup** - Removes local files for security
+## Mục lục thư mục `scripts/`
 
-## File Structure
+| Thư mục | Mục đích |
+|---------|-----------|
+| `ops/` | Vận hành: embeddings, vector index, corpus, optimize parser — [README](ops/README.md). File tương ứng ở **gốc repo** là shim tương thích. |
+| `scratch/` | Thử một lần, debug DB/API — [README](scratch/README.md). |
+| `deployment/` | VPS: setup, `deploy.sh`, service template. |
+| `release/` | `publish.ps1`, `deploy.ps1` (bundle + upload). |
+| `migration/` | Chuyển schema/dữ liệu giữa các phiên bản bảng. |
+| `sql/` | File `.sql` + tiện ích áp dụng (vd. `apply_sql_file.py`). |
+| `diagnostics/` | Kiểm tra queue, pgvector, NaN, pilot vs ground truth, … |
+| `enrichment/` | Làm giàu / sửa batch ngoài luồng API. |
+| `labeling/` | PreLabeler: `prelabeler_labeling_cases.json`, regression, refresh. |
+| `data/` | Tải dataset ngoài, nạp vào corpus/DB. |
+| `reporting/` | Xuất evidence / báo cáo. |
+| `test/` | Regression trong repo (vd. `test_prelabeler_regression.py`). |
 
-```
-scripts/
-├── deploy.ps1          # Wrapper → release/deploy.ps1
-├── publish.ps1         # Wrapper → release/publish.ps1
-└── release/
-    ├── deploy.ps1      # Full automated deploy
-    └── publish.ps1     # Build publish folder only
-```
+**File rời ở `scripts/`** (không vào thư mục con): thường là script cũ hoặc entry ngắn — khi sửa lớn nên **gom vào đúng thư mục** phía trên.
 
-## Security Notes
+---
 
-- ✅ `.env` is gitignored (won't be committed)
-- ✅ Local publish folder auto-cleaned after deploy
-- ✅ VPS `.env` file gets 600 permissions (owner-only read)
-- ⚠️ Ensure your local `.env` has production values before deploy
+## Quy ước script mới
 
-## Troubleshooting
+1. Đặt vào **một** thư mục con theo bảng; không thêm Python mới ở **root repo** nếu tránh được.
+2. Shebang / `python` có thể chạy từ root: `python scripts/diagnostics/check_queue_columns.py`.
+3. Phụ thuộc: dùng cùng venv với app; AI labeling cần `requirements-prod.txt` hoặc `requirements.txt` theo rule trong workspace.
 
-### SSH Issues
+---
+
+## Bảo mật (deploy / .env)
+
+- `.env` gitignored; publish local có thể copy `.env` (xem `publish.ps1`).
+- Trên VPS quyền file `.env` hạn chế (owner read).
+
 ```powershell
-# Test SSH connection
-ssh root@157.66.81.69 'echo "Connection OK"'
-
-# Check VPS service status
-ssh root@157.66.81.69 'supervisorctl status'
-```
-
-### API Issues
-```powershell
-# Check API logs
-ssh root@157.66.81.69 'tail -f /var/log/vnai/api-access.log'
-
-# Manual restart
-ssh root@157.66.81.69 'supervisorctl restart vnai-api'
-```
-
-### Build Issues
-```powershell
-# Check if .env exists
 Test-Path .env
-
-# Manual build without auto-cleanup
-.\scripts\publish.ps1
+.\scripts\publish.ps1 -SkipTests
 ```
+
+---
+
+## Gợi ý xử lý sự cố SSH / API
+
+```powershell
+ssh user@HOST 'echo OK'
+ssh user@HOST 'sudo systemctl status YOUR_SERVICE'
+```
+
+---
+
+**Cấu trúc tổng thể repo**: [`docs/00-ENGINEERING/SOURCE-LAYOUT.md`](../docs/00-ENGINEERING/SOURCE-LAYOUT.md).

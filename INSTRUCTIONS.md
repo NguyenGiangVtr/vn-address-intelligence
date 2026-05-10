@@ -79,6 +79,8 @@ Schema prq: Processing Queue (AddressCleansingQueue — bảng chính)
 - `street_address`: Lõi địa chỉ đã bóc tách bởi SQL
 - `address_standardized`: Kết quả cuối cùng sau AI (OUTPUT)
 
+**Runbook vận hành (train → gate → cleanse → release):** `docs/01-ai-training/11-OPERATING-PHASES-ABCD.md`.
+
 ### 3.2. AI Models (app/ai/)
 | Model | File | Vai trò |
 |---|---|---|

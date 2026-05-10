@@ -6,7 +6,7 @@
 
 ## 📋 Tổng quan Migration
 
-Bảng `prq.address_clean_corpus` được thiết kế để thay thế việc loading corpus từ nhiều nguồn khác nhau, tập trung hóa và tối ưu hóa cho Phase 3 của Training Pipeline.
+Bảng `prq.address_clean_corpus` được thiết kế để thay thế việc loading corpus từ nhiều nguồn khác nhau, tập trung hóa và tối ưu hóa cho pipeline huấn luyện. Sau **cleanse hàng loạt trên queue**, nên làm đầy lại corpus (ví dụ `QUEUE_STANDARDIZED`) theo [11-OPERATING-PHASES-ABCD.md](../01-ai-training/11-OPERATING-PHASES-ABCD.md) (mục vòng lặp sau release).
 
 **🔥 CRITICAL:** Tất cả joins với mat schema PHẢI include admin_version để đảm bảo temporal consistency:
 ```sql

@@ -1,0 +1,41 @@
+<!-- Page: documentation — đọc docs/*.md trực tiếp từ API (single source) -->
+<div class="page" id="documentation">
+
+  <div class="page-header doc-hub-header">
+    <div>
+      <h2 class="page-title-inner">Trung tâm tài liệu</h2>
+      <p class="page-subtitle">
+        Hiển thị nội dung trong thư mục <strong>docs/</strong> của repository.
+        Git và editor vẫn là nơi chỉnh sửa duy nhất; trang web chỉ đọc file <strong>.md</strong> qua máy chủ,
+        không tạo bản HTML tĩnh thứ hai.
+      </p>
+    </div>
+  </div>
+
+  <div class="card doc-hub-card">
+    <div class="doc-hub-toolbar">
+      <input type="search" id="doc-hub-filter" class="doc-hub-search-input"
+        placeholder="Lọc theo tiêu đề hoặc đường dẫn…" autocomplete="off" aria-label="Lọc tài liệu">
+      <div class="doc-hub-toolbar-hints">
+        <span class="doc-hub-muted-inline">Đường dẫn mặc định:</span>
+        <code class="doc-hub-path-hint">INDEX.md</code>
+        <button type="button" class="btn btn-sm btn-outline" id="doc-hub-open-index">
+          Mở mục lục
+        </button>
+      </div>
+    </div>
+
+    <div class="doc-hub-layout">
+      <aside class="doc-hub-nav-wrapper" aria-label="Mục lục tài liệu Markdown">
+        <div class="doc-hub-toc-title">Mục lục</div>
+        <div id="doc-hub-nav-status" class="doc-hub-muted">Đang tải danh sách…</div>
+        <nav id="doc-hub-nav" class="doc-hub-nav doc-hub-nav-toc"></nav>
+      </aside>
+      <article class="doc-hub-article" aria-live="polite">
+        <div id="doc-hub-breadcrumb" class="doc-hub-breadcrumb"></div>
+        <div id="doc-hub-error" class="doc-hub-alert" hidden></div>
+        <div id="doc-hub-render" class="doc-hub-render"></div>
+      </article>
+    </div>
+  </div>
+</div>

@@ -1,5 +1,7 @@
 # 🚀 QUICK REFERENCE - VIETNAMESE ADDRESS NORMALIZATION 4-LAYER ENSEMBLE
 
+**Tham chiếu repo (PostgreSQL queue):** `docs/01-ai-training/11-OPERATING-PHASES-ABCD.md`.
+
 ## ⚡ INSTALLATION & SETUP (3 STEPS)
 
 ### Step 1: Open Google Colab

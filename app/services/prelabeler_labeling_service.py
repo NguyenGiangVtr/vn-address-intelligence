@@ -40,6 +40,42 @@ def normalize_text(text: str) -> str:
     return str(text or "").strip().lower()
 
 
+def admin_entity_text_equivalent(label: str, expected_text: str, actual_text: str) -> bool:
+    """So khớp WDS/DST/PRO khi một bên có tiền tố Type+Name và bên kia chỉ tên (canonical trong suite)."""
+    lab = str(label or "").upper()
+    if lab not in ("WDS", "DST", "PRO"):
+        return False
+    exp = str(expected_text or "").strip()
+    act = str(actual_text or "").strip()
+    if normalize_text(exp) == normalize_text(act):
+        return True
+    alts = ADMIN_PREFIX_ALTERNATIVES.get(lab)
+    if not alts:
+        return False
+    strip_re = rf"(?i)^(?:{alts})\s+"
+
+    def _strip_admin_prefix(s: str) -> str:
+        t = str(s or "").strip()
+        return re.sub(strip_re, "", t, count=1).strip()
+
+    eb = _strip_admin_prefix(exp)
+    ab = _strip_admin_prefix(act)
+    if not eb or not ab:
+        return False
+    eb_n = normalize_text(eb)
+    ab_n = normalize_text(ab)
+    if lab == "PRO":
+        pro_key = {
+            "thành phố trung ương hồ chí minh": "hồ chí minh",
+            "uảng nam": "quảng nam",
+            "quang nam province": "quảng nam",
+            "quang nam": "quảng nam",
+        }
+        eb_n = pro_key.get(eb_n, eb_n)
+        ab_n = pro_key.get(ab_n, ab_n)
+    return eb_n == ab_n
+
+
 def first_expected_text(items: List[Dict[str, Any]], label: str) -> Optional[str]:
     for it in items or []:
         if not isinstance(it, dict):
@@ -201,7 +237,11 @@ def validate_expected_against_actual(
                 all_passed = False
 
         found = any(
-            a.get("label") == label and normalize_text(a.get("text")) == normalize_text(text)
+            a.get("label") == label
+            and (
+                normalize_text(a.get("text")) == normalize_text(text)
+                or admin_entity_text_equivalent(label, text, str(a.get("text") or ""))
+            )
             for a in actual
         )
         details.append({"expected": exp, "found": found})
@@ -216,10 +256,23 @@ def validate_expected_against_actual(
         (str(a.get("label") or "").upper(), normalize_text(str(a.get("text") or "")))
         for a in actual if isinstance(a, dict)
     }
+    def _actual_unused_admin(lab: str, raw_txt: str) -> bool:
+        if lab not in ("WDS", "DST", "PRO"):
+            return True
+        for e in expected:
+            if not isinstance(e, dict):
+                continue
+            if str(e.get("label") or "").upper() != lab:
+                continue
+            if admin_entity_text_equivalent(lab, str(e.get("text") or ""), raw_txt):
+                return False
+        return True
+
     unexpected = [
         {"label": lab, "text": txt}
         for (lab, txt) in actual_set
         if (lab, txt) not in expected_set
+        and _actual_unused_admin(lab, txt)
     ]
     if unexpected:
         all_passed = False

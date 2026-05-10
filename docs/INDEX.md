@@ -2,27 +2,35 @@
 
 Hệ thống tài liệu được tổ chức theo nhóm chức năng để dễ dàng tìm kiếm và quản lý.
 
+**Nguồn chân:** toàn bộ nội dung đọc trên Web UI là các tệp **`.md` trong `docs/`** (không có bản HTML tĩnh trùng lặp). Trong SaaS sau khi đăng nhập: menu **AI & Benchmark → Trung tâm tài liệu** (`#/documentation`). Máy chủ phục vụ file qua `GET /api/repo-docs/list` và `GET /api/repo-docs/raw/{đường_dẫn}.md`; không cần bước convert sang HTML khi chỉnh sửa trong Git.
+
+---
+
+## 🧱 Cấu trúc mã & kỹ thuật - `00-ENGINEERING/`
+
+- **[SOURCE-LAYOUT.md](00-ENGINEERING/SOURCE-LAYOUT.md)** — Cây thư mục chuẩn, ranh giới `app/` vs `scripts/`, checklist khi thêm tính năng  
+- **Script & deploy:** [`scripts/README.md`](../scripts/README.md) · vận hành corpus/embeddings: [`scripts/ops/README.md`](../scripts/ops/README.md)
+
 ---
 
 ## 🤖 AI & Training - `01-ai-training/`
 Tài liệu về mô hình NER, quy trình huấn luyện, pre-labeling, và Colab
 
-**📊 Tổng hợp Toàn bộ Hệ thống:**
-- **[00-TRAINING-PIPELINE-OVERVIEW.md](01-ai-training/00-TRAINING-PIPELINE-OVERVIEW.md)** ⭐ **CHỈ MỤC MỚI** - Toàn bộ quy trình training (5 Phase, IPO chi tiết, thứ tự, KPI, kiểm chứng)
+**📊 Runbook vận hành (nguồn chân):**
+- **[11-OPERATING-PHASES-ABCD.md](01-ai-training/11-OPERATING-PHASES-ABCD.md)** — **A→B→C→D:** train & dữ liệu → khóa KPI → cleanse queue → release parser/UI  
+- **[00-TRAINING-PIPELINE-OVERVIEW.md](01-ai-training/00-TRAINING-PIPELINE-OVERVIEW.md)** — Tổng quan ngắn + link sang model docs
 
-**Tài liệu chi tiết từng Model (NEW):**
+**Redirect (giữ URL cũ, không trùng nội dung):** `08`, `09`, `10`, `production-playbook-execution-flow.md`, `ai-training-workflow-summary.md`, `training-phase-plan.md`, `NER-implement-planning.md`, `pre-labeler-planning.md` → tất cả trỏ tới **`11-OPERATING-PHASES-ABCD.md`**.
+
+**Tài liệu chi tiết từng Model:**
 - **[01-NER_Entities.md](01-ai-training/01-NER_Entities.md)** - PhoBERT NER: Input → Process → Output, Database, UI/UX, Metrics, Validation
 - **[02-PreLabeler.md](01-ai-training/02-PreLabeler.md)** - Hybrid Auto-Annotation: Macro + Micro labeling, Label Studio format
 - **[03-PhoBERT_Siamese.md](01-ai-training/03-PhoBERT_Siamese.md)** - Dense Retriever (Vietnamese): Corpus encoding, retrieval, performance benchmark
 - **[04-mGTE_Siamese.md](01-ai-training/04-mGTE_Siamese.md)** - Multilingual Siamese (Baseline): Zero-shot, latency comparison vs PhoBERT
 - **[05-Qwen_LLM.md](01-ai-training/05-Qwen_LLM.md)** - LLM Normalization: Prompt engineering, JSON parsing, confidence scoring
 
-**Tài liệu cũ (reference):**
-- [ai-training-workflow-summary.md](01-ai-training/ai-training-workflow-summary.md) - Legacy workflow (deprecated - dùng 00-TRAINING-PIPELINE-OVERVIEW thay thế)
-- [NER-implement-planning.md](01-ai-training/NER-implement-planning.md) - Planning doc
-- [training-phase-plan.md](01-ai-training/training-phase-plan.md) - Phase breakdown
-- [pre-labeler-planning.md](01-ai-training/pre-labeler-planning.md) - Pre-labeling strategy
-- [colab_guide.md](01-ai-training/colab_guide.md) - Google Colab setup
+**Khác:**
+- [colab_guide.md](01-ai-training/colab_guide.md) — Google Colab (tuỳ chọn)
 
 ---
 
@@ -79,6 +87,6 @@ Tài liệu hoạch định, tham chiếu nhanh, phân tích
 ## 💡 Mẹo sử dụng
 - Khi bắt đầu dự án mới, xem `06-planning-reference/quick_reference.md`
 - Để hiểu kiến trúc DB, xem `02-database/database.md`
-- Để setup huấn luyện mô hình, bắt đầu từ `01-ai-training/ai-training-workflow-summary.md`
+- Để setup huấn luyện + cleanse queue: **`01-ai-training/11-OPERATING-PHASES-ABCD.md`**; lineage queue ↔ master: `.cursor/rules/address-queue-mat-lineage.mdc` và `app/domain/acq_mat_lineage.py`
 - Để phát triển UI, tham khảo `03-ui-frontend/address-parser-plan.md`
 

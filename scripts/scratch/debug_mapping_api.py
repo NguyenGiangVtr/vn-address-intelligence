@@ -1,3 +1,11 @@
+import sys
+from pathlib import Path
+_here = Path(__file__).resolve().parent
+if str(_here) not in sys.path:
+    sys.path.insert(0, str(_here))
+import _repo_bootstrap  # noqa: E402
+_repo_bootstrap.ensure_repo_root()
+
 import os
 import sys
 from sqlalchemy import create_engine, and_, or_, func

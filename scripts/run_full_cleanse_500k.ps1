@@ -1,4 +1,5 @@
 # Phase 4.3 — Full queue cleanse (up to 500k PENDING rows).
+# Full playbook order + gates: docs/01-ai-training/08-QUEUE-CLEANSE-AND-STANDARDIZATION-PLAYBOOK.md
 # Prerequisites: .env with DB_*, models in app/ai/config.yaml, optional NER_MODEL_ID.
 # Monitor: pipeline logs every 50 rows; periodic reports under reports/.
 # If a previous pipeline is stuck on old corpus_limit, stop it first, then rerun with current config.

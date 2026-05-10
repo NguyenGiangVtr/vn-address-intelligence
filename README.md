@@ -56,24 +56,31 @@ graph TD
 
 ## 📁 Cấu trúc dự án (Project Structure)
 
+**Bản đầy đủ, quy ước đặt code mới và mục lục `scripts/`:**  
+[`docs/00-ENGINEERING/SOURCE-LAYOUT.md`](docs/00-ENGINEERING/SOURCE-LAYOUT.md) · [`scripts/README.md`](scripts/README.md)
+
+Tóm tắt:
+
 ```text
 vn-address-intelligence/
-├── app/                    # Mã nguồn Backend & AI logic
-│   ├── ai/                 # Huấn luyện & triển khai mô hình (PhoBERT, Siamese...)
-│   ├── api/                # FastAPI Endpoints & Web Server
-│   ├── core/               # Cấu hình hệ thống & Kết nối DB (SQLAlchemy)
-│   ├── services/           # Nghiệp vụ: OSM Fetcher, Data Cleansing
-│   ├── tools/               # Tiện ích nghiệp vụ dùng chung
-│   │   └── boundary_visualization/  # Boundary map helpers tích hợp từ project phụ
-│   └── main.py              # CLI Entry Point (init_db, seed, fetch_osm)
-├── ui/                     # Giao diện Frontend (SaaS Dashboard)
-├── data/                   # Dữ liệu mẫu (Seed CSV), Huấn luyện & Export
-├── docs/                   # Tài liệu nghiên cứu & Đặc tả hệ thống
-├── scripts/                # Script bảo trì, trích xuất dữ liệu & reporting
-├── reports/                # Kết quả đánh giá model & experiment
-├── start.py                # Wrapper script khởi chạy nhanh
-└── requirements.txt        # Danh sách thư viện phụ thuộc
+├── app/                    # Backend & AI (import package: app.api, app.services, …)
+│   ├── ai/                 # Mô hình, pipeline, PreLabeler / export_for_annotation
+│   ├── api/                # FastAPI (server.py + module phụ)
+│   ├── core/               # config, database, cache
+│   ├── services/           # OSM, NSO, enrichment, ground truth, …
+│   ├── tools/              # boundary_visualization, …
+│   └── main.py             # CLI (init_db, seed, fetch_osm)
+├── ui/                     # SPA tĩnh: index.html, app.js, pages/
+├── docs/                   # INDEX.md + 01-…06- + 00-ENGINEERING/
+├── scripts/                # migration, sql, diagnostics, ops/, scratch/, labeling, …
+├── data/                   # seed / export cục bộ
+├── models/                 # checkpoint (không commit file lớn)
+├── start.py
+├── requirements.txt
+└── requirements-prod.txt   # VPS CPU (torch+cpu)
 ```
+
+Một số file `.py` ngắn ở **gốc repo** là **shim** (gọi sang `scripts/ops/`); script đầy đủ nằm trong `scripts/ops/` hoặc `scripts/<nhóm>/`.
 
 ---
 

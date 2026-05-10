@@ -1,6 +1,8 @@
 # Đề xuất Tái cấu trúc Dự án (Standardization)
 
-## 1. Cấu trúc mới đề xuất
+> **Cập nhật:** Phần lớn kiến trúc đích (`app/`, `api/`, `services/`, `ai/`) đã áp dụng. **Bản mô tả chân hiện tại** và quy ước đặt file mới: [`../00-ENGINEERING/SOURCE-LAYOUT.md`](../00-ENGINEERING/SOURCE-LAYOUT.md).
+
+## 1. Cấu trúc mới đề xuất (lịch sử / tham chiếu)
 
 ```text
 vn-address-intelligence/

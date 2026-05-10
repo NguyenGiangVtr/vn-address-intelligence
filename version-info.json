@@ -1,6 +1,6 @@
 {
-  "version": "202605091915",
-  "timestamp": "2026-05-09T12:15:14.469Z",
+  "version": "202605092003",
+  "timestamp": "2026-05-09T13:03:09.731Z",
   "files_updated": [
     "ui\\index.html",
     "ui\\login.html",
@@ -10,6 +10,7 @@
     "ui\\pages\\boundary_map_province_20260504_150325.html",
     "ui\\pages\\boundary_map_province_20260504_154256.html",
     "ui\\pages\\boundary_map_province_20260504_172337.html",
+    "ui\\pages\\documentation.html",
     "ui\\pages\\evidence.html",
     "ui\\pages\\experiments.html",
     "ui\\pages\\explorer.html",

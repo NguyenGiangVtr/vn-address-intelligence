@@ -39,6 +39,9 @@ def build_concave_hull_from_points(
     """
     from sqlalchemy import text
 
+    # Matches denormalised queue FK columns (`ward_id`/`district_id`/`province_id`).
+    # Administrative *semantic* resolution from queue ↔ mat uses lineage `old_*` → mat.old_id
+    # (`admin_version = 1`) — see `app/domain/acq_mat_lineage.py`.
     level_col_map = {
         "ward":     ("ward_id",     "prq.address_cleansing_queue"),
         "district": ("district_id", "prq.address_cleansing_queue"),

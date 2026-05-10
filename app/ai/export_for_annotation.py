@@ -15,6 +15,7 @@ from collections import defaultdict
 import argparse
 import sys
 import re
+import unicodedata
 from pathlib import Path
 import yaml
 
@@ -61,7 +62,7 @@ class PreLabeler:
         "ALY": r'(?i)^(Hẻm|Ngõ|Kiệt|Ngách)\s+',
         "NUM": r'(?i)^(Số nhà|Số|Lô|Km)\s+',
         "STR": r'(?i)^(Đường|Phố|Đ\.|QL|Quốc\s*lộ|ĐT|TL|Tỉnh\s*lộ|Đại\s*lộ|HL)\s+',
-        "NHB": r'(?i)^(Khu\s*phố|KP|Tổ\s*dân\s*phố|TDP|Thôn|Ấp|Bản|Tổ|Đội|Sóc|Phum|Xóm|Làng|Khóm|Cụm|Buôn|Plei|KDC|Sảnh)\s*',
+        "NHB": r'(?i)^(Khu\s*phố|KP|Tổ\s*dân\s*phố|TDP|Thôn|Liên\s*ấp|Ấp|Bản|Tổ|Đội|Sóc|Phum|Xóm|Làng|Khóm|Cụm|Buôn|Plei|KDC|Sảnh)\s*',
         "WDS": admin_prefix_anchored_pattern("WDS"),
         "DST": admin_prefix_anchored_pattern("DST"),
         "PRO": admin_prefix_anchored_pattern("PRO"),
@@ -73,9 +74,27 @@ class PreLabeler:
     # Quy tắc Regex cho các đơn vị vi mô (Sắp xếp theo NER_LABELS)
     MICRO_RULES = [
         ("PCD", r'(?i)(?:\b|^)([23456789CFGHJMPQRVWX]{4,8}\+[23456789CFGHJMPQRVWX]{2,3})(?:\b|$)', 0.95),
+        ("NUM", r'(?i)\b(?:nhà\s+\d+(?:\.\d+)?(?:\s+chánh)?)\b', 0.93),
+        ("NHB", r'(?i)\bcăn\s*hộ\s+\d+[a-z]\d+\b', 0.88),
+        ("NUM", r'(?i)\b[Bb]\d+[A-Za-z]?/\d+[A-Za-z]?\b', 0.93),
+        ("NUM", r'(?i)\b[Kk]\d+[A-Za-z]?/\d+\b', 0.93),
         ("BLD", r'(?i)(?:Tòa\s*nhà|Building|Chung\s*cư|CC|Khu\s*tập\s*thể|KTT|Văn\s*phòng|CCN|Tầng|Phòng|Lầu|Block)\s+[^,.\n]+', 0.75),
+        ("BLD", r'(?i)\b(?:Vinhomes|Mizuki|Melosa|Lovera)(?:\s+[A-Za-zÀ-ỹĐđ0-9]+){0,5}\b', 0.79),
+        ("BLD", r'(?i)\bEmpire\s+City\b[^,\n]*', 0.79),
+        ("BLD", r'(?i)\bTilia\s+Residences\b', 0.79),
+        ("BLD", r'(?i)\b(?:Tòa|Toà)\s+Hancrop\b', 0.82),
+        ("BLD", r'(?i)\bToà\s+Autumn\b', 0.86),
         #("POI", r'(?i)(?:Trường|Bệnh\s*viện|BV|Cửa\s*hàng|Tạp\s*hóa|ATM|UBND|Chợ|Siêu\s*thị|Công\s*viên|Công\s*ty|Cty|Nhà\s*thờ|Chùa|Khu công nghiệp|KCN|KDC|Studio)\s+[^,.\n]+', 0.7),
-        ("POI", r'(?i)(?:Trường|Bệnh\s*viện|BV|Trạm\s*y\s*tế|Phòng\s*khám|Nhà\s*thuốc|Quầy\s*thuốc|Thẩm\s*mỹ\s*viện|Khu\s*công\s*nghiệp|KCN|Khu\s*dân\s*cư|Khu\s*đô\s*thị|KDC|KĐT|Khu\s*chế\s*xuất|KCX|Vật\s*liệu\s*xây\s*dựng|VLXD|Phân\s*bón|Vựa|Cửa\s*hàng|Tạp\s*hóa|Siêu\s*thị|Chợ|TTTM|Trung\s*tâm\s*thương\s*mại|UBND|Ủy\s*ban|Công\s*an|Bưu\s*điện|Ngân\s*hàng|ATM|Tiệm\s*vàng|Khách\s*sạn|Nhà\s*nghỉ|Hotel|Motel|Quán|Cafe|Cà\s*phê|Bi-a|Bi\s*a|Spa|Salon|Garage|Kho|Xưởng|Nhà\s*máy|Cơ\s*sở|Công\s*ty|Cty|Doanh\s*nghiệp|Studio|Nhà\s*thờ|Chùa|Đền|Miếu|Phủ|Am|Giáo\s*xứ|Công\s*viên|Cầu|Bến\s*xe|Cảng|Sân\s*bay)\s+[^,.\n/]+', 0.7),
+        ("POI", r'(?i)(?:Trường|Bệnh\s*viện|BV|Trạm\s*y\s*tế|Phòng\s*khám|Nhà\s*thuốc|Quầy\s*thuốc|Thẩm\s*mỹ\s*viện|Khu\s*công\s*nghiệp|KCN|Khu\s*dân\s*cư|Khu\s*đô\s*thị|KDC|KĐT|Khu\s*chế\s*xuất|KCX|Vật\s*liệu\s*xây\s*dựng|VLXD|Phân\s*bón|Vựa|Cửa\s*hàng|Tạp\s*hóa|Siêu\s*thị|Chợ|TTTM|Trung\s*tâm\s*thương\s*mại|UBND|Ủy\s*ban|Công\s*an|Bưu\s*điện|Ngân\s*hàng|ATM|Tiệm\s*vàng|Khách\s*sạn|Nhà\s*nghỉ|Hotel|Hôtel|Motel|Quán|Cafe|Cà\s*phê|Bi-a|Bi\s*a|Spa|Salon|Garage|Kho|Xưởng|Nhà\s*máy|Cơ\s*sở|Công\s*ty|Cty|Doanh\s*nghiệp|Studio|Nhà\s*thờ|Chùa|Đền|Miếu|Phủ|Am(?!\s+province)|Giáo\s*xứ|Công\s*viên|Cầu|Bến\s*xe|Cảng|Sân\s*bay)\s+[^,.\n/]+', 0.7),
+        ("NHB", r'(?i)\bNgã\s+\d+\b', 0.82),
+        ("POI", r'(?i)\bNgã\s+\d+\s+[^,\n]+', 0.84),
+        ("POI", r'(?i)\b(?:karaoke|h[oô]tel)\s+[^,\n]+', 0.76),
+        ("POI", r'(?i)\bchè\s+[^,\n]+', 0.76),
+        ("POI", r'(?i)\btạp\s*h[oó]á\s+[^,\n]+', 0.76),
+        ("POI", r'(?i)\b(?:áo\s*cưới)\s+[^,\n]+', 0.76),
+        ("POI", r'(?i)\b(?:lô\s*cao\s*su)\b', 0.74),
+        ("POI", r'(?i)\bbên\s*cạnh\s+[^,\n]+', 0.74),
+        ("POI", r'(?i)\bsao\s*biển\s+[^,\n]+', 0.74),
         # Tránh nhầm đuôi tên đường "... Thường Kiệt" với hẻm Kiệt (xử lý bổ sung trong vòng MICRO).
         ("ALY", r'(?i)(?:Hẻm|Ngõ|Kiệt|Ngách)\s+[^,.\n]+', 0.85),
         ("NHB", r'(?i)(?:Tháp|tủ|Tủ)\s+[^\),\n]+', 0.84),
@@ -85,7 +104,8 @@ class PreLabeler:
         # Chỉ match "Phố" khi có tiền tố đường rõ ràng (Đường/Đ./QL/...)
         ("STR", r'(?is)(?:^|[\s,])(?:QL\s*\d+[A-Za-z]?|Đ\s*T\s*\d+[A-Za-z]?|[Dd][Tt]\s*\d+[A-Za-z]?)\b', 0.88),
         ("STR", r'(?i)(?:Đường|Đ\.|QL|Quốc\s*lộ|ĐT|DT|TL|Tỉnh\s*lộ|Đại\s*lộ|Hương\s*lộ|HL)\s+[^,.\n]+', 0.85),
-        ("NHB", r'(?i)(?:Khu\s*phố|KP|Tổ\s*dân\s*phố|TDP|Thôn|Ấp|Bản|Tổ|Đội|Sóc|Phum|Xóm|Làng|Khóm|Cụm|Buôn|Plei|KDC|Sảnh)\s*[^,.\n]+|(?:\bKhu\s*\d+[A-Za-z]?\b)', 0.8),
+        ("NHB", r'(?i)\bTổ\d+\b', 0.86),
+        ("NHB", r'(?i)(?:Liên\s*ấp|Khu\s*phố|KP|Tổ\s*dân\s*phố|TDP|Thôn|Ấp|Bản|Tổ|Đội|Sóc|Phum|Xóm|Làng|Khóm|Cụm|Buôn|Plei|KDC|Sảnh)\s*[^,.\n]+|(?:\bKhu\s*\d+[A-Za-z]?\b)', 0.8),
     ]
 
     @classmethod
@@ -131,7 +151,9 @@ class PreLabeler:
         def add_result(start: int, end: int, text: str, label: str, score: float):
             # Lấy bản gốc để tính offset nếu bị cắt tiền tố
             original_text = text
-            
+            if label == "STR" and re.match(r"(?is)^đường\s+vào\b", str(text or "").strip()):
+                label = "POI"
+
             # 1. Giữ nguyên tiền tố gốc theo yêu cầu "Type + Name"
             prefix_pat = cls.PREFIX_PATTERNS.get(label) if label in cls.STRIP_PREFIX_LABELS else None
             if prefix_pat:
@@ -184,11 +206,28 @@ class PreLabeler:
                 if "thường kiệt" in tl:
                     cut = tl.find("thường kiệt") + len("thường kiệt")
                     text = text[:cut].strip(' ,')
-                # Cắt ở cuối nếu dính đơn vị hành chính
-                m_admin = re.search(cls.ADMIN_KEYWORDS, text)
+                # Cắt ở cuối nếu dính đơn vị hành chính (không cắt nhầm "Tỉnh" trong "Tỉnh lộ").
+                _tl_hold = "__TL_PROTECT__"
+                _txt_ad = re.sub(r"(?i)tỉnh\s+lộ", _tl_hold, text)
+                m_admin = re.search(cls.ADMIN_KEYWORDS, _txt_ad)
                 if m_admin:
-                    text = text[:m_admin.start()].strip(' ,')
-                
+                    text = _txt_ad[: m_admin.start()].strip(" ,").replace(_tl_hold, "Tỉnh Lộ")
+                else:
+                    text = _txt_ad.replace(_tl_hold, "Tỉnh Lộ")
+                m_echo_dst = re.search(
+                    r"(?is)\s+(?:bình\s+thuỷ(?:\s+cần\s+thơ)?|cần\s+thơ|quận\s+bình\s+thuỷ)\s*$",
+                    text,
+                )
+                if m_echo_dst:
+                    text = text[: m_echo_dst.start()].strip(" ,")
+                m_st_echo = re.search(r"(?is)\s+(đường\s+.+)$", text.strip())
+                if m_st_echo:
+                    cand = m_st_echo.group(1).strip()
+                    root = re.sub(r"(?i)^đường\s+", "", cand).strip()
+                    pre = text[: m_st_echo.start()].strip()
+                    if root and pre.casefold() == root.casefold():
+                        text = cand
+
                 # Cắt ở cuối nếu dính tiền tố của BLD, POI, ALY (Ví dụ: "Nguyễn Sơn Chung Cư...")
                 for stop_label in ["BLD", "POI", "ALY"]:
                     stop_pat = cls.PREFIX_PATTERNS.get(stop_label)
@@ -201,6 +240,14 @@ class PreLabeler:
                 m_admin = re.search(cls.ADMIN_KEYWORDS, text)
                 if m_admin:
                     text = text[:m_admin.start()].strip(' ,')
+                if label == "BLD" and "(" in text:
+                    m_bt = re.search(r"(?i)\s*\(\s*t\d+[a-z]?", text)
+                    if m_bt:
+                        text = text[: m_bt.start()].strip(" ,")
+                if label == "NHB":
+                    m_par_trim = re.search(r"(?i)\s*\(\s*(?:đường|tuyến|rẻ\s+vào)", text)
+                    if m_par_trim:
+                        text = text[: m_par_trim.start()].strip(" ,")
             if label == "POI":
                 tl = text.lower().strip()
                 if tl.startswith('cafe') or tl.startswith('cà phê'):
@@ -244,6 +291,45 @@ class PreLabeler:
                     primary = ex_labels[0] if ex_labels else None
                     if {str(primary), str(label)}.issubset({"DST", "PRO"}):
                         break
+                    # Macro WDS/DST/PRO đã khớp master — không cho nhãn vi mô cùng span đè (vd KP… bị NHB nuốt).
+                    if str(primary) in {"WDS", "DST", "PRO"} and str(label) not in {"WDS", "DST", "PRO"}:
+                        return False
+                    # Chung cư + span trùng NHB heuristic → ưu tiên BLD (harness chỉ đọc labels[0]).
+                    if (
+                        str(label) == "BLD"
+                        and str(primary) == "NHB"
+                        and re.match(r"(?is)^chung\s*cư\b", str(text or "").strip())
+                    ):
+                        ex_labels[:] = ["BLD"]
+                        existing["value"]["text"] = text
+                        existing["score"] = max(float(existing.get("score", 0.0)), float(score))
+                        return True
+                    _mic_pri = {
+                        "POI": 60,
+                        "PCD": 58,
+                        "BLD": 55,
+                        "NHB": 45,
+                        "ALY": 42,
+                        "STR": 35,
+                        "NUM": 25,
+                    }
+                    np = _mic_pri.get(str(label), 10)
+                    op = _mic_pri.get(str(primary), 10)
+                    if (
+                        str(primary) == "NHB"
+                        and str(label) == "POI"
+                        and re.match(r"(?is)^chợ\s+", str(text or ""))
+                        and len(str(text or "").split()) <= 4
+                    ):
+                        return True
+                    if np > op:
+                        ex_labels[:] = [label]
+                        existing["value"]["labels"] = ex_labels
+                        existing["value"]["text"] = text
+                        existing["score"] = max(float(existing.get("score", 0.0)), float(score))
+                        return True
+                    if np < op:
+                        return True
                     ex_labels.append(label)
                     existing["score"] = max(float(existing.get("score", 0.0)), float(score))
                     return True
@@ -311,9 +397,12 @@ class PreLabeler:
                 for match in re.finditer(rf'(?<!\w){re.escape(term)}(?!\w)', raw_address, re.I):
                     s_pos = match.start()
                     e_pos = match.end()
+                    if label == "WDS":
+                        left_skip = raw_address[max(0, s_pos - 8) : s_pos]
+                        if re.search(r"(?i)Đ\.\s*$", left_skip):
+                            continue
                     left_ctx = raw_address[max(0, s_pos - 24):s_pos]
                     has_prefix_hint = bool(re.search(label_prefix_hints.get(label, r"$^"), left_ctx))
-                    # Nếu có tiền tố ngay trước trong chuỗi gốc, mở rộng span để giữ "Type + Name".
                     pref_pat = cls.PREFIX_PATTERNS.get(label)
                     if pref_pat:
                         pref_match = re.search(pref_pat, left_ctx)
@@ -650,6 +739,16 @@ class PreLabeler:
             if m:
                 num = m.group('num').strip().lstrip(',').strip()
                 rest = m.group('rest').strip()
+                if re.fullmatch(r'(?i)lô\s+\d+[A-Za-z]?', rest):
+                    found_num = _find_in_raw(num)
+                    if found_num:
+                        s1, e1, txtn = found_num
+                        add_result(s1, e1, txtn, 'NUM', 0.98)
+                    found_lo = _find_in_raw(rest)
+                    if found_lo:
+                        s0, e0, txt = found_lo
+                        add_result(s0, e0, txt, 'NHB', 0.91)
+                    break
                 if re.match(r'(?i)^(Tổ|Khu\s*phố|KP|TDP|Thôn|Ấp|Bản|Xóm|Làng|Khóm|Khu\s*\d+)\b', rest):
                     found_num = _find_in_raw(num)
                     if found_num:
@@ -744,12 +843,15 @@ class PreLabeler:
 
             admin_or_micro_prefix = re.compile(
                 rf'(?i)^({ADMIN_ALL_PREFIXES_ALT}|'
-                r'Tổ|Khu phố|Khu\s*\d+|KP|TDP|Thôn|Ấp|Bản|Làng|Xóm|Khóm|Sảnh|Số|Số nhà|Hẻm|Ngõ|Kiệt|Ngách|Đường|Phố|Đ\.|QL|ĐT|TL)\b'
+                r'Tổ|Khu phố|Khu\s*\d+|KP|TDP|Thôn|Ấp|Bản|Làng|Xóm|Khóm|Sảnh|Số|Số nhà|Hẻm|Ngõ|Kiệt|Ngách|Đường|Phố|Đ\.|QL|ĐT|TL|Tòa|Toà)\b'
             )
             # Bỏ qua segment có dấu hiệu POI/cửa hàng để tránh gán nhầm STR.
             skip_tokens = re.compile(
                 r'(?i)\b(shop|studio|chợ|kdc|cây\s+đa|vật\s*liệu\s*xây\s*dựng|'
-                r'cửa\s*hàng|tạp\s*hóa|siêu\s*thị|quán|cafe|cà\s*phê|nhà\s*thuốc|khu\s*dân\s*cư)\b'
+                r'cửa\s*hàng|tạp\s*hóa|siêu\s*thị|quán|cafe|cà\s*phê|nhà\s*thuốc|khu\s*dân\s*cư|'
+                r'công\s+ty|karaoke|garage|sân\s+bay|thẩm\s+mỹ\s+viện|lc\s+|'
+                r'bên\s+cạnh|melosa|mizuki|lovera|tiktok|áo\s*cưới|spa\b|'
+                r'gần\s+cầu|cầu\s+sắt|nhà\s+yến)\b'
             )
             prev_num_re = re.compile(r'(?i)^(?:Số\s+)?(?:K\d+|\d+[A-Za-z]?)(?:[\\/\-]\d+[A-Za-z]?)*\b')
             next_micro_re = re.compile(r'(?i)^(Tổ|Khu phố|KP|Thôn|Ấp|Bản|Phường|Xã|Thị trấn)\b')
@@ -767,6 +869,46 @@ class PreLabeler:
                 if re.search(r'\d', seg_clean) or len(seg_clean.split()) < 2 or len(seg_clean.split()) > 6:
                     continue
                 if skip_tokens.search(seg_clean):
+                    continue
+
+                next_seg_early = raw_segments[i + 1] if i + 1 < len(raw_segments) else ""
+                next_base = _strip_admin_prefix(next_seg_early.strip()).casefold()
+                ward_b = _strip_admin_prefix(str(ward_name or "")).strip().casefold()
+                dst_b = _strip_admin_prefix(str(district_name or "")).strip().casefold()
+                pro_b = _strip_admin_prefix(str(province_name or "")).strip().casefold()
+                seg_cf = seg_clean.casefold()
+                if dst_b and seg_cf == dst_b:
+                    continue
+                if pro_b and seg_cf == pro_b:
+                    continue
+                dst_next_ok = bool(
+                    district_name
+                    and _strip_admin_prefix(next_seg_early.strip()).casefold()
+                    == _strip_admin_prefix(str(district_name)).strip().casefold()
+                )
+                ward_ok = bool(
+                    re.match(rf"(?i)^(?:{ADMIN_ALL_PREFIXES_ALT})\b", next_seg_early.strip())
+                    or dst_next_ok
+                )
+                if (
+                    ward_b
+                    and next_base == ward_b
+                    and ward_ok
+                    and len(seg_clean.split()) <= 4
+                    and not re.search(r"\d", seg_clean)
+                    and not re.search(
+                        r"(?i)\b(quân|lộ|đại\s+lộ|hương\s+lộ|đường)\b",
+                        seg_clean,
+                    )
+                    and not re.match(
+                        r"(?i)^(Đường|Đại\s+lộ|Hương\s+lộ|HL\b)",
+                        seg_clean,
+                    )
+                ):
+                    found_h = _find_in_raw(seg_clean)
+                    if found_h:
+                        hs, he, htxt = found_h
+                        add_result(hs, he, htxt, "NHB", 0.78)
                     continue
 
                 prev_seg = raw_segments[i - 1] if i > 0 else ""
@@ -791,10 +933,16 @@ class PreLabeler:
                 # Tránh nhận diện nhầm STR cho tỉnh/huyện bị nhập lặp dạng "trần".
                 if seg_norm in district_province_variants:
                     continue
-                # Nếu trùng tên phường thì chỉ cho phép khi có ngữ cảnh số nhà ở phía trước
-                # (ví dụ: "Số 112, Nguyễn Thị Minh Khai, ...").
-                if seg_norm in ward_name_variants and (not prev_has_num or prev_is_nhb_like):
-                    continue
+                # Trùng tên phường: không gán STR trừ khi segment có tiền tố đường/hẻm rõ ràng và có số nhà phía trước.
+                if seg_norm in ward_name_variants:
+                    if not prev_has_num:
+                        continue
+                    if not re.match(r'(?i)^khu\s*phố\b', next_seg.strip()):
+                        if not re.match(
+                            r'(?i)^(Đường|Phố|Đ\.|QL|Đại\s+lộ|Hương\s+lộ|HL|Hẻm|Ngõ|Kiệt)\b',
+                            seg_clean,
+                        ):
+                            continue
 
                 prev_is_olc = bool(i > 0 and _segment_is_olc(prev_seg.strip()))
                 next_matches_hint_ward = bool(
@@ -818,6 +966,59 @@ class PreLabeler:
                 raw_address
             )
             free_text = raw_address[:first_admin.start()] if first_admin else raw_address
+
+            m_olc_dst_head = re.match(
+                r"(?is)^\s*([23456789CFGHJMPQRVWX]{4,8}\+[23456789CFGHJMPQRVWX]{2,3})\s+([^,]+?)\s*,\s*",
+                (raw_address or "").strip(),
+            )
+            if m_olc_dst_head and not _has_macro("DST"):
+                mid_dst = m_olc_dst_head.group(2).strip()
+                if mid_dst and not re.search(r"\d", mid_dst):
+                    dpos = raw_address.lower().find(mid_dst.lower())
+                    if dpos >= 0:
+                        add_result(
+                            dpos,
+                            dpos + len(mid_dst),
+                            raw_address[dpos : dpos + len(mid_dst)].strip(),
+                            "DST",
+                            0.91,
+                        )
+
+            w_dup = re.sub(rf"(?i)^(?:{ADMIN_ALL_PREFIXES_ALT})\s*", "", str(ward_name or "")).strip()
+            if w_dup:
+                m_sdup = re.search(
+                    rf"(?i),\s*({re.escape(w_dup)})\s*,\s*(?=(?:Tổ|Thôn|Ấp|Khu\s*phố|KP|TDP)\s)",
+                    raw_address,
+                )
+                if m_sdup:
+                    g = m_sdup.group(1).strip()
+                    s, e = m_sdup.span(1)
+                    add_result(s, e, raw_address[s:e].strip(), "STR", 0.86)
+
+            def _fold_cmp(s: str) -> str:
+                s = unicodedata.normalize("NFD", str(s or "").strip())
+                return "".join(c for c in s if unicodedata.category(c) != "Mn").casefold()
+
+            w_seg = re.sub(rf"(?i)^(?:{ADMIN_ALL_PREFIXES_ALT})\s*", "", str(ward_name or "")).strip()
+            if w_seg and not _has_macro("WDS"):
+                wf = _fold_cmp(w_seg)
+                for seg in raw_segments:
+                    segc = seg.strip()
+                    if re.match(r"(?i)^Đ\.", segc):
+                        continue
+                    if _fold_cmp(segc) != wf:
+                        continue
+                    pos = raw_address.lower().find(segc.lower())
+                    if pos < 0:
+                        continue
+                    add_result(
+                        pos,
+                        pos + len(segc),
+                        raw_address[pos : pos + len(segc)].strip(),
+                        "WDS",
+                        0.92,
+                    )
+                    break
 
             def _nf_plain(s: str) -> str:
                 return re.sub(r'\s+', ' ', (s or '').strip().lower())
@@ -881,13 +1082,141 @@ class PreLabeler:
             if m_duong_so:
                 add_result(m_duong_so.start(1), m_duong_so.end(1), raw_address[m_duong_so.start(1):m_duong_so.end(1)], "STR", 0.84)
 
-            m_dot = re.search(r'(?i)\bĐ\.\s*([^\.,]+?\d+[A-Za-z]?)\b', free_text)
-            if m_dot:
-                add_result(m_dot.start(1), m_dot.end(1), raw_address[m_dot.start(1):m_dot.end(1)], "STR", 0.84)
+            m_d_short = re.search(
+                r'(?i)\b(Đ\.\s+[A-Za-zÀ-ỹĐđ]+(?:\s+[A-Za-zÀ-ỹĐđ]+)?)\s+\d',
+                free_text,
+            )
+            if m_d_short:
+                add_result(
+                    m_d_short.start(1),
+                    m_d_short.end(1),
+                    raw_address[m_d_short.start(1) : m_d_short.end(1)].strip(),
+                    "STR",
+                    0.87,
+                )
 
             m_dt = re.search(r'(?i)\b(DT\s*\d+[A-Za-z]?)\b', free_text)
+            if m_dt and re.match(r'(?i)dt\s*(?:09|08|07|05|03)', m_dt.group(0)):
+                m_dt = None
             if m_dt:
                 add_result(m_dt.start(1), m_dt.end(1), raw_address[m_dt.start(1):m_dt.end(1)], "STR", 0.84)
+
+            m_tl_full = re.search(r'(?i)\b(Đường\s+Tỉnh\s+Lộ\s+\d+[A-Za-z]?)\b', raw_address)
+            if m_tl_full:
+                add_result(
+                    m_tl_full.start(1),
+                    m_tl_full.end(1),
+                    raw_address[m_tl_full.start(1) : m_tl_full.end(1)].strip(),
+                    "STR",
+                    0.9,
+                )
+
+            m_eco = re.search(r'(?i)\b(chung\s*cư\s+ecogreen)\b', raw_address)
+            if m_eco:
+                add_result(
+                    m_eco.start(1),
+                    m_eco.end(1),
+                    raw_address[m_eco.start(1) : m_eco.end(1)].strip(),
+                    "BLD",
+                    0.88,
+                )
+
+            m_paren_nga = re.search(
+                r'(?i)\(\s*(ngã\s+ba\s+[^)]+?)\s+kế\s+([^)]+)\)',
+                raw_address,
+            )
+            if m_paren_nga:
+                for gi in (1, 2):
+                    g = m_paren_nga.group(gi).strip()
+                    if not g:
+                        continue
+                    pos = raw_address.lower().find(g.lower())
+                    if pos >= 0:
+                        add_result(pos, pos + len(g), raw_address[pos : pos + len(g)].strip(), "POI", 0.77)
+
+            m_tkp_nga = re.search(
+                r"(?i)\b(Tổ\s+\d+)\s+(Khu\s+Phố\s+[A-Za-zÀ-ỹĐđ\s]+?)\s*\(\s*(ngã\s+ba\s+[^)]+?)\s+kế\s+([^)]+)\)",
+                raw_address,
+            )
+            if m_tkp_nga:
+                for gi, slab in ((1, "NHB"), (2, "NHB"), (3, "POI"), (4, "POI")):
+                    g = m_tkp_nga.group(gi).strip()
+                    if not g:
+                        continue
+                    pos = raw_address.lower().find(g.lower())
+                    if pos >= 0:
+                        add_result(pos, pos + len(g), raw_address[pos : pos + len(g)].strip(), slab, 0.79)
+
+            m_kp_paren_extra = re.search(
+                r"(?i)\b(Khu\s+Phố\s+[^\(]+?)\s*\(\s*([^)]+)\s*\)",
+                raw_address,
+            )
+            if m_kp_paren_extra and not m_tkp_nga:
+                for gi, slab in ((1, "NHB"), (2, "POI")):
+                    g = m_kp_paren_extra.group(gi).strip()
+                    if not g:
+                        continue
+                    pos = raw_address.lower().find(g.lower())
+                    if pos >= 0:
+                        add_result(pos, pos + len(g), raw_address[pos : pos + len(g)].strip(), slab, 0.78)
+
+            m_da_xom = re.search(
+                r"(?i)\b(cây\s+đa)\s+(xóm\s+đông\s+thôn\s+chè)\b",
+                raw_address,
+            )
+            if m_da_xom:
+                for gi, slab in ((1, "POI"), (2, "NHB")):
+                    g = m_da_xom.group(gi).strip()
+                    pos = raw_address.lower().find(g.lower())
+                    if pos >= 0:
+                        add_result(pos, pos + len(g), raw_address[pos : pos + len(g)].strip(), slab, 0.77)
+
+            m_gan_cau = re.search(r"(?i)\bgần\s+(cầu\s+bà\s+đớt)\b", raw_address)
+            if m_gan_cau:
+                g = m_gan_cau.group(1).strip()
+                pos = raw_address.lower().find(g.lower())
+                if pos >= 0:
+                    add_result(pos, pos + len(g), raw_address[pos : pos + len(g)].strip(), "POI", 0.76)
+
+            m_d_fix = re.search(r"(?i)\b(Đ\.\s*Bình\s+Nhâm)\b", raw_address)
+            if m_d_fix:
+                add_result(
+                    m_d_fix.start(1),
+                    m_d_fix.end(1),
+                    raw_address[m_d_fix.start(1) : m_d_fix.end(1)].strip(),
+                    "STR",
+                    0.87,
+                )
+
+            head_city = raw_address.strip()
+            m_city_blk = re.search(r'(?is)^City\s*,\s*(Vinhomes\s+Marina)', head_city)
+            if m_city_blk:
+                g = m_city_blk.group(1).strip()
+                pos = raw_address.lower().find(g.lower())
+                if pos >= 0:
+                    add_result(pos, pos + len(g), raw_address[pos : pos + len(g)].strip(), "BLD", 0.85)
+                mc = re.search(r'(?i)\bCity\b', raw_address)
+                if mc:
+                    add_result(mc.start(), mc.end(), raw_address[mc.start() : mc.end()].strip(), "POI", 0.72)
+
+            m_to_autumn = re.search(r'(?i)\b(Toà\s+Autumn)\b', raw_address)
+            if m_to_autumn:
+                add_result(
+                    m_to_autumn.start(1),
+                    m_to_autumn.end(1),
+                    raw_address[m_to_autumn.start(1) : m_to_autumn.end(1)].strip(),
+                    "BLD",
+                    0.86,
+                )
+            m_to_a_only = re.search(r'(?i)\b(Tòa\s+A)\b', raw_address)
+            if m_to_a_only:
+                add_result(
+                    m_to_a_only.start(1),
+                    m_to_a_only.end(1),
+                    raw_address[m_to_a_only.start(1) : m_to_a_only.end(1)].strip(),
+                    "NHB",
+                    0.85,
+                )
 
             # Nhóm POI/PCD tự do
             m_cay_da = re.search(r'(?i)\b(cây\s+đa)\b', free_text)
@@ -920,7 +1249,8 @@ class PreLabeler:
 
             m_toa = re.search(r'(?i)\b(Toà?\s*Nhà\s+[^,]+)', free_text)
             if m_toa:
-                add_result(m_toa.start(1), m_toa.end(1), raw_address[m_toa.start(1):m_toa.end(1)], "NHB", 0.7)
+                span_txt = raw_address[m_toa.start(1) : m_toa.end(1)].strip()
+                add_result(m_toa.start(1), m_toa.end(1), span_txt, "BLD", 0.74)
 
             head_adm = raw_address[: first_admin.start()] if first_admin else raw_address
             m_toa_blk = re.search(r"(?i)\b(Tòa\s+[A-ZĐđ]?\d+)\b(?=\s*[,，]|\s*$)", head_adm)
@@ -989,7 +1319,11 @@ class PreLabeler:
                 add_result(s0, e0, raw_address[s0:e0].strip(), "POI", 0.82)
 
             m_nha_named = re.search(r"(?i)\b(nhà\s+[A-Za-zÀ-ỹĐđ][^,\.\]\n]{2,40})", free_text)
-            if m_nha_named and not re.search(r"(?i)\bnhà\s+đối\s+diện\b", m_nha_named.group(1)):
+            if (
+                m_nha_named
+                and not re.search(r"(?i)\bnhà\s+đối\s+diện\b", m_nha_named.group(1))
+                and not re.search(r"(?i)\d+\s*km", m_nha_named.group(1))
+            ):
                 s0, e0 = m_nha_named.span(1)
                 add_result(s0, e0, raw_address[s0:e0].strip(), "POI", 0.79)
 
@@ -1030,7 +1364,29 @@ class PreLabeler:
                     continue
                 if re.match(rf'(?i)^(?:{ADMIN_ALL_PREFIXES_ALT})\b', seg_clean):
                     continue
+                if re.match(r'(?i)^chè\b', seg_clean):
+                    continue
+                if re.match(r'(?i)^bệnh\s+viện\b', seg_clean):
+                    continue
+                if re.match(r'(?i)^(?:công\s+ty|ngã)\b', seg_clean):
+                    continue
+                if re.match(r'(?i)^vinhomes\b', seg_clean):
+                    m_v = re.search(re.escape(seg_clean), raw_address, re.I)
+                    if m_v:
+                        add_result(
+                            m_v.start(),
+                            m_v.end(),
+                            raw_address[m_v.start() : m_v.end()].strip(),
+                            "BLD",
+                            0.86,
+                        )
+                    continue
+                if re.match(r'(?i)^gần\s+cầu\b', seg_clean):
+                    continue
                 if re.match(r'(?i)^(?:Đường|Phố|Đ\.|QL|Quốc\s*lộ|ĐT|DT|TL|Hẻm|Ngõ|Kiệt|Ngách|Số|Số\s*nhà)\b', seg_clean):
+                    continue
+                # Tòa/Chung cư… để MICRO_RULES BLD xử lý; NHB free-text chỉ lấy labels[0] → không chiếm span BLD.
+                if re.match(r'(?i)^(?:chung\s*cư|tòa\s*nhà|building)\b', seg_clean):
                     continue
                 if re.match(r'(?i)^[A-Za-zÀ-ỹĐđ]+(?:\s+[A-Za-zÀ-ỹĐđ]+){0,3}\s+\d+[A-Za-z]?$', seg_clean):
                     if re.match(r'(?i)^vùng\b', seg_clean):
@@ -1039,13 +1395,75 @@ class PreLabeler:
                     if m_seg:
                         add_result(m_seg.start(), m_seg.end(), raw_address[m_seg.start():m_seg.end()].strip(), "NHB", 0.81)
 
+        def _add_leading_ward_prefix_micro() -> None:
+            wn = str(ward_name or "").strip()
+            if not wn:
+                return
+            w_base = re.sub(rf"(?i)^({ADMIN_ALL_PREFIXES_ALT})\s*", "", wn).strip()
+            if not w_base:
+                return
+
+            def _norm_seg(s: str) -> str:
+                return re.sub(r"\s+", " ", (s or "").strip().casefold())
+
+            wb = _norm_seg(w_base)
+            ward_idx = -1
+            for i, seg in enumerate(raw_segments):
+                sn = _norm_seg(seg)
+                if sn == wb or wb in sn or sn in wb:
+                    ward_idx = i
+                    break
+            if ward_idx <= 0:
+                return
+            pre = [raw_segments[j].strip() for j in range(ward_idx)]
+            if not pre:
+                return
+            street_pick = pre[0]
+            if len(pre) >= 2:
+                penult = pre[-2].strip()
+                last_seg = pre[-1].strip()
+                if not re.search(r"\d", last_seg) and (
+                    re.search(r"(?i)\bsố\s+\d", penult)
+                    or re.match(r"(?i)^số\s+\d", penult)
+                    or re.match(r"(?i)^\d+\s*$", penult)
+                ):
+                    street_pick = last_seg
+            if street_pick and re.search(r"(?i)cây\s+đa\s+xóm", street_pick):
+                street_pick = ""
+            if street_pick and not re.search(r"\d", street_pick):
+                found = re.search(re.escape(street_pick), raw_address, re.I)
+                if found:
+                    add_result(
+                        found.start(),
+                        found.end(),
+                        raw_address[found.start() : found.end()].strip(),
+                        "STR",
+                        0.74,
+                    )
+            if len(pre) >= 2:
+                s_second = pre[1]
+                if re.match(
+                    r"(?i)^(Ấp|Thôn|Tổ|Khu\s*phố|KP|TDP|Xóm|Làng|Khóm|Đại\s)",
+                    s_second,
+                ):
+                    found2 = re.search(re.escape(s_second), raw_address, re.I)
+                    if found2:
+                        add_result(
+                            found2.start(),
+                            found2.end(),
+                            raw_address[found2.start() : found2.end()].strip(),
+                            "NHB",
+                            0.73,
+                        )
+
+        _add_leading_ward_prefix_micro()
         _add_bare_street_candidate()
         _add_free_text_bundle_rules()
 
         # Giai đoạn 2: Regex Heuristics cho các cấp Vi mô
         # Thu thập ứng viên rồi sort để ưu tiên span dài hơn trước.
         nhb_piece_re = re.compile(
-            r'(?i)(Khu\s*phố|KP|Tổ\s*dân\s*phố|TDP|Thôn|Ấp|Bản|Tổ|Đội|Sóc|Phum|Xóm|Làng|Khóm|Cụm|Buôn|Plei|KDC|Sảnh)\s*[^,.;\n\-\/]+|(?:\bKhu\s*\d+[A-Za-z]?\b)'
+            r'(?i)(Liên\s*ấp|Khu\s*phố|KP|Tổ\s*dân\s*phố|TDP|Thôn|Ấp|Bản|Tổ|Đội|Sóc|Phum|Xóm|Làng|Khóm|Cụm|Buôn|Plei|KDC|Sảnh)\s*[^,.;\n\-\/]+|(?:\bKhu\s*\d+[A-Za-z]?\b)'
         )
         nhb_anchor_re = re.compile(
             r'(?i)(?:\bKhu\s*phố\b|\bKP\b|\bTổ\s*dân\s*phố\b|\bTDP\b|\bẤp\b|\bBản\b|\bTổ\b|\bSóc\b|\bPhum\b|\bCụm\b|\bBuôn\b|\bPlei\b|\bKDC\b|\bSảnh\b|\bKhu\s*\d+[A-Za-z]?\b)'
@@ -1132,6 +1550,21 @@ class PreLabeler:
                     # Tránh gán NUM cho số thuộc admin unit: "Quận 8", "Phường 13", ...
                     if re.search(rf'(?i)({ADMIN_ALL_PREFIXES_ALT})\s*$', left_ctx):
                         continue
+                    if re.search(r"(?i)ngã\s*$", left_ctx):
+                        continue
+                    md_plain = matched_text.strip()
+                    if re.match(r"(?i)^p\d+$", md_plain):
+                        continue
+                    slice_road = raw_address[max(0, start - 40) : start]
+                    if md_plain.isdigit():
+                        if re.search(r"(?i)(?:tỉnh\s+lộ|đại\s+lộ)\s+$", slice_road):
+                            continue
+                    if re.match(r"(?i)^t\d+[a-z]?$", md_plain) and re.search(r"[\(\[]", raw_address[max(0, start - 120) : start]):
+                        continue
+                    if md_plain.isdigit() and len(md_plain) <= 4 and re.search(r"(?i)t\d+[a-z]?\s+$", slice_road):
+                        continue
+                    if re.match(r"(?i)^\d+k$", md_plain):
+                        continue
                     dig = matched_text.strip()
                     if dig.isdigit() and len(dig) >= 6:
                         continue
@@ -1141,6 +1574,8 @@ class PreLabeler:
                             continue
                     if re.match(r'(?is)^\d{1,6}\s*m\b', dig):
                         continue
+                if label == "BLD" and re.match(r"(?is)^tầng\s+\d+", matched_text.strip()):
+                    label = "NHB"
                 if label == "BLD":
                     mtb = matched_text.strip()
                     m_ph_tower = re.match(
@@ -1166,6 +1601,25 @@ class PreLabeler:
                     if pre_trim.casefold().endswith("thường"):
                         continue
                 if label == "ALY":
+                    mt_al = matched_text.strip()
+                    m_hem_d = re.match(r"(?is)^(hẻm\s+\d+)\s+đ\s*$", mt_al)
+                    if m_hem_d:
+                        g = m_hem_d.group(1).strip()
+                        micro_candidates.append((label, start, start + len(g), g, score + 0.03))
+                        continue
+                    m_hem_so = re.match(
+                        r'(?is)^((?:Hẻm|Ngõ|Kiệt|Ngách)\s+số\s+\d+/\d+)\s+([A-Za-zÀ-ỹĐđ][^,\n]+)$',
+                        mt_al,
+                    )
+                    if m_hem_so:
+                        aly_part = m_hem_so.group(1).strip(" ,")
+                        str_part = m_hem_so.group(2).strip(" ,")
+                        if aly_part:
+                            micro_candidates.append((label, start, start + len(aly_part), aly_part, score + 0.03))
+                        if str_part and not re.match(rf'(?i)^(?:{ADMIN_ALL_PREFIXES_ALT})\b', str_part):
+                            s_str = start + matched_text.lower().find(str_part.lower())
+                            micro_candidates.append(("STR", s_str, s_str + len(str_part), str_part, score + 0.02))
+                        continue
                     m_bare_tail = re.match(
                         r'(?is)^((?:Hẻm|Ngõ|Kiệt|Ngách)\s+\d+[A-Za-z]?)\s+([A-Za-zÀ-ỹĐđ][^,\n]+)$',
                         matched_text.strip(),
@@ -1200,6 +1654,20 @@ class PreLabeler:
                     matched_text.strip(),
                 ):
                     continue
+                if label == "NHB":
+                    dn = str(district_name or "").strip()
+                    pn = str(province_name or "").strip()
+                    mt_nhb_chk = matched_text.strip()
+                    nk_dn = re.sub(rf"(?i)^(?:{ADMIN_ALL_PREFIXES_ALT})\s*", "", dn).strip().casefold()
+                    nk_pn = re.sub(rf"(?i)^(?:{ADMIN_ALL_PREFIXES_ALT})\s*", "", pn).strip().casefold()
+                    if nk_dn and mt_nhb_chk.casefold() == nk_dn:
+                        continue
+                    if nk_pn and mt_nhb_chk.casefold() == nk_pn:
+                        continue
+                    if dn and mt_nhb_chk.casefold() == dn.casefold():
+                        continue
+                    if pn and mt_nhb_chk.casefold() == pn.casefold():
+                        continue
                 if label == "POI":
                     mt_poi = matched_text.strip()
                     if re.match(r'(?is)^trường\s+', mt_poi):
@@ -1230,6 +1698,8 @@ class PreLabeler:
                     and not re.search(r"(?is)\b(tủ|block|tầng|phòng)\b", matched_text.strip())
                 ):
                     label = "POI"
+                if label == "NHB" and re.match(r"(?is)^(?:chè|bệnh\s*viện)\s+", matched_text.strip()):
+                    label = "POI"
                 if label == "NHB":
                     ap_chunks = _split_ap_duong(start, matched_text)
                     if len(ap_chunks) >= 2:
@@ -1238,6 +1708,24 @@ class PreLabeler:
                             micro_candidates.append((lab, s, e, seg_text, score + 0.02))
                         continue
                     mt_l = matched_text.strip()
+                    m_t_ap = re.match(r"(?i)^(Tổ\s+\d+)\s+(ấp\s+.+)$", mt_l)
+                    if m_t_ap:
+                        for gi in (1, 2):
+                            g = m_t_ap.group(gi).strip()
+                            ofs = mt_l.casefold().find(g.casefold())
+                            if ofs >= 0:
+                                s = start + ofs
+                                micro_candidates.append(("NHB", s, s + len(g), g, score + 0.03))
+                        continue
+                    m_t_kp = re.match(r"(?i)^(Tổ\s+\d+)\s+(Khu\s+Phố\s+.+)$", mt_l)
+                    if m_t_kp:
+                        for gi in (1, 2):
+                            g = m_t_kp.group(gi).strip()
+                            ofs = mt_l.casefold().find(g.casefold())
+                            if ofs >= 0:
+                                s = start + ofs
+                                micro_candidates.append(("NHB", s, s + len(g), g, score + 0.03))
+                        continue
                     m_tkp_shop = re.match(
                         r"(?is)^(Tổ\s+\d+)\s+(Khu\s+Phố\s+[^\(\n,]+?)\s*\(\s*([^)]+?)\s*\)",
                         mt_l,
@@ -1289,6 +1777,42 @@ class PreLabeler:
                             micro_candidates.append((label, s, e, seg_text, score))
                         continue
                 if label == "STR":
+                    mt_str = matched_text.strip()
+                    m_dkp = re.match(
+                        r"(?i)^(Đường\s+\d+)\s+(Khu\s+Phố\s+\d+)\b(?:\s+.+)?$",
+                        mt_str,
+                    )
+                    if m_dkp:
+                        g1, g2 = m_dkp.group(1), m_dkp.group(2)
+                        i1 = mt_str.lower().find(g1.lower())
+                        i2 = mt_str.lower().find(g2.lower())
+                        if i1 >= 0 and i2 >= 0:
+                            micro_candidates.append(
+                                ("STR", start + i1, start + i1 + len(g1), g1, score + 0.03)
+                            )
+                            micro_candidates.append(
+                                ("NHB", start + i2, start + i2 + len(g2), g2, score + 0.03)
+                            )
+                        continue
+                    m_tt = re.match(r"(?i)^(.+?)\s+(đường\s+trục)\s*$", mt_str)
+                    if m_tt and len(m_tt.group(1).split()) <= 6:
+                        g1 = m_tt.group(1).strip()
+                        g2 = m_tt.group(2).strip()
+                        i1 = mt_str.lower().find(g1.lower())
+                        i2 = mt_str.lower().find(g2.lower())
+                        if i1 >= 0 and i2 >= 0:
+                            micro_candidates.append(("POI", start + i1, start + i1 + len(g1), g1, score + 0.02))
+                            micro_candidates.append(("STR", start + i2, start + i2 + len(g2), g2, score + 0.02))
+                        continue
+                    m_vuon = re.match(r"(?i)^(vườn\s+lài)\s+an\s+phú\s+đông", mt_str)
+                    if m_vuon:
+                        g1 = m_vuon.group(1).strip()
+                        i1 = mt_str.lower().find(g1.lower())
+                        if i1 >= 0:
+                            micro_candidates.append(
+                                ("STR", start + i1, start + i1 + len(g1), g1, score + 0.03)
+                            )
+                        continue
                     mx = re.sub(r"\s+", " ", matched_text.strip().casefold())
                     if len(matched_text.split()) <= 5 and mx in dst_naked_micro_block:
                         continue
@@ -1297,6 +1821,439 @@ class PreLabeler:
         micro_candidates.sort(key=lambda x: (x[2] - x[1], x[4], -x[1]), reverse=True)
         for label, start, end, matched_text, score in micro_candidates:
             add_result(start, end, matched_text, label, score)
+
+        def _split_combined_str_entities(acc: list) -> None:
+            out: list = []
+            for rr in acc:
+                val = rr.get("value") or {}
+                if val.get("labels") != ["STR"]:
+                    out.append(rr)
+                    continue
+                txt = str(val.get("text") or "").strip()
+                s0 = int(val.get("start") or 0)
+                mdk = re.match(
+                    r"(?i)^(Đường\s+\d+)\s+(Khu\s+Phố\s+\d+)\b(?:\s+.+)?$",
+                    txt,
+                )
+                if mdk:
+                    g1, g2 = mdk.group(1), mdk.group(2)
+                    p1 = txt.lower().find(g1.lower())
+                    p2 = txt.lower().find(g2.lower())
+                    if p1 >= 0 and p2 >= 0:
+                        t1 = txt[p1 : p1 + len(g1)].strip()
+                        t2 = txt[p2 : p2 + len(g2)].strip()
+                        out.append(
+                            {
+                                **rr,
+                                "score": float(rr.get("score") or 0.87),
+                                "value": {
+                                    "start": s0 + p1,
+                                    "end": s0 + p1 + len(t1),
+                                    "text": t1,
+                                    "labels": ["STR"],
+                                },
+                            }
+                        )
+                        out.append(
+                            {
+                                **rr,
+                                "score": float(rr.get("score") or 0.86),
+                                "value": {
+                                    "start": s0 + p2,
+                                    "end": s0 + p2 + len(t2),
+                                    "text": t2,
+                                    "labels": ["NHB"],
+                                },
+                            }
+                        )
+                        continue
+                mv = re.match(r"(?i)^(vườn\s+lài)\s+an\s+phú\s+đông", txt)
+                if mv:
+                    g1 = mv.group(1).strip()
+                    p1 = txt.lower().find(g1.lower())
+                    if p1 >= 0:
+                        t1 = txt[p1 : p1 + len(g1)].strip()
+                        out.append(
+                            {
+                                **rr,
+                                "score": float(rr.get("score") or 0.87),
+                                "value": {
+                                    "start": s0 + p1,
+                                    "end": s0 + p1 + len(t1),
+                                    "text": t1,
+                                    "labels": ["STR"],
+                                },
+                            }
+                        )
+                        continue
+                mtk = re.match(r"(?i)^(.+?)\s+(đường\s+trục)\s*$", txt)
+                if mtk and len(mtk.group(1).split()) <= 6:
+                    g1, g2 = mtk.group(1).strip(), mtk.group(2).strip()
+                    p1 = txt.lower().find(g1.lower())
+                    p2 = txt.lower().find(g2.lower())
+                    if p1 >= 0 and p2 >= 0:
+                        out.append(
+                            {
+                                **rr,
+                                "score": float(rr.get("score") or 0.82),
+                                "value": {
+                                    "start": s0 + p1,
+                                    "end": s0 + p1 + len(g1),
+                                    "text": g1,
+                                    "labels": ["POI"],
+                                },
+                            }
+                        )
+                        out.append(
+                            {
+                                **rr,
+                                "score": float(rr.get("score") or 0.82),
+                                "value": {
+                                    "start": s0 + p2,
+                                    "end": s0 + p2 + len(g2),
+                                    "text": g2,
+                                    "labels": ["STR"],
+                                },
+                            }
+                        )
+                        continue
+                out.append(rr)
+            acc[:] = out
+
+        _split_combined_str_entities(results)
+
+        def _finalize_nhb_str_polish(acc: list) -> None:
+            has_cau_poi = any(
+                (x.get("value") or {}).get("labels") == ["POI"]
+                and "cầu" in str((x.get("value") or {}).get("text") or "").casefold()
+                for x in acc
+            )
+            out: list = []
+            ra = raw_address or ""
+
+            def _fold_cmp_polish(s: str) -> str:
+                t = unicodedata.normalize("NFD", str(s or "").strip())
+                return "".join(c for c in t if unicodedata.category(c) != "Mn").casefold()
+
+            for rr in acc:
+                val = dict(rr.get("value") or {})
+                labs = list(val.get("labels") or [])
+                txt = str(val.get("text") or "").strip()
+                s0 = int(val.get("start") or 0)
+                if labs == ["WDS"]:
+                    wb_hint = re.sub(
+                        rf"(?i)^(?:{ADMIN_ALL_PREFIXES_ALT})\s*",
+                        "",
+                        str(ward_name or ""),
+                    ).strip()
+                    if (
+                        wb_hint
+                        and _fold_cmp_polish(txt) == _fold_cmp_polish(wb_hint)
+                        and txt.casefold() != wb_hint.casefold()
+                    ):
+                        val["text"] = wb_hint
+                if labs == ["STR"]:
+                    m_gc = re.search(r"(?is)^(gần\s+cầu\s+bà\s+đớt)\s*$", txt)
+                    if m_gc:
+                        mp = re.search(r"(?i)\bgần\s+(cầu\s+bà\s+đớt)\b", ra)
+                        if mp:
+                            gpoi = mp.group(1).strip()
+                            ep = mp.start(1)
+                            tgx = ra[ep : ep + len(gpoi)].strip()
+                            out.append(
+                                {
+                                    **rr,
+                                    "score": float(rr.get("score") or 0.79),
+                                    "value": {
+                                        **val,
+                                        "start": ep,
+                                        "end": ep + len(tgx),
+                                        "text": tgx,
+                                        "labels": ["POI"],
+                                    },
+                                }
+                            )
+                        continue
+                    m_ds = re.match(r"(?is)^(Đ\.\s+.+?)\s+(\d+)\s*$", txt)
+                    if m_ds:
+                        g1_raw = m_ds.group(1).strip()
+                        g2_raw = m_ds.group(2).strip()
+                        if not re.search(r"(?is)\bsố\s*$", g1_raw) and re.match(
+                            r"^0\d+$", g2_raw
+                        ):
+                            s1 = s0 + m_ds.start(1)
+                            e1 = s0 + m_ds.end(1)
+                            s2 = s0 + m_ds.start(2)
+                            e2 = s0 + m_ds.end(2)
+                            t1 = ra[s1:e1].strip()
+                            t2 = ra[s2:e2].strip()
+                            out.append(
+                                {
+                                    **rr,
+                                    "score": float(rr.get("score") or 0.87),
+                                    "value": {
+                                        **val,
+                                        "start": s1,
+                                        "end": e1,
+                                        "text": t1,
+                                        "labels": ["STR"],
+                                    },
+                                }
+                            )
+                            out.append(
+                                {
+                                    **rr,
+                                    "score": float(rr.get("score") or 0.86),
+                                    "value": {
+                                        **val,
+                                        "start": s2,
+                                        "end": e2,
+                                        "text": t2,
+                                        "labels": ["NUM"],
+                                    },
+                                }
+                            )
+                            continue
+                if labs == ["STR"] and has_cau_poi and re.match(r"(?is)^gần\s+cầu\b", txt):
+                    continue
+                if labs == ["BLD"] and re.match(r"(?is)^toà\s*nhà\s+[a-z0-9]+\s*$", txt):
+                    val["labels"] = ["NHB"]
+                    labs = ["NHB"]
+                if labs == ["NHB"]:
+                    mta = re.match(r"(?is)^(Tổ\s+\d+)\s+(ấp\s+.+)$", txt)
+                    if mta:
+                        for gi in (1, 2):
+                            g = mta.group(gi).strip()
+                            p = txt.lower().find(g.lower())
+                            if p >= 0:
+                                ep = s0 + p
+                                tgx = ra[ep : ep + len(g)].strip()
+                                el = ep + len(tgx)
+                                out.append(
+                                    {
+                                        **rr,
+                                        "score": float(rr.get("score") or 0.84),
+                                        "value": {
+                                            **val,
+                                            "start": ep,
+                                            "end": el,
+                                            "text": tgx,
+                                            "labels": ["NHB"],
+                                        },
+                                    }
+                                )
+                        continue
+                    mtkp0 = re.match(r"(?is)^(Tổ\s+\d+)\s+(Khu\s+Phố\s+.+)$", txt)
+                    if mtkp0 and "(" not in txt:
+                        for gi in (1, 2):
+                            g = mtkp0.group(gi).strip()
+                            p = txt.lower().find(g.lower())
+                            if p >= 0:
+                                ep = s0 + p
+                                tgx = ra[ep : ep + len(g)].strip()
+                                el = ep + len(tgx)
+                                out.append(
+                                    {
+                                        **rr,
+                                        "score": float(rr.get("score") or 0.84),
+                                        "value": {
+                                            **val,
+                                            "start": ep,
+                                            "end": el,
+                                            "text": tgx,
+                                            "labels": ["NHB"],
+                                        },
+                                    }
+                                )
+                        continue
+                    mtkpp = re.match(r"(?is)^(Tổ\s+\d+)\s+(Khu\s+Phố\s+.+?)\s*\(\s*(.+)\)\s*$", txt)
+                    if mtkpp:
+                        g1, g2, inner = (
+                            mtkpp.group(1).strip(),
+                            mtkpp.group(2).strip(),
+                            mtkpp.group(3).strip(),
+                        )
+                        seq = [(g1, "NHB"), (g2, "NHB")]
+                        mk = re.match(r"(?is)^(ngã\s+ba\s+.+?)\s+kế\s+(.+)$", inner)
+                        if mk:
+                            seq.append((mk.group(1).strip(), "POI"))
+                            seq.append((mk.group(2).strip(), "POI"))
+
+                        def _place_piece(g: str, lb: str) -> None:
+                            g = g.strip()
+                            if not g:
+                                return
+                            p = txt.lower().find(g.lower())
+                            if p >= 0:
+                                ep = s0 + p
+                            else:
+                                ep = ra.lower().find(g.lower(), max(0, s0 - 8))
+                            if ep < 0:
+                                return
+                            frag = ra[ep : ep + len(g)]
+                            tgx = frag.strip()
+                            el = ep + len(tgx)
+                            out.append(
+                                {
+                                    **rr,
+                                    "score": float(rr.get("score") or 0.83),
+                                    "value": {
+                                        **val,
+                                        "start": ep,
+                                        "end": el,
+                                        "text": tgx,
+                                        "labels": [lb],
+                                    },
+                                }
+                            )
+
+                        for gx, lx in seq:
+                            _place_piece(gx, lx)
+                        continue
+                    if "(" in txt and re.search(r"(?i)\(\s*tiệm", txt):
+                        cut = txt.index("(")
+                        outer = txt[:cut].strip()
+                        if outer:
+                            tgx = ra[s0 : s0 + len(outer)].strip()
+                            el = s0 + len(tgx)
+                            out.append(
+                                {
+                                    **rr,
+                                    "score": float(rr.get("score") or 0.82),
+                                    "value": {
+                                        **val,
+                                        "start": s0,
+                                        "end": el,
+                                        "text": tgx,
+                                        "labels": ["NHB"],
+                                    },
+                                }
+                            )
+                            continue
+                    if re.match(r"(?is)^(Đường|Đại\s+lộ|Hương\s+lộ)\s+", txt):
+                        val["labels"] = ["STR"]
+                        out.append({**rr, "value": val})
+                        continue
+                    head_to_st = ra[:s0]
+                    if (
+                        len(txt.split()) <= 5
+                        and not re.search(r"\d", txt)
+                        and not re.match(
+                            r"(?is)^(tổ|khu\s*phố|ấp|thôn|xóm|làng|kp)\b",
+                            txt,
+                        )
+                        and re.search(
+                            r"(?is)[23456789CFGHJMPQRVWX]{4,8}\+[23456789CFGHJMPQRVWX]{2,3}\s*,\s*$",
+                            head_to_st.rstrip(),
+                        )
+                    ):
+                        val["labels"] = ["STR"]
+                        out.append({**rr, "value": val})
+                        continue
+                out.append({**rr, "value": val})
+            acc[:] = out
+
+        _finalize_nhb_str_polish(results)
+
+        def _dedupe_span_entities(acc: list) -> None:
+            seen: set = set()
+            out: list = []
+            for rr in acc:
+                v = rr.get("value") or {}
+                key = (
+                    v.get("start"),
+                    v.get("end"),
+                    tuple(v.get("labels") or []),
+                    str(v.get("text") or "").strip().casefold(),
+                )
+                if key in seen:
+                    continue
+                seen.add(key)
+                out.append(rr)
+            acc[:] = out
+
+        _dedupe_span_entities(results)
+
+        # Free-text có thể gán NHB trước MICRO; BLD trùng span bị chặn (new_len <= ex_len).
+        for rr in results:
+            val = rr.get("value") or {}
+            txt = str(val.get("text") or "").strip()
+            if txt and re.match(r"(?is)^chung\s*cư\b", txt):
+                val["labels"] = ["BLD"]
+            if (
+                val.get("labels") == ["NHB"]
+                and txt
+                and re.match(r"(?is)^tòa\s*nhà\s+", txt)
+            ):
+                val["labels"] = ["BLD"]
+
+        has_eco = any(
+            "ecogreen" in str((rr.get("value") or {}).get("text") or "").lower()
+            and (rr.get("value") or {}).get("labels") == ["BLD"]
+            for rr in results
+        )
+        if not has_eco:
+            m_eco_final = re.search(r"(?i)\b(chung\s*cư\s+ecogreen)\b", raw_address)
+            if m_eco_final:
+                results.append(
+                    {
+                        "from_name": "label",
+                        "to_name": "text",
+                        "type": "labels",
+                        "score": 0.88,
+                        "value": {
+                            "start": m_eco_final.start(1),
+                            "end": m_eco_final.end(1),
+                            "text": raw_address[
+                                m_eco_final.start(1) : m_eco_final.end(1)
+                            ].strip(),
+                            "labels": ["BLD"],
+                        },
+                    }
+                )
+
+        raw_lc = str(raw_address or "").casefold()
+        results[:] = [
+            rr
+            for rr in results
+            if not (
+                (
+                    (rr.get("value") or {}).get("labels") == ["NHB"]
+                    and re.search(
+                        r"(?i)ấp\s+nước\s*50\s*met",
+                        str((rr.get("value") or {}).get("text") or ""),
+                    )
+                )
+                or (
+                    (rr.get("value") or {}).get("labels") == ["STR"]
+                    and re.search(
+                        r"(?i)chung\s*cư\s+ecogreen",
+                        str((rr.get("value") or {}).get("text") or ""),
+                    )
+                )
+                or (
+                    (rr.get("value") or {}).get("labels") == ["POI"]
+                    and str((rr.get("value") or {}).get("text") or "").strip().casefold() == "am province"
+                )
+                or (
+                    (rr.get("value") or {}).get("labels") == ["POI"]
+                    and str((rr.get("value") or {}).get("text") or "").strip().casefold() == "am giang"
+                    and "nam giang" in raw_lc
+                )
+                or (
+                    (rr.get("value") or {}).get("labels") == ["POI"]
+                    and str((rr.get("value") or {}).get("text") or "").strip().casefold() == "am hòa"
+                    and "nam hoà" in raw_lc
+                )
+                or (
+                    (rr.get("value") or {}).get("labels") == ["STR"]
+                    and re.match(
+                        r"(?is)^đường\s+đan\s+đông",
+                        str((rr.get("value") or {}).get("text") or ""),
+                    )
+                )
+            )
+        ]
 
         return results
 

@@ -1,5 +1,7 @@
 # VN Address Intelligence - Codebase Context
 
+**Cấu trúc thư mục & quy ước (chuẩn hóa):** [`docs/00-ENGINEERING/SOURCE-LAYOUT.md`](docs/00-ENGINEERING/SOURCE-LAYOUT.md) · [`scripts/README.md`](scripts/README.md)
+
 ## 🎯 Project Overview
 **Vietnamese Address Intelligence System**: AI-powered platform for address normalization, geospatial enrichment, and administrative boundary management. Handles VN admin hierarchy (63 provinces → districts → wards), OSM data integration, NER training, and real-time parsing research.
 
@@ -35,7 +37,8 @@ CLI (app/main.py) → Data Ingestion → DB → FastAPI API/UI → AI Models →
    - **Models**: PhoBERTSiamese, SiameseMGTE, LLMQwen3
    - **Research**: /api/parser/analyze compares models on samples
    - **Training**: app/ai/train_ner.py, export_for_annotation.py
-   - **Queue**: prq.address_cleansing_queue stores raw → standardized
+   - **Docs UI**: `GET /api/repo-docs/list|raw/*` reads `docs/*.md`; sidebar **Trung tâm tài liệu** (`#/documentation`)
+   - **Queue**: prq.address_cleansing_queue stores raw → standardized (runbook: `docs/01-ai-training/11-OPERATING-PHASES-ABCD.md`). **Join master HC v1**: `old_*` on queue = `mat.*.old_id` with `admin_version = 1` (see `.cursor/rules/address-queue-mat-lineage.mdc`, `app/domain/acq_mat_lineage.py`).
 
 4. **Key DB Schemas**:
    | Schema | Purpose | Key Tables |
@@ -54,6 +57,7 @@ CLI (app/main.py) → Data Ingestion → DB → FastAPI API/UI → AI Models →
 ├── ui/                      # Static frontend (app.js orchestrates pages)
 ├── app/ai/models/*.py       # PhoBERT, mGTE, Qwen LLM
 ├── app/services/osm_fetcher.py # OSM Overpass API client
+├── scripts/ops/             # Embeddings, vector indexes, corpus ops (root-level *.py shims)
 └── docs/*.md                # Architecture plans
 ```
 

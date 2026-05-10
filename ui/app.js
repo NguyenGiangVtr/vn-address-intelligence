@@ -77,7 +77,8 @@ async function fetchWithApiFallback(path, options = {}) {
 const PAGES = [
   "overview", "parser", "batch", "training", "label-studio",
   "experiments", "explorer", "osm-enrichment", "lookup", "boundary-visualization",
-  "admin-units", "nso-sync", "settings", "evidence", "label-registry", "prelabeler-cases"
+  "admin-units", "nso-sync", "settings", "evidence", "label-registry", "prelabeler-cases",
+  "documentation",
 ];
 
 const {
@@ -246,6 +247,11 @@ const PAGE_META = {
     title: 'Address Label Studio - Vietnamese Address Intelligence',
     description: 'Thiết lập nhãn kỳ vọng, đối chiếu với gợi ý nhãn rule (PreLabeler) và tinh chỉnh dữ liệu địa chỉ',
     keywords: 'address labeling, vietnam address, ner, annotation, expected labels'
+  },
+  documentation: {
+    title: 'Trung tâm tài liệu - Vietnamese Address Intelligence',
+    description: 'Đọc trực tiếp các tệp Markdown trong docs/ của repository — trùng nội dung với repo, không có bản HTML tĩnh riêng',
+    keywords: 'documentation, readme, playbook, markdown, huấn luyện, pipeline'
   }
 };
 
@@ -379,9 +385,490 @@ function initializePageSpecific(pageId) {
     case 'prelabeler-cases':
       if (window.pltInitPage) window.pltInitPage();
       break;
+    case 'documentation':
+      initDocumentationHub();
+      break;
     // Add more page-specific initialization as needed
   }
 }
+
+// ══════════════════════════════════════════════════════════════
+// TRUNG TÂM TÀI LIỆU — đọc trực tiếp *.md trong docs/ qua GET /api/repo-docs
+// Render: markdown-it + highlight.js + github-markdown-css (CDN)
+// Mục lục: cây thư mục có thứ tự (numeric trong tên được sort đúng)
+// ══════════════════════════════════════════════════════════════
+
+const DOC_HUB_LS_KEY = 'vnai_doc_hub_path';
+const DOC_UI_LIB_REV = 'mdit-hljs-1';
+
+const docHubState = {
+  docs: [],
+  currentPath: null,
+  libsPromise: null,
+  libRevApplied: '',
+  navBuilt: false,
+};
+
+let repoDocsMarkdownIt = null;
+
+function repoDocsResetMarkdownLibs() {
+  docHubState.libsPromise = null;
+  repoDocsMarkdownIt = null;
+  docHubState.libRevApplied = '';
+}
+
+function repoDocsScriptOnce(src, idempotentId) {
+  return new Promise((resolve, reject) => {
+    if (idempotentId && document.getElementById(idempotentId)) {
+      resolve();
+      return;
+    }
+    const s = document.createElement('script');
+    if (idempotentId) s.id = idempotentId;
+    s.src = src;
+    s.async = true;
+    s.onload = () => resolve();
+    s.onerror = () => reject(new Error(`Không tải được thư viện: ${src}`));
+    document.head.appendChild(s);
+  });
+}
+
+function repoDocsLinkOnce(href, id) {
+  if (document.getElementById(id)) return;
+  const l = document.createElement('link');
+  l.rel = 'stylesheet';
+  l.href = href;
+  l.id = id;
+  document.head.appendChild(l);
+}
+
+function docHubIsDarkTheme() {
+  const t = document.documentElement.getAttribute('data-theme') || '';
+  return t === 'dark' || t === 'oled-black';
+}
+
+function docHubApplyMarkdownStylesheets() {
+  const dark = docHubIsDarkTheme();
+  const mdOld = document.getElementById('vnai-doc-gh-md');
+  const hlOld = document.getElementById('vnai-doc-hljs');
+  if (mdOld) mdOld.remove();
+  if (hlOld) hlOld.remove();
+  repoDocsLinkOnce(
+    dark
+      ? 'https://cdn.jsdelivr.net/npm/github-markdown-css@5.7.1/github-markdown-dark.min.css'
+      : 'https://cdn.jsdelivr.net/npm/github-markdown-css@5.7.1/github-markdown-light.min.css',
+    'vnai-doc-gh-md'
+  );
+  repoDocsLinkOnce(
+    dark
+      ? 'https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github-dark.min.css'
+      : 'https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/github.min.css',
+    'vnai-doc-hljs'
+  );
+}
+
+function docHubEnsureThemeObserver() {
+  if (docHubState._themeObs) return;
+  docHubState._themeObs = new MutationObserver(() => {
+    if (document.getElementById('documentation')?.classList.contains('active')) {
+      docHubApplyMarkdownStylesheets();
+    }
+  });
+  docHubState._themeObs.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['data-theme'],
+  });
+}
+
+function docHubEscapeHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function repoDocsEnsureMarkdownLibs() {
+  if (docHubState.libRevApplied !== DOC_UI_LIB_REV) {
+    repoDocsResetMarkdownLibs();
+    docHubState.libRevApplied = DOC_UI_LIB_REV;
+  }
+  if (!docHubState.libsPromise) {
+    docHubApplyMarkdownStylesheets();
+    docHubEnsureThemeObserver();
+    docHubState.libsPromise = Promise.all([
+      repoDocsScriptOnce(
+        'https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js',
+        'vnai-hljs'
+      ),
+      repoDocsScriptOnce(
+        'https://cdn.jsdelivr.net/npm/markdown-it@14.1.0/dist/markdown-it.min.js',
+        'vnai-markdown-it'
+      ),
+      repoDocsScriptOnce(
+        'https://cdn.jsdelivr.net/npm/dompurify@3.2.4/dist/purify.min.js',
+        'vnai-dompurify'
+      ),
+    ]).then(() => {
+      const hl = window.hljs;
+      const Md = window.markdownit || window.markdownIt;
+      if (typeof Md !== 'function') throw new Error('markdown-it chưa sẵn sàng');
+      const inst = Md({
+        html: false,
+        linkify: true,
+        typographer: true,
+        highlight: (str, lang) => {
+          const esc = docHubEscapeHtml(str);
+          const safeLang = String(lang || '').replace(/[^a-zA-Z0-9_-]/g, '') || 'text';
+          if (lang && hl && hl.getLanguage(lang)) {
+            try {
+              const v = hl.highlight(str, { language: lang, ignoreIllegals: true }).value;
+              return `<pre><code class="hljs language-${safeLang}">${v}</code></pre>`;
+            } catch (_e) {
+              /* fall through */
+            }
+          }
+          if (hl && typeof hl.highlightAuto === 'function') {
+            try {
+              const v = hl.highlightAuto(str).value;
+              return `<pre><code class="hljs">${v}</code></pre>`;
+            } catch (_e) {
+              /* fall through */
+            }
+          }
+          return `<pre><code class="hljs">${esc}</code></pre>`;
+        },
+      });
+      repoDocsMarkdownIt = inst;
+      try {
+        inst.enable(["table"]);
+      } catch (_e) {
+        /* bảng mặc định không bật trên một số build — bỏ qua */
+      }
+    });
+  }
+  return docHubState.libsPromise;
+}
+
+function repoDocsMarkdownToHtml(mdText) {
+  if (!repoDocsMarkdownIt) throw new Error('markdown-it chưa khởi tạo');
+  return repoDocsMarkdownIt.render(mdText);
+}
+
+function docHubNaturalCompare(a, b) {
+  return String(a).localeCompare(String(b), 'vi', { numeric: true, sensitivity: 'base' });
+}
+
+function docHubHumanFolderLabel(segment) {
+  if (!segment) return '';
+  return String(segment).replace(/-/g, ' ');
+}
+
+function docHubNewTree() {
+  return { dirs: new Map(), files: [] };
+}
+
+function docHubTreeAdd(tree, doc) {
+  const parts = doc.path.split('/').filter(Boolean);
+  if (parts.length === 1) {
+    tree.files.push(doc);
+    return;
+  }
+  let cur = tree;
+  for (let i = 0; i < parts.length - 1; i++) {
+    const seg = parts[i];
+    if (!cur.dirs.has(seg)) cur.dirs.set(seg, docHubNewTree());
+    cur = cur.dirs.get(seg);
+  }
+  cur.files.push(doc);
+}
+
+function docHubTreeLeafCount(node) {
+  let n = node.files.length;
+  for (const ch of node.dirs.values()) n += docHubTreeLeafCount(ch);
+  return n;
+}
+
+/** Mở folder chứa tài liệu hiện tại */
+function docHubExpandForPath(relPath) {
+  const segments = relPath.split('/').filter(Boolean);
+  if (segments.length <= 1) return;
+  let acc = '';
+  for (let i = 0; i < segments.length - 1; i++) {
+    acc = i === 0 ? segments[0] : `${acc}/${segments[i]}`;
+    const el = document.querySelector(`#doc-hub-nav details[data-folder-rel="${acc}"]`);
+    if (el) el.open = true;
+  }
+}
+
+function docHubMakeLeafButton(doc) {
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'doc-hub-nav-btn';
+  btn.dataset.path = doc.path;
+  if (doc.path === 'INDEX.md') btn.classList.add('doc-hub-toc-leaf-index');
+  const title = document.createElement('span');
+  title.textContent = doc.title || doc.path.split('/').pop();
+  const meta = document.createElement('span');
+  meta.className = 'doc-hub-nav-meta';
+  meta.textContent = doc.path;
+  btn.appendChild(title);
+  btn.appendChild(meta);
+  btn.addEventListener('click', () => {
+    docHubLoadDocument(doc.path);
+    docHubSetActiveNav(doc.path);
+  });
+  return btn;
+}
+
+/** @param {*} container HTMLElement */
+function docHubLeafCompare(a, b) {
+  if (a.path === 'INDEX.md' && b.path !== 'INDEX.md') return -1;
+  if (b.path === 'INDEX.md' && a.path !== 'INDEX.md') return 1;
+  return docHubNaturalCompare(a.path, b.path);
+}
+
+function docHubRenderTree(container, tree, folderRelPrefix) {
+  const filesSorted = tree.files.slice().sort(docHubLeafCompare);
+  for (const doc of filesSorted) {
+    container.appendChild(docHubMakeLeafButton(doc));
+  }
+
+  const keys = [...tree.dirs.keys()].sort(docHubNaturalCompare);
+  for (const key of keys) {
+    const subtree = tree.dirs.get(key);
+    const rel = folderRelPrefix ? `${folderRelPrefix}/${key}` : key;
+    if (!subtree || docHubTreeLeafCount(subtree) === 0) continue;
+
+    const details = document.createElement('details');
+    details.className = 'doc-hub-toc-folder';
+    details.dataset.folderRel = rel;
+    const depth = rel.split('/').length;
+    details.open = depth <= 2;
+
+    const summary = document.createElement('summary');
+    summary.className = 'doc-hub-toc-summary';
+    summary.textContent = docHubHumanFolderLabel(key);
+
+    const inner = document.createElement('div');
+    inner.className = 'doc-hub-toc-branch doc-hub-toc-inner';
+
+    docHubRenderTree(inner, subtree, rel);
+
+    details.appendChild(summary);
+    details.appendChild(inner);
+    container.appendChild(details);
+  }
+}
+
+function docHubBuildNavTree(docsFiltered) {
+  const nav = document.getElementById('doc-hub-nav');
+  if (!nav) return;
+
+  nav.innerHTML = '';
+
+  const tree = docHubNewTree();
+  for (const doc of docsFiltered) {
+    docHubTreeAdd(tree, doc);
+  }
+
+  const wrapper = document.createElement('div');
+  wrapper.className = 'doc-hub-toc-branch doc-hub-toc-branch--root';
+
+  if (!docHubTreeLeafCount(tree)) {
+    const p = document.createElement('div');
+    p.className = 'doc-hub-toc-empty';
+    p.textContent = 'Không có tài liệu khớp bộ lọc.';
+    nav.appendChild(p);
+    return;
+  }
+
+  docHubRenderTree(wrapper, tree, '');
+  nav.appendChild(wrapper);
+}
+
+function docHubResolveMdLink(currentPath, href) {
+  if (!href || href.startsWith('#')) return null;
+  const trimmed = href.trim();
+  if (/^mailto:/i.test(trimmed)) return { external: true, url: trimmed };
+  if (/^https?:\/\//i.test(trimmed)) return { external: true, url: trimmed };
+
+  try {
+    const baseDir =
+      currentPath && currentPath.includes('/')
+        ? currentPath.slice(0, currentPath.lastIndexOf('/') + 1)
+        : '';
+    const u = new URL(trimmed, `http://vnai.doc/${baseDir}`);
+    let pathname = decodeURIComponent(u.pathname.replace(/^\//, ''));
+    pathname = pathname.split('#')[0].split('?')[0];
+    if (!pathname.toLowerCase().endsWith('.md')) {
+      return { external: true, url: trimmed };
+    }
+    return { path: pathname.replace(/\\/g, '/') };
+  } catch (_e) {
+    return null;
+  }
+}
+
+async function docHubFetchList() {
+  const res = await fetchWithApiFallback('/repo-docs/list', { headers: getAuthHeader() });
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status}`);
+  }
+  const data = await res.json();
+  return Array.isArray(data.documents) ? data.documents : [];
+}
+
+function docHubDocsMatchingFilter(docs, q) {
+  const qLower = q.trim().toLowerCase();
+  if (!qLower) return docs.slice();
+  return docs.filter(
+    (d) =>
+      (d.title && d.title.toLowerCase().includes(qLower)) ||
+      (d.path && d.path.toLowerCase().includes(qLower))
+  );
+}
+
+function docHubRebuildNav(docs, q) {
+  docHubBuildNavTree(docHubDocsMatchingFilter(docs, q));
+  if (docHubState.currentPath) {
+    docHubExpandForPath(docHubState.currentPath);
+    docHubSetActiveNav(docHubState.currentPath);
+  }
+}
+
+function docHubSetActiveNav(path) {
+  document.querySelectorAll('#doc-hub-nav .doc-hub-nav-btn').forEach((b) => {
+    b.classList.toggle('doc-hub-active', b.dataset.path === path);
+  });
+  const active = document.querySelector('#doc-hub-nav .doc-hub-nav-btn.doc-hub-active');
+  if (active) {
+    active.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+  try {
+    localStorage.setItem(DOC_HUB_LS_KEY, path);
+  } catch (_e) {
+    /* ignore */
+  }
+}
+
+function docHubBindContentClicks() {
+  const host = document.getElementById('doc-hub-render');
+  if (!host || host.dataset.docBound === '1') return;
+  host.dataset.docBound = '1';
+  host.addEventListener('click', (ev) => {
+    const a = ev.target.closest('a');
+    if (!a || !docHubState.currentPath) return;
+    const href = a.getAttribute('href');
+    const resolved = docHubResolveMdLink(docHubState.currentPath, href);
+    if (!resolved || resolved.external) return;
+    ev.preventDefault();
+    docHubLoadDocument(resolved.path);
+    docHubSetActiveNav(resolved.path);
+  });
+}
+
+async function docHubLoadDocument(relPath) {
+  const status = document.getElementById('doc-hub-error');
+  const render = document.getElementById('doc-hub-render');
+  const crumb = document.getElementById('doc-hub-breadcrumb');
+  if (!render || !crumb) return;
+
+  if (status) {
+    status.hidden = true;
+    status.textContent = '';
+  }
+  render.innerHTML = '<div class="doc-hub-muted markdown-body doc-hub-markdown-body">Đang tải…</div>';
+  crumb.textContent = relPath;
+
+  try {
+    await repoDocsEnsureMarkdownLibs();
+    const encodedPath = relPath
+      .split('/')
+      .map((segment) => encodeURIComponent(segment))
+      .join('/');
+    const res = await fetchWithApiFallback(`/repo-docs/raw/${encodedPath}`, {
+      headers: getAuthHeader(),
+    });
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status} — ${relPath}`);
+    }
+    const md = await res.text();
+    const dirty = repoDocsMarkdownToHtml(md);
+    const clean = window.DOMPurify
+      ? window.DOMPurify.sanitize(dirty, { USE_PROFILES: { html: true } })
+      : dirty;
+    render.innerHTML = `<div class="markdown-body doc-hub-markdown-body">${clean}</div>`;
+    docHubState.currentPath = relPath;
+    docHubExpandForPath(relPath);
+  } catch (err) {
+    const msg = err && err.message ? err.message : String(err);
+    if (status) {
+      status.textContent = msg;
+      status.hidden = false;
+    }
+    render.innerHTML = '';
+  }
+}
+
+function initDocumentationHub() {
+  const navHost = document.getElementById('doc-hub-nav');
+  const navStatus = document.getElementById('doc-hub-nav-status');
+  const filter = document.getElementById('doc-hub-filter');
+  const btnIndex = document.getElementById('doc-hub-open-index');
+  if (!navHost || !navStatus) return;
+
+  docHubBindContentClicks();
+
+  if (btnIndex) {
+    btnIndex.onclick = () => {
+      docHubLoadDocument('INDEX.md');
+      docHubSetActiveNav('INDEX.md');
+    };
+  }
+
+  let filterTimer;
+  if (filter) {
+    filter.oninput = () => {
+      clearTimeout(filterTimer);
+      filterTimer = setTimeout(() => docHubRebuildNav(docHubState.docs, filter.value), 200);
+    };
+  }
+
+  if (docHubState.navBuilt && docHubState.docs.length) {
+    docHubRebuildNav(docHubState.docs, filter ? filter.value : '');
+    return;
+  }
+
+  navStatus.textContent = 'Đang tải danh sách…';
+  docHubFetchList()
+    .then((docs) => {
+      docHubState.docs = docs;
+      docHubState.navBuilt = true;
+      navStatus.textContent = `${docs.length} tệp .md`;
+      docHubRebuildNav(docs, filter ? filter.value : '');
+      let startPath = null;
+      try {
+        startPath = localStorage.getItem(DOC_HUB_LS_KEY);
+      } catch (_e) {
+        startPath = null;
+      }
+      const known = (p) => docs.some((d) => d.path === p);
+      if (!startPath || !known(startPath)) {
+        startPath = known('INDEX.md') ? 'INDEX.md' : docs[0]?.path || null;
+      }
+      if (startPath) {
+        docHubLoadDocument(startPath);
+        docHubSetActiveNav(startPath);
+      }
+    })
+    .catch((err) => {
+      const msg = err && err.message ? err.message : String(err);
+      navStatus.textContent = `Lỗi: ${msg}`;
+    });
+}
+
+window.initDocumentationHub = initDocumentationHub;
 
 function initRouting() {
   // Handle browser back/forward buttons
@@ -1579,6 +2066,7 @@ const PAGE_GROUP_MAP = {
   'experiments': 'ai-bench',
   'label-registry': 'ai-bench',
   'prelabeler-cases': 'ai-bench',
+  'documentation': 'ai-bench',
 };
 
 function openNavGroup(groupId) {

@@ -6985,3 +6985,266 @@ body.no-scroll {
     height: 46px;
   }
 }
+
+/* ══════════════════════════════════════════════════════════════
+   Documentation hub — Markdown từ docs/ (đọc qua API)
+   ══════════════════════════════════════════════════════════════ */
+
+#documentation .doc-hub-header {
+  margin-bottom: var(--spacing-lg);
+}
+
+#documentation .doc-hub-card {
+  overflow: hidden;
+}
+
+#documentation .doc-hub-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 16px;
+  padding: var(--spacing-md) var(--spacing-lg);
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-secondary);
+}
+
+#documentation .doc-hub-search-input {
+  flex: 1 1 220px;
+  min-width: 180px;
+  height: 40px;
+  padding: 0 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-strong);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+}
+
+#documentation .doc-hub-toolbar-hints {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+#documentation .doc-hub-path-hint {
+  font-size: 12px;
+  padding: 2px 8px;
+}
+
+#documentation .doc-hub-layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+  gap: 0;
+  min-height: 520px;
+  max-height: calc(100vh - 240px);
+}
+
+#documentation .doc-hub-nav-wrapper {
+  border-right: 1px solid var(--border-subtle);
+  background: var(--bg-secondary);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+#documentation .doc-hub-toc-title {
+  padding: var(--spacing-sm) var(--spacing-md) 4px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-tertiary);
+}
+
+#documentation .doc-hub-muted-inline {
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+#documentation .doc-hub-muted {
+  font-size: 12px;
+  color: var(--text-secondary);
+  padding: 4px var(--spacing-md) 8px;
+}
+
+#documentation .doc-hub-nav.doc-hub-nav-toc {
+  overflow-y: auto;
+  flex: 1;
+  padding: 4px 0 calc(var(--spacing-lg) + 8px);
+  font-feature-settings: "tnum";
+}
+
+#documentation .doc-hub-toc-branch {
+  border-left: 1px solid var(--border-subtle);
+  margin: 4px 0 4px 10px;
+  padding-left: 6px;
+}
+
+#documentation .doc-hub-toc-branch--root {
+  border-left: none;
+  margin-left: 0;
+  padding-left: 0;
+}
+
+#documentation .doc-hub-toc-folder {
+  margin: 0 0 2px;
+  border-radius: var(--radius-sm);
+}
+
+#documentation .doc-hub-toc-folder > summary.doc-hub-toc-summary {
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+  padding: 6px 12px;
+  margin: 0 8px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+#documentation .doc-hub-toc-folder > summary.doc-hub-toc-summary::-webkit-details-marker {
+  display: none;
+}
+
+#documentation .doc-hub-toc-folder > summary.doc-hub-toc-summary::before {
+  content: "\f07c";
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
+  margin-right: 8px;
+  font-size: 11px;
+  color: var(--accent-primary);
+  display: inline-block;
+  width: 14px;
+}
+
+#documentation .doc-hub-toc-folder:not([open]) > summary.doc-hub-toc-summary::before {
+  content: "\f07b";
+}
+
+#documentation .doc-hub-toc-folder > summary.doc-hub-toc-summary:hover {
+  background: var(--bg-hover);
+}
+
+#documentation .doc-hub-toc-inner {
+  padding: 2px 0 6px 4px;
+}
+
+#documentation .doc-hub-nav-btn {
+  display: block;
+  width: calc(100% - 16px);
+  margin: 0 8px 2px;
+  text-align: left;
+  padding: 7px 10px 7px 14px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 13px;
+  line-height: 1.35;
+  cursor: pointer;
+  border-left: 3px solid transparent;
+}
+
+#documentation .doc-hub-nav-btn:hover {
+  background: var(--bg-hover);
+}
+
+#documentation .doc-hub-nav-btn.doc-hub-active {
+  background: var(--bg-elevated);
+  border-left-color: var(--accent-primary);
+}
+
+#documentation .doc-hub-nav-meta {
+  display: block;
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+  word-break: break-all;
+  line-height: 1.3;
+}
+
+#documentation .doc-hub-toc-leaf-index .doc-hub-nav-meta {
+  color: var(--accent-primary);
+}
+
+#documentation .doc-hub-toc-empty {
+  padding: 8px 16px;
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+#documentation .doc-hub-article {
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+#documentation .doc-hub-breadcrumb {
+  padding: var(--spacing-sm) var(--spacing-lg);
+  font-size: 12px;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-subtle);
+  flex: 0 0 auto;
+  word-break: break-all;
+}
+
+#documentation .doc-hub-alert {
+  margin: var(--spacing-md) var(--spacing-lg) 0;
+  padding: 12px var(--spacing-md);
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(220, 80, 80, 0.45);
+  background: rgba(220, 80, 80, 0.1);
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+#documentation .doc-hub-render {
+  flex: 1;
+  overflow: auto;
+  padding: var(--spacing-md) var(--spacing-lg);
+  scroll-behavior: smooth;
+}
+
+/* github-markdown-css + highlight.js trong panel app */
+#documentation .markdown-body.doc-hub-markdown-body {
+  box-sizing: border-box;
+  max-width: 980px;
+  margin: 0 auto;
+  font-size: 15px;
+  line-height: 1.62;
+  background-color: transparent !important;
+}
+
+#documentation .markdown-body.doc-hub-markdown-body > *:first-child {
+  margin-top: 0 !important;
+}
+
+#documentation .markdown-body.doc-hub-markdown-body pre {
+  border-radius: var(--radius-md);
+  overflow-x: auto;
+}
+
+#documentation .markdown-body.doc-hub-markdown-body code {
+  font-size: 0.9em;
+}
+
+#documentation .markdown-body.doc-hub-markdown-body table {
+  display: block;
+  overflow-x: auto;
+}
+
+@media (max-width: 900px) {
+  #documentation .doc-hub-layout {
+    grid-template-columns: 1fr;
+    max-height: none;
+  }
+
+  #documentation .doc-hub-nav-wrapper {
+    border-right: none;
+    border-bottom: 1px solid var(--border-subtle);
+    max-height: min(42vh, 320px);
+  }
+}

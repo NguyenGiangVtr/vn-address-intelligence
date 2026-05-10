@@ -515,6 +515,7 @@ for record in export_data:
 
 ## 📚 References
 
+- **Runbook vận hành:** [11-OPERATING-PHASES-ABCD.md](11-OPERATING-PHASES-ABCD.md) (giai đoạn B: regression PreLabeler trước batch ML trên `prq.address_cleansing_queue`)
 - **Code:** `app/ai/export_for_annotation.py`
 - **PreLabeler class:** Lines 37-200
 - **Label mappings:** `app/ai/constants.py`

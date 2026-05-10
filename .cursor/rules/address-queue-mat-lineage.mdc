@@ -1,0 +1,43 @@
+---
+description: Canonical join rule — prq.address_cleansing_queue administrative lineage ↔ mat.* (v1 masters)
+globs:
+  - app/domain/acq_mat_lineage.py
+  - scripts/diagnostics/audit*.py
+  - scripts/migration/*.py
+  - app/api/server.py
+  - app/ai/export_for_annotation.py
+alwaysApply: false
+---
+
+# Queue ↔ Administrative master (`mat.*`) lineage
+
+Single source constants: `app/domain/acq_mat_lineage.py`.
+
+## Business contract (PostgreSQL)
+
+To resolve **`prq.address_cleansing_queue`** rows onto **đơn vị hành chính phiên bản 1 trong `mat`** (canonical semantic join), **do not** use `province_id` / `district_id` / `ward_id` on the queue unless you explicitly label that path as a denormalised / legacy snapshot diagnostic.
+
+Instead use **lineage keys**:
+
+```sql
+FROM prq.address_cleansing_queue AS acq
+JOIN mat.province p ON acq.old_province_id = p.old_id AND p.admin_version = 1
+  AND COALESCE(p.is_deleted, FALSE) = FALSE AND COALESCE(p.is_current, TRUE) = TRUE
+JOIN mat.district d ON acq.old_district_id = d.old_id AND d.admin_version = 1
+  AND COALESCE(d.is_deleted, FALSE) = FALSE AND COALESCE(d.is_current, TRUE) = TRUE
+JOIN mat.ward w     ON acq.old_ward_id     = w.old_id AND w.admin_version = 1
+  AND COALESCE(w.is_deleted, FALSE) = FALSE AND COALESCE(w.is_current, TRUE) = TRUE
+```
+
+- **Full triple INNER join** ⇒ row has coherent lineage resolving to three **active** v1 masters (quality gate).
+
+**Denormalised** `acq.province_id` / `district_id` / `ward_id` join `mat.*` on business id — always qualify **`mat.*.admin_version`** (and avoid counting rows without `DISTINCT acq.id` when the same id exists under multiple versions).
+
+## Flows touched in repo
+
+- **Migration coverage & APPLY**: `scripts/migration/migrate_acq_to_admin_v2.py` — mapping join + UPDATE go through lineage → `mapping.v1_id` equals **master `.province_id` / `.district_id` / `.ward_id`** resolved from queue `old_*`.
+- **Audit**: `scripts/diagnostics/audit_acq_admin_bridge.py` — lineage-based metrics first; FK histogram labelled diagnostic only.
+- **Analysis helper**: `scripts/migration/analyze_admin_version.py` — lineage samples + FK histogram appendix.
+- **Export / corpus SQL** already honours lineage patterns in places like `export_for_annotation.py` — keep aligned with this rule when adding joins.
+
+When adding SQL or Python that interprets administrative meaning from the queue: **reuse** `JOIN_QUEUE_*` / `sql_count_queue_rows_full_lineage_v1_resolution()` from `acq_mat_lineage.py`; do not copy-paste ad-hoc predicates.

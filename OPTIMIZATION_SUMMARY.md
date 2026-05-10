@@ -4,6 +4,8 @@
 **Trạng thái:** ✅ Đã triển khai  
 **Mục tiêu:** Tối ưu hóa hiệu suất parser và training pipeline sau khi có table `prq.address_clean_corpus`
 
+**Runbook vận hành:** `docs/01-ai-training/11-OPERATING-PHASES-ABCD.md`.
+
 ---
 
 ## 📊 Trạng thái hiện tại

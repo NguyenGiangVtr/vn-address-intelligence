@@ -309,8 +309,8 @@ Hàng đợi **chuẩn hóa địa chỉ**: raw → tiền xử lý → NER (Pho
 
 1. **Input:** `source_system`, `raw_address`, `order_count`
 2. **Trạng thái:** `processing_status` (`PENDING`, `PROCESSING`, `COMPLETED`, `FAILED`, …), `processing_method` (`SQL_RULE`, `ENSEMBLE_AI`, `MANUAL`, …), `error_message`
-3. **Hành chính (đã map):** `province_id/name`, `district_id/name`, `ward_id/name`
-4. **Lineage (ID cũ / pre-map):** `old_province_id`, `old_district_id`, `old_ward_id` — join `mat.*.old_id` hoặc `admin_unit_mapping`
+3. **Hành chính (đã map / snapshot denormalised):** `province_id/name`, `district_id/name`, `ward_id/name` — **không dùng** làm khóa nghiệp vụ duy nhất khi giải nghĩa master; có thể lệch kỳ HC so với lineage.
+4. **Lineage (chuẩn join master v1):** `old_province_id`, `old_district_id`, `old_ward_id` — join `mat.province` / `mat.district` / `mat.ward` trên **`mat.*.old_id`** với **`admin_version = 1`** (`acq.old_province_id = p.old_id AND p.admin_version = 1`; tương tự `d`, `w`). Xem `.cursor/rules/address-queue-mat-lineage.mdc` và `app/domain/acq_mat_lineage.py`. `mat.admin_unit_mapping` / `mat.ward_mapping` bổ sung khi có.
 5. **Lõi đường phố:** `street_address` (thường từ SQL rule), `normalized_phobert`, `normalized_mgte`
 6. **AI:** `phobert_parsed_components`, `phobert_confidence_score`, `mgte_parsed_components`, `mgte_confidence_score` (JSON + score 0–1)
 7. **Quyết định:** `selected_ai_model`, `address_standardized`
@@ -319,6 +319,8 @@ Hàng đợi **chuẩn hóa địa chỉ**: raw → tiền xử lý → NER (Pho
 10. **Audit:** `created_at`, `updated_at`
 
 **Lưu ý:** Trong ORM có comment các cột **ACS** (G2) và **address_epoch** (G5) — có thể được thêm bằng migration SQL sau; khi có trong DB, bổ sung cùng ý nghĩa trong bảng này.
+
+**Vận hành cleanse / chuẩn hóa hàng loạt:** [11-OPERATING-PHASES-ABCD.md](../01-ai-training/11-OPERATING-PHASES-ABCD.md) (giai đoạn C).
 
 **Index tham khảo:** `idx_address_status` trên `processing_status` (theo script DDL thủ công / migration).
 

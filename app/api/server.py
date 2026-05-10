@@ -51,6 +51,7 @@ from app.services.prelabeler_labeling_service import (
 from app.api import schemas
 from app.api.boundary import router as boundary_router
 from app.api.spatial import router as spatial_router
+from app.api.repo_docs import router as repo_docs_router
 from typing import Any, Dict, List, Optional, Union
 import json
 
@@ -1738,6 +1739,40 @@ def get_stats(db: Session = Depends(get_db)):
             "online": stats_tracker.get_online_count()
         }
     }
+
+
+@api_router.get("/queue/summary", tags=["Xử lý hàng loạt"], summary="Thống kê nhanh prq.address_cleansing_queue")
+def get_queue_summary(db: Session = Depends(get_db), current_user: str = Depends(get_current_user)):
+    """
+    Đếm theo processing_status và số dòng chưa có address_standardized — tiện cho n8n / giám sát
+    trước khi POST /api/batch/trigger.
+    """
+    try:
+        total = db.query(func.count()).select_from(AddressCleansingQueue).scalar() or 0
+        status_rows = (
+            db.query(AddressCleansingQueue.processing_status, func.count())
+            .group_by(AddressCleansingQueue.processing_status)
+            .all()
+        )
+        by_status = {str(s or "NULL"): int(c) for s, c in status_rows}
+        without_standardized = (
+            db.query(func.count())
+            .select_from(AddressCleansingQueue)
+            .filter(AddressCleansingQueue.address_standardized.is_(None))
+            .scalar()
+            or 0
+        )
+        return {
+            "schema": "prq.address_cleansing_queue",
+            "total": int(total),
+            "byProcessingStatus": by_status,
+            "addressStandardizedNull": int(without_standardized),
+            "generatedAt": datetime.utcnow().isoformat() + "Z",
+        }
+    except Exception as e:
+        logger.error("queue/summary: %s", e)
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 def _normalize_text(value: Optional[str]) -> str:
@@ -3457,6 +3492,7 @@ def download_prelabeler_export_file(name: str, current_user=Depends(get_current_
 
 api_router.include_router(boundary_router, prefix="/boundary")
 api_router.include_router(spatial_router)
+app.include_router(repo_docs_router, prefix="/api")
 app.include_router(api_router, prefix="/api") # Match frontend API_BASE
 app.include_router(api_router_v1) # Support /api/v1/*
 

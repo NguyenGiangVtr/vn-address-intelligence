@@ -34,7 +34,7 @@
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="style.css?v=202605091915">
+    <link rel="stylesheet" href="style.css?v=202605092045">
     
     <!-- Structured Data -->
     <script type="application/ld+json">
@@ -90,10 +90,10 @@
 
                 <div class="nav-divider"></div>
 
-                <!-- ── Group: Đồng bộ hành chính (BR1) ── -->
+                <!-- Luồng: (1) Nền tảng dữ liệu ĐVHC — đồng bộ nguồn rồi chuẩn hóa danh mục -->
                 <button class="nav-group-toggle" data-group="gov-sync">
-                    <span class="nav-group-icon"><i class="fa-solid fa-rotate"></i></span>
-                    <span class="nav-group-label">Đồng bộ hành chính</span>
+                    <span class="nav-group-icon"><i class="fa-solid fa-landmark"></i></span>
+                    <span class="nav-group-label">Nền tảng ĐVHC</span>
                     <i class="fa-solid fa-chevron-down nav-chevron"></i>
                 </button>
                 <div class="nav-group-items" id="group-gov-sync">
@@ -103,41 +103,20 @@
                     </a>
                     <a href="#" class="nav-item nav-sub" data-page="admin-units">
                         <i class="fa-solid fa-building-user"></i>
-                        <span>Quản lý ĐVHC</span>
+                        <span>Quản lý đơn vị hành chính</span>
                     </a>
                 </div>
 
-                <!-- ── Group: Nhập & Xử lý địa chỉ (BR2) ── -->
-                <button class="nav-group-toggle" data-group="address-processing">
-                    <span class="nav-group-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
-                    <span class="nav-group-label">Chuẩn hóa địa chỉ</span>
-                    <i class="fa-solid fa-chevron-down nav-chevron"></i>
-                </button>
-                <div class="nav-group-items" id="group-address-processing">
-                    <a href="#" class="nav-item nav-sub" data-page="parser">
-                        <i class="fa-solid fa-wand-magic-sparkles"></i>
-                        <span>Phân tích địa chỉ</span>
-                    </a>
-                    <a href="#" class="nav-item nav-sub" data-page="batch">
-                        <i class="fa-solid fa-layer-group"></i>
-                        <span>Xử lý hàng loạt</span>
-                    </a>
-                    <a href="#" class="nav-item nav-sub" data-page="explorer">
-                        <i class="fa-solid fa-database"></i>
-                        <span>Khám phá hàng đợi</span>
-                    </a>
-                </div>
-
-                <!-- ── Group: Tra cứu & Không gian (BR3, BR4) ── -->
+                <!-- (2) Tra cứu & bản đồ — dùng mã/ĐVHC để đối chiếu và xem ranh giới -->
                 <button class="nav-group-toggle" data-group="spatial">
                     <span class="nav-group-icon"><i class="fa-solid fa-map-location-dot"></i></span>
-                    <span class="nav-group-label">Tra cứu & Không gian</span>
+                    <span class="nav-group-label">Tra cứu & bản đồ</span>
                     <i class="fa-solid fa-chevron-down nav-chevron"></i>
                 </button>
                 <div class="nav-group-items" id="group-spatial">
                     <a href="#" class="nav-item nav-sub" data-page="lookup">
                         <i class="fa-solid fa-arrow-right-arrow-left"></i>
-                        <span>Chuyển đổi ĐVHC</span>
+                        <span>Chuyển đổi & tra cứu ĐVHC</span>
                     </a>
                     <a href="#" class="nav-item nav-sub" data-page="boundary-visualization">
                         <i class="fa-solid fa-border-all"></i>
@@ -145,10 +124,31 @@
                     </a>
                 </div>
 
-                <!-- ── Group: Làm giàu dữ liệu (BR5) ── -->
+                <!-- (3) Chuẩn hóa địa chỉ — thử từng dòng → hàng loạt → theo dõi hàng đợi -->
+                <button class="nav-group-toggle" data-group="address-processing">
+                    <span class="nav-group-icon"><i class="fa-solid fa-route"></i></span>
+                    <span class="nav-group-label">Xử lý chuỗi địa chỉ</span>
+                    <i class="fa-solid fa-chevron-down nav-chevron"></i>
+                </button>
+                <div class="nav-group-items" id="group-address-processing">
+                    <a href="#" class="nav-item nav-sub" data-page="parser">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i>
+                        <span>Phân tích từng địa chỉ</span>
+                    </a>
+                    <a href="#" class="nav-item nav-sub" data-page="batch">
+                        <i class="fa-solid fa-layer-group"></i>
+                        <span>Xử lý hàng loạt</span>
+                    </a>
+                    <a href="#" class="nav-item nav-sub" data-page="explorer">
+                        <i class="fa-solid fa-database"></i>
+                        <span>Hàng đợi & khám phá</span>
+                    </a>
+                </div>
+
+                <!-- (4) Làm giàu — gắn thêm ngữ cảnh địa lý sau khi đã có text/queue -->
                 <button class="nav-group-toggle" data-group="enrichment">
                     <span class="nav-group-icon"><i class="fa-solid fa-seedling"></i></span>
-                    <span class="nav-group-label">Làm giàu dữ liệu</span>
+                    <span class="nav-group-label">Làm giàu địa chỉ</span>
                     <i class="fa-solid fa-chevron-down nav-chevron"></i>
                 </button>
                 <div class="nav-group-items" id="group-enrichment">
@@ -158,22 +158,13 @@
                     </a>
                 </div>
 
-                <!-- ── Group: AI & Benchmark (BR6) ── -->
+                <!-- (5) Vòng đời AI: lược đồ nhãn → gán nhãn → train → benchmark → tài liệu -->
                 <button class="nav-group-toggle" data-group="ai-bench">
-                    <span class="nav-group-icon"><i class="fa-solid fa-brain"></i></span>
-                    <span class="nav-group-label">AI & Benchmark</span>
+                    <span class="nav-group-icon"><i class="fa-solid fa-diagram-project"></i></span>
+                    <span class="nav-group-label">AI, nhãn & đánh giá</span>
                     <i class="fa-solid fa-chevron-down nav-chevron"></i>
                 </button>
                 <div class="nav-group-items" id="group-ai-bench">
-
-                    <a href="#" class="nav-item nav-sub" data-page="training">
-                        <i class="fa-solid fa-microchip"></i>
-                        <span>Huấn luyện mô hình</span>
-                    </a>
-                    <a href="#" class="nav-item nav-sub" data-page="experiments">
-                        <i class="fa-solid fa-flask-vial"></i>
-                        <span>So sánh mô hình</span>
-                    </a>
                     <a href="#" class="nav-item nav-sub" data-page="label-registry">
                         <i class="fa-solid fa-list-ul"></i>
                         <span>Danh sách nhãn NER</span>
@@ -181,6 +172,18 @@
                     <a href="#" class="nav-item nav-sub" data-page="prelabeler-cases">
                         <i class="fa-solid fa-tags"></i>
                         <span>Address Label Studio</span>
+                    </a>
+                    <a href="#" class="nav-item nav-sub" data-page="training">
+                        <i class="fa-solid fa-microchip"></i>
+                        <span>Huấn luyện mô hình</span>
+                    </a>
+                    <a href="#" class="nav-item nav-sub" data-page="experiments">
+                        <i class="fa-solid fa-flask-vial"></i>
+                        <span>So sánh & thực nghiệm</span>
+                    </a>
+                    <a href="#" class="nav-item nav-sub" data-page="documentation">
+                        <i class="fa-solid fa-book-open"></i>
+                        <span>Trung tâm tài liệu</span>
                     </a>
                 </div>
 
@@ -297,8 +300,8 @@
     </div>
 
     <div id="toast-container" class="toast-container"></div>
-    <script src="controls-template.js?v=202605091915"></script>
-    <script src="app.js?v=202605091915"></script>
+    <script src="controls-template.js?v=202605092003"></script>
+    <script src="app.js?v=202605092003"></script>
 </body>
 
 </html>
