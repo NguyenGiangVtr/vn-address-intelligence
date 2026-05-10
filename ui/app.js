@@ -5992,21 +5992,31 @@ async function initEvidenceView() {
     return `<div class="plt-raw-annotated">${html}</div>`;
   }
 
+  /** Cùng quy tắc với `normalize_text` phía server (NFC + trim + lower) để chip/UI khớp `details`. */
+  function pltNormCompare(s) {
+    return String(s || '')
+      .normalize('NFC')
+      .trim()
+      .toLowerCase()
+      .replace(/\u00a0/g, ' ');
+  }
+
   function detailFor(r, label, expText) {
     const details = r.details || [];
     const lab = String(label || '').toUpperCase();
-    const expNorm = String(expText || '').trim().toLowerCase();
-    if (expNorm) {
-      const d = details.find(
-        x =>
-          x.expected &&
-          String(x.expected.label || '').toUpperCase() === lab &&
-          String(x.expected.text || '').trim().toLowerCase() === expNorm
+    const expKey = pltNormCompare(expText);
+    if (expKey) {
+      return (
+        details.find(
+          x =>
+            x.expected &&
+            String(x.expected.label || '').toUpperCase() === lab &&
+            pltNormCompare(x.expected.text) === expKey
+        ) || null
       );
-      if (d) return d;
     }
-    return details.find(
-      x => x.expected && String(x.expected.label || '').toUpperCase() === lab
+    return (
+      details.find(x => x.expected && String(x.expected.label || '').toUpperCase() === lab) || null
     );
   }
 
@@ -6076,6 +6086,61 @@ async function initEvidenceView() {
     return false;
   }
 
+  /** Gợi ý từ PreLabeler.predict (random-predict / lưu DB), căn chỉnh casing theo raw. */
+  function pltSuggestedSuggestions(caseObj) {
+    const raw = String(caseObj?.input || '');
+    const normalized = normalizeExpectedItems(Array.isArray(caseObj?.suggested) ? caseObj.suggested : []);
+    const out = [];
+    const seen = new Set();
+    normalized.forEach(item => {
+      const label = String(item?.label || '').trim().toUpperCase();
+      const textNorm = String(item?.text || '').trim();
+      if (!label || !textNorm) return;
+      const text = pltResolveTextByRawCasing(raw, textNorm);
+      const key = `${label}::${String(text).trim().toLowerCase()}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      out.push({ label, text: String(text).trim() });
+    });
+    out.sort((a, b) => {
+      const ra = pltLabelHotkeyRank(a.label);
+      const rb = pltLabelHotkeyRank(b.label);
+      if (ra !== rb) return ra - rb;
+      return a.text.localeCompare(b.text, 'vi');
+    });
+    return out;
+  }
+
+  function renderSuggestedBlock(c) {
+    if (!c) return '';
+    const list = pltSuggestedSuggestions(c);
+    if (!list.length) return '';
+    const activeCase = cases.find(x => x.id === activeId);
+    const canApplyCount = list.filter(u => !pltHasExpectedPair(activeCase || c, u?.label, u?.text)).length;
+    const applyAllDisabled = canApplyCount <= 0;
+    const applyAllTitle = applyAllDisabled
+      ? 'Tất cả gợi ý đã có trong nhãn kỳ vọng'
+      : `Thêm tối đa ${canApplyCount} gợi ý chưa có vào nhãn kỳ vọng`;
+    return `
+      <div class="plt-suggested-block">
+        <div class="plt-suggested-toolbar">
+          <button type="button" class="btn btn-outline btn-sm plt-suggested-apply-all" title="${pltEsc(applyAllTitle)}" ${applyAllDisabled ? 'disabled aria-disabled="true"' : ''}>
+            <i class="fa-solid fa-bolt"></i> Thêm hết
+          </button>
+        </div>
+        <div class="plt-tokens">
+          ${list
+            .map(
+              u =>
+                `<button type="button" class="plt-token plt-token-add-exp" data-label="${pltEsc(u.label)}" data-text="${pltEsc(u.text)}" title="Thêm vào nhãn kỳ vọng">
+                  <span class="plt-badge lc-${u.label}">${u.label}</span> ${pltEsc(u.text)}
+                </button>`
+            )
+            .join('')}
+        </div>
+      </div>`;
+  }
+
   function renderRunAuxiliary(r) {
     if (!r) return '';
     if (r.error) {
@@ -6139,18 +6204,43 @@ async function initEvidenceView() {
       const resp = await fetch(`${API}/prelabeler-cases`, { headers: authHdr() });
       if (!resp.ok) throw new Error(resp.status);
       const raw = await resp.json();
-      cases = raw.map(c => ({
-        ...c,
-        input:
-          typeof c.input === 'string'
-            ? c.input
-            : c.input && c.input.raw_address
-              ? String(c.input.raw_address)
-              : '',
-        note: String((c && c.note != null) ? c.note : ''),
-        expected: typeof c.expected === 'string' ? JSON.parse(c.expected) : (c.expected || []),
-        strict: c?.strict !== false,
-      }));
+      cases = raw.map(c => {
+        const sugRaw = c?.suggested;
+        let sugArr =
+          sugRaw == null ? [] : typeof sugRaw === 'string'
+            ? (() => {
+                try {
+                  return JSON.parse(sugRaw);
+                } catch {
+                  return [];
+                }
+              })()
+            : sugRaw;
+        if (!Array.isArray(sugArr)) sugArr = [];
+        return {
+          ...c,
+          input:
+            typeof c.input === 'string'
+              ? c.input
+              : c.input && c.input.raw_address
+                ? String(c.input.raw_address)
+                : '',
+          note: String((c && c.note != null) ? c.note : ''),
+          expected: normalizeExpectedItems(
+            typeof c.expected === 'string'
+              ? (() => {
+                  try {
+                    return JSON.parse(c.expected);
+                  } catch {
+                    return [];
+                  }
+                })()
+              : c.expected || []
+          ),
+          suggested: normalizeExpectedItems(sugArr),
+          strict: c?.strict !== false,
+        };
+      });
       // Hydrate persisted run results so summary + indicators survive page reload.
       results = {};
       for (const c of cases) {
@@ -6163,7 +6253,12 @@ async function initEvidenceView() {
       console.warn('PreLabeler labeling: cannot load from DB, trying localStorage', e);
       cases = JSON.parse(localStorage.getItem('plt_cases') || '[]');
     }
-    cases = (cases || []).map(c => ({ ...c, strict: c?.strict !== false }));
+    cases = (cases || []).map(c => ({
+      ...c,
+      expected: normalizeExpectedItems(Array.isArray(c.expected) ? c.expected : []),
+      suggested: normalizeExpectedItems(Array.isArray(c.suggested) ? c.suggested : []),
+      strict: c?.strict !== false,
+    }));
     const firstVisible = getVisibleCases()[0];
     if (firstVisible) {
       // Always default to the first case as shown in current list ordering.
@@ -6312,9 +6407,7 @@ async function initEvidenceView() {
     }
 
     try {
-      const prefill = document.getElementById('plt-chk-random-predict-prefill')?.checked;
-      const qp = prefill ? '?predict=true' : '';
-      const res = await fetch(`${API}/prelabeler-cases/random-predict${qp}`, {
+      const res = await fetch(`${API}/prelabeler-cases/random-predict`, {
         headers: authHdr(),
       });
       if (res.status === 401) {
@@ -6329,7 +6422,17 @@ async function initEvidenceView() {
 
       const data = await res.json();
       const rawAddress = String(data?.raw_address || '').trim();
-      const expected = normalizeExpectedItems(data?.expected);
+      let suggestedSrc = Array.isArray(data?.suggested) ? data.suggested : [];
+      let expectedFlat = Array.isArray(data?.expected) ? data.expected : [];
+      if ((!suggestedSrc || suggestedSrc.length === 0) && expectedFlat.length > 0) {
+        suggestedSrc = expectedFlat;
+        expectedFlat = [];
+      }
+      const suggested = normalizeExpectedItems(suggestedSrc);
+      const expectedFromApi = normalizeExpectedItems(expectedFlat);
+      // Gợi ý rule → nhập thẳng vào nhãn kỳ vọng (không cần bấm «Thêm hết»). Không giữ suggested trên case để trùng UI.
+      const expected = suggested.length ? suggested : expectedFromApi;
+      const suggestedStored = [];
       if (!rawAddress) {
         window.showToast?.('Phản hồi thiếu địa chỉ gốc hợp lệ.', 'warning');
         return;
@@ -6363,6 +6466,7 @@ async function initEvidenceView() {
       if (selectedCase) {
         selectedCase.input = rawAddress;
         selectedCase.expected = expected;
+        selectedCase.suggested = suggestedStored;
         if (queueMeta) selectedCase.meta = queueMeta;
         else delete selectedCase.meta;
         selectedCase.note = String(selectedCase.note || '');
@@ -6379,6 +6483,7 @@ async function initEvidenceView() {
           input: rawAddress,
           note: '',
           expected,
+          suggested: suggestedStored,
           strict: true,
           created_at: new Date().toISOString(),
           ...(queueMeta ? { meta: queueMeta } : {}),
@@ -6390,8 +6495,11 @@ async function initEvidenceView() {
       renderList();
       renderEditor();
       updateSummary();
+      const nLab = expected.length;
       window.showToast?.(
-        `${selectedCase ? 'Đã cập nhật mẫu đang chọn' : 'Đã tạo mẫu mới'}${sourceId ? ` (${sourceId})` : ''}`,
+        `${selectedCase ? 'Đã cập nhật mẫu đang chọn' : 'Đã tạo mẫu mới'}${sourceId ? ` (${sourceId})` : ''}${
+          nLab ? ` · ${nLab} nhãn từ rule vào kỳ vọng` : ''
+        }`,
         'success'
       );
     } catch (e) {
@@ -6510,9 +6618,6 @@ async function initEvidenceView() {
             <label style="color:var(--text-tertiary);display:flex;align-items:center;gap:8px;cursor:pointer;white-space:nowrap" title="Bật để báo lỗi khi có nhận diện ngoài danh sách kỳ vọng">
               <input type="checkbox" ${c.strict ? 'checked' : ''} onchange="pltUpd('strict',this.checked)"> Chế độ nghiêm
             </label>
-            <label style="color:var(--text-tertiary);display:flex;align-items:center;gap:8px;cursor:pointer;white-space:nowrap" title="Bật: khi lấy mẫu ngẫu nhiên, gọi PreLabeler để điền sẵn nhãn kỳ vọng gợi ý. Tắt: chỉ lấy địa chỉ từ hàng đợi, expected để trống.">
-              <input type="checkbox" id="plt-chk-random-predict-prefill" ${localStorage.getItem('plt_random_prefill_predict') === '1' ? 'checked' : ''} onchange="localStorage.setItem('plt_random_prefill_predict', this.checked ? '1' : '0')"> Predict (gợi ý khi lấy mẫu)
-            </label>
           </div>
         </div>
         <div class="plt-editor-scroll">
@@ -6541,7 +6646,10 @@ async function initEvidenceView() {
             </div>
             <div class="plt-exp-layout">
               <div class="plt-label-grid" id="plt-exp-list">${renderMergedLabelGrid(c, result)}</div>
-              ${renderRunAuxiliary(result)}
+              <div class="plt-exp-sidebar">
+                ${renderSuggestedBlock(c)}
+                ${renderRunAuxiliary(result)}
+              </div>
             </div>
           </div>
         </div>
@@ -6565,12 +6673,17 @@ async function initEvidenceView() {
     const prevInput = String(c.input || '');
     c.input = nextInput;
 
-    // Khi raw text thay đổi, kết quả run trước đó không còn hợp lệ.
-    if (nextInput !== prevInput && Object.prototype.hasOwnProperty.call(results, c.id)) {
-      delete results[c.id];
-      renderEditor();
-      renderList();
-      updateSummary();
+    // Khi raw text thay đổi: bỏ đối chiếu cũ và gợi ý rule (không còn khớp chuỗi).
+    if (nextInput !== prevInput) {
+      const hadResult = Object.prototype.hasOwnProperty.call(results, c.id);
+      const hadSuggest = Array.isArray(c.suggested) && c.suggested.length > 0;
+      if (hadResult) delete results[c.id];
+      if (hadSuggest) c.suggested = [];
+      if (hadResult || hadSuggest) {
+        renderEditor();
+        renderList();
+        updateSummary();
+      }
     }
 
     // Khong tu dong them WDS/DST/PRO vao expected khi user dang go.
@@ -6729,6 +6842,33 @@ async function initEvidenceView() {
     return raw.slice(idx, idx + needle.length);
   }
 
+  function pltAddAllSuggestedToExpected() {
+    const c = cases.find(x => x.id === activeId);
+    if (!c) return;
+    const list = pltSuggestedSuggestions(c);
+    if (!list.length) {
+      window.showToast?.('Không có gợi ý rule để áp dụng', 'info');
+      return;
+    }
+
+    let addedCount = 0;
+    list.forEach(item => {
+      if (pltAddExpectedPair(c, item?.label, item?.text)) addedCount += 1;
+    });
+
+    if (!addedCount) {
+      window.showToast?.('Tất cả gợi ý đã tồn tại trong nhãn kỳ vọng', 'info');
+      return;
+    }
+
+    pltSave();
+    renderEditor();
+    renderList();
+    updateSummary();
+    window.showToast?.(`Đã thêm ${addedCount}/${list.length} gợi ý vào nhãn kỳ vọng`, 'success');
+    void pltRunOne();
+  }
+
   function pltUnexpectedSuggestions(caseObj, runResult) {
     const raw = String(caseObj?.input || '');
     const src = Array.isArray(runResult?.unexpected) ? runResult.unexpected : [];
@@ -6778,6 +6918,7 @@ async function initEvidenceView() {
     renderList();
     updateSummary();
     window.showToast?.(`Đã thêm ${addedCount}/${unexpected.length} đề xuất vào nhãn kỳ vọng`, 'success');
+    void pltRunOne();
   }
 
   function pltClearAllExpectedLabels() {
@@ -7196,6 +7337,11 @@ async function initEvidenceView() {
         if (t.closest('.plt-unexpected-apply-all')) {
           e.preventDefault();
           pltAddAllUnexpectedToExpected();
+          return;
+        }
+        if (t.closest('.plt-suggested-apply-all')) {
+          e.preventDefault();
+          pltAddAllSuggestedToExpected();
           return;
         }
         if (t.closest('.plt-unexpected-clear-all')) {

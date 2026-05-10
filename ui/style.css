@@ -6016,6 +6016,20 @@ body.no-scroll {
   gap: 12px;
 }
 
+/* Cột phải (màn lớn): gợi ý rule + kết quả đối chiếu xếp dọc */
+#prelabeler-cases .plt-exp-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+#prelabeler-cases .plt-exp-sidebar > .plt-suggested-block,
+#prelabeler-cases .plt-exp-sidebar > .plt-unexpected-block,
+#prelabeler-cases .plt-exp-sidebar > .plt-run-error {
+  margin-top: 0;
+}
+
 #prelabeler-cases .plt-label-grid-empty {
   grid-column: 1 / -1;
   padding: 16px;
@@ -6307,7 +6321,8 @@ body.no-scroll {
   font-weight: 600;
 }
 
-#prelabeler-cases .plt-unexpected-block {
+#prelabeler-cases .plt-unexpected-block,
+#prelabeler-cases .plt-suggested-block {
   margin-top: 12px;
   padding-top: 12px;
   border-top: 1px solid var(--border-subtle);
@@ -6324,7 +6339,8 @@ body.no-scroll {
     max-width: none;
   }
 
-  #prelabeler-cases .plt-exp-layout .plt-unexpected-block {
+  #prelabeler-cases .plt-exp-layout .plt-unexpected-block,
+  #prelabeler-cases .plt-exp-layout .plt-suggested-block {
     margin-top: 0;
     padding-top: 0;
     border-top: none;
@@ -6640,6 +6656,37 @@ body.no-scroll {
   justify-content: center;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+/* Thanh “Thêm hết” phía trên chip gợi ý: gọn, không khung nặng */
+#prelabeler-cases .plt-suggested-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  margin: 0 0 2px;
+  padding: 0;
+  min-height: 0;
+}
+
+#prelabeler-cases .plt-suggested-toolbar .plt-suggested-apply-all {
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.25;
+  border-color: var(--border-subtle);
+  color: var(--text-secondary);
+  background: transparent;
+  box-shadow: none;
+}
+
+#prelabeler-cases .plt-suggested-toolbar .plt-suggested-apply-all:not(:disabled):hover {
+  border-color: var(--accent, #3b82f6);
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
+#prelabeler-cases .plt-suggested-toolbar .plt-suggested-apply-all:disabled {
+  opacity: 0.45;
 }
 
 #prelabeler-cases .plt-run-error {

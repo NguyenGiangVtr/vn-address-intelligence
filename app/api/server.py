@@ -3024,6 +3024,7 @@ def _ensure_prelabeler_testcases_table():
         ALTER TABLE ai.prelabeler_testcases ADD COLUMN IF NOT EXISTS test_result JSONB NULL;
         ALTER TABLE ai.prelabeler_testcases ADD COLUMN IF NOT EXISTS tested_at TIMESTAMPTZ NULL;
         ALTER TABLE ai.prelabeler_testcases ADD COLUMN IF NOT EXISTS predict_meta JSONB NULL;
+        ALTER TABLE ai.prelabeler_testcases ADD COLUMN IF NOT EXISTS suggested JSONB NULL;
     """)
     try:
         with engine.connect() as conn:
@@ -3108,6 +3109,8 @@ class PreLabelerLabelingCase(BaseModel):
     note: Optional[Any] = ""
     expected: Optional[List[Dict[str, Any]]] = None
     strict: Optional[Any] = True
+    # Gợi ý rule (random-predict / UI), không phải nhãn kỳ vọng đã khóa.
+    suggested: Optional[List[Dict[str, Any]]] = None
     # Gợi ý queue (Đồng bộ GET /random-predict “meta”) — fallback khi /run không còn WDS/DST/PRO trong expected.
     meta: Optional[Dict[str, Any]] = None
 
@@ -3127,7 +3130,7 @@ def list_prelabeler_cases(current_user=Depends(get_current_user)):
     try:
         with engine.connect() as conn:
             rows = conn.execute(text(
-                "SELECT id, name, input, note, expected, strict, predict_meta, test_result, tested_at, created_at, updated_at "
+                "SELECT id, name, input, note, expected, strict, predict_meta, suggested, test_result, tested_at, created_at, updated_at "
                 "FROM ai.prelabeler_testcases ORDER BY created_at ASC"
             )).mappings().all()
         out = []
@@ -3143,17 +3146,10 @@ def list_prelabeler_cases(current_user=Depends(get_current_user)):
 
 
 @api_router.get("/prelabeler-cases/random-predict", tags=["PreLabeler Labeling Suite"])
-def random_prelabeler_predict(
-    predict: bool = Query(
-        False,
-        description="True: chạy PreLabeler.predict và trả expected gợi ý. False: chỉ lấy địa chỉ + meta từ hàng đợi.",
-    ),
-    current_user=Depends(get_current_user),
-):
+def random_prelabeler_predict(current_user=Depends(get_current_user)):
     """
     Lấy ngẫu nhiên một raw_address trong queue chưa có trong bộ cases.
-    Khi predict=True (query): chạy PreLabeler.predict và trả expected gợi ý.
-    Khi predict=False (mặc định): không gọi predict — expected trả về rỗng; dùng khi chỉ cần lấy mẫu raw.
+    Luôn chạy PreLabeler.predict — kết quả trả trong `suggested`; `expected` luôn rỗng (người dùng tinh chỉnh kỳ vọng trên UI).
     """
     from app.ai.export_for_annotation import PreLabeler
 
@@ -3225,28 +3221,26 @@ def random_prelabeler_predict(
         district_name = str(row.get("district_name") or "").strip() or None
         province_name = str(row.get("province_name") or "").strip() or None
 
-        if predict:
-            predictions = PreLabeler.predict(
-                raw_address=raw_address,
-                ward_name=ward_name,
-                district_name=district_name,
-                province_name=province_name,
-            )
-            expected = predictions_to_expected(predictions)
-            expected = enforce_admin_type_name(
-                expected=expected,
-                raw_address=raw_address,
-                ward_name=ward_name,
-                district_name=district_name,
-                province_name=province_name,
-            )
-        else:
-            expected = []
+        predictions = PreLabeler.predict(
+            raw_address=raw_address,
+            ward_name=ward_name,
+            district_name=district_name,
+            province_name=province_name,
+        )
+        suggested = predictions_to_expected(predictions)
+        suggested = enforce_admin_type_name(
+            expected=suggested,
+            raw_address=raw_address,
+            ward_name=ward_name,
+            district_name=district_name,
+            province_name=province_name,
+        )
 
         return {
             "source_id": row.get("id"),
             "raw_address": raw_address,
-            "expected": expected,
+            "expected": [],
+            "suggested": suggested,
             "meta": {
                 "ward_name": ward_name,
                 "district_name": district_name,
@@ -3306,12 +3300,29 @@ def save_prelabeler_cases(cases: List[PreLabelerLabelingCase], current_user=Depe
                     seen.add(k)
                     normalized_expected.append({"label": label, "text": text_val})
 
+                suggested_items = getattr(c, "suggested", None) or []
+                normalized_suggested: List[Dict[str, str]] = []
+                seen_sugg: set[tuple[str, str]] = set()
+                if isinstance(suggested_items, list):
+                    for item in suggested_items:
+                        if not isinstance(item, dict):
+                            continue
+                        slabel = str(item.get("label") or "").strip().upper()
+                        stext = str(item.get("text") or "").strip()
+                        if not slabel or not stext:
+                            continue
+                        sk = (slabel, stext.lower())
+                        if sk in seen_sugg:
+                            continue
+                        seen_sugg.add(sk)
+                        normalized_suggested.append({"label": slabel, "text": stext})
+
                 pmd = getattr(c, "meta", None)
                 predict_meta_json = json.dumps(pmd if isinstance(pmd, dict) and pmd else {}, ensure_ascii=False)
 
                 conn.execute(text("""
-                    INSERT INTO ai.prelabeler_testcases (id, name, input, note, expected, strict, predict_meta, test_result, tested_at, updated_at)
-                    VALUES (:id, :name, CAST(:input AS JSONB), :note, CAST(:expected AS JSONB), :strict, CAST(:predict_meta AS JSONB), NULL, NULL, NOW())
+                    INSERT INTO ai.prelabeler_testcases (id, name, input, note, expected, strict, predict_meta, suggested, test_result, tested_at, updated_at)
+                    VALUES (:id, :name, CAST(:input AS JSONB), :note, CAST(:expected AS JSONB), :strict, CAST(:predict_meta AS JSONB), CAST(:suggested AS JSONB), NULL, NULL, NOW())
                     ON CONFLICT (id) DO UPDATE SET
                         name = EXCLUDED.name,
                         input = EXCLUDED.input,
@@ -3319,6 +3330,7 @@ def save_prelabeler_cases(cases: List[PreLabelerLabelingCase], current_user=Depe
                         expected = EXCLUDED.expected,
                         strict = EXCLUDED.strict,
                         predict_meta = EXCLUDED.predict_meta,
+                        suggested = EXCLUDED.suggested,
                         test_result = NULL,
                         tested_at = NULL,
                         updated_at = NOW()
@@ -3330,6 +3342,7 @@ def save_prelabeler_cases(cases: List[PreLabelerLabelingCase], current_user=Depe
                     "expected": json.dumps(normalized_expected, ensure_ascii=False),
                     "strict": bool(c.strict),
                     "predict_meta": predict_meta_json,
+                    "suggested": json.dumps(normalized_suggested, ensure_ascii=False),
                 })
         return {"ok": True, "count": len(cases)}
     except Exception as e:
@@ -3393,10 +3406,12 @@ def run_prelabeler_cases(payload: PreLabelerLabelingRunPayload, current_user=Dep
             })
             continue
 
-        actual = [
-            {"label": p["value"]["labels"][0], "text": p["value"]["text"]}
-            for p in predictions
-        ]
+        actual = []
+        for p in predictions:
+            v = p.get("value") or {}
+            labs = v.get("labels") or []
+            lab0 = str(labs[0]).strip().upper() if labs else ""
+            actual.append({"label": lab0, "text": str(v.get("text") or "").strip()})
 
         validation = validate_expected_against_actual(
             raw_address=raw_address,

@@ -67,7 +67,7 @@
         <button type="button" class="btn plt-btn-run plt-btn-run-all" id="plt-btn-run-all" title="Đối chiếu lần lượt tất cả mẫu trong danh sách (chỉ F9, không giữ Ctrl/Alt/Shift)" aria-keyshortcuts="F9">
           <i class="fa-solid fa-forward-fast"></i> Đối chiếu tất cả <span class="plt-btn-kbd">F9</span>
         </button>
-        <button type="button" class="btn plt-btn-random" id="plt-btn-random-predict" title="Lấy một địa chỉ ngẫu nhiên từ hàng đợi và điền gợi ý nhãn (chỉ F10, không giữ Ctrl/Alt/Shift)" aria-keyshortcuts="F10">
+        <button type="button" class="btn plt-btn-random" id="plt-btn-random-predict" title="Lấy địa chỉ ngẫu nhiên từ hàng đợi, chạy PreLabeler và hiển thị các đoạn tách dưới dạng gợi ý (chỉ F10, không giữ Ctrl/Alt/Shift)" aria-keyshortcuts="F10">
           <i class="fa-solid fa-shuffle"></i> Lấy mẫu ngẫu nhiên và gợi ý nhãn <span class="plt-btn-kbd">F10</span>
         </button>
         <label class="plt-overwrite-label" title="Khi bật: cập nhật mẫu đang chọn thay vì tạo mẫu mới">
@@ -89,7 +89,7 @@
   <div id="plt-random-loading-overlay" class="plt-random-loading-overlay" hidden aria-hidden="true">
     <div class="plt-random-loading-overlay__panel" role="status" aria-live="polite">
       <i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i>
-      <span>Đang lấy mẫu ngẫu nhiên…</span>
+      <span>Đang lấy mẫu và chạy gợi ý rule…</span>
     </div>
   </div>
 </div>
