@@ -6312,7 +6312,9 @@ async function initEvidenceView() {
     }
 
     try {
-      const res = await fetch(`${API}/prelabeler-cases/random-predict`, {
+      const prefill = document.getElementById('plt-chk-random-predict-prefill')?.checked;
+      const qp = prefill ? '?predict=true' : '';
+      const res = await fetch(`${API}/prelabeler-cases/random-predict${qp}`, {
         headers: authHdr(),
       });
       if (res.status === 401) {
@@ -6434,7 +6436,7 @@ async function initEvidenceView() {
   }
 
   function pltDel(id) {
-    if (!confirm('Xóa mẫu này?')) return;
+    const removed = cases.find(c => c.id === id);
     cases = cases.filter(c => c.id !== id);
     if (activeId === id) {
       activeId = null;
@@ -6445,6 +6447,8 @@ async function initEvidenceView() {
     renderList();
     updateSummary();
     syncPltRunCluster();
+    const nm = String(removed?.name || '').trim() || 'mẫu';
+    window.showToast?.(`Đã xóa ${nm}`, 'success');
   }
 
   function pltSelect(id) {
@@ -6505,6 +6509,9 @@ async function initEvidenceView() {
           <div class="plt-editor-actions">
             <label style="color:var(--text-tertiary);display:flex;align-items:center;gap:8px;cursor:pointer;white-space:nowrap" title="Bật để báo lỗi khi có nhận diện ngoài danh sách kỳ vọng">
               <input type="checkbox" ${c.strict ? 'checked' : ''} onchange="pltUpd('strict',this.checked)"> Chế độ nghiêm
+            </label>
+            <label style="color:var(--text-tertiary);display:flex;align-items:center;gap:8px;cursor:pointer;white-space:nowrap" title="Bật: khi lấy mẫu ngẫu nhiên, gọi PreLabeler để điền sẵn nhãn kỳ vọng gợi ý. Tắt: chỉ lấy địa chỉ từ hàng đợi, expected để trống.">
+              <input type="checkbox" id="plt-chk-random-predict-prefill" ${localStorage.getItem('plt_random_prefill_predict') === '1' ? 'checked' : ''} onchange="localStorage.setItem('plt_random_prefill_predict', this.checked ? '1' : '0')"> Predict (gợi ý khi lấy mẫu)
             </label>
           </div>
         </div>

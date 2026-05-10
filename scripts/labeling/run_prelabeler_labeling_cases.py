@@ -209,6 +209,10 @@ def _parse_min_pass_rate(value: str) -> float:
 
 
 def main() -> int:
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--file",

@@ -20,9 +20,9 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-08T23:31:42.887767+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "mox4uo86mrbo",
@@ -65,9 +65,9 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-08T23:32:00.462777+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "mox4z0yxbu5o",
@@ -98,9 +98,9 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-08T23:35:23.607454+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "mox509dxryr6",
@@ -131,9 +131,9 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-08T23:36:21.174363+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "mox52y9qsr1n",
@@ -168,9 +168,9 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-08T23:38:26.725506+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "mox58lpw70p0",
@@ -209,9 +209,9 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-08T23:42:50.396059+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "mox5x5du2anr",
@@ -242,9 +242,9 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T00:01:55.641507+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "mox5yr1gyvoc",
@@ -275,9 +275,9 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T00:03:10.356272+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "mox5zmfucdd1",
@@ -304,9 +304,9 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T00:03:51.055984+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "mox6lgnkzscq",
@@ -337,9 +337,9 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T00:20:49.999465+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "mox6lygwwz04",
@@ -366,9 +366,9 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T00:21:13.068858+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "mox7keuv84kg",
@@ -399,9 +399,9 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T00:48:00.632603+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "mox7l8ypsjev",
@@ -428,9 +428,9 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T00:48:39.639269+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "mox7ll2t4myu",
@@ -461,9 +461,9 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T00:48:55.340241+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "mox7o1j23kk6",
@@ -498,9 +498,9 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T00:50:49.967481+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "mox7oxi503tg",
@@ -531,9 +531,9 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T00:51:31.412365+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "mox91u6sdhqy",
@@ -564,9 +564,9 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T01:29:33.426756+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "mox92cw6dsxn",
@@ -597,9 +597,9 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T01:29:57.513992+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "mox932h0qagk",
@@ -630,9 +630,9 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T01:30:30.658097+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "mox93e16sydu",
@@ -663,154 +663,137 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T01:30:45.643873+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
-    "id": "mowvcybntifx",
-    "name": "Random #170497",
-    "input": "Thôn EaNguôi, xã cư né, krông búk, đắk lắk, Xã Cư Né, Huyện Krông Búk, Đắk Lắk",
+    "id": "movnpsxss61h",
+    "name": "Studio Đức Quyền - ấp 9",
+    "input": "Studio Đức Quyền - ấp 9, Xã An Linh, Huyện Phú Giáo, Bình Dương",
     "note": "",
     "expected": [
       {
-        "text": "Thôn EaNguôi",
-        "label": "NHB"
-      },
-      {
-        "text": "Cư Né",
-        "label": "WDS"
-      },
-      {
-        "text": "Krông Búk",
-        "label": "DST"
-      },
-      {
-        "text": "Đắk Lắk",
-        "label": "PRO"
-      }
-    ],
-    "strict": true,
-    "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
-    "created_at": "2026-05-09T12:42:40.011571+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
-  },
-  {
-    "id": "mownktvqbnjd",
-    "name": "Random #215666",
-    "input": "Phong Thạnh A, Giá Rai, Bạc Liêu, Việt Nam",
-    "note": "",
-    "expected": [
-      {
-        "text": "Phong Thạnh A",
-        "label": "WDS"
-      },
-      {
-        "text": "Giá Rai",
-        "label": "DST"
-      },
-      {
-        "text": "Bạc Liêu",
-        "label": "PRO"
-      }
-    ],
-    "strict": false,
-    "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
-    "created_at": "2026-05-09T12:42:40.011571+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
-  },
-  {
-    "id": "movo72xf6lwb",
-    "name": "Cây đa xóm đông thôn chè",
-    "input": "Cây đa xóm đông thôn chè, Xã Liên Bão, Huyện Tiên Du, Bắc Ninh",
-    "note": "",
-    "expected": [
-      {
-        "text": "Cây đa",
+        "text": "Studio Đức Quyền - ấp 9",
         "label": "POI"
       },
       {
-        "text": "xóm đông thôn chè",
-        "label": "NHB"
-      },
-      {
-        "text": "Liên Bão",
+        "text": "An Linh",
         "label": "WDS"
       },
       {
-        "text": "Tiên Du",
+        "text": "Phú Giáo",
         "label": "DST"
       },
       {
-        "text": "Bắc Ninh",
+        "text": "Bình Dương",
         "label": "PRO"
       }
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T12:42:40.011571+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
-    "id": "mowo3datp8uu",
-    "name": "Random #204675",
-    "input": "328 Đông Hội, Đông Anh, Hà Nội, Việt Nam",
+    "id": "mownllxctnqw",
+    "name": "Random #198694",
+    "input": "Số 32, Đường XC7, Phường Mỹ Phước, Thị Xã Bến Cát, Bình Dương",
     "note": "",
     "expected": [
       {
-        "text": "328",
+        "text": "Số 32",
         "label": "NUM"
       },
       {
-        "text": "Đông Hội",
+        "text": "Đường XC7",
+        "label": "STR"
+      },
+      {
+        "text": "Mỹ Phước",
         "label": "WDS"
       },
       {
-        "text": "Đông Anh",
+        "text": "Bến Cát",
         "label": "DST"
       },
       {
-        "text": "Hà Nội",
+        "text": "Bình Dương",
         "label": "PRO"
       }
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T12:42:40.011571+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
-    "id": "mowx8ogu4f91",
-    "name": "Random #395316",
-    "input": "Xóm 1 Thôn Bưởi Rỏi, Xã Quảng Hợp, Huyện Quảng Trạch, Quảng Bình",
+    "id": "mowh0le24fsb",
+    "name": "Vật Liệu Xây Dựng ",
+    "input": "Vật liệu xây dựng Tồn Mân, Thôn 2, Xã Ia Hlốp, Huyện Chư Sê, Gia Lai",
     "note": "",
     "expected": [
       {
-        "text": "Xóm 1 Thôn Bưởi Rỏi",
+        "text": "Vật liệu xây dựng Tồn Mân",
+        "label": "POI"
+      },
+      {
+        "text": "Thôn 2",
         "label": "NHB"
       },
       {
-        "text": "Quảng Hợp",
+        "text": "Xã Ia Hlốp",
         "label": "WDS"
       },
       {
-        "text": "Quảng Trạch",
+        "text": "Huyện Chư Sê",
         "label": "DST"
       },
       {
-        "text": "Quảng Bình",
+        "text": "Gia Lai",
         "label": "PRO"
       }
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T12:42:40.011571+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
+  },
+  {
+    "id": "movp4r3pe70k",
+    "name": "Toà Nhà A1 , Chung Cư C5",
+    "input": "Toà Nhà A1 , Chung Cư C5, Phường Đông Vệ, Thành Phố Thanh Hóa, Thanh Hóa",
+    "note": "",
+    "expected": [
+      {
+        "text": "Toà Nhà A1",
+        "label": "NHB"
+      },
+      {
+        "text": "Chung Cư C5",
+        "label": "BLD"
+      },
+      {
+        "text": "Đông Vệ",
+        "label": "WDS"
+      },
+      {
+        "text": "Thành Phố Thanh Hóa",
+        "label": "PRO"
+      },
+      {
+        "text": "Thanh Hóa",
+        "label": "DST"
+      }
+    ],
+    "strict": false,
+    "test_result": null,
+    "tested_at": "2026-05-10T14:01:36.131Z",
+    "created_at": "2026-05-09T12:42:40.011571+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "mowvnq6wedwe",
@@ -841,9 +824,125 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T12:42:40.011571+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
+  },
+  {
+    "id": "mowx8ogu4f91",
+    "name": "Random #395316",
+    "input": "Xóm 1 Thôn Bưởi Rỏi, Xã Quảng Hợp, Huyện Quảng Trạch, Quảng Bình",
+    "note": "",
+    "expected": [
+      {
+        "text": "Xóm 1 Thôn Bưởi Rỏi",
+        "label": "NHB"
+      },
+      {
+        "text": "Quảng Hợp",
+        "label": "WDS"
+      },
+      {
+        "text": "Quảng Trạch",
+        "label": "DST"
+      },
+      {
+        "text": "Quảng Bình",
+        "label": "PRO"
+      }
+    ],
+    "strict": false,
+    "test_result": null,
+    "tested_at": "2026-05-10T14:01:36.131Z",
+    "created_at": "2026-05-09T12:42:40.011571+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
+  },
+  {
+    "id": "mownjtkwjnlm",
+    "name": "Random #438458",
+    "input": "Đường Bạch Liêu, Thị Trấn Tân Kỳ, Huyện Tân Kỳ, Nghệ An",
+    "note": "",
+    "expected": [
+      {
+        "text": "Đường Bạch Liêu",
+        "label": "STR"
+      },
+      {
+        "text": "Tân Kỳ",
+        "label": "WDS"
+      },
+      {
+        "text": "Tân Kỳ",
+        "label": "DST"
+      },
+      {
+        "text": "Nghệ An",
+        "label": "PRO"
+      }
+    ],
+    "strict": false,
+    "test_result": null,
+    "tested_at": "2026-05-10T14:01:36.131Z",
+    "created_at": "2026-05-09T12:42:40.011571+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
+  },
+  {
+    "id": "mown799zzgsy",
+    "name": "Random #425417",
+    "input": "Ngõ 3 Xóm Cầu Nộn Khê, Xã Yên Từ, Huyện Yên Mô, Ninh Bình",
+    "note": "",
+    "expected": [
+      {
+        "text": "Ngõ 3 Xóm Cầu Nộn Khê",
+        "label": "ALY"
+      },
+      {
+        "text": "Yên Từ",
+        "label": "WDS"
+      },
+      {
+        "text": "Yên Mô",
+        "label": "DST"
+      },
+      {
+        "text": "Ninh Bình",
+        "label": "PRO"
+      }
+    ],
+    "strict": false,
+    "test_result": null,
+    "tested_at": "2026-05-10T14:01:36.131Z",
+    "created_at": "2026-05-09T12:42:40.011571+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
+  },
+  {
+    "id": "movnkkdh05i4",
+    "name": "Barber Shop",
+    "input": "Anh Chung Barber Shop, Thị Trấn Hương Khê, Huyện Hương Khê, Hà Tĩnh",
+    "note": "",
+    "expected": [
+      {
+        "text": "Anh Chung Barber Shop",
+        "label": "PCD"
+      },
+      {
+        "text": "Hương Khê",
+        "label": "WDS"
+      },
+      {
+        "text": "Hương Khê",
+        "label": "DST"
+      },
+      {
+        "text": "Hà Tĩnh",
+        "label": "PRO"
+      }
+    ],
+    "strict": false,
+    "test_result": null,
+    "tested_at": "2026-05-10T14:01:36.131Z",
+    "created_at": "2026-05-09T12:42:40.011571+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "mownl6qh4c7j",
@@ -874,42 +973,75 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T12:42:40.011571+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
-    "id": "mowo42d5ynix",
-    "name": "Random #469547",
-    "input": "Số 52, Ấp 4, Xã Mỹ Thạnh, Huyện Thủ Thừa, Long An",
+    "id": "movp13fy1ht6",
+    "name": "3RR5+R2C, An Hòa, Thị Trấn La Hà",
+    "input": "3RR5+R2C, An Hòa, Thị Trấn La Hà, Huyện Tư Nghĩa, Tỉnh Quảng Ngãi",
     "note": "",
     "expected": [
       {
-        "text": "Số 52",
-        "label": "NUM"
+        "text": "3RR5+R2C",
+        "label": "PCD"
       },
       {
-        "text": "Ấp 4",
-        "label": "NHB"
+        "text": "An Hòa",
+        "label": "STR"
       },
       {
-        "text": "Mỹ Thạnh",
+        "text": "La Hà",
         "label": "WDS"
       },
       {
-        "text": "Thủ Thừa",
+        "text": "Tư Nghĩa",
         "label": "DST"
       },
       {
-        "text": "Long An",
+        "text": "Quảng Ngãi",
         "label": "PRO"
       }
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T12:42:40.011571+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
+  },
+  {
+    "id": "movp2swc36ar",
+    "name": "Chợ Liên Thạch, Thôn Liên Thạch, ",
+    "input": "Chợ Liên Thạch, Thôn Liên Thạch, Xã Hòa Phú, Huyện Tây Hòa, Phú Yên",
+    "note": "",
+    "expected": [
+      {
+        "text": "Chợ Liên Thạch",
+        "label": "POI"
+      },
+      {
+        "text": "Thôn Liên Thạch",
+        "label": "NHB"
+      },
+      {
+        "text": "Hòa Phú",
+        "label": "WDS"
+      },
+      {
+        "text": "Tây Hòa",
+        "label": "DST"
+      },
+      {
+        "text": "Phú Yên",
+        "label": "PRO"
+      }
+    ],
+    "strict": false,
+    "test_result": null,
+    "tested_at": "2026-05-10T14:01:36.131Z",
+    "created_at": "2026-05-09T12:42:40.011571+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "movoxtvewvoc",
@@ -944,38 +1076,38 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T12:42:40.011571+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
-    "id": "mowo63y6lv1h",
-    "name": "Random #208747",
-    "input": "XJQW+PHW, Phường Nghĩa Phú, Gia Nghĩa, Đắk Nông, Việt Nam",
+    "id": "mowo3datp8uu",
+    "name": "Random #204675",
+    "input": "328 Đông Hội, Đông Anh, Hà Nội, Việt Nam",
     "note": "",
     "expected": [
       {
-        "text": "XJQW+PHW",
-        "label": "PCD"
+        "text": "328",
+        "label": "NUM"
       },
       {
-        "text": "Nghĩa Phú",
+        "text": "Đông Hội",
         "label": "WDS"
       },
       {
-        "text": "Gia Nghĩa",
+        "text": "Đông Anh",
         "label": "DST"
       },
       {
-        "text": "Đắk Nông",
+        "text": "Hà Nội",
         "label": "PRO"
       }
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T12:42:40.011571+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "mowo3q55wp0s",
@@ -1006,108 +1138,9 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T12:42:40.011571+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
-  },
-  {
-    "id": "mownllxctnqw",
-    "name": "Random #198694",
-    "input": "Số 32, Đường XC7, Phường Mỹ Phước, Thị Xã Bến Cát, Bình Dương",
-    "note": "",
-    "expected": [
-      {
-        "text": "Số 32",
-        "label": "NUM"
-      },
-      {
-        "text": "Đường XC7",
-        "label": "STR"
-      },
-      {
-        "text": "Mỹ Phước",
-        "label": "WDS"
-      },
-      {
-        "text": "Bến Cát",
-        "label": "DST"
-      },
-      {
-        "text": "Bình Dương",
-        "label": "PRO"
-      }
-    ],
-    "strict": false,
-    "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
-    "created_at": "2026-05-09T12:42:40.011571+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
-  },
-  {
-    "id": "movria9jmh9t",
-    "name": "507/50, Hương Lộ 3",
-    "input": "507/50, Hương Lộ 3, Phường Bình Hưng Hòa, Quận Bình Tân, TP. Hồ Chí Minh",
-    "note": "",
-    "expected": [
-      {
-        "text": "507/50",
-        "label": "NUM"
-      },
-      {
-        "text": "Hương Lộ 3",
-        "label": "STR"
-      },
-      {
-        "text": "Bình Hưng Hòa",
-        "label": "WDS"
-      },
-      {
-        "text": "Bình Tân",
-        "label": "DST"
-      },
-      {
-        "text": "Hồ Chí Minh",
-        "label": "PRO"
-      }
-    ],
-    "strict": false,
-    "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
-    "created_at": "2026-05-09T12:42:40.011571+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
-  },
-  {
-    "id": "movp2swc36ar",
-    "name": "Chợ Liên Thạch, Thôn Liên Thạch, ",
-    "input": "Chợ Liên Thạch, Thôn Liên Thạch, Xã Hòa Phú, Huyện Tây Hòa, Phú Yên",
-    "note": "",
-    "expected": [
-      {
-        "text": "Chợ Liên Thạch",
-        "label": "POI"
-      },
-      {
-        "text": "Thôn Liên Thạch",
-        "label": "NHB"
-      },
-      {
-        "text": "Hòa Phú",
-        "label": "WDS"
-      },
-      {
-        "text": "Tây Hòa",
-        "label": "DST"
-      },
-      {
-        "text": "Phú Yên",
-        "label": "PRO"
-      }
-    ],
-    "strict": false,
-    "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
-    "created_at": "2026-05-09T12:42:40.011571+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "movowkuebflk",
@@ -1138,59 +1171,101 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T12:42:40.011571+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
-    "id": "mowo5nj3s63j",
-    "name": "Random #43634",
-    "input": "Shop Boss Chợ Cần Đăng, Xã Cần Đăng, Huyện Châu Thành, An Giang",
+    "id": "mowo42d5ynix",
+    "name": "Random #469547",
+    "input": "Số 52, Ấp 4, Xã Mỹ Thạnh, Huyện Thủ Thừa, Long An",
     "note": "",
     "expected": [
       {
-        "text": "Chợ Cần Đăng",
-        "label": "POI"
+        "text": "Số 52",
+        "label": "NUM"
       },
       {
-        "text": "Cần Đăng",
+        "text": "Ấp 4",
+        "label": "NHB"
+      },
+      {
+        "text": "Mỹ Thạnh",
         "label": "WDS"
       },
       {
-        "text": "Châu Thành",
+        "text": "Thủ Thừa",
         "label": "DST"
       },
       {
-        "text": "An Giang",
+        "text": "Long An",
         "label": "PRO"
       }
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T12:42:40.011571+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
-    "id": "mowxfwecsl9j",
-    "name": "Random #99460",
-    "input": "58 Hùng Vương, Đắk Mâm, Krông Nô, Đắk Nông, Việt Nam",
+    "id": "mow71qp4gsok",
+    "name": "Bệnh viện Đa khoa tỉnh Ninh Thuận",
+    "input": "Bệnh viện Đa khoa tỉnh Ninh Thuận, Nguyễn Văn Cừ, Văn Hải, Phan Rang-Tháp Chàm, Ninh Thuận, Việt Nam",
     "note": "",
     "expected": [
       {
-        "text": "58",
-        "label": "NUM"
-      },
+        "text": "tỉnh Ninh Thuận",
+        "label": "PRO"
+      }
+    ],
+    "strict": false,
+    "test_result": null,
+    "tested_at": "2026-05-10T14:01:36.131Z",
+    "created_at": "2026-05-09T12:42:40.011571+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
+  },
+  {
+    "id": "mownktvqbnjd",
+    "name": "Random #215666",
+    "input": "Phong Thạnh A, Giá Rai, Bạc Liêu, Việt Nam",
+    "note": "",
+    "expected": [
       {
-        "text": "Hùng Vương",
-        "label": "STR"
-      },
-      {
-        "text": "Đắk Mâm",
+        "text": "Phong Thạnh A",
         "label": "WDS"
       },
       {
-        "text": "Krông Nô",
+        "text": "Giá Rai",
+        "label": "DST"
+      },
+      {
+        "text": "Bạc Liêu",
+        "label": "PRO"
+      }
+    ],
+    "strict": false,
+    "test_result": null,
+    "tested_at": "2026-05-10T14:01:36.131Z",
+    "created_at": "2026-05-09T12:42:40.011571+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
+  },
+  {
+    "id": "mowo63y6lv1h",
+    "name": "Random #208747",
+    "input": "XJQW+PHW, Phường Nghĩa Phú, Gia Nghĩa, Đắk Nông, Việt Nam",
+    "note": "",
+    "expected": [
+      {
+        "text": "XJQW+PHW",
+        "label": "PCD"
+      },
+      {
+        "text": "Nghĩa Phú",
+        "label": "WDS"
+      },
+      {
+        "text": "Gia Nghĩa",
         "label": "DST"
       },
       {
@@ -1200,116 +1275,137 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T12:42:40.011571+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
-    "id": "mowo6ivty91y",
-    "name": "Random #347056",
-    "input": "Cty Bóng Đèn, Đường De 1, Khu Công Nghiệp Mỹ Phước 3, Phường Thới Hòa, Thị Xã Bến Cát, Bình Dương",
+    "id": "movria9jmh9t",
+    "name": "507/50, Hương Lộ 3",
+    "input": "507/50, Hương Lộ 3, Phường Bình Hưng Hòa, Quận Bình Tân, TP. Hồ Chí Minh",
     "note": "",
     "expected": [
       {
-        "text": "Cty Bóng Đèn",
-        "label": "POI"
-      },
-      {
-        "text": "Đường De 1",
-        "label": "STR"
-      },
-      {
-        "text": "Khu Công Nghiệp Mỹ Phước 3",
-        "label": "POI"
-      },
-      {
-        "text": "Thới Hòa",
-        "label": "WDS"
-      },
-      {
-        "text": "Bến Cát",
-        "label": "DST"
-      },
-      {
-        "text": "Bình Dương",
-        "label": "PRO"
-      }
-    ],
-    "strict": false,
-    "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
-    "created_at": "2026-05-09T12:42:40.011571+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
-  },
-  {
-    "id": "mowo4n8ec73m",
-    "name": "Random #497289",
-    "input": "Hẻm 11 , 49B kv3.an khanh Đường Nguyên Văn Linh, Phường An Khánh, Quận Ninh Kiều, Cần Thơ",
-    "note": "",
-    "expected": [
-      {
-        "text": "Hẻm 11",
-        "label": "ALY"
-      },
-      {
-        "text": "49B",
+        "text": "507/50",
         "label": "NUM"
       },
       {
-        "text": "kv3.an khanh Đường Nguyên Văn Linh",
+        "text": "Hương Lộ 3",
         "label": "STR"
       },
       {
-        "text": "An Khánh",
+        "text": "Bình Hưng Hòa",
         "label": "WDS"
       },
       {
-        "text": "Ninh Kiều",
+        "text": "Bình Tân",
         "label": "DST"
       },
       {
-        "text": "Cần Thơ",
+        "text": "Hồ Chí Minh",
         "label": "PRO"
       }
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T12:42:40.011571+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
-    "id": "movp7727ltg5",
-    "name": "2PGX+PH7,  Đ. Khánh Bình 11",
-    "input": "2PGX+PH7,  Đ. Khánh Bình 11, Phường Khánh Bình, Thành Phố Tân Uyên, Tỉnh Bình Dương, Việt Nam",
+    "id": "mowiazrxjyj2",
+    "name": "Chợ Mỹ Phong, Đường 702",
+    "input": "Chợ Mỹ Phong, Đường 702, Xã Nhơn Hải, Huyện Ninh Hải, Ninh Thuận",
     "note": "",
     "expected": [
       {
-        "text": "2PGX+PH7",
-        "label": "PCD"
+        "text": "Chợ Mỹ Phong",
+        "label": "POI"
       },
       {
-        "text": "Đ. Khánh Bình 11",
+        "text": "Đường 702",
         "label": "STR"
       },
       {
-        "text": "Khánh Bình",
+        "text": "Nhơn Hải",
         "label": "WDS"
       },
       {
-        "text": "Tân Uyên",
+        "text": "Ninh Hải",
         "label": "DST"
       },
       {
-        "text": "Bình Dương",
+        "text": "Ninh Thuận",
         "label": "PRO"
       }
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T12:42:40.011571+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
+  },
+  {
+    "id": "movo72xf6lwb",
+    "name": "Cây đa xóm đông thôn chè",
+    "input": "Cây đa xóm đông thôn chè, Xã Liên Bão, Huyện Tiên Du, Bắc Ninh",
+    "note": "",
+    "expected": [
+      {
+        "text": "Cây đa",
+        "label": "POI"
+      },
+      {
+        "text": "xóm đông thôn chè",
+        "label": "NHB"
+      },
+      {
+        "text": "Liên Bão",
+        "label": "WDS"
+      },
+      {
+        "text": "Tiên Du",
+        "label": "DST"
+      },
+      {
+        "text": "Bắc Ninh",
+        "label": "PRO"
+      }
+    ],
+    "strict": false,
+    "test_result": null,
+    "tested_at": "2026-05-10T14:01:36.131Z",
+    "created_at": "2026-05-09T12:42:40.011571+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
+  },
+  {
+    "id": "mowvcybntifx",
+    "name": "Random #170497",
+    "input": "Thôn EaNguôi, xã cư né, krông búk, đắk lắk, Xã Cư Né, Huyện Krông Búk, Đắk Lắk",
+    "note": "",
+    "expected": [
+      {
+        "text": "Thôn EaNguôi",
+        "label": "NHB"
+      },
+      {
+        "text": "Cư Né",
+        "label": "WDS"
+      },
+      {
+        "text": "Krông Búk",
+        "label": "DST"
+      },
+      {
+        "text": "Đắk Lắk",
+        "label": "PRO"
+      }
+    ],
+    "strict": true,
+    "test_result": null,
+    "tested_at": "2026-05-10T14:01:36.131Z",
+    "created_at": "2026-05-09T12:42:40.011571+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "mowxg9pat0hv",
@@ -1344,163 +1440,34 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T12:42:40.011571+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
-    "id": "mowiazrxjyj2",
-    "name": "Chợ Mỹ Phong, Đường 702",
-    "input": "Chợ Mỹ Phong, Đường 702, Xã Nhơn Hải, Huyện Ninh Hải, Ninh Thuận",
+    "id": "mowo6ivty91y",
+    "name": "Random #347056",
+    "input": "Cty Bóng Đèn, Đường De 1, Khu Công Nghiệp Mỹ Phước 3, Phường Thới Hòa, Thị Xã Bến Cát, Bình Dương",
     "note": "",
     "expected": [
       {
-        "text": "Chợ Mỹ Phong",
+        "text": "Cty Bóng Đèn",
         "label": "POI"
       },
       {
-        "text": "Đường 702",
+        "text": "Đường De 1",
         "label": "STR"
       },
       {
-        "text": "Nhơn Hải",
-        "label": "WDS"
-      },
-      {
-        "text": "Ninh Hải",
-        "label": "DST"
-      },
-      {
-        "text": "Ninh Thuận",
-        "label": "PRO"
-      }
-    ],
-    "strict": false,
-    "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
-    "created_at": "2026-05-09T12:42:40.011571+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
-  },
-  {
-    "id": "mownjtkwjnlm",
-    "name": "Random #438458",
-    "input": "Đường Bạch Liêu, Thị Trấn Tân Kỳ, Huyện Tân Kỳ, Nghệ An",
-    "note": "",
-    "expected": [
-      {
-        "text": "Đường Bạch Liêu",
-        "label": "STR"
-      },
-      {
-        "text": "Tân Kỳ",
-        "label": "WDS"
-      },
-      {
-        "text": "Tân Kỳ",
-        "label": "DST"
-      },
-      {
-        "text": "Nghệ An",
-        "label": "PRO"
-      }
-    ],
-    "strict": false,
-    "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
-    "created_at": "2026-05-09T12:42:40.011571+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
-  },
-  {
-    "id": "mow71qp4gsok",
-    "name": "Bệnh viện Đa khoa tỉnh Ninh Thuận",
-    "input": "Bệnh viện Đa khoa tỉnh Ninh Thuận, Nguyễn Văn Cừ, Văn Hải, Phan Rang-Tháp Chàm, Ninh Thuận, Việt Nam",
-    "note": "",
-    "expected": [
-      {
-        "text": "tỉnh Ninh Thuận",
-        "label": "PRO"
-      }
-    ],
-    "strict": false,
-    "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
-    "created_at": "2026-05-09T12:42:40.011571+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
-  },
-  {
-    "id": "movnkkdh05i4",
-    "name": "Barber Shop",
-    "input": "Anh Chung Barber Shop, Thị Trấn Hương Khê, Huyện Hương Khê, Hà Tĩnh",
-    "note": "",
-    "expected": [
-      {
-        "text": "Anh Chung Barber Shop",
-        "label": "PCD"
-      },
-      {
-        "text": "Hương Khê",
-        "label": "WDS"
-      },
-      {
-        "text": "Hương Khê",
-        "label": "DST"
-      },
-      {
-        "text": "Hà Tĩnh",
-        "label": "PRO"
-      }
-    ],
-    "strict": false,
-    "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
-    "created_at": "2026-05-09T12:42:40.011571+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
-  },
-  {
-    "id": "mown799zzgsy",
-    "name": "Random #425417",
-    "input": "Ngõ 3 Xóm Cầu Nộn Khê, Xã Yên Từ, Huyện Yên Mô, Ninh Bình",
-    "note": "",
-    "expected": [
-      {
-        "text": "Ngõ 3 Xóm Cầu Nộn Khê",
-        "label": "ALY"
-      },
-      {
-        "text": "Yên Từ",
-        "label": "WDS"
-      },
-      {
-        "text": "Yên Mô",
-        "label": "DST"
-      },
-      {
-        "text": "Ninh Bình",
-        "label": "PRO"
-      }
-    ],
-    "strict": false,
-    "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
-    "created_at": "2026-05-09T12:42:40.011571+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
-  },
-  {
-    "id": "movnpsxss61h",
-    "name": "Studio Đức Quyền - ấp 9",
-    "input": "Studio Đức Quyền - ấp 9, Xã An Linh, Huyện Phú Giáo, Bình Dương",
-    "note": "",
-    "expected": [
-      {
-        "text": "Studio Đức Quyền - ấp 9",
+        "text": "Khu Công Nghiệp Mỹ Phước 3",
         "label": "POI"
       },
       {
-        "text": "An Linh",
+        "text": "Thới Hòa",
         "label": "WDS"
       },
       {
-        "text": "Phú Giáo",
+        "text": "Bến Cát",
         "label": "DST"
       },
       {
@@ -1510,9 +1477,104 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T12:42:40.011571+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
+  },
+  {
+    "id": "movp7727ltg5",
+    "name": "2PGX+PH7,  Đ. Khánh Bình 11",
+    "input": "2PGX+PH7,  Đ. Khánh Bình 11, Phường Khánh Bình, Thành Phố Tân Uyên, Tỉnh Bình Dương, Việt Nam",
+    "note": "",
+    "expected": [
+      {
+        "text": "2PGX+PH7",
+        "label": "PCD"
+      },
+      {
+        "text": "Đ. Khánh Bình 11",
+        "label": "STR"
+      },
+      {
+        "text": "Khánh Bình",
+        "label": "WDS"
+      },
+      {
+        "text": "Tân Uyên",
+        "label": "DST"
+      },
+      {
+        "text": "Bình Dương",
+        "label": "PRO"
+      }
+    ],
+    "strict": false,
+    "test_result": null,
+    "tested_at": "2026-05-10T14:01:36.131Z",
+    "created_at": "2026-05-09T12:42:40.011571+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
+  },
+  {
+    "id": "mowxfwecsl9j",
+    "name": "Random #99460",
+    "input": "58 Hùng Vương, Đắk Mâm, Krông Nô, Đắk Nông, Việt Nam",
+    "note": "",
+    "expected": [
+      {
+        "text": "58",
+        "label": "NUM"
+      },
+      {
+        "text": "Hùng Vương",
+        "label": "STR"
+      },
+      {
+        "text": "Đắk Mâm",
+        "label": "WDS"
+      },
+      {
+        "text": "Krông Nô",
+        "label": "DST"
+      },
+      {
+        "text": "Đắk Nông",
+        "label": "PRO"
+      }
+    ],
+    "strict": false,
+    "test_result": null,
+    "tested_at": "2026-05-10T14:01:36.131Z",
+    "created_at": "2026-05-09T12:42:40.011571+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
+  },
+  {
+    "id": "mowo5nj3s63j",
+    "name": "Random #43634",
+    "input": "Shop Boss Chợ Cần Đăng, Xã Cần Đăng, Huyện Châu Thành, An Giang",
+    "note": "",
+    "expected": [
+      {
+        "text": "Chợ Cần Đăng",
+        "label": "POI"
+      },
+      {
+        "text": "Cần Đăng",
+        "label": "WDS"
+      },
+      {
+        "text": "Châu Thành",
+        "label": "DST"
+      },
+      {
+        "text": "An Giang",
+        "label": "PRO"
+      }
+    ],
+    "strict": false,
+    "test_result": null,
+    "tested_at": "2026-05-10T14:01:36.131Z",
+    "created_at": "2026-05-09T12:42:40.011571+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "movnh9uw74op",
@@ -1547,108 +1609,46 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T12:42:40.011571+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
-    "id": "mowh0le24fsb",
-    "name": "Vật Liệu Xây Dựng ",
-    "input": "Vật liệu xây dựng Tồn Mân, Thôn 2, Xã Ia Hlốp, Huyện Chư Sê, Gia Lai",
+    "id": "mowo4n8ec73m",
+    "name": "Random #497289",
+    "input": "Hẻm 11 , 49B kv3.an khanh Đường Nguyên Văn Linh, Phường An Khánh, Quận Ninh Kiều, Cần Thơ",
     "note": "",
     "expected": [
       {
-        "text": "Vật liệu xây dựng Tồn Mân",
-        "label": "POI"
+        "text": "Hẻm 11",
+        "label": "ALY"
       },
       {
-        "text": "Thôn 2",
-        "label": "NHB"
+        "text": "49B",
+        "label": "NUM"
       },
       {
-        "text": "Xã Ia Hlốp",
-        "label": "WDS"
-      },
-      {
-        "text": "Huyện Chư Sê",
-        "label": "DST"
-      },
-      {
-        "text": "Gia Lai",
-        "label": "PRO"
-      }
-    ],
-    "strict": false,
-    "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
-    "created_at": "2026-05-09T12:42:40.011571+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
-  },
-  {
-    "id": "movp4r3pe70k",
-    "name": "Toà Nhà A1 , Chung Cư C5",
-    "input": "Toà Nhà A1 , Chung Cư C5, Phường Đông Vệ, Thành Phố Thanh Hóa, Thanh Hóa",
-    "note": "",
-    "expected": [
-      {
-        "text": "Toà Nhà A1",
-        "label": "NHB"
-      },
-      {
-        "text": "Chung Cư C5",
-        "label": "BLD"
-      },
-      {
-        "text": "Đông Vệ",
-        "label": "WDS"
-      },
-      {
-        "text": "Thành Phố Thanh Hóa",
-        "label": "PRO"
-      },
-      {
-        "text": "Thanh Hóa",
-        "label": "DST"
-      }
-    ],
-    "strict": false,
-    "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
-    "created_at": "2026-05-09T12:42:40.011571+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
-  },
-  {
-    "id": "movp13fy1ht6",
-    "name": "3RR5+R2C, An Hòa, Thị Trấn La Hà",
-    "input": "3RR5+R2C, An Hòa, Thị Trấn La Hà, Huyện Tư Nghĩa, Tỉnh Quảng Ngãi",
-    "note": "",
-    "expected": [
-      {
-        "text": "3RR5+R2C",
-        "label": "PCD"
-      },
-      {
-        "text": "An Hòa",
+        "text": "kv3.an khanh Đường Nguyên Văn Linh",
         "label": "STR"
       },
       {
-        "text": "La Hà",
+        "text": "An Khánh",
         "label": "WDS"
       },
       {
-        "text": "Tư Nghĩa",
+        "text": "Ninh Kiều",
         "label": "DST"
       },
       {
-        "text": "Quảng Ngãi",
+        "text": "Cần Thơ",
         "label": "PRO"
       }
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T12:42:40.011571+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "mow8oxje9ssm",
@@ -1679,9 +1679,9 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T12:42:40.011571+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moxx497pwb5c",
@@ -1716,9 +1716,9 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T12:43:17.124607+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moxx4h37jokx",
@@ -1749,9 +1749,9 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T12:43:27.332985+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moxx67958avw",
@@ -1782,9 +1782,9 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T12:44:47.895164+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moxx9y3b5cco",
@@ -1811,9 +1811,9 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T12:47:42.620384+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moxxg44rj4jj",
@@ -1844,9 +1844,9 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T12:52:30.268447+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moxxggjztdgu",
@@ -1877,9 +1877,9 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T12:52:46.372716+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moxxkk5rgv1p",
@@ -1914,9 +1914,9 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T12:55:57.651245+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moxxma0zfqdr",
@@ -1951,9 +1951,9 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T12:57:17.834740+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moxxmt5kl00s",
@@ -1984,9 +1984,9 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T12:57:42.619401+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moxxndo71rey",
@@ -2017,9 +2017,9 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T12:58:09.204234+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moxxpt232rr5",
@@ -2050,9 +2050,9 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T13:00:02.463787+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moxxq5bn3i21",
@@ -2087,9 +2087,9 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T13:00:18.354456+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moxxt9ae7tbf",
@@ -2116,9 +2116,9 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T13:02:43.462727+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moxyn04tp24z",
@@ -2145,9 +2145,9 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T13:25:51.297818+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moxyr8c3l39x",
@@ -2182,9 +2182,9 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T13:29:08.548370+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moxys3krig48",
@@ -2215,9 +2215,9 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T13:29:49.035970+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moxzediu28ne",
@@ -2248,9 +2248,9 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T13:47:08.351601+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moxzq30tsyjh",
@@ -2281,9 +2281,9 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T13:56:14.630419+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moxzqdo1idwb",
@@ -2314,9 +2314,9 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T13:56:28.422313+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moxzqr5j510c",
@@ -2351,9 +2351,9 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T13:56:45.908785+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moxzr5dpufq6",
@@ -2388,9 +2388,9 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T13:57:04.351726+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moy0iiu0gh35",
@@ -2421,9 +2421,9 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T14:18:21.479202+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moy0l679pj1d",
@@ -2454,9 +2454,9 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T14:20:25.089886+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moy0n98flydq",
@@ -2491,9 +2491,9 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T14:22:02.325246+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moy0z6kbjh5v",
@@ -2528,9 +2528,9 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T14:31:18.733329+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moy11ykx4492",
@@ -2565,9 +2565,9 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T14:33:28.362226+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moy12a55ky6t",
@@ -2602,9 +2602,9 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T14:33:43.355344+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moy13uzqysfi",
@@ -2639,9 +2639,9 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T14:34:57.043146+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moy1e19oumah",
@@ -2684,9 +2684,9 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T14:42:51.932700+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moy1i0qowycc",
@@ -2717,9 +2717,9 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T14:45:57.673732+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moy1u9cbu3qi",
@@ -2750,9 +2750,9 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T14:55:28.692394+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moy1uhmw6z3k",
@@ -2775,9 +2775,9 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T14:55:39.446653+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moy1ul55g854",
@@ -2808,9 +2808,9 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T14:55:43.986697+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moy1uvcivyh2",
@@ -2845,9 +2845,9 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T14:55:57.207906+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moy2778bx3nq",
@@ -2878,9 +2878,9 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T15:05:32.480431+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moy28nkx2892",
@@ -2907,9 +2907,9 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T15:06:40.339060+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moy28qkbw02o",
@@ -2944,9 +2944,9 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T15:06:44.192025+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moy2mqp5yanc",
@@ -2973,9 +2973,9 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T15:17:37.552044+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moy2n84l61og",
@@ -3010,9 +3010,9 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T15:18:00.135169+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moy37oaakkx3",
@@ -3039,9 +3039,9 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T15:33:54.228237+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moy3l0xf6tdw",
@@ -3072,9 +3072,9 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T15:44:17.273820+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moy3l6m11lqv",
@@ -3105,9 +3105,9 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T15:44:24.509832+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moy3mprgv8hm",
@@ -3138,9 +3138,9 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T15:45:35.982361+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moy3o9q02947",
@@ -3171,9 +3171,9 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T15:46:48.499355+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moy3pfx71fqf",
@@ -3183,9 +3183,9 @@
     "expected": [],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T15:47:43.196547+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moy3pka7oztu",
@@ -3220,9 +3220,9 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T15:47:48.850091+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moy3qxch3fm8",
@@ -3257,9 +3257,9 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T15:48:52.432354+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moy3r5tljfc5",
@@ -3290,9 +3290,9 @@
     ],
     "strict": false,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T15:49:03.417829+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moy49ah5ou37",
@@ -3327,9 +3327,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T16:03:09.260759+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moy4t5i9bor4",
@@ -3352,9 +3352,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T16:18:35.937136+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moy4t8wpvfay",
@@ -3377,9 +3377,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T16:18:40.346702+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moy4tc4zoj56",
@@ -3410,9 +3410,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T16:18:44.522464+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moy4tf650ho7",
@@ -3447,9 +3447,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T16:18:48.450618+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moy4xwgp26p1",
@@ -3484,9 +3484,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T16:22:17.489946+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moy4zx07e6f0",
@@ -3517,9 +3517,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T16:23:51.505662+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moy5cdzh357b",
@@ -3546,9 +3546,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T16:33:33.389233+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moy5cm71r1gl",
@@ -3579,9 +3579,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T16:33:44.023868+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moy5cqmqlan1",
@@ -3608,9 +3608,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T16:33:49.775280+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moy5cupbjghq",
@@ -3641,9 +3641,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T16:33:55.041787+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moy5cynxr0vj",
@@ -3674,9 +3674,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T16:34:00.184789+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moy5d38ymn6c",
@@ -3703,9 +3703,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T16:34:06.126784+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moy5d705p7ho",
@@ -3736,9 +3736,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T16:34:10.988181+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moy5e5foik4e",
@@ -3773,9 +3773,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T16:34:55.617058+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moy5lkvj0411",
@@ -3818,9 +3818,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T16:40:42.224464+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moy5qipdzebd",
@@ -3855,9 +3855,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T16:44:32.687114+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moy5t4r7r84r",
@@ -3888,9 +3888,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T16:46:34.577460+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moy5un2gix8l",
@@ -3921,9 +3921,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T16:47:44.971602+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moy5zvs0dnw6",
@@ -3954,9 +3954,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T16:51:49.536915+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moy70dgs6xpm",
@@ -3987,9 +3987,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T17:20:12.091398+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moy7ar1t9qiz",
@@ -4020,9 +4020,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T17:28:16.237623+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moy7axpj6kcl",
@@ -4061,9 +4061,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T17:28:24.876686+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moy7b0ubites",
@@ -4098,9 +4098,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T17:28:28.931083+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moy7brkg9sxu",
@@ -4127,9 +4127,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T17:29:03.576865+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moy7cbqrj5sl",
@@ -4160,9 +4160,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T17:29:29.716023+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moy7cfhpl4q5",
@@ -4193,9 +4193,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T17:29:34.582327+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moy7gosxcjdk",
@@ -4234,9 +4234,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T17:32:53.292189+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moy7k3mb3zta",
@@ -4267,9 +4267,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T17:35:32.446065+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moy7nzaxnx63",
@@ -4304,9 +4304,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T17:38:33.753131+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moy7olemvmw1",
@@ -4337,9 +4337,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T17:39:02.119940+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moy7owxiqxfl",
@@ -4370,9 +4370,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T17:39:17.052092+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moy7po1n4e6j",
@@ -4403,9 +4403,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T17:39:52.209622+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moy9j9sau3uh",
@@ -4436,9 +4436,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T18:30:53.009138+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moy9jfafl5sy",
@@ -4469,9 +4469,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T18:31:00.149155+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moy9jlenk5ox",
@@ -4502,9 +4502,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T18:31:08.072437+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00"
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   },
   {
     "id": "moyjzv8epiqb",
@@ -4543,9 +4543,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T23:23:45.609591+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Phú Lợi",
       "district_name": "Thủ Dầu Một",
@@ -4556,7 +4556,7 @@
     "id": "moyk0hqnbhxs",
     "name": "Mẫu ngẫu nhiên · 49167",
     "input": "Block A2, Chung cư Topaz Home 2, đường 154, Phường Tân Phú, Thành Phố Thủ Đức, TP. Hồ Chí Minh",
-    "note": "",
+    "note": "Chung cư là BLD",
     "expected": [
       {
         "text": "đường 154",
@@ -4585,9 +4585,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T23:24:14.495302+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Tân Phú",
       "district_name": "Thủ Đức",
@@ -4623,9 +4623,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T23:25:17.647415+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Tràng Cát",
       "district_name": "Hải An",
@@ -4657,9 +4657,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T23:26:16.020890+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Hộ Phòng",
       "district_name": "Giá Rai",
@@ -4695,9 +4695,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T23:28:48.441263+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Vĩnh Thạnh",
       "district_name": "Nha Trang",
@@ -4737,9 +4737,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T23:29:05.791290+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Tân Phước",
       "district_name": "Gò Công Đông",
@@ -4750,12 +4750,8 @@
     "id": "moyk7pkekj5b",
     "name": "Mẫu ngẫu nhiên · 301240",
     "input": "Đường Vào Nhà Trọ Văn Quảng, Xã Tân Thành, Thành Phố Đồng Xoài, Bình Phước",
-    "note": "",
+    "note": "POI\tNhà Trọ Văn Quảng\tĐây là mốc địa điểm (điểm đến cụ thể), dùng nhãn POI để định vị.\nĐường Vào: Cụm từ này đóng vai trò chỉ dẫn lối đi/hướng đi vào một địa điểm cụ thể",
     "expected": [
-      {
-        "text": "Xã Tân Thành",
-        "label": "WDS"
-      },
       {
         "text": "Thành Phố Đồng Xoài",
         "label": "DST"
@@ -4765,15 +4761,19 @@
         "label": "PRO"
       },
       {
-        "text": "Đường Vào Nhà Trọ Văn Quảng",
+        "text": "Xã Tân Thành",
+        "label": "WDS"
+      },
+      {
+        "text": "Nhà Trọ Văn Quảng",
         "label": "POI"
       }
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T23:29:51.233090+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Tân Thành",
       "district_name": "Đồng Xoài",
@@ -4784,7 +4784,7 @@
     "id": "moyk9jnjbesh",
     "name": "Mẫu ngẫu nhiên · 438871",
     "input": "Số 17, Tổ 1 Khu Phố Đồng Sổ (ngã ba Bến ván kế mắt kính Việt Nhật), Thị Trấn Lai Uyên, Huyện Bàu Bàng, Bình Dương",
-    "note": "",
+    "note": "ngã ba Bến ván: là 1 địa danh => POI\nmắt kính Việt Nhật): cũng là POI",
     "expected": [
       {
         "text": "Số 17",
@@ -4821,9 +4821,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T23:31:18.396583+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Lai Uyên",
       "district_name": "Bàu Bàng",
@@ -4834,7 +4834,7 @@
     "id": "moykbw9fkgn5",
     "name": "Mẫu ngẫu nhiên · 15723",
     "input": "Công Ty Hảo Phụng, Xóm 7 , Ngã 3 Trạm Điện, Xã Nga Thanh, Huyện Nga Sơn, Thanh Hóa",
-    "note": "",
+    "note": "Ngã 3 Trạm Điện: là POI",
     "expected": [
       {
         "text": "Xóm 7",
@@ -4863,9 +4863,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T23:33:06.493888+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Nga Thành",
       "district_name": "Nga Sơn",
@@ -4901,9 +4901,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T23:34:37.144753+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Tân Phong",
       "district_name": "7",
@@ -4943,9 +4943,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T23:34:44.831749+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Vĩnh Thanh",
       "district_name": "Nhơn Trạch",
@@ -4981,9 +4981,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T23:34:52.775756+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Thạch Thang",
       "district_name": "Hải Châu",
@@ -5019,9 +5019,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T23:35:16.902383+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Bùi Thị Xuân",
       "district_name": "Quy Nhơn",
@@ -5057,9 +5057,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T23:35:20.322129+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Tân Nghĩa",
       "district_name": "Hàm Tân",
@@ -5095,9 +5095,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T23:35:34.941714+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Tân Tạo A",
       "district_name": "Bình Tân",
@@ -5133,9 +5133,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T23:35:39.140010+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Đồng Phú",
       "district_name": "Đồng Hới",
@@ -5171,9 +5171,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T23:35:42.882045+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Bình Trưng Đông",
       "district_name": "Thủ Đức",
@@ -5184,7 +5184,7 @@
     "id": "moyki65fw37j",
     "name": "Mẫu ngẫu nhiên · 84152",
     "input": "Karaoke Âm Vang, 40/14 Nguyễn Thông, Phường Trảng Dài, Thành Phố Biên Hòa, Đồng Nai",
-    "note": "",
+    "note": "Karaoke là POI",
     "expected": [
       {
         "text": "Nguyễn Thông",
@@ -5213,9 +5213,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T23:37:59.243440+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Trảng Dài",
       "district_name": "Biên Hòa",
@@ -5247,9 +5247,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T23:42:50.045171+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Định Hòa",
       "district_name": "Thủ Dầu Một",
@@ -5285,9 +5285,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T23:43:01.634995+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Hòa Cường Nam",
       "district_name": "Hải Châu",
@@ -5323,9 +5323,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T23:43:32.703341+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Bồ Đề",
       "district_name": "Long Biên",
@@ -5357,9 +5357,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T23:43:41.028924+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Trần Văn Thời",
       "district_name": "Trần Văn Thời",
@@ -5395,9 +5395,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T23:43:52.884254+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Ea KNuec",
       "district_name": "Krông Pắc",
@@ -5433,9 +5433,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T23:44:11.176429+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Mỹ Thạnh Bắc",
       "district_name": "Đức Huệ",
@@ -5475,9 +5475,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T23:44:36.259640+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Bình Hưng",
       "district_name": "Bình Chánh",
@@ -5488,7 +5488,7 @@
     "id": "moykqtulgfrh",
     "name": "Mẫu ngẫu nhiên · 198714",
     "input": "B12/11D - Liên ấp 1-2-3, Xã Vĩnh Lộc B, Huyện Bình Chánh, TP. Hồ Chí Minh",
-    "note": "",
+    "note": "Liên ấp: là 1 cụm thuộc NHB",
     "expected": [
       {
         "text": "Xã Vĩnh Lộc B",
@@ -5513,9 +5513,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T23:44:43.823872+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Vĩnh Lộc B",
       "district_name": "Bình Chánh",
@@ -5551,9 +5551,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T23:46:22.730721+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Tân Thới Nhất",
       "district_name": "12",
@@ -5585,9 +5585,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T23:46:27.977023+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Tam Đàn",
       "district_name": "Phú Ninh",
@@ -5627,9 +5627,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T23:46:35.355432+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Quang Trung",
       "district_name": "Thái Bình",
@@ -5661,9 +5661,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T23:49:01.164349+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Khuê Trung",
       "district_name": "Cẩm Lệ",
@@ -5699,9 +5699,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T23:49:08.434336+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Phú Thuận",
       "district_name": "7",
@@ -5712,7 +5712,7 @@
     "id": "moykwup3raem",
     "name": "Mẫu ngẫu nhiên · 71829",
     "input": "gọi sdt 0907936522 chung cư Ecogreen, Đường Nguyễn Văn Linh, Phường Tân Thuận Tây, Quận 7, Hồ Chí Minh",
-    "note": "",
+    "note": "gọi sdt 0907936522: thông tin cá nhân không đưa vào",
     "expected": [
       {
         "text": "Đường Nguyễn Văn Linh",
@@ -5737,9 +5737,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T23:49:25.177767+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Tân Thuận Tây",
       "district_name": "7",
@@ -5775,9 +5775,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T23:50:51.101770+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Tự An",
       "district_name": "Buôn Ma Thuột",
@@ -5813,9 +5813,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T23:51:00.077041+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Hòa Minh",
       "district_name": "Châu Thành",
@@ -5851,9 +5851,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T23:51:08.651537+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Tân Phong",
       "district_name": "7",
@@ -5889,9 +5889,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T23:51:16.103219+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Hòa An",
       "district_name": "Cẩm Lệ",
@@ -5927,9 +5927,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T23:51:21.831307+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Khánh Hải",
       "district_name": "Trần Văn Thời",
@@ -5961,9 +5961,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T23:51:42.927461+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Bình Thủy",
       "district_name": "Bình Thuỷ",
@@ -5974,14 +5974,10 @@
     "id": "moyl03ksspyn",
     "name": "Mẫu ngẫu nhiên · 184931",
     "input": "2/71h, Đ. Bình Nhâm 02, Binh Nhâm, Thuận An, Bình Dương, Việt Nam",
-    "note": "",
+    "note": "Đ. Bình Nhâm 02: tồn tại đường Bình Nhâm 02 => đúng",
     "expected": [
       {
         "text": "2/71h",
-        "label": "NUM"
-      },
-      {
-        "text": "02",
         "label": "NUM"
       },
       {
@@ -5993,19 +5989,19 @@
         "label": "PRO"
       },
       {
-        "text": "Đ. Bình Nhâm",
-        "label": "STR"
+        "text": "Binh Nhâm",
+        "label": "WDS"
       },
       {
-        "label": "WDS",
-        "text": "Bình Nhâm"
+        "text": "Đ. Bình Nhâm 02",
+        "label": "STR"
       }
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T23:51:56.837617+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Bình Nhâm",
       "district_name": "Thuận An",
@@ -6041,9 +6037,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T23:53:24.733994+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Sở Dầu",
       "district_name": "Hồng Bàng",
@@ -6083,9 +6079,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T23:53:39.887460+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Nghĩa Chánh",
       "district_name": "Quảng Ngãi",
@@ -6117,9 +6113,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T23:56:34.482549+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Nam Hồng",
       "district_name": "Nam Trực",
@@ -6155,9 +6151,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T23:56:41.499059+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Thiệu Trung",
       "district_name": "Thiệu Hóa",
@@ -6193,9 +6189,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T23:56:45.703874+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Thạnh An",
       "district_name": "Vĩnh Thạnh",
@@ -6231,9 +6227,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T23:57:02.140324+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Lê Đại Hành",
       "district_name": "Hai Bà Trưng",
@@ -6269,9 +6265,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T23:57:08.579285+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "An Tân",
       "district_name": "An Lão",
@@ -6307,9 +6303,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T23:57:13.427165+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Bình Trị Đông",
       "district_name": "Bình Tân",
@@ -6345,9 +6341,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T23:57:18.543915+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Hiệp Bình Chánh",
       "district_name": "Thủ Đức",
@@ -6377,15 +6373,15 @@
         "label": "NHB"
       },
       {
-        "label": "STR",
-        "text": "Bầu Dừng"
+        "text": "Bầu Dừng",
+        "label": "STR"
       }
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T23:57:22.679020+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Diên Sơn",
       "district_name": "Diên Khánh",
@@ -6421,9 +6417,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-09T23:58:52.436401+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Thủ Thiêm",
       "district_name": "Thủ Đức",
@@ -6463,9 +6459,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:00:26.065429+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Linh Đông",
       "district_name": "Thủ Đức",
@@ -6501,9 +6497,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:01:25.067309+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Lâm Tân",
       "district_name": "Thạnh Trị",
@@ -6539,9 +6535,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:01:32.185472+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Hòa Nhơn",
       "district_name": "Hòa Vang",
@@ -6577,9 +6573,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:01:39.279729+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Lộc Thủy",
       "district_name": "Phú Lộc",
@@ -6615,9 +6611,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:02:52.323350+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Chợ Chùa",
       "district_name": "Nghĩa Hành",
@@ -6653,9 +6649,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:03:03.263392+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "1",
       "district_name": "Mỹ Tho",
@@ -6691,9 +6687,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:03:06.247402+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Tân An",
       "district_name": "La Gi",
@@ -6733,9 +6729,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:03:18.509223+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Tuy Lai",
       "district_name": "Mỹ Đức",
@@ -6767,9 +6763,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:03:39.914182+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Phù Ủng",
       "district_name": "Ân Thi",
@@ -6809,9 +6805,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:03:43.812903+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Tăng Nhơn Phú B",
       "district_name": "Thủ Đức",
@@ -6847,9 +6843,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:05:36.827956+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Bình Quới",
       "district_name": "Châu Thành",
@@ -6889,9 +6885,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:05:44.253128+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "2",
       "district_name": "Đà Lạt",
@@ -6931,9 +6927,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:06:03.027428+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Tây Mỗ",
       "district_name": "Nam Từ Liêm",
@@ -6971,15 +6967,15 @@
         "label": "PRO"
       },
       {
-        "label": "NHB",
-        "text": "Dịch Vụ 05"
+        "text": "Dịch Vụ 05",
+        "label": "NHB"
       }
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:07:19.058329+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Kiến Hưng",
       "district_name": "Hà Đông",
@@ -7015,9 +7011,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:07:51.794274+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Tân Quý",
       "district_name": "Tân Phú",
@@ -7057,9 +7053,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:07:58.432771+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Quang Trung",
       "district_name": "Vinh",
@@ -7095,9 +7091,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:08:07.280511+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Tân Hoa",
       "district_name": "Lục Ngạn",
@@ -7125,9 +7121,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:08:28.437745+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Cầu Diễn",
       "district_name": "Nam Từ Liêm",
@@ -7163,9 +7159,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:08:34.429042+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "17",
       "district_name": "Bình Thạnh",
@@ -7197,9 +7193,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:08:52.269916+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Cam Phú",
       "district_name": "Cam Ranh",
@@ -7243,9 +7239,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:08:56.616397+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Hố Nai",
       "district_name": "Biên Hòa",
@@ -7277,9 +7273,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:09:03.886704+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Liên Minh",
       "district_name": "Vụ Bản",
@@ -7311,9 +7307,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:09:06.633222+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Tân Bình",
       "district_name": "Dĩ An",
@@ -7349,9 +7345,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:14:23.796810+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "13",
       "district_name": "Tân Bình",
@@ -7387,9 +7383,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:15:05.129768+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Quảng Thịnh",
       "district_name": "Thanh Hóa",
@@ -7425,9 +7421,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:15:14.191681+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Hiệp Tân",
       "district_name": "Tân Phú",
@@ -7467,9 +7463,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:15:18.357153+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Thạnh Xuân",
       "district_name": "12",
@@ -7509,9 +7505,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:15:23.385597+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Láng Dài",
       "district_name": "Long Đất",
@@ -7551,9 +7547,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:15:53.220058+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Thịnh Liệt",
       "district_name": "Hoàng Mai",
@@ -7589,9 +7585,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:15:57.936011+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "An Khê",
       "district_name": "Thanh Khê",
@@ -7623,9 +7619,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:16:31.679980+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Tam Hiệp",
       "district_name": "Châu Thành",
@@ -7665,9 +7661,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:16:40.863194+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Tân Kiên",
       "district_name": "Bình Chánh",
@@ -7703,9 +7699,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:17:00.764595+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Thuận Quý",
       "district_name": "Hàm Thuận Nam",
@@ -7745,9 +7741,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:17:06.338389+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Bà Điểm",
       "district_name": "Hóc Môn",
@@ -7783,9 +7779,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:19:20.615153+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Bến Nghé",
       "district_name": "1",
@@ -7821,9 +7817,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:19:24.385362+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "An Phú Đông",
       "district_name": "12",
@@ -7859,9 +7855,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:20:48.841721+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Phú Thuận",
       "district_name": "7",
@@ -7893,9 +7889,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:21:10.161513+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Phú Sơn",
       "district_name": "Ba Vì",
@@ -7931,9 +7927,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:21:16.075232+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "14",
       "district_name": "3",
@@ -7969,9 +7965,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:21:22.111333+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "2",
       "district_name": "Mỹ Tho",
@@ -8007,9 +8003,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:21:26.386056+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Bình Chiểu",
       "district_name": "Thủ Đức",
@@ -8041,9 +8037,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:21:37.207216+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Quan Hoa",
       "district_name": "Cầu Giấy",
@@ -8075,9 +8071,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:21:42.022381+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Hồng Bạch",
       "district_name": "Đông Hưng",
@@ -8113,9 +8109,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:21:48.527770+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Nhơn Thành",
       "district_name": "An Nhơn",
@@ -8151,9 +8147,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:21:51.338452+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Phước Hải",
       "district_name": "Long Đất",
@@ -8189,9 +8185,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:22:37.893578+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Gia Canh",
       "district_name": "Định Quán",
@@ -8227,9 +8223,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:22:47.070957+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Tân Hòa",
       "district_name": "Biên Hòa",
@@ -8265,9 +8261,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:22:54.561779+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Phước Thạnh",
       "district_name": "Mỹ Tho",
@@ -8307,9 +8303,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:23:08.007659+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Láng Hạ",
       "district_name": "Đống Đa",
@@ -8345,9 +8341,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:23:14.930118+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Đồng Hải",
       "district_name": "Đồng Hới",
@@ -8387,9 +8383,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:23:18.740481+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "22",
       "district_name": "Bình Thạnh",
@@ -8417,9 +8413,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:23:45.125453+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Khánh Hòa",
       "district_name": "Châu Phú",
@@ -8455,9 +8451,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:24:05.672856+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Mường Thanh",
       "district_name": "Điện Biên Phủ",
@@ -8497,9 +8493,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:24:14.054168+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Dịch Vọng",
       "district_name": "Cầu Giấy",
@@ -8527,9 +8523,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:24:29.075408+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Minh Thắng",
       "district_name": "Chơn Thành",
@@ -8565,9 +8561,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:24:34.740808+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Phong Phú",
       "district_name": "Bình Chánh",
@@ -8603,9 +8599,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:24:49.637576+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Hiệp Bình Phước",
       "district_name": "Thủ Đức",
@@ -8641,9 +8637,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:25:52.499633+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Bình Thắng",
       "district_name": "Dĩ An",
@@ -8683,9 +8679,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:26:00.203484+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Bình Chiểu",
       "district_name": "Thủ Đức",
@@ -8721,9 +8717,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:27:21.565397+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "An Thới",
       "district_name": "Bình Thuỷ",
@@ -8759,9 +8755,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:27:31.791869+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Thanh An",
       "district_name": "Hớn Quản",
@@ -8805,9 +8801,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:27:38.353589+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Đông Hòa",
       "district_name": "Dĩ An",
@@ -8847,9 +8843,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:27:48.616725+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "An Bình",
       "district_name": "Dĩ An",
@@ -8881,9 +8877,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:27:55.926868+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Đồng Nguyên",
       "district_name": "Từ Sơn",
@@ -8915,9 +8911,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:28:01.750172+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Thạnh Mỹ",
       "district_name": "Nam Giang",
@@ -8949,9 +8945,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:29:17.266830+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Phúc Yên",
       "district_name": "Lâm Bình",
@@ -8987,9 +8983,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:29:23.241325+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Nam Hoà",
       "district_name": "Quảng Yên",
@@ -9029,9 +9025,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:29:40.459690+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Thanh Trì",
       "district_name": "Hoàng Mai",
@@ -9067,9 +9063,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:29:45.504088+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Hòa Thọ Đông",
       "district_name": "Cẩm Lệ",
@@ -9105,9 +9101,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:29:50.160749+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Thái Bình",
       "district_name": "Châu Thành",
@@ -9147,9 +9143,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:29:54.439263+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Đông Quang",
       "district_name": "Ba Vì",
@@ -9185,9 +9181,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:30:00.454868+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Xà Bang",
       "district_name": "Châu Đức",
@@ -9223,9 +9219,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:30:04.567410+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Mỹ Tân",
       "district_name": "Cái Bè",
@@ -9261,9 +9257,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:30:07.550947+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Phước Hải",
       "district_name": "Nha Trang",
@@ -9303,9 +9299,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:30:49.170707+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Dĩ An",
       "district_name": "Dĩ An",
@@ -9341,9 +9337,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:30:52.788163+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Giồng Trôm",
       "district_name": "Giồng Trôm",
@@ -9387,9 +9383,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:31:10.946450+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Quyết Thắng",
       "district_name": "Biên Hòa",
@@ -9421,9 +9417,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:31:35.967610+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Hòa Thuận",
       "district_name": "Buôn Ma Thuột",
@@ -9463,9 +9459,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:31:38.555809+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Hải Sơn",
       "district_name": "Đồ Sơn",
@@ -9501,9 +9497,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:31:54.486711+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "11",
       "district_name": "Bình Thạnh",
@@ -9539,9 +9535,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:31:57.892084+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Mỹ Bình",
       "district_name": "Long Xuyên",
@@ -9577,9 +9573,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:32:21.722327+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Tân Quý",
       "district_name": "Tân Phú",
@@ -9615,9 +9611,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:32:24.473965+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Xuân Yên",
       "district_name": "Sông Cầu",
@@ -9657,9 +9653,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:32:32.554900+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Bình Châu",
       "district_name": "Xuyên Mộc",
@@ -9695,9 +9691,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:32:40.046943+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "An Khánh",
       "district_name": "Ninh Kiều",
@@ -9733,9 +9729,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:32:46.205007+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "An Biên",
       "district_name": "Lê Chân",
@@ -9771,9 +9767,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:33:17.366134+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Bình Trị Đông",
       "district_name": "Bình Tân",
@@ -9813,9 +9809,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:33:20.830629+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Đức Long",
       "district_name": "Phan Thiết",
@@ -9847,9 +9843,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:33:23.875487+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Bình Trung",
       "district_name": "Thăng Bình",
@@ -9885,9 +9881,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:33:27.266986+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Nam Phước",
       "district_name": "Duy Xuyên",
@@ -9923,9 +9919,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:33:31.347893+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Phổ Nhơn",
       "district_name": "Đức Phổ",
@@ -9957,9 +9953,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:33:48.453896+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Dương Xá",
       "district_name": "Gia Lâm",
@@ -9991,9 +9987,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:34:10.077572+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Bình Hưng",
       "district_name": "Bình Chánh",
@@ -10025,9 +10021,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:34:22.895806+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Suối Nho",
       "district_name": "Định Quán",
@@ -10063,9 +10059,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:34:25.805665+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Na Dương",
       "district_name": "Lộc Bình",
@@ -10101,9 +10097,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:34:32.039979+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "14",
       "district_name": "3",
@@ -10139,9 +10135,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:34:34.037452+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Tân Thạnh",
       "district_name": "Tam Kỳ",
@@ -10169,9 +10165,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:34:45.524738+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Hiệp Tân",
       "district_name": "Tân Phú",
@@ -10199,9 +10195,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:34:48.314715+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Vĩnh Bình Nam",
       "district_name": "Vĩnh Thuận",
@@ -10237,9 +10233,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:34:49.516826+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Hòa Khánh Nam",
       "district_name": "Liên Chiểu",
@@ -10275,9 +10271,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:34:51.849759+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Phước Lập",
       "district_name": "Tân Phước",
@@ -10313,9 +10309,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:35:33.200187+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "22",
       "district_name": "Bình Thạnh",
@@ -10351,9 +10347,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:36:29.131125+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Long Bình",
       "district_name": "Biên Hòa",
@@ -10385,9 +10381,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:36:35.070925+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Long Trường",
       "district_name": "Thủ Đức",
@@ -10427,9 +10423,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:37:10.417811+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Bình Thắng",
       "district_name": "Dĩ An",
@@ -10465,9 +10461,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:37:18.295037+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Tân Thành",
       "district_name": "Buôn Ma Thuột",
@@ -10515,9 +10511,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:37:21.170129+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Linh Trung",
       "district_name": "Thủ Đức",
@@ -10553,9 +10549,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:37:24.394072+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Cuor Đăng",
       "district_name": "Cư M'gar",
@@ -10595,9 +10591,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:37:27.283404+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Hòa Thọ Tây",
       "district_name": "Cẩm Lệ",
@@ -10633,9 +10629,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:37:41.293923+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Tân Thới Nhất",
       "district_name": "12",
@@ -10671,9 +10667,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:37:47.772584+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Bình Trị Đông",
       "district_name": "Bình Tân",
@@ -10709,9 +10705,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:38:10.820679+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "1",
       "district_name": "Quảng Trị",
@@ -10747,9 +10743,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:38:50.547849+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Mỹ An",
       "district_name": "Ngũ Hành Sơn",
@@ -10793,9 +10789,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:40:02.811641+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Hiệp Bình Chánh",
       "district_name": "Thủ Đức",
@@ -10831,9 +10827,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:40:24.401003+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Tân Quang",
       "district_name": "Ninh Giang",
@@ -10873,9 +10869,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:40:43.587681+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Thạnh Trị",
       "district_name": "Thạnh Trị",
@@ -10911,9 +10907,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:40:49.969632+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Ea Bhốk",
       "district_name": "Cư Kuin",
@@ -10949,9 +10945,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:41:36.802715+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "An Trung",
       "district_name": "Kông Chro",
@@ -10995,9 +10991,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:41:40.568283+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Thanh Xuân Trung",
       "district_name": "Thanh Xuân",
@@ -11033,9 +11029,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:42:15.347267+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Đài Sơn",
       "district_name": "Phan Rang-Tháp Chàm",
@@ -11067,9 +11063,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:42:19.837621+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Quỳnh Thọ",
       "district_name": "Quỳnh Lưu",
@@ -11113,9 +11109,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:42:38.545196+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Thanh Sơn",
       "district_name": "Phan Rang-Tháp Chàm",
@@ -11151,9 +11147,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:42:47.620121+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Bình Trị Đông",
       "district_name": "Bình Tân",
@@ -11189,9 +11185,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:43:30.161349+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "An Thạnh",
       "district_name": "Thuận An",
@@ -11223,9 +11219,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:43:40.044683+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Vĩnh Lạc",
       "district_name": "Rạch Giá",
@@ -11261,9 +11257,9 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:43:46.467069+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "An Bình",
       "district_name": "Buôn Hồ",
@@ -11303,13 +11299,674 @@
     ],
     "strict": true,
     "test_result": null,
-    "tested_at": "2026-05-10T01:06:50.878Z",
+    "tested_at": "2026-05-10T14:01:36.131Z",
     "created_at": "2026-05-10T00:43:49.429957+07:00",
-    "updated_at": "2026-05-10T08:02:50.917331+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
     "meta": {
       "ward_name": "Hồ",
       "district_name": "Thuận Thành",
       "province_name": "Bắc Ninh"
     }
+  },
+  {
+    "id": "moz7lm1ggr5i",
+    "name": "Mẫu ngẫu nhiên · 170721",
+    "input": "Quầy Thuốc Hải Đăng, Ql1a, Xã Tân Phúc, Huyện Hàm Tân, Bình Thuận",
+    "note": "",
+    "expected": [
+      {
+        "text": "Ql1a",
+        "label": "STR"
+      },
+      {
+        "text": "Quầy Thuốc Hải Đăng",
+        "label": "POI"
+      },
+      {
+        "text": "Xã Tân Phúc",
+        "label": "WDS"
+      },
+      {
+        "text": "Huyện Hàm Tân",
+        "label": "DST"
+      },
+      {
+        "text": "Lâm Đồng",
+        "label": "PRO"
+      }
+    ],
+    "strict": true,
+    "test_result": null,
+    "tested_at": "2026-05-10T14:01:36.131Z",
+    "created_at": "2026-05-10T10:24:31.088565+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
+    "meta": {
+      "ward_name": "Tân Minh",
+      "district_name": "Lâm Đồng",
+      "province_name": "Lâm Đồng"
+    }
+  },
+  {
+    "id": "moz7raq2oc6f",
+    "name": "Mẫu ngẫu nhiên · 151458",
+    "input": "Hòa An, Đường Vựa Năm Thanh, Xã Ngũ Hiệp, Huyện Cai Lậy, Tiền Giang",
+    "note": "",
+    "expected": [
+      {
+        "text": "Đường Vựa Năm Thanh",
+        "label": "STR"
+      },
+      {
+        "text": "Hòa An",
+        "label": "STR"
+      },
+      {
+        "text": "Xã Ngũ Hiệp",
+        "label": "WDS"
+      },
+      {
+        "text": "Huyện Cai Lậy",
+        "label": "DST"
+      },
+      {
+        "text": "Tiền Giang",
+        "label": "PRO"
+      }
+    ],
+    "strict": true,
+    "test_result": null,
+    "tested_at": "2026-05-10T14:01:36.131Z",
+    "created_at": "2026-05-10T10:28:54.852447+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
+    "meta": {
+      "ward_name": "Ngũ Hiệp",
+      "district_name": "Cai Lậy",
+      "province_name": "Tiền Giang"
+    }
+  },
+  {
+    "id": "moz7rsv3j73x",
+    "name": "Mẫu ngẫu nhiên · 230421",
+    "input": "Số 8 Nguyễn Khuyến, Phường Xương Giang, Thành Phố Bắc Giang, Bắc Giang",
+    "note": "",
+    "expected": [
+      {
+        "text": "Nguyễn Khuyến",
+        "label": "STR"
+      },
+      {
+        "text": "Số 8",
+        "label": "NUM"
+      },
+      {
+        "text": "Phường Xương Giang",
+        "label": "WDS"
+      },
+      {
+        "text": "Thành Phố Bắc Giang",
+        "label": "DST"
+      },
+      {
+        "text": "Thành Phố Bắc Giang",
+        "label": "PRO"
+      }
+    ],
+    "strict": true,
+    "test_result": null,
+    "tested_at": "2026-05-10T14:01:36.131Z",
+    "created_at": "2026-05-10T10:29:18.341515+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
+    "meta": {
+      "ward_name": "Bắc Giang",
+      "district_name": "Bắc Ninh",
+      "province_name": "Bắc Ninh"
+    }
+  },
+  {
+    "id": "moztgytlw2e7",
+    "name": "Mẫu ngẫu nhiên · 165700",
+    "input": "cầu 42, Xã Ia Sol, Huyện Phú Thiện, Gia Lai",
+    "note": "",
+    "expected": [
+      {
+        "text": "cầu 42",
+        "label": "POI"
+      },
+      {
+        "text": "Xã Ia Sol",
+        "label": "WDS"
+      },
+      {
+        "text": "Huyện Phú Thiện",
+        "label": "DST"
+      },
+      {
+        "text": "Gia Lai",
+        "label": "PRO"
+      }
+    ],
+    "strict": true,
+    "test_result": null,
+    "tested_at": "2026-05-10T14:01:36.131Z",
+    "created_at": "2026-05-10T20:36:44.689801+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
+    "meta": {
+      "ward_name": "Phú Thiện",
+      "district_name": "Gia Lai",
+      "province_name": "Gia Lai"
+    }
+  },
+  {
+    "id": "mozth3f6yke1",
+    "name": "Mẫu ngẫu nhiên · 22830",
+    "input": "287 Phan Văn Hớn, Tân Thới Nhất, Quận 12, Thành phố Hồ Chí Minh 71510, Việt Nam",
+    "note": "",
+    "expected": [
+      {
+        "text": "Phan Văn Hớn",
+        "label": "STR"
+      },
+      {
+        "text": "287",
+        "label": "NUM"
+      },
+      {
+        "text": "Đông Hưng Thuận",
+        "label": "WDS"
+      },
+      {
+        "text": "Thành phố Hồ Chí Minh",
+        "label": "PRO"
+      },
+      {
+        "text": "Quận 12",
+        "label": "DST"
+      },
+      {
+        "text": "Tân Thới Nhất",
+        "label": "WDS"
+      }
+    ],
+    "strict": true,
+    "test_result": null,
+    "tested_at": "2026-05-10T14:01:36.131Z",
+    "created_at": "2026-05-10T20:36:50.480830+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
+    "meta": {
+      "ward_name": "Đông Hưng Thuận",
+      "district_name": "Hồ Chí Minh",
+      "province_name": "Hồ Chí Minh"
+    }
+  },
+  {
+    "id": "mozthxdlihz3",
+    "name": "Mẫu ngẫu nhiên · 52208",
+    "input": "Chung cư Vista Verde, Nguyễn Thanh Sơn, Thạnh Mỹ Lợi, Thủ Đức, Hồ Chí Minh, Việt Nam",
+    "note": "",
+    "expected": [
+      {
+        "text": "Chung cư Vista Verde",
+        "label": "BLD"
+      },
+      {
+        "text": "Cát Lái",
+        "label": "WDS"
+      },
+      {
+        "text": "Hồ Chí Minh",
+        "label": "PRO"
+      },
+      {
+        "text": "Thủ Đức",
+        "label": "DST"
+      },
+      {
+        "text": "Thạnh Mỹ Lợi",
+        "label": "WDS"
+      },
+      {
+        "text": "Nguyễn Thanh Sơn",
+        "label": "STR"
+      }
+    ],
+    "strict": true,
+    "test_result": null,
+    "tested_at": "2026-05-10T14:01:36.131Z",
+    "created_at": "2026-05-10T20:37:29.470591+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
+    "meta": {
+      "ward_name": "Cát Lái",
+      "district_name": "Hồ Chí Minh",
+      "province_name": "Hồ Chí Minh"
+    }
+  },
+  {
+    "id": "moztieyssahi",
+    "name": "Mẫu ngẫu nhiên · 112599",
+    "input": "32c/6, Hoài Thanh, Phường 14, Quận 8, TP. Hồ Chí Minh",
+    "note": "",
+    "expected": [
+      {
+        "text": "Hoài Thanh",
+        "label": "STR"
+      },
+      {
+        "text": "32c/6",
+        "label": "NUM"
+      },
+      {
+        "text": "Phường 14",
+        "label": "WDS"
+      },
+      {
+        "text": "Quận 8",
+        "label": "DST"
+      },
+      {
+        "text": "TP. Hồ Chí Minh",
+        "label": "PRO"
+      }
+    ],
+    "strict": true,
+    "test_result": null,
+    "tested_at": "2026-05-10T14:01:36.131Z",
+    "created_at": "2026-05-10T20:37:52.100913+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
+    "meta": {
+      "ward_name": "Phú Định",
+      "district_name": "Hồ Chí Minh",
+      "province_name": "Hồ Chí Minh"
+    }
+  },
+  {
+    "id": "moztij1ufxpl",
+    "name": "Mẫu ngẫu nhiên · 359957",
+    "input": "Buôn Đắk tro-xã krong nô-huyen lak -tỉnh Đắk lak, Xã Krông Nô, Huyện Lắk, Đắk Lắk",
+    "note": "",
+    "expected": [
+      {
+        "text": "Buôn Đắk tro-",
+        "label": "NHB"
+      },
+      {
+        "text": "Xã Krông Nô",
+        "label": "WDS"
+      },
+      {
+        "text": "Huyện Lắk",
+        "label": "DST"
+      },
+      {
+        "text": "Đắk Lắk",
+        "label": "PRO"
+      }
+    ],
+    "strict": true,
+    "test_result": null,
+    "tested_at": "2026-05-10T14:01:36.131Z",
+    "created_at": "2026-05-10T20:37:57.405494+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
+    "meta": {
+      "ward_name": "Krông Nô",
+      "district_name": "Đắk Lắk",
+      "province_name": "Đắk Lắk"
+    }
+  },
+  {
+    "id": "moztj07s8iia",
+    "name": "Mẫu ngẫu nhiên · 146110",
+    "input": "Thôn Văn Hoá Tiến Hưng, Đường Bê Tông, Thôn Tiến Hưng, Xã Tiến Lợi, Thành Phố Phan Thiết, Bình Thuận",
+    "note": "",
+    "expected": [
+      {
+        "text": "Đường Bê Tông",
+        "label": "STR"
+      },
+      {
+        "text": "Thôn Văn Hoá Tiến Hưng",
+        "label": "NHB"
+      },
+      {
+        "text": "Thôn Tiến Hưng",
+        "label": "NHB"
+      },
+      {
+        "text": "Thành Phố Phan Thiết",
+        "label": "DST"
+      },
+      {
+        "text": "Xã Tiến Lợi",
+        "label": "WDS"
+      },
+      {
+        "text": "Bình Thuận",
+        "label": "PRO"
+      }
+    ],
+    "strict": true,
+    "test_result": null,
+    "tested_at": "2026-05-10T14:01:36.131Z",
+    "created_at": "2026-05-10T20:38:19.803180+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
+    "meta": {
+      "ward_name": "Tuyên Quang",
+      "district_name": "Lâm Đồng",
+      "province_name": "Lâm Đồng"
+    }
+  },
+  {
+    "id": "moztjfyp1vtx",
+    "name": "Mẫu ngẫu nhiên · 457246",
+    "input": "Tòa B, Chung Cư Mỹ Phúc, Số 192, Phạm Đức Sơn, Phường 16, Quận 8, TP. Hồ Chí Minh",
+    "note": "",
+    "expected": [
+      {
+        "text": "Phạm Đức Sơn",
+        "label": "STR"
+      },
+      {
+        "text": "Chung Cư Mỹ Phúc",
+        "label": "BLD"
+      },
+      {
+        "text": "Số 192",
+        "label": "NUM"
+      },
+      {
+        "text": "Phường 16",
+        "label": "WDS"
+      },
+      {
+        "text": "Quận 8",
+        "label": "DST"
+      },
+      {
+        "text": "TP. Hồ Chí Minh",
+        "label": "PRO"
+      }
+    ],
+    "strict": true,
+    "test_result": null,
+    "tested_at": "2026-05-10T14:01:36.131Z",
+    "created_at": "2026-05-10T20:38:40.021888+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
+    "meta": {
+      "ward_name": "Tân Nhựt",
+      "district_name": "Hồ Chí Minh",
+      "province_name": "Hồ Chí Minh"
+    }
+  },
+  {
+    "id": "moztk42ph9s4",
+    "name": "Mẫu ngẫu nhiên · 390358",
+    "input": "Căn hộ E4.3.7 Tòa E3-E4, Toà Nhà The Emerald, Đường Đình Thôn, Phường Mỹ Đình 1, Quận Nam Từ Liêm, Hà Nội",
+    "note": "Nằm sau Căn hộ là só nhà STR, lấy nguyên cụm",
+    "expected": [
+      {
+        "text": "Đường Đình Thôn",
+        "label": "STR"
+      },
+      {
+        "text": "Toà Nhà The Emerald",
+        "label": "BLD"
+      },
+      {
+        "text": "Phường Mỹ Đình 1",
+        "label": "WDS"
+      },
+      {
+        "text": "Quận Nam Từ Liêm",
+        "label": "DST"
+      },
+      {
+        "text": "Hà Nội",
+        "label": "PRO"
+      },
+      {
+        "text": "Căn hộ E4.3.7",
+        "label": "NUM"
+      },
+      {
+        "text": "Tòa E3-E4",
+        "label": "NHB"
+      }
+    ],
+    "strict": true,
+    "test_result": null,
+    "tested_at": "2026-05-10T14:01:36.131Z",
+    "created_at": "2026-05-10T20:39:11.272663+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
+    "meta": {
+      "ward_name": "Từ Liêm",
+      "district_name": "Hà Nội",
+      "province_name": "Hà Nội"
+    }
+  },
+  {
+    "id": "moztktswcpg0",
+    "name": "Mẫu ngẫu nhiên · 369301",
+    "input": "480/13/15, Mã Lò (vào hẻm 480/17, chạy gần cuối hẻm là thấy bên tay phải), Phường Bình Hưng Hòa A, Quận Bình Tân, TP. Hồ Chí Minh",
+    "note": "chạy gần cuối hẻm là thấy bên tay phải: đây là nguyên câu chỉ dẫn, dư thừa",
+    "expected": [
+      {
+        "text": "hẻm 480/17",
+        "label": "ALY"
+      },
+      {
+        "text": "480/13/15",
+        "label": "NUM"
+      },
+      {
+        "text": "Phường Bình Hưng Hòa A",
+        "label": "WDS"
+      },
+      {
+        "text": "Quận Bình Tân",
+        "label": "DST"
+      },
+      {
+        "text": "TP. Hồ Chí Minh",
+        "label": "PRO"
+      },
+      {
+        "text": "Mã Lò",
+        "label": "STR"
+      }
+    ],
+    "strict": true,
+    "test_result": null,
+    "tested_at": "2026-05-10T14:01:36.131Z",
+    "created_at": "2026-05-10T20:39:44.605348+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
+    "meta": {
+      "ward_name": "Bình Trị Đông",
+      "district_name": "Hồ Chí Minh",
+      "province_name": "Hồ Chí Minh"
+    }
+  },
+  {
+    "id": "moztm1psj9dt",
+    "name": "Mẫu ngẫu nhiên · 337741",
+    "input": "Ủy Ban Xã Công Lý, Thôn Cát Vinh, Xã Công Lý, Huyện Lý Nhân, Hà Nam",
+    "note": "",
+    "expected": [
+      {
+        "text": "Thôn Cát Vinh",
+        "label": "NHB"
+      },
+      {
+        "text": "Xã Công Lý",
+        "label": "WDS"
+      },
+      {
+        "text": "Huyện Lý Nhân",
+        "label": "DST"
+      },
+      {
+        "text": "Ủy Ban Xã Công Lý",
+        "label": "POI"
+      },
+      {
+        "text": "Hà Nam",
+        "label": "PRO"
+      }
+    ],
+    "strict": true,
+    "test_result": null,
+    "tested_at": "2026-05-10T14:01:36.131Z",
+    "created_at": "2026-05-10T20:40:41.523349+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
+    "meta": {
+      "ward_name": "Nam Xang",
+      "district_name": "Ninh Bình",
+      "province_name": "Ninh Bình"
+    }
+  },
+  {
+    "id": "moztmi2paamu",
+    "name": "Mẫu ngẫu nhiên · 357227",
+    "input": "23/84, Cát Vũ, Phường Tràng Cát, Quận Hải An, Hải Phòng",
+    "note": "",
+    "expected": [
+      {
+        "text": "Cát Vũ",
+        "label": "STR"
+      },
+      {
+        "text": "23/84",
+        "label": "NUM"
+      },
+      {
+        "text": "Phường Tràng Cát",
+        "label": "WDS"
+      },
+      {
+        "text": "Quận Hải An",
+        "label": "DST"
+      },
+      {
+        "text": "Hải Phòng",
+        "label": "PRO"
+      }
+    ],
+    "strict": true,
+    "test_result": null,
+    "tested_at": "2026-05-10T14:01:36.131Z",
+    "created_at": "2026-05-10T20:41:02.723229+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
+    "meta": {
+      "ward_name": "Hải An",
+      "district_name": "Hải Phòng",
+      "province_name": "Hải Phòng"
+    }
+  },
+  {
+    "id": "moztmlkcw54o",
+    "name": "Mẫu ngẫu nhiên · 376557",
+    "input": "XFPJ+8M Thọ Xuân, Xã Xuân Tín, Huyện Thọ Xuân, Tỉnh Thanh Hóa",
+    "note": "Thường đứng sau PCD là STR",
+    "expected": [
+      {
+        "text": "XFPJ+8M",
+        "label": "PCD"
+      },
+      {
+        "text": "Xã Xuân Tín",
+        "label": "WDS"
+      },
+      {
+        "text": "Huyện Thọ Xuân",
+        "label": "DST"
+      },
+      {
+        "text": "Tỉnh Thanh Hóa",
+        "label": "PRO"
+      },
+      {
+        "text": "Thọ Xuân",
+        "label": "STR"
+      }
+    ],
+    "strict": true,
+    "test_result": null,
+    "tested_at": "2026-05-10T14:01:36.131Z",
+    "created_at": "2026-05-10T20:41:07.254119+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
+    "meta": {
+      "ward_name": "Xuân Tín",
+      "district_name": "Thanh Hóa",
+      "province_name": "Thanh Hóa"
+    }
+  },
+  {
+    "id": "moztq9c6566o",
+    "name": "Mẫu ngẫu nhiên · 188527",
+    "input": "Cổng số 2 Chung cư Ruby Celadon City, Đ. N4, Sơn Kỳ, Tân Phú, Thành phố Hồ Chí Minh, Việt Nam",
+    "note": "",
+    "expected": [
+      {
+        "text": "Đ. N4",
+        "label": "STR"
+      },
+      {
+        "text": "Chung cư Ruby Celadon City",
+        "label": "BLD"
+      },
+      {
+        "text": "Thành phố Hồ Chí Minh",
+        "label": "PRO"
+      },
+      {
+        "text": "Cổng số 2",
+        "label": "NHB"
+      },
+      {
+        "text": "Tân Phú",
+        "label": "DST"
+      },
+      {
+        "text": "Sơn Kỳ",
+        "label": "WDS"
+      }
+    ],
+    "strict": true,
+    "test_result": null,
+    "tested_at": "2026-05-10T14:01:36.131Z",
+    "created_at": "2026-05-10T20:43:58.020218+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00",
+    "meta": {
+      "ward_name": "Bình Hưng Hòa",
+      "district_name": "Hồ Chí Minh",
+      "province_name": "Hồ Chí Minh"
+    }
+  },
+  {
+    "id": "moztubj5tmkl",
+    "name": "Mẫu địa chỉ mới",
+    "input": "268 Lý Thường Kiệt, Phường Diên Hồng, Hồ Chí Minh, Việt Nam",
+    "note": "",
+    "expected": [
+      {
+        "text": "268",
+        "label": "NUM"
+      },
+      {
+        "text": "Lý Thường Kiệt",
+        "label": "STR"
+      },
+      {
+        "text": "Hồ Chí Minh",
+        "label": "PRO"
+      },
+      {
+        "text": "Phường Diên Hồng",
+        "label": "WDS"
+      }
+    ],
+    "strict": true,
+    "test_result": null,
+    "tested_at": "2026-05-10T14:01:36.131Z",
+    "created_at": "2026-05-10T20:47:07.331205+07:00",
+    "updated_at": "2026-05-10T20:58:16.507800+07:00"
   }
 ]

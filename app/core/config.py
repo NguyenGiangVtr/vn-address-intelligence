@@ -15,6 +15,30 @@ def _typesense_export_read_timeout():
     return float(raw)
 
 
+def _parser_corpus_max_addresses() -> int:
+    """Giới hạn số địa chỉ corpus khi load parser (Siamese / encoding). Mặc định 100000."""
+    raw = os.getenv("PARSER_CORPUS_MAX_ADDRESSES", "").strip()
+    if not raw:
+        return 100_000
+    try:
+        n = int(raw)
+        return max(1, min(n, 2_000_000))
+    except ValueError:
+        return 100_000
+
+
+def _jwt_access_token_expire_minutes() -> int:
+    """Thời hạn JWT (phút). Mặc định 7 ngày; có thể giảm/tăng qua JWT_ACCESS_TOKEN_EXPIRE_MINUTES."""
+    raw = os.getenv("JWT_ACCESS_TOKEN_EXPIRE_MINUTES", "").strip()
+    if not raw:
+        return 60 * 24 * 7  # 10080 phút
+    try:
+        n = int(raw)
+        return max(5, min(n, 525600))  # tối thiểu 5 phút, tối đa 1 năm
+    except ValueError:
+        return 60 * 24 * 7
+
+
 class Config:
     DB_HOST = os.getenv("DB_HOST")
     DB_PORT = os.getenv("DB_PORT", "5432")
@@ -66,6 +90,12 @@ class Config:
     REDIS_DB = int(os.getenv("REDIS_DB", "0"))
     REDIS_CACHE_TTL = int(os.getenv("REDIS_CACHE_TTL", "3600"))
     REDIS_ENABLED = os.getenv("REDIS_ENABLED", "true").lower() == "true"
+
+    # JWT (đăng nhập API / UI)
+    JWT_ACCESS_TOKEN_EXPIRE_MINUTES = _jwt_access_token_expire_minutes()
+
+    # Parser / Siamese: số địa chỉ tối đa load từ DB khi encode corpus
+    PARSER_CORPUS_MAX_ADDRESSES = _parser_corpus_max_addresses()
 
     # SMTP Settings
     SMTP_HOST = os.getenv("SMTP_HOST", "smtp.gmail.com")

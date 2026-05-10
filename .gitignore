@@ -221,3 +221,4 @@ __marimo__/
 *.safetensors
 *.pt
 checkpoint-*/
+/docs

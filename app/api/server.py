@@ -482,13 +482,14 @@ def _load_parser_corpus(db: Session) -> List[str]:
     3. prq.address_cleansing_queue.address_standardized (legacy)
     4. Administrative hierarchy (fallback)
     """
+    max_n = Config.PARSER_CORPUS_MAX_ADDRESSES
     try:
         # Try loading from ground truth service first
         from app.services.ground_truth_service import GroundTruthService
         
         gt_service = GroundTruthService(db)
         corpus = gt_service.get_corpus_addresses(
-            limit=100000,
+            limit=max_n,
             min_quality_score=0.7,
             source_systems=['TYPESENSE', 'GOOGLE']
         )
@@ -512,10 +513,10 @@ def _load_parser_corpus(db: Session) -> List[str]:
               AND quality_score >= 0.7
               AND LENGTH(standardized_address) > 5
             ORDER BY quality_score DESC, usage_count DESC
-            LIMIT 100000
+            LIMIT :max_n
         """)
         
-        clean_corpus_result = db.execute(clean_corpus_query).fetchall()
+        clean_corpus_result = db.execute(clean_corpus_query, {"max_n": max_n}).fetchall()
         if clean_corpus_result:
             corpus = [row[0] for row in clean_corpus_result if row[0]]
             if len(corpus) > 100:  # Sufficient corpus size
@@ -532,7 +533,7 @@ def _load_parser_corpus(db: Session) -> List[str]:
             .filter(AddressCleansingQueue.address_standardized.isnot(None))
             .filter(func.length(AddressCleansingQueue.address_standardized) > 10)
             .distinct()
-            .limit(100000)
+            .limit(max_n)
             .all()
         )
         corpus = [row[0] for row in standardized_rows if row and row[0]]
@@ -551,7 +552,7 @@ def _load_parser_corpus(db: Session) -> List[str]:
             .join(District, and_(Ward.district_id == District.district_id, Ward.admin_version == District.admin_version))
             .join(Province, and_(District.province_id == Province.province_id, District.admin_version == Province.admin_version))
             .filter(Ward.is_deleted == False, District.is_deleted == False, Province.is_deleted == False)
-            .limit(100000)
+            .limit(max_n)
             .all()
         )
         corpus = [f"{ward}, {district}, {province}" for ward, district, province in hierarchy_rows if ward and district and province]
@@ -3142,10 +3143,17 @@ def list_prelabeler_cases(current_user=Depends(get_current_user)):
 
 
 @api_router.get("/prelabeler-cases/random-predict", tags=["PreLabeler Labeling Suite"])
-def random_prelabeler_predict(current_user=Depends(get_current_user)):
+def random_prelabeler_predict(
+    predict: bool = Query(
+        False,
+        description="True: chạy PreLabeler.predict và trả expected gợi ý. False: chỉ lấy địa chỉ + meta từ hàng đợi.",
+    ),
+    current_user=Depends(get_current_user),
+):
     """
-    Lay ngau nhien 1 raw_address trong queue chua ton tai o bo cases,
-    sau đó chạy PreLabeler.predict và trả về expected gợi ý.
+    Lấy ngẫu nhiên một raw_address trong queue chưa có trong bộ cases.
+    Khi predict=True (query): chạy PreLabeler.predict và trả expected gợi ý.
+    Khi predict=False (mặc định): không gọi predict — expected trả về rỗng; dùng khi chỉ cần lấy mẫu raw.
     """
     from app.ai.export_for_annotation import PreLabeler
 
@@ -3217,20 +3225,23 @@ def random_prelabeler_predict(current_user=Depends(get_current_user)):
         district_name = str(row.get("district_name") or "").strip() or None
         province_name = str(row.get("province_name") or "").strip() or None
 
-        predictions = PreLabeler.predict(
-            raw_address=raw_address,
-            ward_name=ward_name,
-            district_name=district_name,
-            province_name=province_name,
-        )
-        expected = predictions_to_expected(predictions)
-        expected = enforce_admin_type_name(
-            expected=expected,
-            raw_address=raw_address,
-            ward_name=ward_name,
-            district_name=district_name,
-            province_name=province_name,
-        )
+        if predict:
+            predictions = PreLabeler.predict(
+                raw_address=raw_address,
+                ward_name=ward_name,
+                district_name=district_name,
+                province_name=province_name,
+            )
+            expected = predictions_to_expected(predictions)
+            expected = enforce_admin_type_name(
+                expected=expected,
+                raw_address=raw_address,
+                ward_name=ward_name,
+                district_name=district_name,
+                province_name=province_name,
+            )
+        else:
+            expected = []
 
         return {
             "source_id": row.get("id"),
