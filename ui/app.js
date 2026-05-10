@@ -5026,10 +5026,342 @@ function initBoundaryVisualizationUI() {
   refreshRequiredFields();
   appendLog("Boundary visualization ready.");
   setStatus("Sẵn sàng tạo bản đồ ranh giới", "idle");
+
+  // ── Comparison section ────────────────────────────────────────────────────
+  _initCompareSection();
+  // ── Mismatch section ──────────────────────────────────────────────────────
+  _initMismatchSection();
+  // ── Audit section ─────────────────────────────────────────────────────────
+  _initAuditSection();
+  // ── Inspection section ────────────────────────────────────────────────────
+  _initInspectSection();
+}
+
+// ── Helper: load report list into a <select> ─────────────────────────────────
+async function _loadReportList(selectEl) {
+  if (!selectEl) return;
+  try {
+    const res = await fetch(`${API_BASE}/boundary/reports`, { headers: getAuthHeader() });
+    if (!res.ok) return;
+    const data = await res.json();
+    const files = data.files || [];
+    const first = selectEl.options[0];
+    selectEl.innerHTML = "";
+    selectEl.appendChild(first);
+    files.forEach((f) => {
+      const opt = document.createElement("option");
+      opt.value = `data/${f}`;
+      opt.textContent = f;
+      selectEl.appendChild(opt);
+    });
+  } catch (_) {}
+}
+
+// ── COMPARE SECTION ──────────────────────────────────────────────────────────
+function _initCompareSection() {
+  const header = document.querySelector("#boundary-compare-section .card-header");
+  const body = document.getElementById("boundary-compare-body");
+  if (header && body) {
+    header.addEventListener("click", () => {
+      const hidden = body.style.display === "none";
+      body.style.display = hidden ? "" : "none";
+    });
+  }
+
+  const fileInput = document.getElementById("compare-file-input");
+  const batchInput = document.getElementById("compare-batch-size");
+  const runBtn = document.getElementById("btn-compare-run");
+  const statusEl = document.getElementById("compare-status");
+  const statusDot = document.getElementById("compare-status-dot");
+  const summaryEl = document.getElementById("compare-summary");
+  const detailWrap = document.getElementById("compare-detail-wrap");
+  const tableBody = document.getElementById("compare-table-body");
+  const downloadBtn = document.getElementById("compare-download-btn");
+
+  let lastReportFile = null;
+
+  const setStatus = (msg, tone = "idle") => {
+    if (statusEl) { statusEl.textContent = msg; }
+    if (statusDot) { statusDot.className = `pstatus-dot ${tone}`; }
+  };
+
+  if (!runBtn) return;
+
+  runBtn.addEventListener("click", async () => {
+    const file = fileInput?.files?.[0];
+    if (!file) { showToast?.("Chọn file CSV trước", "warning"); return; }
+
+    const formData = new FormData();
+    formData.append("file", file);
+    const batchSize = parseInt(batchInput?.value || "500", 10);
+
+    setStatus("Đang xử lý...", "loading");
+    runBtn.disabled = true;
+    runBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>Đang chạy...</span>';
+
+    try {
+      const res = await fetch(`${API_BASE}/boundary/compare?batch_size=${batchSize}`, {
+        method: "POST",
+        headers: getAuthHeader(),
+        body: formData,
+      });
+      if (!res.ok) { const t = await res.text(); throw new Error(t || res.status); }
+      const data = await res.json();
+
+      const s = data.summary || {};
+      document.getElementById("compare-province-pct").textContent = (s.province_match_pct ?? "—");
+      document.getElementById("compare-district-pct").textContent = (s.district_match_pct ?? "—");
+      document.getElementById("compare-ward-pct").textContent = (s.ward_match_pct ?? "—");
+      document.getElementById("compare-all-pct").textContent = (s.all_match_pct ?? "—");
+      if (summaryEl) summaryEl.style.display = "";
+
+      const rows = data.detail_rows || [];
+      if (tableBody) {
+        tableBody.innerHTML = rows.map((r) => `
+          <tr>
+            <td style="padding:5px 10px;border-bottom:1px solid var(--border-subtle)">${r.order_code || "—"}</td>
+            <td style="padding:5px 10px;border-bottom:1px solid var(--border-subtle);color:${r.province_match ? "var(--success)" : "var(--danger)"}">${r.province_match ? "✓" : "✗"}</td>
+            <td style="padding:5px 10px;border-bottom:1px solid var(--border-subtle);color:${r.district_match ? "var(--success)" : "var(--danger)"}">${r.district_match ? "✓" : "✗"}</td>
+            <td style="padding:5px 10px;border-bottom:1px solid var(--border-subtle);color:${r.ward_match ? "var(--success)" : "var(--danger)"}">${r.ward_match ? "✓" : "✗"}</td>
+            <td style="padding:5px 10px;border-bottom:1px solid var(--border-subtle);color:${r.all_match ? "var(--success)" : "var(--danger)"}">${r.all_match ? "✓" : "✗"}</td>
+          </tr>`).join("");
+      }
+      if (detailWrap) detailWrap.style.display = "";
+
+      lastReportFile = data.report_file;
+      setStatus(`Hoàn thành — ${s.total_rows || 0} hàng, Ward match: ${s.ward_match_pct}%`, "success");
+      showToast?.("So sánh hoàn thành", "success");
+
+      // Reload mismatch / inspect selects
+      _loadReportList(document.getElementById("mismatch-report-select"));
+      _loadReportList(document.getElementById("inspect-report-select"));
+    } catch (err) {
+      setStatus("Lỗi: " + err.message, "danger");
+      showToast?.("So sánh thất bại", "danger");
+    } finally {
+      runBtn.disabled = false;
+      runBtn.innerHTML = '<i class="fa-solid fa-play"></i><span>Chạy so sánh</span>';
+    }
+  });
+
+  if (downloadBtn) {
+    downloadBtn.addEventListener("click", () => {
+      if (!lastReportFile) { showToast?.("Chưa có file báo cáo", "warning"); return; }
+      window.open(`${API_BASE}/boundary/download?file=${encodeURIComponent(lastReportFile)}`, "_blank");
+    });
+  }
+}
+
+// ── MISMATCH SECTION ─────────────────────────────────────────────────────────
+function _initMismatchSection() {
+  const header = document.querySelector("#boundary-mismatch-section .card-header");
+  const body = document.getElementById("boundary-mismatch-body");
+  if (header && body) {
+    header.addEventListener("click", () => {
+      const hidden = body.style.display === "none";
+      body.style.display = hidden ? "" : "none";
+      if (hidden) _loadReportList(document.getElementById("mismatch-report-select"));
+    });
+  }
+
+  const runBtn = document.getElementById("btn-mismatch-run");
+  const statusEl = document.getElementById("mismatch-status");
+  const statusDot = document.getElementById("mismatch-status-dot");
+  const frameWrap = document.getElementById("mismatch-frame-wrap");
+  const frame = document.getElementById("mismatch-map-frame");
+  const link = document.getElementById("mismatch-map-link");
+
+  const setStatus = (msg, tone = "idle") => {
+    if (statusEl) statusEl.textContent = msg;
+    if (statusDot) statusDot.className = `pstatus-dot ${tone}`;
+  };
+
+  if (!runBtn) return;
+
+  runBtn.addEventListener("click", async () => {
+    const reportVal = document.getElementById("mismatch-report-select")?.value || "";
+    const params = new URLSearchParams();
+    if (reportVal) params.set("detailed_csv", reportVal);
+
+    setStatus("Đang tạo bản đồ mismatch...", "loading");
+    runBtn.disabled = true;
+    runBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>Đang tạo...</span>';
+
+    try {
+      const res = await fetch(`${API_BASE}/boundary/mismatch?${params}`, { headers: getAuthHeader() });
+      if (!res.ok) { const t = await res.text(); throw new Error(t || res.status); }
+      const data = await res.json();
+      if (frame && data.url) frame.src = data.url;
+      if (link && data.url) { link.href = data.url; link.style.display = ""; }
+      if (frameWrap) frameWrap.style.display = "";
+      setStatus("Bản đồ mismatch đã tạo", "success");
+    } catch (err) {
+      setStatus("Lỗi: " + err.message, "danger");
+      showToast?.("Không thể tạo bản đồ mismatch", "danger");
+    } finally {
+      runBtn.disabled = false;
+      runBtn.innerHTML = '<i class="fa-solid fa-map"></i><span>Tạo bản đồ</span>';
+    }
+  });
+}
+
+// ── AUDIT SECTION ─────────────────────────────────────────────────────────────
+function _initAuditSection() {
+  const header = document.querySelector("#boundary-audit-section .card-header");
+  const body = document.getElementById("boundary-audit-body");
+  if (header && body) {
+    header.addEventListener("click", () => {
+      const hidden = body.style.display === "none";
+      body.style.display = hidden ? "" : "none";
+    });
+  }
+
+  const runBtn = document.getElementById("btn-audit-run");
+  const statusEl = document.getElementById("audit-status");
+  const statusDot = document.getElementById("audit-status-dot");
+  const frameWrap = document.getElementById("audit-frame-wrap");
+  const frame = document.getElementById("audit-map-frame");
+  const link = document.getElementById("audit-map-link");
+
+  const setStatus = (msg, tone = "idle") => {
+    if (statusEl) statusEl.textContent = msg;
+    if (statusDot) statusDot.className = `pstatus-dot ${tone}`;
+  };
+
+  if (!runBtn) return;
+
+  runBtn.addEventListener("click", async () => {
+    const sourceVal = document.getElementById("audit-source-select")?.value || "";
+    const bufferM   = document.getElementById("audit-buffer-m")?.value || "50";
+    const alpha     = document.getElementById("audit-alpha")?.value || "0.3";
+    const limit     = document.getElementById("audit-limit")?.value || "0";
+
+    const params = new URLSearchParams({ buffer_m: bufferM, alpha, limit });
+    if (sourceVal) params.set("source_json", sourceVal);
+
+    setStatus("Đang tạo bản đồ audit...", "loading");
+    runBtn.disabled = true;
+    runBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>Đang tạo...</span>';
+
+    try {
+      const res = await fetch(`${API_BASE}/boundary/audit?${params}`, { headers: getAuthHeader() });
+      if (!res.ok) { const t = await res.text(); throw new Error(t || res.status); }
+      const data = await res.json();
+      if (frame && data.url) frame.src = data.url;
+      if (link && data.url) { link.href = data.url; link.style.display = ""; }
+      if (frameWrap) frameWrap.style.display = "";
+      setStatus(`Audit map: ${data.record_count || 0} records`, "success");
+    } catch (err) {
+      setStatus("Lỗi: " + err.message, "danger");
+      showToast?.("Không thể tạo audit map", "danger");
+    } finally {
+      runBtn.disabled = false;
+      runBtn.innerHTML = '<i class="fa-solid fa-magnifying-glass"></i><span>Tạo bản đồ audit</span>';
+    }
+  });
+}
+
+// ── INSPECTION SECTION ────────────────────────────────────────────────────────
+function _initInspectSection() {
+  const header = document.querySelector("#boundary-inspect-section .card-header");
+  const body = document.getElementById("boundary-inspect-body");
+  if (header && body) {
+    header.addEventListener("click", () => {
+      const hidden = body.style.display === "none";
+      body.style.display = hidden ? "" : "none";
+      if (hidden) _loadReportList(document.getElementById("inspect-report-select"));
+    });
+  }
+
+  const runBtn = document.getElementById("btn-inspect-run");
+  const applyBtn = document.getElementById("btn-inspect-apply");
+  const statusEl = document.getElementById("inspect-status");
+  const statusDot = document.getElementById("inspect-status-dot");
+  const summaryEl = document.getElementById("inspect-summary");
+  const applyWrap = document.getElementById("inspect-apply-wrap");
+  const jsonPathEl = document.getElementById("inspect-json-path");
+
+  const setStatus = (msg, tone = "idle") => {
+    if (statusEl) statusEl.textContent = msg;
+    if (statusDot) statusDot.className = `pstatus-dot ${tone}`;
+  };
+
+  if (!runBtn) return;
+
+  runBtn.addEventListener("click", async () => {
+    const reportVal = document.getElementById("inspect-report-select")?.value || "";
+    const limit     = document.getElementById("inspect-limit")?.value || "0";
+    const params    = new URLSearchParams({ limit });
+    if (reportVal) params.set("detailed_csv", reportVal);
+
+    setStatus("Đang phân tích...", "loading");
+    runBtn.disabled = true;
+    runBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>Đang chạy...</span>';
+
+    try {
+      const res = await fetch(`${API_BASE}/boundary/inspect?${params}`, {
+        method: "POST",
+        headers: getAuthHeader(),
+      });
+      if (!res.ok) { const t = await res.text(); throw new Error(t || res.status); }
+      const data = await res.json();
+
+      const s = data.summary || {};
+      document.getElementById("inspect-csv-count").textContent   = s.likely_csv_correct      || 0;
+      document.getElementById("inspect-api-count").textContent   = s.likely_api_correct      || 0;
+      document.getElementById("inspect-ambiguous-count").textContent = s.ambiguous_both_evidence || 0;
+      document.getElementById("inspect-indet-count").textContent = s.indeterminate            || 0;
+      if (summaryEl) summaryEl.style.display = "";
+
+      if (data.inspection_file && jsonPathEl) jsonPathEl.value = data.inspection_file;
+      if (applyWrap) applyWrap.style.display = "";
+
+      setStatus(`Inspection hoàn thành — ${data.total_mismatch || 0} mismatch rows`, "success");
+    } catch (err) {
+      setStatus("Lỗi: " + err.message, "danger");
+      showToast?.("Inspection thất bại", "danger");
+    } finally {
+      runBtn.disabled = false;
+      runBtn.innerHTML = '<i class="fa-solid fa-microscope"></i><span>Chạy Inspection</span>';
+    }
+  });
+
+  if (applyBtn) {
+    applyBtn.addEventListener("click", async () => {
+      const jsonPath  = jsonPathEl?.value || "";
+      const reportVal = document.getElementById("inspect-report-select")?.value || "";
+      if (!jsonPath) { showToast?.("Chạy Inspection trước để lấy file JSON", "warning"); return; }
+
+      const params = new URLSearchParams({ inspection_json: jsonPath });
+      if (reportVal) params.set("detailed_csv", reportVal);
+
+      applyBtn.disabled = true;
+      applyBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>Đang áp dụng...</span>';
+
+      try {
+        const res = await fetch(`${API_BASE}/boundary/inspect/apply?${params}`, {
+          method: "POST",
+          headers: getAuthHeader(),
+        });
+        if (!res.ok) { const t = await res.text(); throw new Error(t || res.status); }
+        const data = await res.json();
+        const downloadUrl = data.download_url;
+        if (downloadUrl) window.open(downloadUrl, "_blank");
+        setStatus(`Áp dụng xong — ${data.adjusted_count || 0} rows được điều chỉnh`, "success");
+        showToast?.("Đã tạo CSV đã điều chỉnh", "success");
+      } catch (err) {
+        setStatus("Lỗi apply: " + err.message, "danger");
+        showToast?.("Apply thất bại", "danger");
+      } finally {
+        applyBtn.disabled = false;
+        applyBtn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i><span>Áp dụng &amp; Tải CSV</span>';
+      }
+    });
+  }
 }
 
 /**
- * Dynamically calculates and adjusts the height of scrollable elements 
+ * Dynamically calculates and adjusts the height of scrollable elements
  * (gridview, job-log, etc.) to prevent #page-content from overflowing.
  */
 function adjustActivePageHeight() {

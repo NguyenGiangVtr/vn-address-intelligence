@@ -106,6 +106,249 @@
             </div>
         </div>
     </div>
+
+    <!-- ══ SECTION: COMPARISON ══ -->
+    <div class="mt-12 card" id="boundary-compare-section">
+        <div class="card-header" style="cursor:pointer;" onclick="document.getElementById('boundary-compare-body').classList.toggle('hidden')">
+            <span class="card-title"><i class="fa-solid fa-code-compare mr-8"></i> So sánh đơn hàng với API</span>
+            <span style="float:right; color:var(--text-secondary); font-size:12px;">Click để mở/đóng</span>
+        </div>
+        <div class="card-body" id="boundary-compare-body" class="hidden" style="display:none;">
+            <div class="parser-hero-inner">
+                <div class="parser-input-wrap" style="flex-wrap:wrap; gap:12px;">
+                    <div class="form-group" style="flex:1 1 280px;">
+                        <label class="form-label">File CSV đơn hàng</label>
+                        <input type="file" id="compare-file-input" class="form-input" accept=".csv">
+                        <div style="font-size:11px; color:var(--text-secondary); margin-top:4px;">
+                            Cột: order_code, lat, lng, province_id, district_id, ward_id
+                        </div>
+                    </div>
+                    <div class="form-group" style="flex:0 0 160px;">
+                        <label class="form-label">Batch size</label>
+                        <input type="number" id="compare-batch-size" class="form-input" value="500" min="10" max="5000">
+                    </div>
+                    <div class="parser-input-actions" style="align-self:flex-end;">
+                        <button class="parser-btn-run" id="btn-compare-run" type="button">
+                            <i class="fa-solid fa-play"></i>
+                            <span>Chạy so sánh</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="parser-status-bar">
+                    <div id="compare-status-dot" class="pstatus-dot idle"></div>
+                    <span id="compare-status" class="pstatus-text">Sẵn sàng</span>
+                </div>
+            </div>
+
+            <!-- Summary cards -->
+            <div class="smart-filter-grid mt-12" id="compare-summary" style="display:none;">
+                <div class="pmodel-card" style="min-width:160px;">
+                    <div class="pmodel-header"><div class="pmodel-icon" style="--mc:#60a5fa"><i class="fa-solid fa-globe"></i></div>
+                        <div class="pmodel-title"><div class="pmodel-name">Province</div><div class="pmodel-sub">Match %</div></div></div>
+                    <div class="pmodel-body"><div style="font-size:26px;font-weight:800"><span id="compare-province-pct">—</span>%</div></div>
+                </div>
+                <div class="pmodel-card" style="min-width:160px;">
+                    <div class="pmodel-header"><div class="pmodel-icon" style="--mc:#34d399"><i class="fa-solid fa-map-pin"></i></div>
+                        <div class="pmodel-title"><div class="pmodel-name">District</div><div class="pmodel-sub">Match %</div></div></div>
+                    <div class="pmodel-body"><div style="font-size:26px;font-weight:800"><span id="compare-district-pct">—</span>%</div></div>
+                </div>
+                <div class="pmodel-card" style="min-width:160px;">
+                    <div class="pmodel-header"><div class="pmodel-icon" style="--mc:#f59e0b"><i class="fa-solid fa-location-dot"></i></div>
+                        <div class="pmodel-title"><div class="pmodel-name">Ward</div><div class="pmodel-sub">Match %</div></div></div>
+                    <div class="pmodel-body"><div style="font-size:26px;font-weight:800"><span id="compare-ward-pct">—</span>%</div></div>
+                </div>
+                <div class="pmodel-card" style="min-width:160px;">
+                    <div class="pmodel-header"><div class="pmodel-icon" style="--mc:#a78bfa"><i class="fa-solid fa-check-double"></i></div>
+                        <div class="pmodel-title"><div class="pmodel-name">All match</div><div class="pmodel-sub">Match %</div></div></div>
+                    <div class="pmodel-body"><div style="font-size:26px;font-weight:800"><span id="compare-all-pct">—</span>%</div></div>
+                </div>
+            </div>
+
+            <!-- Detail table -->
+            <div class="mt-12" id="compare-detail-wrap" style="display:none;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                    <span style="font-weight:600; font-size:13px;">Chi tiết (tối đa 2000 dòng)</span>
+                    <button id="compare-download-btn" class="parser-btn-run"
+                        style="padding:6px 14px; font-size:12px; gap:6px;">
+                        <i class="fa-solid fa-download"></i> Tải CSV
+                    </button>
+                </div>
+                <div style="overflow:auto; max-height:360px; border:1px solid var(--border-subtle); border-radius:var(--radius);">
+                    <table id="compare-table" style="width:100%; border-collapse:collapse; font-size:12px;">
+                        <thead>
+                            <tr style="position:sticky;top:0;background:var(--bg-surface);z-index:1;">
+                                <th style="padding:6px 10px;text-align:left;border-bottom:1px solid var(--border-subtle);">Order</th>
+                                <th style="padding:6px 10px;text-align:left;">Province</th>
+                                <th style="padding:6px 10px;text-align:left;">District</th>
+                                <th style="padding:6px 10px;text-align:left;">Ward</th>
+                                <th style="padding:6px 10px;text-align:left;">All match</th>
+                            </tr>
+                        </thead>
+                        <tbody id="compare-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ SECTION: MISMATCH ══ -->
+    <div class="mt-12 card" id="boundary-mismatch-section">
+        <div class="card-header" style="cursor:pointer;" onclick="document.getElementById('boundary-mismatch-body').classList.toggle('hidden')">
+            <span class="card-title"><i class="fa-solid fa-arrows-split-up-and-left mr-8"></i> Sửa lỗi mismatch đa-ward</span>
+            <span style="float:right; color:var(--text-secondary); font-size:12px;">Click để mở/đóng</span>
+        </div>
+        <div class="card-body" id="boundary-mismatch-body" style="display:none;">
+            <div class="parser-hero-inner">
+                <div class="parser-input-wrap" style="flex-wrap:wrap; gap:12px; align-items:flex-end;">
+                    <div class="form-group" style="flex:1 1 320px;">
+                        <label class="form-label">Báo cáo chi tiết</label>
+                        <select id="mismatch-report-select" class="form-input">
+                            <option value="">-- Chọn file báo cáo --</option>
+                        </select>
+                    </div>
+                    <div class="parser-input-actions" style="align-self:flex-end;">
+                        <button class="parser-btn-run" id="btn-mismatch-run" type="button">
+                            <i class="fa-solid fa-map"></i>
+                            <span>Tạo bản đồ</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="parser-status-bar">
+                    <div id="mismatch-status-dot" class="pstatus-dot idle"></div>
+                    <span id="mismatch-status" class="pstatus-text">Sẵn sàng</span>
+                </div>
+            </div>
+            <div class="mt-12" id="mismatch-frame-wrap" style="display:none;">
+                <a id="mismatch-map-link" href="#" target="_blank" rel="noreferrer"
+                   style="font-size:12px; color:var(--accent);">Mở bản đồ trong tab mới</a>
+                <iframe id="mismatch-map-frame" title="Mismatch correction map"
+                    style="width:100%;height:680px;border:0;display:block;margin-top:8px;"
+                    src="about:blank"></iframe>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ SECTION: AUDIT ══ -->
+    <div class="mt-12 card" id="boundary-audit-section">
+        <div class="card-header" style="cursor:pointer;" onclick="document.getElementById('boundary-audit-body').classList.toggle('hidden')">
+            <span class="card-title"><i class="fa-solid fa-magnifying-glass-chart mr-8"></i> Audit cannot-determine</span>
+            <span style="float:right; color:var(--text-secondary); font-size:12px;">Click để mở/đóng</span>
+        </div>
+        <div class="card-body" id="boundary-audit-body" style="display:none;">
+            <div class="parser-hero-inner">
+                <div class="parser-input-wrap" style="flex-wrap:wrap; gap:12px; align-items:flex-end;">
+                    <div class="form-group" style="flex:1 1 280px;">
+                        <label class="form-label">Nguồn dữ liệu (JSON inspection hoặc CSV)</label>
+                        <select id="audit-source-select" class="form-input">
+                            <option value="">-- Mặc định: báo cáo mới nhất --</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="flex:0 0 120px;">
+                        <label class="form-label">Buffer (m)</label>
+                        <input type="number" id="audit-buffer-m" class="form-input" value="50" min="10" max="500">
+                    </div>
+                    <div class="form-group" style="flex:0 0 100px;">
+                        <label class="form-label">Alpha</label>
+                        <input type="number" id="audit-alpha" class="form-input" value="0.3" step="0.05" min="0.05" max="1">
+                    </div>
+                    <div class="form-group" style="flex:0 0 100px;">
+                        <label class="form-label">Limit</label>
+                        <input type="number" id="audit-limit" class="form-input" value="0" min="0" placeholder="0=tất cả">
+                    </div>
+                    <div class="parser-input-actions" style="align-self:flex-end;">
+                        <button class="parser-btn-run" id="btn-audit-run" type="button">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                            <span>Tạo bản đồ audit</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="parser-status-bar">
+                    <div id="audit-status-dot" class="pstatus-dot idle"></div>
+                    <span id="audit-status" class="pstatus-text">Sẵn sàng</span>
+                </div>
+            </div>
+            <div class="mt-12" id="audit-frame-wrap" style="display:none;">
+                <a id="audit-map-link" href="#" target="_blank" rel="noreferrer"
+                   style="font-size:12px; color:var(--accent);">Mở bản đồ trong tab mới</a>
+                <iframe id="audit-map-frame" title="Audit map"
+                    style="width:100%;height:680px;border:0;display:block;margin-top:8px;"
+                    src="about:blank"></iframe>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ SECTION: INSPECTION ══ -->
+    <div class="mt-12 card" id="boundary-inspect-section">
+        <div class="card-header" style="cursor:pointer;" onclick="document.getElementById('boundary-inspect-body').classList.toggle('hidden')">
+            <span class="card-title"><i class="fa-solid fa-file-waveform mr-8"></i> Report Inspection</span>
+            <span style="float:right; color:var(--text-secondary); font-size:12px;">Click để mở/đóng</span>
+        </div>
+        <div class="card-body" id="boundary-inspect-body" style="display:none;">
+            <div class="parser-hero-inner">
+                <div class="parser-input-wrap" style="flex-wrap:wrap; gap:12px; align-items:flex-end;">
+                    <div class="form-group" style="flex:1 1 280px;">
+                        <label class="form-label">Báo cáo chi tiết để inspect</label>
+                        <select id="inspect-report-select" class="form-input">
+                            <option value="">-- Mặc định: mới nhất --</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="flex:0 0 120px;">
+                        <label class="form-label">Limit rows</label>
+                        <input type="number" id="inspect-limit" class="form-input" value="0" min="0" placeholder="0=tất cả">
+                    </div>
+                    <div class="parser-input-actions" style="align-self:flex-end;">
+                        <button class="parser-btn-run" id="btn-inspect-run" type="button">
+                            <i class="fa-solid fa-microscope"></i>
+                            <span>Chạy Inspection</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="parser-status-bar">
+                    <div id="inspect-status-dot" class="pstatus-dot idle"></div>
+                    <span id="inspect-status" class="pstatus-text">Sẵn sàng</span>
+                </div>
+            </div>
+
+            <!-- Verdict summary -->
+            <div class="smart-filter-grid mt-12" id="inspect-summary" style="display:none;">
+                <div class="pmodel-card" style="min-width:160px;">
+                    <div class="pmodel-header"><div class="pmodel-icon" style="--mc:#34d399"><i class="fa-solid fa-circle-check"></i></div>
+                        <div class="pmodel-title"><div class="pmodel-name">CSV Correct</div><div class="pmodel-sub">likely_csv_correct</div></div></div>
+                    <div class="pmodel-body"><div style="font-size:26px;font-weight:800"><span id="inspect-csv-count">0</span></div></div>
+                </div>
+                <div class="pmodel-card" style="min-width:160px;">
+                    <div class="pmodel-header"><div class="pmodel-icon" style="--mc:#f59e0b"><i class="fa-solid fa-circle-check"></i></div>
+                        <div class="pmodel-title"><div class="pmodel-name">API Correct</div><div class="pmodel-sub">likely_api_correct</div></div></div>
+                    <div class="pmodel-body"><div style="font-size:26px;font-weight:800"><span id="inspect-api-count">0</span></div></div>
+                </div>
+                <div class="pmodel-card" style="min-width:160px;">
+                    <div class="pmodel-header"><div class="pmodel-icon" style="--mc:#a78bfa"><i class="fa-solid fa-circle-question"></i></div>
+                        <div class="pmodel-title"><div class="pmodel-name">Ambiguous</div><div class="pmodel-sub">ambiguous_both</div></div></div>
+                    <div class="pmodel-body"><div style="font-size:26px;font-weight:800"><span id="inspect-ambiguous-count">0</span></div></div>
+                </div>
+                <div class="pmodel-card" style="min-width:160px;">
+                    <div class="pmodel-header"><div class="pmodel-icon" style="--mc:#f87171"><i class="fa-solid fa-circle-xmark"></i></div>
+                        <div class="pmodel-title"><div class="pmodel-name">Indeterminate</div><div class="pmodel-sub">indeterminate</div></div></div>
+                    <div class="pmodel-body"><div style="font-size:26px;font-weight:800"><span id="inspect-indet-count">0</span></div></div>
+                </div>
+            </div>
+
+            <!-- Inspection file + Apply -->
+            <div class="mt-12" id="inspect-apply-wrap" style="display:none;">
+                <div style="display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap;">
+                    <div class="form-group" style="flex:1 1 320px;">
+                        <label class="form-label">File inspection JSON để áp dụng</label>
+                        <input type="text" id="inspect-json-path" class="form-input" placeholder="data/report_inspection/report_inspection_*.json" readonly>
+                    </div>
+                    <button class="parser-btn-run" id="btn-inspect-apply"
+                        style="align-self:flex-end; padding:8px 18px; font-size:13px; gap:6px;">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i>
+                        <span>Áp dụng &amp; Tải CSV</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <style>

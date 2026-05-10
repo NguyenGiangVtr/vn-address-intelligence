@@ -85,7 +85,33 @@ def extract_polygon_rings(raw_coordinates):
     return _extract_polygon_rings(raw_coordinates)
 
 
-def add_boundaries_to_map(map_obj, polygons):
+def add_boundaries_to_map(map_obj, polygons, *, fixed_color=None, fill_opacity=0.12):
+    """
+    Render polygon rings onto map_obj.
+
+    fixed_color: when set, all rings are drawn in that single colour with no
+                 partner-based layer grouping (used by audit/mismatch tools).
+    fill_opacity: fill opacity when fixed_color is active (default 0.12).
+    """
+    if fixed_color is not None:
+        total_rings = 0
+        layer = folium.FeatureGroup(name="Boundaries", show=True)
+        layer.add_to(map_obj)
+        for polygon in polygons:
+            rings = _extract_polygon_rings(polygon.get("coordinates"))
+            for ring in rings:
+                total_rings += 1
+                folium.Polygon(
+                    locations=ring,
+                    color=fixed_color,
+                    weight=2,
+                    fill=True,
+                    fill_color=fixed_color,
+                    fill_opacity=fill_opacity,
+                    popup=f"Area: {polygon.get('area_name') or polygon.get('unit_name') or 'N/A'}",
+                ).add_to(layer)
+        return total_rings
+
     partner_layers = {}
     total_rings = 0
     for polygon in polygons:

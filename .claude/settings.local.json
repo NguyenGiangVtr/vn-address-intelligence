@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Path \"D:\\\\Document_D\\\\CCJ_Source_Extra\" -Directory)",
+      "Bash(Select-Object Name)",
+      "Bash(cmd *)",
+      "PowerShell(Get-PSDrive -PSProvider FileSystem | ForEach-Object { Write-Host $_.Root })",
+      "Bash(findstr /I \"main app\")",
+      "Bash(cd /d \"D:\\\\Document_D\\\\CCJ_Source_Extra\\\\vn-address-intelligence\")",
+      "Bash(python -c \"from app.tools.boundary_visualization.comparison_logic import build_result_row, align_items_to_rows; print\\('comparison_logic OK'\\)\")",
+      "PowerShell(Get-ChildItem -Path \"D:\\\\Document_D\\\\CCJ_Source_Extra\\\\vn-address-intelligence\" -File | Where-Object { $_.Extension -match '\\\\.\\(ps1|sh|bat|cmd\\)$' } | Select-Object Name)"
+    ]
+  }
+}
