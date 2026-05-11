@@ -30,8 +30,10 @@ passlib[bcrypt]>=1.7.4
 # ── AI / ML ──
 transformers>=4.38.0
 datasets>=2.17.0
-# transformers 4.5x+ yêu cầu torch>=2.6 (CVE-2025-32434 / torch.load an toàn)
-torch>=2.6.0
+# Torch 2.6+ làm nhiều wheel manylinux_2_28 — VPS/cũ chỉ thấy tới ~2.4.1 trong pip list.
+# Dùng tối thiểu 2.4.1 để deploy được; hf_trusted_torch_load hỗ trợ checkpoint trên Torch cũ.
+# Khi có thể, nâng máy chủ/Python và pip lên Torch 2.6+ (CVE-2025-32434 / weights_only mặc định).
+torch>=2.4.1
 sentence-transformers>=2.5.1
 seqeval>=1.2.2
 numpy>=1.24.4

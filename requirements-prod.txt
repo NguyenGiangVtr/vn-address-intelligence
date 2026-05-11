@@ -35,8 +35,8 @@ passlib[bcrypt]>=1.7.4
 # ── AI / ML (CPU) ──
 transformers>=4.38.0
 datasets>=2.17.0
-# transformers 4.5x+ — torch>=2.6 + index CPU ở đầu file → wheel +cpu khi có
-torch>=2.6.0
+# CPU index ở đầu file. Một số host chỉ có wheel torch tới 2.4.x — xem ghi chú torch trong requirements.txt.
+torch>=2.4.1
 sentence-transformers>=2.5.1
 seqeval>=1.2.2
 numpy>=1.24.4
