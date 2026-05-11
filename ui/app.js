@@ -1768,9 +1768,15 @@ function setOSMRunButtons(isRunning) {
 }
 
 async function fetchOSMSummary() {
-  const response = await fetch(`${API_BASE}/osm/summary`, {
+  const response = await fetchWithApiFallback("/osm/summary", {
     headers: getAuthHeader(),
   });
+
+  if (response.status === 401) {
+    localStorage.removeItem("vnai_token");
+    window.location.href = "login.html";
+    throw new Error("Unauthorized");
+  }
 
   if (!response.ok) {
     throw new Error(`OSM summary API failed: ${response.status}`);
@@ -1784,7 +1790,7 @@ async function triggerOSMJob(options = {}) {
   const targetTotal = options.target_total || getNumericInputValue("osm-target-total") || 5000000;
   const provinceId = options.province_id || null;
 
-  const response = await fetch(`${API_BASE}/osm/trigger`, {
+  const response = await fetchWithApiFallback("/osm/trigger", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -1811,7 +1817,7 @@ async function triggerOSMJob(options = {}) {
 }
 
 async function fetchOSMJobStatus() {
-  const response = await fetch(`${API_BASE}/osm/job`, {
+  const response = await fetchWithApiFallback("/osm/job", {
     headers: getAuthHeader(),
   });
 
