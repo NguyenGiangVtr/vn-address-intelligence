@@ -16,6 +16,9 @@ import numpy as np
 import torch
 from sentence_transformers import SentenceTransformer, models
 
+from app.ai.utils.sentence_transformers_compat import transformer_backbone_embedding_dim
+from app.ai.utils.torch_hf_weights_compat import hf_trusted_torch_load
+
 logger = logging.getLogger(__name__)
 
 
@@ -62,9 +65,13 @@ class PhoBERTSiamese:
         self.device         = self._resolve_device(device)
 
         logger.info(" Loading PhoBERT: %s (device=%s)", model_name, self.device)
-        transformer = models.Transformer(model_name, max_seq_length=max_seq_length)
-        pooling     = models.Pooling(transformer.get_embedding_dimension())
-        self.model  = SentenceTransformer(modules=[transformer, pooling], device=self.device)
+        # PyTorch 2.6+ defaults torch.load(weights_only=True); pytorch_model.bin của HF thường cần False.
+        with hf_trusted_torch_load():
+            transformer = models.Transformer(model_name, max_seq_length=max_seq_length)
+            pooling = models.Pooling(transformer_backbone_embedding_dim(transformer))
+            self.model = SentenceTransformer(
+                modules=[transformer, pooling], device=self.device
+            )
         self.model.eval()
 
         # Pre-computed corpus embeddings

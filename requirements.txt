@@ -30,7 +30,8 @@ passlib[bcrypt]>=1.7.4
 # ── AI / ML ──
 transformers>=4.38.0
 datasets>=2.17.0
-torch>=2.2.0
+# transformers 4.5x+ yêu cầu torch>=2.6 (CVE-2025-32434 / torch.load an toàn)
+torch>=2.6.0
 sentence-transformers>=2.5.1
 seqeval>=1.2.2
 numpy>=1.24.4

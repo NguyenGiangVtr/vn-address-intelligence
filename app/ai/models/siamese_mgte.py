@@ -13,6 +13,8 @@ import numpy as np
 import torch
 from sentence_transformers import SentenceTransformer
 
+from app.ai.utils.sentence_transformers_compat import sentence_transformer_output_dim
+
 logger = logging.getLogger(__name__)
 
 
@@ -62,8 +64,11 @@ class SiameseMGTE:
         self._corpus: List[str]             = []
         self._corpus_emb: Optional[np.ndarray] = None
 
-        logger.info(" mGTE Siamese loaded. Emb dim: %d",
-                    self.model.get_embedding_dimension())
+        _edim = sentence_transformer_output_dim(self.model)
+        logger.info(
+            " mGTE Siamese loaded. Emb dim: %s",
+            _edim if _edim is not None else "unknown",
+        )
 
     # ------------------------------------------------------------------
     def encode_corpus(self, addresses: List[str]):

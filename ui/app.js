@@ -6158,13 +6158,13 @@ async function initEvidenceView() {
     const applyAllTitle = applyAllDisabled
       ? 'Tất cả đề xuất đã có sẵn trong nhãn kỳ vọng'
       : 'Thêm tất cả nhãn ngoài kỳ vọng vào danh sách nhãn kỳ vọng hiện tại';
+    const blockTitle = strictMode ? 'Ngoài kỳ vọng (chế độ nghiêm)' : 'Đề xuất (chế độ thường)';
     return `
-      <div class="plt-unexpected-block">
-        <div class="plt-result-section-title">${strictMode ? 'Nhãn ngoài kỳ vọng (chế độ nghiêm)' : 'Nhãn đề xuất thêm (chế độ thường)'}</div>
-        <div class="plt-run-prompt">
-          <i class="fa-solid fa-hand-pointer"></i> Chọn từng mục hoặc áp dụng toàn bộ đề xuất vào nhãn kỳ vọng.
+      <div class="plt-unexpected-block" role="region" aria-label="${pltEsc(blockTitle)}">
+        <div class="plt-unexpected-head-row">
+          <span class="plt-unexpected-label">${pltEsc(strictMode ? 'Ngoài kỳ vọng' : 'Đề xuất')}</span>
           <button type="button" class="btn btn-outline btn-sm plt-unexpected-apply-all" title="${pltEsc(applyAllTitle)}" ${applyAllDisabled ? 'disabled aria-disabled="true"' : ''}>
-            <i class="fa-solid fa-bolt"></i> Apply all đề xuất
+            <i class="fa-solid fa-bolt"></i> Thêm hết
           </button>
         </div>
         <div class="plt-tokens">
@@ -6641,7 +6641,7 @@ async function initEvidenceView() {
             <div class="plt-raw-annotated-row">
               ${renderAnnotatedRawText(c)}
               <button type="button" class="btn btn-outline btn-sm plt-unexpected-clear-all" title="${pltEsc(clearAllTitle)}" ${clearAllDisabled ? 'disabled aria-disabled="true"' : ''}>
-                <i class="fa-solid fa-trash"></i> Xóa all nhãn
+                <i class="fa-solid fa-trash"></i> Xóa hết nhãn
               </button>
             </div>
             <div class="plt-exp-layout">

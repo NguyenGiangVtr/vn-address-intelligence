@@ -433,9 +433,13 @@ class Layer2_mGTE:
         self.model = SentenceTransformer(model_name, device=device)
         self.model.eval()
 
-        print(
-            f" mGTE model loaded successfully (embedding_dim: {self.model.get_embedding_dimension()})"
-        )
+        _emb_dim = None
+        for _name in ("get_embedding_dimension", "get_sentence_embedding_dimension"):
+            _fn = getattr(self.model, _name, None)
+            if callable(_fn):
+                _emb_dim = _fn()
+                break
+        print(f" mGTE model loaded successfully (embedding_dim: {_emb_dim})")
 
     def encode(self, texts: List[str]) -> np.ndarray:
         """

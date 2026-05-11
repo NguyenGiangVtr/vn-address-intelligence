@@ -14,6 +14,8 @@ from typing import List, Dict, Any, Optional
 from collections import defaultdict
 from transformers import AutoTokenizer, AutoModelForTokenClassification, pipeline
 
+from app.ai.utils.torch_hf_weights_compat import hf_trusted_torch_load
+
 logger = logging.getLogger(__name__)
 
 # Nhãn BIO từ bộ dữ liệu / model Electra chuẩn hoá → mã trong constants (STR, WDS, DST, PRO)
@@ -64,10 +66,13 @@ class AddressNER:
         
         try:
             logger.info(f"Loading fine-tuned NER model from {model_path}...")
-            self.tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
-            if getattr(self.tokenizer, "model_max_length", 512) > 4096:
-                self.tokenizer.model_max_length = 512
-            self.model = AutoModelForTokenClassification.from_pretrained(model_path)
+            with hf_trusted_torch_load():
+                self.tokenizer = AutoTokenizer.from_pretrained(
+                    model_path, trust_remote_code=True
+                )
+                if getattr(self.tokenizer, "model_max_length", 512) > 4096:
+                    self.tokenizer.model_max_length = 512
+                self.model = AutoModelForTokenClassification.from_pretrained(model_path)
             
             # token-classification (cùng task NER); hỗ trợ Electra/PhoBERT fine-tuned
             self.ner_pipeline = pipeline(
