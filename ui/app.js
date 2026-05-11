@@ -102,6 +102,8 @@ function getAuthHeader() {
 /** Any 401 from this app’s API clears the session and opens the login page (covers all fetch call sites). */
 (function installFetchUnauthorizedRedirect() {
   const nativeFetch = window.fetch.bind(window);
+  /** Coalesces parallel 401 responses so we only navigate to login once. */
+  let unauthorizedLoginRedirectScheduled = false;
 
   function requestUrlString(input) {
     if (typeof input === 'string') return input;
@@ -133,6 +135,10 @@ function getAuthHeader() {
   window.fetch = async function fetchWithUnauthorizedRedirect(input, init) {
     const response = await nativeFetch(input, init);
     if (response.status === 401 && isAppApiRequest(input)) {
+      if (unauthorizedLoginRedirectScheduled) {
+        return response;
+      }
+      unauthorizedLoginRedirectScheduled = true;
       try {
         localStorage.removeItem('vnai_token');
       } catch (_e) {}
@@ -5423,10 +5429,6 @@ async function initEvidenceView() {
   /** Label order + hotkeys from /api/config/ner-labels, sorted by hotkey (same as constants.py). */
   let nerLabelsOrdered = [];
 
-  const API = (window.location.hostname === 'localhost' || window.location.protocol === 'file:')
-    ? 'http://localhost:8081/api'
-    : '/api';
-
   let cases = [], activeId = null, results = {};
   let pltResultFilter = 'all';
 
@@ -5729,7 +5731,7 @@ async function initEvidenceView() {
       console.warn('[PreLabeler] ensureNerLabelsLoaded:', e);
     }
     try {
-      const res = await fetch(`${API}/config/ner-labels`);
+      const res = await fetch(`${API_BASE}/config/ner-labels`);
       if (!res.ok) throw new Error(String(res.status));
       const data = await res.json();
       nerLabelsOrdered = applyNerLabelOrder(data.labels);
@@ -6201,7 +6203,7 @@ async function initEvidenceView() {
     }
 
     try {
-      const resp = await fetch(`${API}/prelabeler-cases`, { headers: authHdr() });
+      const resp = await fetch(`${API_BASE}/prelabeler-cases`, { headers: authHdr() });
       if (!resp.ok) throw new Error(resp.status);
       const raw = await resp.json();
       cases = raw.map(c => {
@@ -6407,7 +6409,7 @@ async function initEvidenceView() {
     }
 
     try {
-      const res = await fetch(`${API}/prelabeler-cases/random-predict`, {
+      const res = await fetch(`${API_BASE}/prelabeler-cases/random-predict`, {
         headers: authHdr(),
       });
       if (res.status === 401) {
@@ -6576,7 +6578,7 @@ async function initEvidenceView() {
     clearTimeout(saveTimer);
     saveTimer = setTimeout(async () => {
       try {
-        await fetch(`${API}/prelabeler-cases`, {
+        await fetch(`${API_BASE}/prelabeler-cases`, {
           method: 'POST',
           headers: authHdr(),
           body: JSON.stringify(cases),
@@ -6727,7 +6729,7 @@ async function initEvidenceView() {
       try {
         const ctrl = new AbortController();
         pltTypingSuggestAbort = ctrl;
-        const res = await fetch(`${API}/parser/analyze?model=prelabeler`, {
+        const res = await fetch(`${API_BASE}/parser/analyze?model=prelabeler`, {
           method: 'POST',
           headers: authHdr(),
           body: JSON.stringify({ raw_address: latestText }),
@@ -6947,7 +6949,7 @@ async function initEvidenceView() {
       btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
     }
     try {
-      const res = await fetch(`${API}/prelabeler-cases/run`, {
+      const res = await fetch(`${API_BASE}/prelabeler-cases/run`, {
         method: 'POST',
         headers: authHdr(),
         body: JSON.stringify({ cases: [normalizeCaseForApi(c, 0)] }),
@@ -6984,7 +6986,7 @@ async function initEvidenceView() {
       btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
     }
     try {
-      const res = await fetch(`${API}/prelabeler-cases/run`, {
+      const res = await fetch(`${API_BASE}/prelabeler-cases/run`, {
         method: 'POST',
         headers: authHdr(),
         body: JSON.stringify({ cases: cases.map((c, i) => normalizeCaseForApi(c, i)) }),
@@ -7104,7 +7106,7 @@ async function initEvidenceView() {
       btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang xuất…';
     }
     try {
-      const res = await fetch(`${API}/prelabeler-cases/export-label-studio`, {
+      const res = await fetch(`${API_BASE}/prelabeler-cases/export-label-studio`, {
         method: 'POST',
         headers: authHdr(),
         body: JSON.stringify({ limit }),
@@ -7173,7 +7175,7 @@ async function initEvidenceView() {
 
     setTimeout(async () => {
       try {
-        const res = await fetch(`${API}/parser/analyze?model=prelabeler`, {
+        const res = await fetch(`${API_BASE}/parser/analyze?model=prelabeler`, {
           method: 'POST',
           headers: authHdr(),
           body: JSON.stringify({ raw_address: text }),
