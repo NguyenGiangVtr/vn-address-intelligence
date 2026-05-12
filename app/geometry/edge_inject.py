@@ -95,7 +95,8 @@ def edge_inject_lookup(
         SELECT {id_col}, {lat_col}, {lon_col}
         FROM {tbl}
         WHERE {id_col} = ANY(:ids)
-          AND is_current = TRUE
+          AND is_active = TRUE
+          AND is_deleted = FALSE
           AND {lat_col} IS NOT NULL
     """)
 

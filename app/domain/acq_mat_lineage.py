@@ -7,24 +7,25 @@ with `admin_version = 1` (see project rule `address-queue-mat-lineage`).
 Prefer this over joining `province_id` / `district_id` / `ward_id` on the queue when resolving
 meaning against master administrative data. For denormed IDs on the queue, always join `mat` with
 matching `admin_version`; use `COUNT(DISTINCT acq.id)` in diagnostics when the same business id
-can appear in more than one mat row (e.g. v1 + v2).
+can appear in more than one mat row (e.g. v1 + v2). Current master slices use `is_active` (not
+`is_current`, removed from schema after migration `20260512_mat_is_active_drop_is_current.sql`).
 """
 
 from __future__ import annotations
 
 # Contractual predicates (match business SQL exactly)
-# Prefer one active v1 master per old_id (is_deleted / is_current).
+# Prefer one active v1 master per old_id (is_deleted / is_active).
 JOIN_QUEUE_PROVINCE_V1_LINEAGE = (
     "JOIN mat.province p ON acq.old_province_id = p.old_id AND p.admin_version = 1 "
-    "AND COALESCE(p.is_deleted, FALSE) = FALSE AND COALESCE(p.is_current, TRUE) = TRUE"
+    "AND COALESCE(p.is_deleted, FALSE) = FALSE AND COALESCE(p.is_active, TRUE) = TRUE"
 )
 JOIN_QUEUE_DISTRICT_V1_LINEAGE = (
     "JOIN mat.district d ON acq.old_district_id = d.old_id AND d.admin_version = 1 "
-    "AND COALESCE(d.is_deleted, FALSE) = FALSE AND COALESCE(d.is_current, TRUE) = TRUE"
+    "AND COALESCE(d.is_deleted, FALSE) = FALSE AND COALESCE(d.is_active, TRUE) = TRUE"
 )
 JOIN_QUEUE_WARD_V1_LINEAGE = (
     "JOIN mat.ward w ON acq.old_ward_id = w.old_id AND w.admin_version = 1 "
-    "AND COALESCE(w.is_deleted, FALSE) = FALSE AND COALESCE(w.is_current, TRUE) = TRUE"
+    "AND COALESCE(w.is_deleted, FALSE) = FALSE AND COALESCE(w.is_active, TRUE) = TRUE"
 )
 
 

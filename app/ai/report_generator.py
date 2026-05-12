@@ -187,4 +187,3 @@ def save_csv(detail_df: pd.DataFrame, csv_path: str):
     os.makedirs(os.path.dirname(csv_path) or ".", exist_ok=True)
     detail_df.to_csv(csv_path, index=False, encoding="utf-8-sig")
     print(f" CSV đã lưu: {csv_path}")
-: {csv_path}")

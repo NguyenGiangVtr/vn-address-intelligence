@@ -79,11 +79,11 @@ def main():
                     w.ward_name
                 FROM prq.address_cleansing_queue acq
                 JOIN mat.province p ON acq.old_province_id = p.old_id AND p.admin_version = 1
-                  AND COALESCE(p.is_deleted, FALSE) = FALSE AND COALESCE(p.is_current, TRUE) = TRUE
+                  AND COALESCE(p.is_deleted, FALSE) = FALSE AND COALESCE(p.is_active, TRUE) = TRUE
                 JOIN mat.district d ON acq.old_district_id = d.old_id AND d.admin_version = 1
-                  AND COALESCE(d.is_deleted, FALSE) = FALSE AND COALESCE(d.is_current, TRUE) = TRUE
+                  AND COALESCE(d.is_deleted, FALSE) = FALSE AND COALESCE(d.is_active, TRUE) = TRUE
                 JOIN mat.ward w ON acq.old_ward_id = w.old_id AND w.admin_version = 1
-                  AND COALESCE(w.is_deleted, FALSE) = FALSE AND COALESCE(w.is_current, TRUE) = TRUE
+                  AND COALESCE(w.is_deleted, FALSE) = FALSE AND COALESCE(w.is_active, TRUE) = TRUE
                 LIMIT 5
             """)
             samples = cur.fetchall()

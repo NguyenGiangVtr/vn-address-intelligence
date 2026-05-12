@@ -27,7 +27,7 @@
 | **A.4** | Train / eval retrieval | [ ] | `train_siamese_mgte.py` · `evaluate_retriever.py` |
 | **A.5** | Embeddings + vector index | [ ] | `compute_embeddings.py` · `setup_vector_indexes.py` |
 | **B.1** | Định nghĩa KPI (F1/Acc scope) bằng văn bản | [x] | **Chốt giao thức:** chỉ báo đạt ngưỡng khi đủ **bộ chỉ số primary** (**mục B.1**). Chỉ số **bổ trợ** báo trong luận/bảng nhưng **không thay gate B**. |
-| **B.2** | Regression PreLabeler | [x] | `run_prelabeler_labeling_cases.py` 136/136; `test_prelabeler_regression.py` OK *(verify 2026-05-10)* |
+| **B.2** | Regression PreLabeler | [x] | `run_prelabeler_labeling_cases.py` **330/330**; `test_prelabeler_regression.py` OK *(verify 2026-05-12)* |
 | **B.3** | `config.yaml` + DB khớp inference | [~] | File tồn tại và trỏ `prq`; **khóa version model** sau A.3 |
 | **C.1** | `check_queue_columns.py` | [x] | *(verify 2026-05-10)* |
 | **C.2** | `audit_acq_admin_bridge.py` (+ gate G1–G4 tuỳ team) | [x] | Đã dùng trong phiên audit; **re-run** trước migrate production |
@@ -144,6 +144,8 @@ Lệnh **`python app/ai/production_pipeline.py --config app/ai/config.yaml --lim
 | **C.4b** | `python app/ai/production_pipeline.py --config app/ai/config.yaml` | **Không** `--limit`: xử lý **toàn bộ** dòng còn pending/null standardized (có thể rất lâu). |
 
 **Pipeline làm gì (tóm tắt):** đọc `config.yaml` → nạp corpus (mGTE) → NER + retrieval + LLM → ghi `address_standardized`, `processing_status`, confidence, ACS… vào **`prq.address_cleansing_queue`**. **`PYTHONPATH`** phải trỏ root repo nếu chạy từ thư mục gốc (như mục chuẩn hóa môi trường).
+
+**Luồng end-to-end một lần (pilot + train smoke + LaTeX metrics):** `scripts/flow/run_full_vnai_flow.ps1` hoặc `scripts/flow/run_full_vnai_flow.sh` — xem `scripts/flow/README.md` (có `-SkipDb` / `SKIP_DB=1` khi không có PostgreSQL).
 
 **Lineage chuẩn (semantic):** `old_*` ↔ `mat.*.old_id` và **`admin_version`** thống nhất khi giải thích master — xem `.cursor/rules/address-queue-mat-lineage.mdc` và `app/domain/acq_mat_lineage.py`.
 

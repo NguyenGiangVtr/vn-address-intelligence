@@ -68,15 +68,15 @@ def _log(msg: str = "") -> None:
 # Active v1 master by business id (matches lineage constants for UPDATE … JOIN mat.* pl/dl/wl)
 _WHERE_PROVINCE_V1_MASTER = (
     "pl.admin_version = 1 AND COALESCE(pl.is_deleted, FALSE) = FALSE "
-    "AND COALESCE(pl.is_current, TRUE) = TRUE"
+    "AND COALESCE(pl.is_active, TRUE) = TRUE"
 )
 _WHERE_DISTRICT_V1_MASTER = (
     "dl.admin_version = 1 AND COALESCE(dl.is_deleted, FALSE) = FALSE "
-    "AND COALESCE(dl.is_current, TRUE) = TRUE"
+    "AND COALESCE(dl.is_active, TRUE) = TRUE"
 )
 _WHERE_WARD_V1_MASTER = (
     "wl.admin_version = 1 AND COALESCE(wl.is_deleted, FALSE) = FALSE "
-    "AND COALESCE(wl.is_current, TRUE) = TRUE"
+    "AND COALESCE(wl.is_active, TRUE) = TRUE"
 )
 
 
@@ -173,17 +173,17 @@ def apply_ward_mapping_lineage_updates(db, dry_run: bool = False) -> int:
           ON wn.ward_id = wm.ward_id_new
           AND wn.admin_version = 2
           AND COALESCE(wn.is_deleted, FALSE) = FALSE
-          AND COALESCE(wn.is_current, TRUE) = TRUE
+          AND COALESCE(wn.is_active, TRUE) = TRUE
         LEFT JOIN mat.district dn
           ON dn.district_id = COALESCE(wm.district_id_new, wn.district_id)
           AND dn.admin_version = 2
           AND COALESCE(dn.is_deleted, FALSE) = FALSE
-          AND COALESCE(dn.is_current, TRUE) = TRUE
+          AND COALESCE(dn.is_active, TRUE) = TRUE
         LEFT JOIN mat.province pn
           ON pn.province_id = COALESCE(wm.province_id_new, dn.province_id)
           AND pn.admin_version = 2
           AND COALESCE(pn.is_deleted, FALSE) = FALSE
-          AND COALESCE(pn.is_current, TRUE) = TRUE
+          AND COALESCE(pn.is_active, TRUE) = TRUE
         """
     )
 

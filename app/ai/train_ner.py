@@ -694,6 +694,7 @@ def train_model(
         json.dump({
             "train_loss": train_result.training_loss,
             "eval_results": eval_results,
+            "token_accuracy": float(token_accuracy),
             "label_list": label_list,
             "n_train": len(train_data),
             "n_eval": len(eval_data),

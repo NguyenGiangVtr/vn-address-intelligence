@@ -135,9 +135,17 @@ function getAuthHeader() {
   window.fetch = async function fetchWithUnauthorizedRedirect(input, init) {
     const response = await nativeFetch(input, init);
     if (response.status === 401 && isAppApiRequest(input)) {
-      if (unauthorizedLoginRedirectScheduled) {
+      const isOnLoginPage = window.location.pathname.includes('login.html');
+
+      // If we're already on login.html, don't keep navigating (can create a client-side redirect loop).
+      if (isOnLoginPage) {
+        try {
+          localStorage.removeItem('vnai_token');
+        } catch (_e) {}
         return response;
       }
+
+      if (unauthorizedLoginRedirectScheduled) return response;
       unauthorizedLoginRedirectScheduled = true;
       try {
         localStorage.removeItem('vnai_token');

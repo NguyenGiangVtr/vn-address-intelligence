@@ -87,10 +87,10 @@ class EpochDetector:
             from app.core.database import District, Ward
             # Pre-2025: admin_version = 1
             pre_districts = self._db.query(District.district_name).filter(
-                District.admin_version == 1, District.is_current == False
+                District.admin_version == 1, District.is_active == False
             ).all()
             pre_wards = self._db.query(Ward.ward_name).filter(
-                Ward.admin_version == 1, Ward.is_current == False
+                Ward.admin_version == 1, Ward.is_active == False
             ).all()
             self._pre_unit_names = {
                 r[0].lower().strip() for r in pre_districts + pre_wards if r[0]
@@ -98,10 +98,10 @@ class EpochDetector:
 
             # Post-2025: admin_version = 2
             post_districts = self._db.query(District.district_name).filter(
-                District.admin_version == 2
+                District.admin_version == 2, District.is_active == True
             ).all()
             post_wards = self._db.query(Ward.ward_name).filter(
-                Ward.admin_version == 2
+                Ward.admin_version == 2, Ward.is_active == True
             ).all()
             self._post_unit_names = {
                 r[0].lower().strip() for r in post_districts + post_wards if r[0]

@@ -85,10 +85,12 @@ class Province(Base):
     decision_date = Column(DateTime)
     notes = Column(Text)
 
-    # SCD Type 2 — Lịch sử thay đổi hành chính
+    # Trạng thái hiển thị / master hiện tại (UI/API). Lịch sử: is_active=false, cùng *_no có thể có *_id khác.
+    is_active = Column(Boolean, default=True, nullable=False)
+
+    # SCD Type 2 — khoảng hiệu lực (đồng bộ với valid_*); không dùng is_current — đã bỏ ở DB.
     valid_from = Column(DateTime, default=func.now())
     valid_to = Column(DateTime, default=datetime(9999, 12, 31))
-    is_current = Column(Boolean, default=True)
     version_id = Column(Integer, default=1)
     predecessor_id = Column(Integer, ForeignKey('mat.province.row_id'), nullable=True)
 
@@ -177,7 +179,7 @@ class District(Base):
     district_name_en = Column(String(200))
     old_id = Column(Integer) # Lưu ID từ DB cũ để tra cứu
     sfdc_id = Column(String(100))
-    is_active = Column(Boolean)
+    is_active = Column(Boolean, default=True, nullable=False)
     type_name_en = Column(String(128))
     
     # GSO Extended Info
@@ -188,10 +190,8 @@ class District(Base):
     decision_date = Column(DateTime)
     notes = Column(Text)
 
-    # SCD Type 2 — Lịch sử thay đổi hành chính
     valid_from = Column(DateTime, default=func.now())
     valid_to = Column(DateTime, default=datetime(9999, 12, 31))
-    is_current = Column(Boolean, default=True)
     version_id = Column(Integer, default=1)
     predecessor_id = Column(Integer, ForeignKey('mat.district.row_id'), nullable=True)
 
@@ -217,7 +217,7 @@ class Ward(Base):
     is_deleted = Column(Boolean, default=False)
     ward_name_en = Column(String(200))
     old_id = Column(Integer) # Lưu ID từ DB cũ để tra cứu
-    is_active = Column(Boolean)
+    is_active = Column(Boolean, default=True, nullable=False)
     type_name_en = Column(String(128))
     
     # GSO Extended Info
@@ -228,10 +228,8 @@ class Ward(Base):
     decision_date = Column(DateTime)
     notes = Column(Text)
 
-    # SCD Type 2 — Lịch sử thay đổi hành chính
     valid_from = Column(DateTime, default=func.now())
     valid_to = Column(DateTime, default=datetime(9999, 12, 31))
-    is_current = Column(Boolean, default=True)
     version_id = Column(Integer, default=1)
     predecessor_id = Column(Integer, ForeignKey('mat.ward.row_id'), nullable=True)
 

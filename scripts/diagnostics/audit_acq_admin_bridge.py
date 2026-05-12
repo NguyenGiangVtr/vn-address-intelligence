@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import json
 import sys
 from pathlib import Path
@@ -32,9 +33,105 @@ def _safe_print_blob(obj: object) -> None:
         print(json.dumps(obj, indent=2, ensure_ascii=True), flush=True)
 
 
-def main() -> None:
+def _normalize_lang(lang: str | None) -> str:
+    if not lang:
+        return "en"
+    x = str(lang).strip().lower().replace("-", "_")
+    if x in ("vi", "vn", "vie", "vietnam"):
+        return "vi"
+    return "en"
+
+
+def _ui_strings(lang: str) -> dict[str, str]:
+    """Console-only labels (JSON snapshot stays English for tooling)."""
+    if _normalize_lang(lang) == "vi":
+        return {
+            "connecting": "Đang kết nối...",
+            "running": "Đang chạy: {title}...",
+            "section_decision": "\n=== QUYẾT ĐỊNH (theo dữ liệu) ===",
+            "section_gates": "\n=== CỔNG KIỂM (ĐẠT / KHÔNG ĐẠT) — admin_version & lineage ===",
+            "note_denorm_histogram": (
+                "\nGhi chú: denorm_version_tuple_histogram_ambiguous_join — "
+                "tổng các bucket có thể vượt quá số dòng queue vì cùng một id nghiệp vụ "
+                "có thể tồn tại ở nhiều mat.admin_version khác nhau "
+                "(một dòng queue khớp nhiều bộ tuple)."
+            ),
+            "wrote_json": "\nĐã ghi snapshot JSON: {path}",
+        }
+    return {
+        "connecting": "Connecting...",
+        "running": "Running: {title}...",
+        "section_decision": "\n=== DECISION (data-driven) ===",
+        "section_gates": "\n=== GATES (PASS / FAIL) — admin_version & lineage ===",
+        "note_denorm_histogram": (
+            "\nNote: denorm_version_tuple_histogram_ambiguous_join — "
+            "sum of buckets can exceed queue rows if same business id exists "
+            "under multiple mat.admin_version (one queue row matches several tuples)."
+        ),
+        "wrote_json": "\nWrote JSON snapshot: {path}",
+    }
+
+
+def _recommended_path_for_export(
+    lang: str,
+    pct_triple: float,
+    pct_wm_lineage_rows: float,
+    pct_lineage_distinct_in_wm: float,
+) -> list[str]:
+    """English strings for JSON; Vietnamese only when lang=vi (same semantics)."""
+    use_vi = _normalize_lang(lang) == "vi"
+    out: list[str] = []
+    if pct_triple >= 95:
+        out.append(
+            "Độ phủ bộ ba lineage ổn định; dùng INNER join lineage cho phân tích/kiểm thử."
+            if use_vi
+            else (
+                "Lineage triple coverage is healthy; INNER join lineage for analytics/tests."
+            )
+        )
+    elif pct_triple >= 70:
+        out.append(
+            "Sửa NULL/không khớp old_* lineage so với mat.old_id cho đến khi độ phủ bộ ba tăng."
+            if use_vi
+            else (
+                "Repair NULL/mismatched old_* lineage vs mat.old_id until triple coverage climbs."
+            )
+        )
+    else:
+        out.append(
+            "Độ phủ bộ ba lineage thấp; ưu tiên back-fill các khoá lineage."
+            if use_vi
+            else "Low lineage triple coverage; prioritize back-fill of lineage keys."
+        )
+
+    if pct_wm_lineage_rows >= 40 or pct_lineage_distinct_in_wm >= 40:
+        out.append(
+            "Dùng mat.ward_mapping theo ward_id lineage v1 (wl từ old_ward_id -> mat.old_id)."
+            if use_vi
+            else (
+                "Use mat.ward_mapping keyed by lineage v1 ward_id "
+                "(wl from old_ward_id->mat.old_id)."
+            )
+        )
+    return out
+
+
+def _g3_note(lang: str) -> str:
+    if _normalize_lang(lang) == "vi":
+        return (
+            "tồn tại các dòng mat p,d,w cùng admin_version, "
+            "d.province_id=queue.province_id, w.district_id=queue.district_id"
+        )
+    return (
+        "exists mat rows p,d,w with equal admin_version, "
+        "d.province_id=queue.province_id, w.district_id=queue.district_id"
+    )
+
+
+def main(write_json: Path | None = None, lang: str | None = None) -> None:
     _configure_stdout_utf8()
-    print("Connecting...", flush=True)
+    ui = _ui_strings(lang or "en")
+    print(ui["connecting"], flush=True)
 
     snippets: list[tuple[str, str]] = [
         (
@@ -59,7 +156,7 @@ def main() -> None:
             SELECT COUNT(DISTINCT acq.id)::bigint AS distinct_queue_rows_match_province_lineage_v1
             FROM prq.address_cleansing_queue acq
             JOIN mat.province p ON acq.old_province_id = p.old_id AND p.admin_version = 1
-              AND COALESCE(p.is_deleted, FALSE) = FALSE AND COALESCE(p.is_current, TRUE) = TRUE
+              AND COALESCE(p.is_deleted, FALSE) = FALSE AND COALESCE(p.is_active, TRUE) = TRUE
             """,
         ),
         (
@@ -68,7 +165,7 @@ def main() -> None:
             SELECT COUNT(DISTINCT acq.id)::bigint AS distinct_queue_rows_match_district_lineage_v1
             FROM prq.address_cleansing_queue acq
             JOIN mat.district d ON acq.old_district_id = d.old_id AND d.admin_version = 1
-              AND COALESCE(d.is_deleted, FALSE) = FALSE AND COALESCE(d.is_current, TRUE) = TRUE
+              AND COALESCE(d.is_deleted, FALSE) = FALSE AND COALESCE(d.is_active, TRUE) = TRUE
             """,
         ),
         (
@@ -77,7 +174,7 @@ def main() -> None:
             SELECT COUNT(DISTINCT acq.id)::bigint AS distinct_queue_rows_match_ward_lineage_v1
             FROM prq.address_cleansing_queue acq
             JOIN mat.ward w ON acq.old_ward_id = w.old_id AND w.admin_version = 1
-              AND COALESCE(w.is_deleted, FALSE) = FALSE AND COALESCE(w.is_current, TRUE) = TRUE
+              AND COALESCE(w.is_deleted, FALSE) = FALSE AND COALESCE(w.is_active, TRUE) = TRUE
             """,
         ),
         (
@@ -134,19 +231,19 @@ def main() -> None:
                    COUNT(*)::bigint AS rows,
                    COUNT(old_id)::bigint AS with_old_id
             FROM mat.province p
-            WHERE COALESCE(p.is_deleted, FALSE) = FALSE AND p.is_current = TRUE
+            WHERE COALESCE(p.is_deleted, FALSE) = FALSE AND p.is_active = TRUE
             GROUP BY p.admin_version
             UNION ALL
             SELECT 'district', d.admin_version::text,
                    COUNT(*)::bigint, COUNT(d.old_id)::bigint
             FROM mat.district d
-            WHERE COALESCE(d.is_deleted, FALSE) = FALSE AND d.is_current = TRUE
+            WHERE COALESCE(d.is_deleted, FALSE) = FALSE AND d.is_active = TRUE
             GROUP BY d.admin_version
             UNION ALL
             SELECT 'ward', w.admin_version::text,
                    COUNT(*)::bigint, COUNT(w.old_id)::bigint
             FROM mat.ward w
-            WHERE COALESCE(w.is_deleted, FALSE) = FALSE AND w.is_current = TRUE
+            WHERE COALESCE(w.is_deleted, FALSE) = FALSE AND w.is_active = TRUE
             GROUP BY w.admin_version
             ORDER BY rel, av
             """,
@@ -169,7 +266,7 @@ def main() -> None:
               SELECT DISTINCT wl.ward_id AS ward_id_lineage_v1
               FROM prq.address_cleansing_queue acq
               JOIN mat.ward wl ON acq.old_ward_id = wl.old_id AND wl.admin_version = 1
-                AND COALESCE(wl.is_deleted, FALSE) = FALSE AND COALESCE(wl.is_current, TRUE) = TRUE
+                AND COALESCE(wl.is_deleted, FALSE) = FALSE AND COALESCE(wl.is_active, TRUE) = TRUE
             )
             SELECT COUNT(*)::bigint AS distinct_lineage_v1_ward_ids,
                    COUNT(*) FILTER (
@@ -194,7 +291,7 @@ def main() -> None:
                      ) AS has_ward_mapping
               FROM prq.address_cleansing_queue acq
               JOIN mat.ward wl ON acq.old_ward_id = wl.old_id AND wl.admin_version = 1
-                AND COALESCE(wl.is_deleted, FALSE) = FALSE AND COALESCE(wl.is_current, TRUE) = TRUE
+                AND COALESCE(wl.is_deleted, FALSE) = FALSE AND COALESCE(wl.is_active, TRUE) = TRUE
               LEFT JOIN mat.ward_mapping wm ON wm.ward_id_old = wl.ward_id
               WHERE acq.old_ward_id IS NOT NULL
               GROUP BY acq.id
@@ -241,19 +338,19 @@ def main() -> None:
               INNER JOIN mat.province p
                 ON p.province_id = acq.province_id
                 AND COALESCE(p.is_deleted, FALSE) = FALSE
-                AND COALESCE(p.is_current, TRUE) = TRUE
+                AND COALESCE(p.is_active, TRUE) = TRUE
               INNER JOIN mat.district d
                 ON d.district_id = acq.district_id
                 AND d.admin_version = p.admin_version
                 AND d.province_id = acq.province_id
                 AND COALESCE(d.is_deleted, FALSE) = FALSE
-                AND COALESCE(d.is_current, TRUE) = TRUE
+                AND COALESCE(d.is_active, TRUE) = TRUE
               INNER JOIN mat.ward w
                 ON w.ward_id = acq.ward_id
                 AND w.admin_version = p.admin_version
                 AND w.district_id = acq.district_id
                 AND COALESCE(w.is_deleted, FALSE) = FALSE
-                AND COALESCE(w.is_current, TRUE) = TRUE
+                AND COALESCE(w.is_active, TRUE) = TRUE
               WHERE acq.province_id IS NOT NULL
                 AND acq.district_id IS NOT NULL
                 AND acq.ward_id IS NOT NULL
@@ -297,7 +394,7 @@ def main() -> None:
     results: dict = {}
     with engine.connect() as c:
         for title, sql in snippets:
-            print(f"Running: {title}...", flush=True)
+            print(ui["running"].format(title=title), flush=True)
             rows = c.execute(text(sql)).mappings().all()
             results[title] = [dict(x) for x in rows]
             for r in rows:
@@ -325,11 +422,14 @@ def main() -> None:
     hit = float(lw_ov.get("lineage_wards_hit_ward_mapping") or 0)
     pct_lineage_distinct_in_wm = round(100.0 * hit / dl, 2) if dl else 0.0
 
+    rp_en = _recommended_path_for_export(
+        "en", pct_triple, pct_wm_lineage_rows, pct_lineage_distinct_in_wm
+    )
     decision = {
         "pct_queue_rows_matching_lineage_triple_v1_MASTER": pct_triple,
         "pct_queue_rows_with_old_ward_mapped_via_ward_mapping_lineageWARD": pct_wm_lineage_rows,
         "pct_distinct_lineage_v1_wards_in_mat_ward_mapping": pct_lineage_distinct_in_wm,
-        "recommended_path": [],
+        "recommended_path": rp_en,
         "avoid_using_denormalized_FK_join_for_master_semantics_without_fallback": True,
         "canonical_join_note": (
             ".cursor/rules/address-queue-mat-lineage.mdc "
@@ -337,26 +437,15 @@ def main() -> None:
         ),
     }
 
-    if pct_triple >= 95:
-        decision["recommended_path"].append(
-            "Lineage triple coverage is healthy; INNER join lineage for analytics/tests."
+    print(ui["section_decision"], flush=True)
+    if _normalize_lang(lang) == "vi":
+        decision_show = copy.deepcopy(decision)
+        decision_show["recommended_path"] = _recommended_path_for_export(
+            "vi", pct_triple, pct_wm_lineage_rows, pct_lineage_distinct_in_wm
         )
-    elif pct_triple >= 70:
-        decision["recommended_path"].append(
-            "Repair NULL/mismatched old_* lineage vs mat.old_id until triple coverage climbs."
-        )
+        _safe_print_blob(decision_show)
     else:
-        decision["recommended_path"].append(
-            "Low lineage triple coverage; prioritize back-fill of lineage keys."
-        )
-
-    if pct_wm_lineage_rows >= 40 or pct_lineage_distinct_in_wm >= 40:
-        decision["recommended_path"].append(
-            "Use mat.ward_mapping keyed by lineage v1 ward_id (wl from old_ward_id->mat.old_id)."
-        )
-
-    print("\n=== DECISION (data-driven) ===", flush=True)
-    _safe_print_blob(decision)
+        _safe_print_blob(decision)
 
     # --- Explicit gates: admin_version alignment (denorm P/D/W) ---
     dup_rows = results.get("mat_v1_duplicate_old_id_smoke") or []
@@ -396,27 +485,62 @@ def main() -> None:
             "rows_aligned": aligned_ok,
             "rows_failed": fail_align,
             "pct_aligned_of_three_fk": pct_aligned,
-            "note": (
-                "exists mat rows p,d,w with equal admin_version, "
-                "d.province_id=queue.province_id, w.district_id=queue.district_id"
-            ),
+            "note": _g3_note("en"),
         },
-        "G4_denorm_aligned_also_is_current_on_all_three": {
+        "G4_denorm_aligned_is_active_on_all_three": {
             "pass": denorm_current_pass,
             "rows_all_three_fk": three_fk,
             "rows_aligned_current": aligned_cur,
             "pct_aligned_current_of_three_fk": pct_aligned_cur,
         },
     }
-    print("\n=== GATES (PASS / FAIL) — admin_version & lineage ===", flush=True)
-    _safe_print_blob(gates)
-    print(
-        "\nNote: denorm_version_tuple_histogram_ambiguous_join — "
-        "sum of buckets can exceed queue rows if same business id exists "
-        "under multiple mat.admin_version (one queue row matches several tuples).",
-        flush=True,
-    )
+    print(ui["section_gates"], flush=True)
+    if _normalize_lang(lang) == "vi":
+        gates_show = copy.deepcopy(gates)
+        gates_show["G3_denorm_P_D_W_same_admin_version_and_geo_hierarchy"][
+            "note"
+        ] = _g3_note("vi")
+        _safe_print_blob(gates_show)
+    else:
+        _safe_print_blob(gates)
+    print(ui["note_denorm_histogram"], flush=True)
+
+    if write_json is not None:
+        payload = {
+            "overview": overview,
+            "decision": decision,
+            "gates": gates,
+        }
+        write_json.parent.mkdir(parents=True, exist_ok=True)
+        write_json.write_text(
+            json.dumps(payload, indent=2, ensure_ascii=False) + "\n",
+            encoding="utf-8",
+        )
+        print(ui["wrote_json"].format(path=write_json), flush=True)
 
 
 if __name__ == "__main__":
-    main()
+    import argparse
+
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument(
+        "--write-json",
+        type=str,
+        default=None,
+        help="Ghi overview + decision + gates ra file JSON (để đồng bộ báo cáo LaTech)",
+    )
+    ap.add_argument(
+        "--lang",
+        type=str,
+        default="en",
+        metavar="en|vi",
+        help=(
+            "Console UI language: en or vi. "
+            "JSON snapshot still uses English recommended_path and G3 gate note."
+        ),
+    )
+    ns = ap.parse_args()
+    main(
+        write_json=Path(ns.write_json).resolve() if ns.write_json else None,
+        lang=ns.lang,
+    )

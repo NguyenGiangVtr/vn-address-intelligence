@@ -156,7 +156,7 @@ class ACSCalculator:
                 ward = self._db.query(Ward).filter(
                     Ward.ward_id == ward_id,
                     Ward.district_id == district_id,
-                    Ward.is_current == True,
+                    Ward.is_active == True,
                 ).first()
                 if ward:
                     checks_passed += 1
@@ -167,7 +167,7 @@ class ACSCalculator:
                 district = self._db.query(District).filter(
                     District.district_id == district_id,
                     District.province_id == province_id,
-                    District.is_current == True,
+                    District.is_active == True,
                 ).first()
                 if district:
                     checks_passed += 1

@@ -17,18 +17,16 @@ def patch_administrative_tables():
             logger.info(f"Checking and patching table mat.{table}...")
             
             # 1. Add SCD columns
-            # valid_from: Start of record validity
-            # valid_to: End of record validity (9999-12-31 for current)
-            # is_current: Flag for the latest version
-            # version_id: Incremental version number
-            # predecessor_id: Link to previous version (self-referencing FK)
-            
+            # valid_from / valid_to: khoảng hiệu lực
+            # is_active: dòng đại diện hiện tại (UI/API); thay thế is_current (xem migration 20260512_*)
+            # version_id / predecessor_id: chuỗi thay thế
+
             queries = [
                 f"ALTER TABLE mat.{table} ADD COLUMN IF NOT EXISTS valid_from TIMESTAMP DEFAULT NOW()",
                 f"ALTER TABLE mat.{table} ADD COLUMN IF NOT EXISTS valid_to TIMESTAMP DEFAULT '9999-12-31'",
-                f"ALTER TABLE mat.{table} ADD COLUMN IF NOT EXISTS is_current BOOLEAN DEFAULT TRUE",
+                f"ALTER TABLE mat.{table} ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE",
                 f"ALTER TABLE mat.{table} ADD COLUMN IF NOT EXISTS version_id INTEGER DEFAULT 1",
-                f"ALTER TABLE mat.{table} ADD COLUMN IF NOT EXISTS predecessor_id INTEGER"
+                f"ALTER TABLE mat.{table} ADD COLUMN IF NOT EXISTS predecessor_id INTEGER",
             ]
             
             for q in queries:

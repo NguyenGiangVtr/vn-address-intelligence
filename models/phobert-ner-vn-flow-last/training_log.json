@@ -1,0 +1,43 @@
+{
+  "train_loss": 0.5797437689304352,
+  "eval_results": {
+    "eval_loss": 0.1572694629430771,
+    "eval_f1": 0.9376196990424077,
+    "eval_precision": 0.9289780428300353,
+    "eval_recall": 0.9464236398784867,
+    "eval_runtime": 17.249,
+    "eval_samples_per_second": 46.379,
+    "eval_steps_per_second": 2.899,
+    "epoch": 1.0
+  },
+  "token_accuracy": 0.9715354248909204,
+  "label_list": [
+    "O",
+    "B-PCD",
+    "I-PCD",
+    "B-BLD",
+    "I-BLD",
+    "B-POI",
+    "I-POI",
+    "B-ALY",
+    "I-ALY",
+    "B-NUM",
+    "I-NUM",
+    "B-STR",
+    "I-STR",
+    "B-NHB",
+    "I-NHB",
+    "B-WDS",
+    "I-WDS",
+    "B-DST",
+    "I-DST",
+    "B-PRO",
+    "I-PRO"
+  ],
+  "n_train": 4000,
+  "n_eval": 800,
+  "epochs": 1,
+  "learning_rate": 2e-05,
+  "batch_size": 8,
+  "data_source": "hf_dataset=dathuynh1108/ner-address-standard-dataset;train_cap=4000;eval_cap=800;streaming=True"
+}
