@@ -6,11 +6,11 @@
 **Vietnamese Address Intelligence System**: AI-powered platform for address normalization, geospatial enrichment, and administrative boundary management. Handles VN admin hierarchy (63 provinces → districts → wards), OSM data integration, NER training, and real-time parsing research.
 
 **Tech Stack**:
-- **Backend**: FastAPI (app/api/server.py)
+- **Backend**: FastAPI ([src/app/api/server.py](src/app/api/server.py)), editable install `pip install -e .`
 - **Frontend**: Static HTML/JS/CSS (ui/)
 - **DB**: PostgreSQL (schemas: `mat`, `osm`, `ath`, `prq`)
 - **AI/ML**: PhoBERT, mGTE (Siamese), Qwen LLM for address normalization
-- **CLI**: Click (app/main.py)
+- **CLI**: Click ([src/app/main.py](src/app/main.py))
 - **Data Sources**: NSO API, OSM Overpass, GSO crawlers, synthetic data
 
 ## 🏗️ Architecture & Data Flow
@@ -27,18 +27,18 @@ CLI (app/main.py) → Data Ingestion → DB → FastAPI API/UI → AI Models →
    - `fetch_osm`: OSM streets/buildings/POIs
    - `seed_queue`: Raw addresses → prq.address_cleansing_queue
 
-2. **API Server** (app/api/server.py):
+2. **API Server** (src/app/api/server.py):
    - Serves UI static files (/ui, /pages)
    - Endpoints: /api/provinces, /api/lookup/mapping, /api/parser/analyze, /api/benchmark
    - Background jobs: OSM fetch, AI benchmarks
    - Auth: JWT (admin/vnai@2026)
 
-3. **AI Pipeline** (app/ai/*):
+3. **AI Pipeline** (src/app/ai/*):
    - **Models**: PhoBERTSiamese, SiameseMGTE, LLMQwen3
    - **Research**: /api/parser/analyze compares models on samples
-   - **Training**: app/ai/train_ner.py, export_for_annotation.py
+   - **Training**: src/app/ai/train_ner.py, export_for_annotation.py
    - **Docs UI**: `GET /api/repo-docs/list|raw/*` reads `docs/*.md`; sidebar **Trung tâm tài liệu** (`#/documentation`)
-   - **Queue**: prq.address_cleansing_queue stores raw → standardized (runbook: `docs/01-ai-training/11-OPERATING-PHASES-ABCD.md`). **Join master HC v1**: `old_*` on queue = `mat.*.old_id` with `admin_version = 1` (see `.cursor/rules/address-queue-mat-lineage.mdc`, `app/domain/acq_mat_lineage.py`).
+   - **Queue**: prq.address_cleansing_queue stores raw → standardized (runbook: `docs/01-ai-training/11-OPERATING-PHASES-ABCD.md`). **Join master HC v1**: `old_*` on queue = `mat.*.old_id` with `admin_version = 1` (see `.cursor/rules/address-queue-mat-lineage.mdc`, `src/app/domain/acq_mat_lineage.py`).
 
 4. **Key DB Schemas**:
    | Schema | Purpose | Key Tables |
@@ -50,14 +50,15 @@ CLI (app/main.py) → Data Ingestion → DB → FastAPI API/UI → AI Models →
 
 ## 🚀 Key Files & Entry Points
 ```
-├── app/main.py              # Click CLI: init_db, seed_*, fetch_osm
-├── app/api/server.py        # FastAPI app + all endpoints
-├── app/core/database.py     # SQLAlchemy models + create_all_tables()
-├── app/core/config.py       # DB URL, env vars
+├── src/app/main.py          # Click CLI: init_db, seed_*, fetch_osm
+├── src/app/api/server.py    # FastAPI app + endpoints (deps/state/job_runners tách riêng)
+├── src/app/core/database.py # SQLAlchemy models + create_all_tables()
+├── src/app/core/config.py   # DB URL, env vars
 ├── ui/                      # Static frontend (app.js orchestrates pages)
-├── app/ai/models/*.py       # PhoBERT, mGTE, Qwen LLM
-├── app/services/osm_fetcher.py # OSM Overpass API client
-├── scripts/ops/             # Embeddings, vector indexes, corpus ops (root-level *.py shims)
+├── src/app/ai/models/*.py   # PhoBERT, mGTE, Qwen LLM
+├── src/app/services/osm_fetcher.py # OSM Overpass API client
+├── scripts/ops/             # Embeddings, vector indexes, corpus ops (canonical)
+├── scripts/shims/           # Launchers tới scripts/ops (lệnh ngắn, không nằm ở gốc repo)
 └── docs/*.md                # Architecture plans
 ```
 

@@ -19,13 +19,19 @@ import json
 import sys
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT))
+for _p in [Path(__file__).resolve().parent, *Path(__file__).resolve().parents]:
+    if (_p / "pyproject.toml").is_file():
+        if str(_p) not in sys.path:
+            sys.path.insert(0, str(_p))
+        break
+import _bootstrap_import_paths  # noqa: E402
+
+_bootstrap_import_paths.install()
 
 from app.ai.db_connector import DBConnector
 from app.ai.export_for_annotation import PreLabeler
 from app.ai.utils.config_loader import load_config_with_env
+from app.paths import ai_config_yaml_relative_posix
 from app.services.prelabeler_labeling_service import (
     enforce_admin_type_name,
     first_expected_text,
@@ -174,7 +180,7 @@ def main() -> int:
     )
     parser.add_argument(
         "--config",
-        default="app/ai/config.yaml",
+        default=ai_config_yaml_relative_posix(),
         help="Config path for DB connection",
     )
     parser.add_argument(

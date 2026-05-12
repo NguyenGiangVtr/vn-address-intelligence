@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.11,<3.14"
 
 [tool.setuptools.packages.find]
-where = ["."]
+where = ["src"]
 include = ["app*"]
 
 [tool.pytest.ini_options]

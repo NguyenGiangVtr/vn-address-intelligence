@@ -8,7 +8,8 @@ Tài liệu **chân** để tra cứu: code nằm đâu, thêm tính năng mới
 
 | Thư mục / file | Vai trò |
 |----------------|---------|
-| `app/` | **Gói ứng dụng Python**: API, DB, nghiệp vụ, AI — *import được* (`from app...`). |
+| `src/app/` | **Gói ứng dụng Python** (src layout): API, DB, nghiệp vụ, AI — *import được* (`from app...`; cần `pip install -e .` hoặc `PYTHONPATH=src`). |
+| `_bootstrap_import_paths.py` | Một số entry script gọi trước `import app` khi chạy file `.py` trực tiếp. |
 | `ui/` | Giao diện tĩnh: `index.html`, `app.js`, `pages/*.html`, `style.css`. |
 | `docs/` | Markdown: kiến trúc, playbook, đặc tả (`docs/INDEX.md` là mục lục). |
 | `scripts/` | Script vận hành/migration/diagnostics — *chạy bằng đường dẫn*, không import như thư viện chính. |
@@ -17,19 +18,20 @@ Tài liệu **chân** để tra cứu: code nằm đâu, thêm tính năng mới
 | `.github/workflows/` | CI/CD (deploy tarball, bảo mật). |
 | `requirements.txt` / `requirements-prod.txt` | Phụ thuộc dev vs VPS CPU. |
 | `start.py` | Wrapper khởi động API nhanh (tham chiếu trong deploy). |
-| `pyproject.toml` | Metadata package (`app*`). |
-| `*.py` (một số tên ngắn ở gốc) | **Shim tương thích**: gọi `runpy` tới `scripts/ops/<tên>.py`. Giữ `python compute_embeddings.py` như cũ; **mã thật** nằm trong `scripts/ops/`. |
+| `pyproject.toml` | Metadata package; setuptools tìm package trong `src/` (`where = ["src"]`). |
+| `optimize_parser_performance.py` (gốc) | **Một shim đặc biệt**: `from optimize_parser_performance import …` (PEP 562) + CLI; implementation trong `scripts/ops/optimize_parser_performance.py`. |
 
-Script vận hành corpus/embeddings/vector (compute, setup_vector_indexes, optimize_*, quick_corpus, v.v.) — **canonical** tại `scripts/ops/`; file cùng tên ở gốc chỉ là launcher.
+Script vận hành corpus/embeddings/vector — **canonical** tại [`scripts/ops/`](../../scripts/ops/README.md). Các lệnh ngắn tương đương `python compute_embeddings.py` (đã bỏ ở gốc) dùng **`python scripts/shims/<tên>.py`** hoặc **`python scripts/ops/<tên>.py`** trực tiếp.
 
 ---
 
-## 2. `app/` — ranh giới layer
+## 2. `src/app/` — ranh giới layer
 
 ```
-app/
+src/app/
 ├── main.py              # CLI Click: init_db, seed, fetch_osm, …
-├── api/                 # FastAPI: server.py (app chính), boundary, spatial, schemas, repo_docs
+├── paths.py             # Gốc repo (neo `pyproject.toml`), đường dẫn config AI, docs, v.v.
+├── api/                 # FastAPI: server.py, deps.py (auth/DB session), state.py + job_runners.py (job nền), routers/, boundary, spatial, schemas, repo_docs
 ├── core/                # config, database (SQLAlchemy), cache
 ├── services/            # Nghiệp vụ: OSM, NSO, enrichment, ground truth, auth, crawlers, …
 ├── ai/                  # Mô hình & pipeline: models/, export_for_annotation (PreLabeler), train_*, experiment_runner, …
@@ -39,9 +41,9 @@ app/
 
 **Quy ước**
 
-- **API chỉ** điều phối: đọc request → gọi service hoặc module `app/ai` → trả response.
-- Logic tái sử dụng dài hạn → `app/services/` hoặc `app/ai/` (tùy domain).
-- File chỉ phục vụ một route có thể sát `app/api/` nhưng tránh làm phồng `server.py` (tách module con đã có mẫu: `boundary.py`, `repo_docs.py`).
+- **API chỉ** điều phối: đọc request → gọi service hoặc module `app.ai` → trả response.
+- Logic tái sử dụng dài hạn → `app.services` hoặc `app.ai` (tùy domain).
+- File chỉ phục vụ một route có thể sát `app.api` nhưng tránh làm phồng `server.py` (tách module con đã có mẫu: `boundary.py`, `repo_docs.py`; thêm router trong `api/routers/` khi nhóm endpoint lớn).
 
 ---
 
@@ -73,6 +75,7 @@ Script **mới**: chọn đúng thư mục; tiện ích vận hành tổng quát
 - `index.html`: shell + sidebar (`data-page` → `ui/pages/<id>.html`).
 - `app.js`: điều phớt trang, gọi API; không nhét logic nghiệp vụ nặng.
 - `pages/*.html`: từng màn hình; asset version qua query `?v=` (CI/publish).
+- `pages/generated/`: artefact HTML tạo động (vd. bản đồ ranh giới), URL `/pages/generated/...`.
 
 ---
 
@@ -87,7 +90,7 @@ Script **mới**: chọn đúng thư mục; tiện ích vận hành tổng quát
 
 ## 6. Checklist khi thêm tính năng
 
-1. API mới → `app/api/` (module riêng nếu đủ lớn) + test tay route.
-2. Quy tắc nghiệp vụ → `app/services/` (hoặc `app/ai/` nếu chỉ ML).
+1. API mới → `src/app/api/` (module riêng nếu đủ lớn) + test tay route.
+2. Quy tắc nghiệp vụ → `src/app/services/` (hoặc `src/app/ai/` nếu chỉ ML).
 3. Script một lần / vận hành → `scripts/<nhóm>/`.
 4. Tài liệu hướng dẫn → `docs/` + một dòng trong `INDEX.md` nếu là tài liệu chính.

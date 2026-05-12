@@ -13,7 +13,7 @@ npm run build
 
 ### 2. Chạy PowerShell script (Windows)
 ```powershell
-./build.ps1
+powershell -ExecutionPolicy Bypass -File .\scripts\release\build_ui_assets.ps1
 ```
 
 ### 3. Build + publish
@@ -32,7 +32,7 @@ npm run publish
 
 ```
 ├── build-version.js      # Node.js build script
-├── build.ps1            # PowerShell build script  
+├── scripts/release/build_ui_assets.ps1  # PowerShell cache-bust (tương đương)
 ├── package.json         # NPM scripts
 ├── version-info.json    # Version tracking (auto-generated)
 └── ui/

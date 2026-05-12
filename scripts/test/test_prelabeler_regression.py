@@ -11,10 +11,14 @@ Tuan thu rule "Type + Name" cho admin labels (WDS/DST/PRO).
 import sys
 from pathlib import Path
 
+for _p in [Path(__file__).resolve().parent, *Path(__file__).resolve().parents]:
+    if (_p / "pyproject.toml").is_file():
+        if str(_p) not in sys.path:
+            sys.path.insert(0, str(_p))
+        break
+import _bootstrap_import_paths  # noqa: E402
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT))
+_bootstrap_import_paths.install()
 
 from app.ai.export_for_annotation import PreLabeler
 

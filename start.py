@@ -1,10 +1,14 @@
 import sys
 import os
 
-# Thêm thư mục dự án vào PYTHONPATH
+# PYTHONPATH: src layout → .../src contains package `app`; else repo root (legacy).
 project_root = os.path.dirname(os.path.abspath(__file__))
-if project_root not in sys.path:
-    sys.path.append(project_root)
+_src = os.path.join(project_root, "src")
+if os.path.isfile(os.path.join(_src, "app", "__init__.py")):
+    if _src not in sys.path:
+        sys.path.insert(0, _src)
+elif project_root not in sys.path:
+    sys.path.insert(0, project_root)
 
 if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "serve-ui":

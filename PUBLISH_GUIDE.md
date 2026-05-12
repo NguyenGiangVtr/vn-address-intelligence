@@ -6,7 +6,7 @@
 
 #### 1. Publish đầy đủ (Recommended)
 ```powershell
-.\publish.ps1
+.\scripts\release\publish.ps1
 ```
 **Kết quả:**
 - ✅ Tự động update version cho tất cả CSS/JS files  
@@ -15,14 +15,14 @@
 
 #### 2. Publish với auto-cleanup (Bảo mật)
 ```powershell
-.\publish.ps1 -CleanupAfter
+.\scripts\release\publish.ps1 -CleanupAfter
 ```
 **Kết quả:** 
 - Giống như trên + tự xóa folder `publish/` sau 30 giây
 
 #### 3. Chỉ update version (Không tạo publish folder)
 ```powershell
-.\publish.ps1 -VersionOnly
+.\scripts\release\publish.ps1 -VersionOnly
 ```
 
 ### 📋 NPM Scripts (Alternative)
@@ -67,13 +67,13 @@ publish/
 
 ### Option 1: Zip & Upload
 ```powershell
-# Sau khi chạy .\publish.ps1
+# Sau khi chạy .\scripts\release\publish.ps1
 Compress-Archive -Path "publish\*" -DestinationPath "vnai-deploy.zip"
 # Upload vnai-deploy.zip lên VPS
 ```
 
 ### Option 2: MobaXterm Drag & Drop  
-1. Chạy `.\publish.ps1`
+1. Chạy `.\scripts\release\publish.ps1`
 2. Mở MobaXterm
 3. Kéo nội dung folder `publish/` vào `/opt/vnai/` trên VPS
 
@@ -111,4 +111,4 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 
 ---
 
-**🎉 Ready to deploy! Chạy `.\publish.ps1` và upload lên VPS!**
+**🎉 Ready to deploy! Chạy `.\scripts\release\publish.ps1` và upload lên VPS!**

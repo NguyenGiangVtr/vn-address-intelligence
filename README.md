@@ -63,18 +63,22 @@ Tóm tắt:
 
 ```text
 vn-address-intelligence/
-├── app/                    # Backend & AI (import package: app.api, app.services, …)
+├── src/app/                # Backend & AI (Python package `app`; pip install -e .)
 │   ├── ai/                 # Mô hình, pipeline, PreLabeler / export_for_annotation
-│   ├── api/                # FastAPI (server.py + module phụ)
+│   ├── api/                # FastAPI (server.py, deps.py, state, job_runners, routers/)
 │   ├── core/               # config, database, cache
 │   ├── services/           # OSM, NSO, enrichment, ground truth, …
 │   ├── tools/              # boundary_visualization, …
+│   ├── paths.py            # repo root + canonical config paths (src-aware)
 │   └── main.py             # CLI (init_db, seed, fetch_osm)
-├── ui/                     # SPA tĩnh: index.html, app.js, pages/
+├── ui/                     # SPA tĩnh: index.html, app.js, pages/, pages/generated/
 ├── docs/                   # INDEX.md + 01-…06- + 00-ENGINEERING/
 ├── scripts/                # migration, sql, diagnostics, ops/, scratch/, labeling, …
 ├── data/                   # seed / export cục bộ
 ├── models/                 # checkpoint (không commit file lớn)
+├── _bootstrap_import_paths.py  # helper cho script chạy theo đường dẫn file
+├── optimize_parser_performance.py  # PEP 562 → scripts/ops (import từ gốc repo)
+├── scripts/shims/            # launcher tới scripts/ops (thay shim .py ở gốc)
 ├── start.py
 ├── requirements.txt
 └── requirements-prod.txt   # VPS CPU (torch+cpu)
@@ -103,6 +107,7 @@ python3.11 -m venv .venv   # Linux/macOS — Windows: py -3.11 -m venv .venv
 source .venv/bin/activate  # Windows: .venv\Scripts\activate
 pip install -U pip
 pip install -r requirements.txt
+pip install -e .
 
 # 3. Cấu hình môi trường
 cp .env.example .env

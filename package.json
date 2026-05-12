@@ -5,9 +5,10 @@
   "main": "ui/app.js",
   "scripts": {
     "build": "node build-version.js",
-    "publish": "powershell -ExecutionPolicy Bypass -File .\\publish.ps1",
-    "publish-clean": "powershell -ExecutionPolicy Bypass -File .\\publish.ps1 -CleanupAfter",
-    "version-only": "powershell -ExecutionPolicy Bypass -File .\\publish.ps1 -VersionOnly",
+    "publish": "powershell -ExecutionPolicy Bypass -File .\\scripts\\release\\publish.ps1",
+    "publish-clean": "powershell -ExecutionPolicy Bypass -File .\\scripts\\release\\publish.ps1 -CleanupAfter",
+    "version-only": "powershell -ExecutionPolicy Bypass -File .\\scripts\\release\\publish.ps1 -VersionOnly",
+    "build:ps1": "powershell -ExecutionPolicy Bypass -File .\\scripts\\release\\build_ui_assets.ps1",
     "dev": "npm run build && echo 'Development build ready'",
     "version-check": "type version-info.json"
   },

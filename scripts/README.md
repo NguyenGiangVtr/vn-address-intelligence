@@ -28,20 +28,21 @@ Chi tiết publish: xem comment đầu file `scripts/release/publish.ps1` và [`
 
 | Thư mục | Mục đích |
 |---------|-----------|
-| `ops/` | Vận hành: embeddings, vector index, corpus, optimize parser — [README](ops/README.md). File tương ứng ở **gốc repo** là shim tương thích. |
+| `ops/` | Vận hành: embeddings, vector index, corpus, optimize parser — [README](ops/README.md). Launcher ngắn: [`shims/`](shims/). |
 | `scratch/` | Thử một lần, debug DB/API — [README](scratch/README.md). |
 | `deployment/` | VPS: setup, `deploy.sh`, service template. |
-| `release/` | `publish.ps1`, `deploy.ps1` (bundle + upload). |
+| `release/` | `publish.ps1`, `deploy.ps1`, `build_ui_assets.ps1` (cache-bust UI). |
 | `migration/` | Chuyển schema/dữ liệu giữa các phiên bản bảng. |
-| `sql/` | File `.sql` + tiện ích áp dụng (vd. `apply_sql_file.py`). |
+| `sql/` | File `.sql` + `apply_sql_file.py`, **`create_tables.py` / `create_tables.ps1` / `create_tables.sh`** (init schema từ SQLAlchemy). |
 | `diagnostics/` | Kiểm tra queue, pgvector, NaN, pilot vs ground truth, … |
 | `enrichment/` | Làm giàu / sửa batch ngoài luồng API. |
 | `labeling/` | PreLabeler: `prelabeler_labeling_cases.json`, regression, refresh. |
 | `data/` | Tải dataset ngoài, nạp vào corpus/DB. |
 | `reporting/` | Xuất evidence / báo cáo. |
-| `test/` | Regression trong repo (vd. `test_prelabeler_regression.py`). |
+| `test/` | Regression trong repo (`test_prelabeler_regression.py`, `test_ground_truth_service.py`, …). |
+| `shims/` | Launcher ngắn gọi `scripts/ops/<tên>.py` (thay cho file shim cũ ở gốc repo): `python scripts/shims/compute_embeddings.py`, v.v. |
 
-**File rời ở `scripts/`** (không vào thư mục con): thường là script cũ hoặc entry ngắn — khi sửa lớn nên **gom vào đúng thư mục** phía trên.
+**File rời ở `scripts/`** (không vào thư mục con): nếu còn, nên **gom** vào các nhóm trên (vd. `migration/patch_scd_columns.py`, `sql/create_tables.py`, `data/sync_google_data.py`).
 
 ---
 
@@ -55,7 +56,7 @@ Chi tiết publish: xem comment đầu file `scripts/release/publish.ps1` và [`
 
 ## Bảo mật (deploy / .env)
 
-- `.env` gitignored; publish local có thể copy `.env` (xem `publish.ps1`).
+- `.env` gitignored; publish local có thể copy `.env` (xem `scripts/release/publish.ps1`).
 - Trên VPS quyền file `.env` hạn chế (owner read).
 
 ```powershell

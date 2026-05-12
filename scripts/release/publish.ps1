@@ -7,23 +7,42 @@
 #   - Cache bust: only ui/*.html and ui/pages/*.html (sed-equivalent replace)
 #   - Tree: mirror repo with same exclusions as "Build release tarball" tar step
 #
-# Usage: .\scripts\release\publish.ps1 [-SkipTests] [-NoPipInstall] [-AssetVersion "1736..."] [-CleanupAfter]
-# Run from repository root.
+# Usage: .\scripts\release\publish.ps1 [-SkipTests] [-NoPipInstall] [-AssetVersion "1736..."] [-CleanupAfter] [-VersionOnly]
+# Resolves repo root from script location (works if cwd is not repo root).
 # --------------------------------------------------------------
 
 param(
     [string]$AssetVersion = "",
     [switch]$SkipTests,
     [switch]$NoPipInstall,
-    [switch]$CleanupAfter
+    [switch]$CleanupAfter,
+    [switch]$VersionOnly
 )
 
 $ErrorActionPreference = "Stop"
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $OutputEncoding = [System.Text.Encoding]::UTF8
 
-$RepoRoot = (Get-Location).Path
+$RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 $PublishDir = Join-Path $RepoRoot "publish"
+
+if ($VersionOnly) {
+    Write-Host "Version-only: running build-version.js..." -ForegroundColor Yellow
+    $bv = Join-Path $RepoRoot "build-version.js"
+    if (-not (Test-Path $bv)) {
+        Write-Host "Missing $bv" -ForegroundColor Red
+        exit 1
+    }
+    Push-Location $RepoRoot
+    try {
+        & node $bv
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    } finally {
+        Pop-Location
+    }
+    Write-Host "Version build completed." -ForegroundColor Green
+    exit 0
+}
 
 function Get-UnixEpochSeconds {
     [Math]::Floor([decimal]([DateTimeOffset]::UtcNow.UtcDateTime - [datetime]'1970-01-01T00:00:00Z').TotalSeconds)
@@ -35,7 +54,8 @@ function Invoke-CacheBustDeployParity {
     $utf8 = New-Object System.Text.UTF8Encoding $false
     $paths = @(
         (Join-Path $Root "ui"),
-        (Join-Path $Root "ui\pages")
+        (Join-Path $Root "ui\pages"),
+        (Join-Path $Root "ui\pages\generated")
     )
     foreach ($dir in $paths) {
         if (-not (Test-Path $dir)) { continue }
@@ -80,6 +100,10 @@ if (-not $SkipTests) {
         & python -m pip install --no-cache-dir -r $reqProd
         if ($LASTEXITCODE -ne 0) {
             throw "pip install failed (exit $LASTEXITCODE)"
+        }
+        & python -m pip install --no-cache-dir -e $RepoRoot
+        if ($LASTEXITCODE -ne 0) {
+            throw "pip install -e . failed (exit $LASTEXITCODE)"
         }
     }
     else {

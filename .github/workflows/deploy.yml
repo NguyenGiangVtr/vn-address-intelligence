@@ -118,7 +118,9 @@ jobs:
 
       - name: Install dependencies for prelabeler tests
         shell: bash
-        run: pip install --no-cache-dir -r requirements-prod.txt
+        run: |
+          pip install --no-cache-dir -r requirements-prod.txt
+          pip install --no-cache-dir -e .
 
       - name: Run prelabeler regression suite
         shell: bash
@@ -131,7 +133,7 @@ jobs:
       - name: Apply cache-busting version to HTML assets
         shell: bash
         run: |
-          for file in ui/*.html ui/pages/*.html; do
+          for file in ui/*.html ui/pages/*.html ui/pages/generated/*.html; do
             [ -f "$file" ] || continue
             sed -E -i "s|style\.css(\?v=[0-9]+)?|style.css?v=${ASSET_VERSION}|g" "$file"
             sed -E -i "s|app\.js(\?v=[0-9]+)?|app.js?v=${ASSET_VERSION}|g" "$file"
@@ -222,6 +224,7 @@ jobs:
             . .venv/bin/activate
             pip install --upgrade pip
             pip install --no-cache-dir -r requirements-prod.txt
+            pip install --no-cache-dir -e .
 
             ln -sfn "$RELEASE_DIR" "$DEPLOY_PATH/current"
 

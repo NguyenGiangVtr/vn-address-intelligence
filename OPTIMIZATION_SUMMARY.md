@@ -37,7 +37,7 @@
 python populate_clean_corpus.py --config app/ai/config.yaml --source both
 
 # Quick setup với environment variables
-python quick_corpus_setup.py
+python scripts/shims/quick_corpus_setup.py
 
 # Data cleaning và validation  
 python app/ai/clean_corpus_data.py
@@ -46,7 +46,7 @@ python app/ai/clean_corpus_data.py
 ### **2. Embedding Computation**
 ```bash
 # Pre-compute embeddings cho performance
-python compute_embeddings.py
+python scripts/shims/compute_embeddings.py
 ```
 
 ### **3. Performance Optimization**
@@ -61,7 +61,7 @@ python optimize_parser_performance.py
 ### **4. Vector Similarity (Pending)**
 ```bash
 # Setup pgvector indexes
-python setup_vector_indexes.py
+python scripts/shims/setup_vector_indexes.py
 ```
 
 ---
@@ -196,7 +196,7 @@ tail -f terminals/772223.txt
 ### **2. Setup pgvector Indexes** ⏳  
 ```bash  
 # Sau khi embeddings xong
-python setup_vector_indexes.py
+python scripts/shims/setup_vector_indexes.py
 ```
 
 ### **3. Production Integration** 📦

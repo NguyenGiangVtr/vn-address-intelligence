@@ -1,6 +1,6 @@
 # `scripts/ops` — vận hành corpus, vector, tối ưu
 
-Mã **đầy đủ** nằm đây. Ở thư mục gốc repo vẫn có file cùng tên (shim) để lệnh `python compute_embeddings.py` và `from optimize_parser_performance import …` hoạt động như trước.
+Mã **đầy đủ** nằm đây. **Shim ngắn** (tương đương lệnh cũ ở gốc repo) nằm trong [`scripts/shims/`](../shims/) — ví dụ `python scripts/shims/compute_embeddings.py`. Import kiểu `from optimize_parser_performance import …` vẫn dùng file **`optimize_parser_performance.py` ở gốc repo** (PEP 562 → file này).
 
 | File | Mục đích |
 |------|-----------|
