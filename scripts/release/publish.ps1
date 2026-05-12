@@ -165,7 +165,7 @@ Write-Host "  [OK] HTML query strings updated" -ForegroundColor Green
 Write-Host "[4/4] ------------------------------------------------------" -ForegroundColor Green
 Write-Host "  PUBLISH READY: $PublishDir"
 Write-Host "  VPS install (same as deploy job):"
-Write-Host "    cd <release_dir>; python3 -m venv .venv; . .venv/bin/activate"
+Write-Host "    cd <release_dir>; python3.11 -m venv .venv; . .venv/bin/activate"
 Write-Host "    pip install --upgrade pip"
 Write-Host "    pip install --no-cache-dir -r requirements-prod.txt"
 Write-Host "--------------------------------------------------------------" -ForegroundColor Green

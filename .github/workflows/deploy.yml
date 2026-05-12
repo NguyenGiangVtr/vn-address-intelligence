@@ -220,7 +220,12 @@ jobs:
 
             cd "$RELEASE_DIR"
             export PIP_NO_CACHE_DIR=1
-            python3 -m venv .venv
+            # Package requires Python >=3.11 (pyproject.toml); default python3 on Ubuntu is often 3.8.
+            if ! command -v python3.11 >/dev/null 2>&1; then
+              echo "ERROR: python3.11 not found. Install it on the VPS (e.g. scripts/deployment/vnai-vps-setup.sh or apt/deadsnakes), then redeploy."
+              exit 1
+            fi
+            python3.11 -m venv .venv
             . .venv/bin/activate
             pip install --upgrade pip
             pip install --no-cache-dir -r requirements-prod.txt
