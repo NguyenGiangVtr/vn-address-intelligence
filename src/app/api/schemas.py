@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import Optional
 from datetime import datetime
 
@@ -25,12 +25,11 @@ class ProvinceUpdate(BaseModel):
     admin_version: Optional[int] = None
 
 class ProvinceResponse(ProvinceBase):
+    model_config = ConfigDict(from_attributes=True)
+
     province_id: int
     created_date: datetime
     updated_date: datetime
-
-    class Config:
-        from_attributes = True
 
 # --- DISTRICT ---
 class DistrictBase(BaseModel):
@@ -59,12 +58,11 @@ class DistrictUpdate(BaseModel):
     admin_version: Optional[int] = None
 
 class DistrictResponse(DistrictBase):
+    model_config = ConfigDict(from_attributes=True)
+
     district_id: int
     created_date: datetime
     updated_date: datetime
-
-    class Config:
-        from_attributes = True
 
 # --- WARD ---
 class WardBase(BaseModel):
@@ -95,9 +93,8 @@ class WardUpdate(BaseModel):
     admin_version: Optional[int] = None
 
 class WardResponse(WardBase):
+    model_config = ConfigDict(from_attributes=True)
+
     ward_id: int
     created_date: datetime
     updated_date: datetime
-
-    class Config:
-        from_attributes = True

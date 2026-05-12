@@ -35,6 +35,7 @@ from concurrent.futures import ThreadPoolExecutor
 import random
 import string
 from types import SimpleNamespace
+from contextlib import asynccontextmanager
 from app.core.database import SessionLocal, Province, District, Ward, OSMStreet, OSMBuilding, OSMPoi, OSMRawEntity, TrainingDataset, TrainingHistory, BenchmarkModelBaseline, AddressCleansingQueue, WardMapping, AuthUser, EmailVerification, SyncLog, UnitEdge, engine, seed_training_metadata
 from app.services.scd_sync import get_unit_at_date, get_sync_summary
 from app.services.auth import verify_password, create_access_token, get_password_hash
@@ -74,20 +75,23 @@ _DEFAULT_AI_YAML_REL = ai_config_yaml_relative_posix()
 logger = setup_logging()
 logger = logging.getLogger("VNAI_Server")
 
+
+@asynccontextmanager
+async def _vnai_lifespan(app: FastAPI):
+    """Startup: bảng auth + nạp model AI nền. (Thay cho on_event — tránh DeprecationWarning FastAPI.)"""
+    _ensure_auth_user_table()
+    # Note: _ensure_prelabeler_testcases_table is already called at import time
+    _start_background_model_loading()
+    yield
+
+
 app = FastAPI(
     title="VN Address Intelligence API",
     docs_url="/api/docs",
     openapi_url="/api/openapi.json",
-    redoc_url="/api/redoc"
+    redoc_url="/api/redoc",
+    lifespan=_vnai_lifespan,
 )
-
-
-@app.on_event("startup")
-async def on_startup():
-    """Khởi tạo database và nạp model AI trong background."""
-    _ensure_auth_user_table()
-    # Note: _ensure_prelabeler_testcases_table is already called at import time
-    _start_background_model_loading()
 
 # Use APIRouter for cleaner route management
 api_router = APIRouter()
