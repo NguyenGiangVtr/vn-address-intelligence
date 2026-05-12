@@ -37,7 +37,20 @@ class SiameseMGTE:
         self.device     = "cuda" if (device == "auto" and torch.cuda.is_available()) else ("cpu" if device == "auto" else device)
 
         logger.info(" Loading mGTE: %s (device=%s)", model_name, self.device)
-        
+
+        try:
+            import sentence_transformers as st
+            import transformers
+
+            logger.info(
+                " mGTE deps: torch=%s transformers=%s sentence_transformers=%s",
+                getattr(torch, "__version__", "?"),
+                getattr(transformers, "__version__", "?"),
+                getattr(st, "__version__", "?"),
+            )
+        except Exception:
+            pass
+
         # VPS Debug: Check for einops which is required by GTE remote code
         try:
             import einops
@@ -54,11 +67,19 @@ class SiameseMGTE:
             self.model.eval()
         except Exception as e:
             logger.error(f" Failed to initialize SentenceTransformer for mGTE: {e}")
-            # Check for common VPS issues
-            if "out of memory" in str(e).lower():
+            msg = str(e).lower()
+            if "out of memory" in msg:
                 logger.error(" >>> CRITICAL: CUDA/RAM Out of Memory while loading mGTE.")
-            elif "remote code" in str(e).lower():
+            elif "remote code" in msg:
                 logger.error(" >>> CRITICAL: Failed to load remote code. Check 'trust_remote_code=True' and internet connection.")
+            elif "out of bounds" in msg or ("index" in msg and "bound" in msg):
+                logger.error(
+                    " >>> Gợi ý (index/embedding out of bounds): thường do cache HF hỏng hoặc "
+                    "torch/transformers/tokenizers không tương thích với remote code của gte-multilingual. "
+                    "Thử: (1) xóa cache model: rm -rf ~/.cache/huggingface/hub/models--Alibaba-NLP--gte-multilingual-base* "
+                    "(hoặc SNAP_HOME tương ứng); (2) pip install -U tokenizers transformers sentence-transformers "
+                    "theo requirements-prod.txt; (3) đặt PARSER_MGTE_DEVICE=cpu trong .env rồi restart API."
+                )
             raise e
 
         self._corpus: List[str]             = []

@@ -366,7 +366,10 @@ def _build_parser_runtime_bundle() -> dict:
     try:
         logger.info("Loading mGTE model...")
         parser_loading_state["currentModel"] = "mgte"
-        mgte = SiameseMGTE(model_name="Alibaba-NLP/gte-multilingual-base", device="auto")
+        mgte = SiameseMGTE(
+            model_name="Alibaba-NLP/gte-multilingual-base",
+            device=Config.PARSER_MGTE_DEVICE,
+        )
         if bundle["corpus"]:
             logger.info(f"Encoding corpus with mGTE ({len(bundle['corpus'])} addresses)...")
             mgte.encode_corpus(bundle["corpus"])

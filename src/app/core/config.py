@@ -29,6 +29,18 @@ def _parser_corpus_max_addresses() -> int:
         return 100_000
 
 
+def _parser_mgte_device() -> str:
+    """
+    Thiết bị load mGTE (SentenceTransformer): auto | cpu | cuda.
+    Trên một số VPS (CUDA/driver hoặc wheel lệch), load có thể lỗi embedding index;
+    đặt PARSER_MGTE_DEVICE=cpu để thử.
+    """
+    raw = (os.getenv("PARSER_MGTE_DEVICE") or "auto").strip().lower()
+    if raw in ("auto", "cpu", "cuda"):
+        return raw
+    return "auto"
+
+
 def _jwt_access_token_expire_minutes() -> int:
     """Thời hạn JWT (phút). Mặc định 7 ngày; có thể giảm/tăng qua JWT_ACCESS_TOKEN_EXPIRE_MINUTES."""
     raw = os.getenv("JWT_ACCESS_TOKEN_EXPIRE_MINUTES", "").strip()
@@ -98,6 +110,7 @@ class Config:
 
     # Parser / Siamese: số địa chỉ tối đa load từ DB khi encode corpus
     PARSER_CORPUS_MAX_ADDRESSES = _parser_corpus_max_addresses()
+    PARSER_MGTE_DEVICE = _parser_mgte_device()
 
     # SMTP Settings
     SMTP_HOST = os.getenv("SMTP_HOST", "smtp.gmail.com")
