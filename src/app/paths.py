@@ -15,6 +15,11 @@ def repo_root() -> Path:
     for p in [here.parent, *here.parents]:
         if (p / "pyproject.toml").is_file():
             return p
+    # Flat VPS deploy: chỉ đồng bộ .../<root>/app/ mà không copy pyproject.toml — .env thường nằm cạnh app/
+    if here.parent.name == "app":
+        candidate = here.parent.parent
+        if (candidate / ".env").is_file():
+            return candidate
     raise RuntimeError("Could not locate repository root (no pyproject.toml above app.paths)")
 
 

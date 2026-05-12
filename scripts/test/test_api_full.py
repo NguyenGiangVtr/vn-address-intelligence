@@ -41,7 +41,13 @@ def _repo_root() -> Path:
 
 def normalize_case_for_api(c: dict[str, Any], idx: int = 0) -> dict[str, Any]:
     """Mirror ui/app.js `normalizeCaseForApi` (giữ contract với POST /prelabeler-cases/run)."""
-    inp = str(c.get("input") if c.get("input") is not None else "")
+    raw_in = c.get("input")
+    if isinstance(raw_in, str):
+        inp = raw_in
+    elif isinstance(raw_in, dict):
+        inp = str(raw_in.get("raw_address") or "").strip()
+    else:
+        inp = str(raw_in if raw_in is not None else "")
     expected_raw = c.get("expected") if isinstance(c.get("expected"), list) else []
     expected: list[dict[str, str]] = []
     for e in expected_raw:
@@ -160,6 +166,35 @@ def test_prelabeler_run_single_ok(client):
     assert row.get("id") == "api_test_one"
     assert "passed" in row
     assert isinstance(row.get("actual"), list)
+
+
+def test_prelabeler_run_dict_input_like_db_row(client):
+    """GET /prelabeler-cases có thể trả input dạng object; /run phải nhận raw_address đúng (đồng bộ UI)."""
+    addr = "45 Nguyễn Hoành, Phường Vĩnh Trường, Nha Trang, Khánh Hòa"
+    payload = {
+        "cases": [
+            normalize_case_for_api(
+                {
+                    "id": "api_dict_input",
+                    "input": {"raw_address": addr, "ward_name": "", "district_name": "", "province_name": ""},
+                    "expected": [
+                        {"label": "STR", "text": "Nguyễn Hoành"},
+                        {"label": "WDS", "text": "Phường Vĩnh Trường"},
+                        {"label": "PRO", "text": "Khánh Hòa"},
+                    ],
+                    "strict": False,
+                },
+                0,
+            )
+        ]
+    }
+    r = client.post("/api/prelabeler-cases/run", json=payload)
+    assert r.status_code == 200, r.text
+    row = r.json()[0]
+    assert row.get("id") == "api_dict_input"
+    assert "error" not in row or not row.get("error")
+    assert isinstance(row.get("actual"), list)
+    assert len(row.get("actual") or []) > 0
 
 
 def test_prelabeler_run_bulk_like_ui(client):

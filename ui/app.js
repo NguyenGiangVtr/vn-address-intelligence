@@ -10,10 +10,39 @@ const UI_SETTINGS_STORAGE_KEY = 'vnai_ui_settings_v1';
 const VALID_THEMES = new Set(['dark', 'light', 'oled-black']);
 const VALID_MOTION_MODES = new Set(['smooth', 'fast', 'off']);
 
+/** Treat apex and www as the same host for "API on this site" detection (common redirect-loop case). */
+function hostsMatchForSameSiteApi(apiHost, pageHost) {
+  const a = String(apiHost || '').toLowerCase();
+  const b = String(pageHost || '').toLowerCase();
+  if (!a || !b) return false;
+  if (a === b) return true;
+  const stripWww = (h) => h.replace(/^www\./, '');
+  return stripWww(a) === stripWww(b);
+}
+
 function normalizeApiBase(url) {
   const raw = String(url || '').trim();
   if (!raw) return DEFAULT_API_BASE;
-  return raw.replace(/\/+$/, '');
+  const trimmed = raw.replace(/\/+$/, '');
+  // Absolute URL on the *same* host as the SPA → use a path-only base (e.g. `/api`).
+  // Avoids going back through the public origin on every fetch, which can trigger
+  // proxy / HTTPS / canonical redirect loops (Chrome: ERR_TOO_MANY_REDIRECTS).
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    try {
+      const parsed = new URL(trimmed);
+      const loc = typeof window !== 'undefined' ? window.location : null;
+      if (loc && loc.host && hostsMatchForSameSiteApi(parsed.host, loc.host)) {
+        let path = (parsed.pathname || '').replace(/\/+$/, '') || '/';
+        if (path === '/') {
+          return '/api';
+        }
+        return path.startsWith('/') ? path : `/${path}`;
+      }
+    } catch (_e) {
+      return trimmed;
+    }
+  }
+  return trimmed;
 }
 
 function loadUISettings() {
@@ -47,16 +76,38 @@ function applyVisualSettings(settings) {
 }
 
 let API_BASE = normalizeApiBase(loadUISettings().apiBaseUrl);
+(function migrateSameOriginApiBaseToPath() {
+  try {
+    const stored = loadUISettings();
+    const raw = stored?.apiBaseUrl;
+    if (raw == null || String(raw).trim() === '') return;
+    const trimmed = String(raw).trim().replace(/\/+$/, '');
+    const normalized = normalizeApiBase(trimmed);
+    if (normalized === trimmed) return;
+    saveUISettings({ ...stored, apiBaseUrl: normalized });
+    API_BASE = normalized;
+  } catch (_e) {}
+})();
 applyVisualSettings(loadUISettings());
 
 function getApiBaseCandidates() {
-  const candidates = [API_BASE, normalizeApiBase(loadUISettings().apiBaseUrl), DEFAULT_API_BASE];
-
+  const raw = [
+    API_BASE,
+    normalizeApiBase(loadUISettings().apiBaseUrl),
+    DEFAULT_API_BASE,
+  ];
   if (window.location.origin && window.location.origin !== 'null') {
-    candidates.push(`${window.location.origin}/api`);
+    raw.push(`${window.location.origin}/api`);
   }
-
-  return [...new Set(candidates.filter(Boolean).map((value) => normalizeApiBase(value)))];
+  const set = new Set(
+    raw
+      .filter(Boolean)
+      .map((value) => normalizeApiBase(value))
+  );
+  return [...set].sort((a, b) => {
+    const score = (x) => (String(x).startsWith('/') ? 0 : 1);
+    return score(a) - score(b);
+  });
 }
 
 async function fetchWithApiFallback(path, options = {}) {
@@ -1868,12 +1919,17 @@ async function loadTrainingHistoryFromDB({ silent = false } = {}) {
 }
 
 let osmPollTimer = null;
+/** Số lần poll OSM liên tiếp lỗi mạng (Failed to fetch) — dùng backoff trước khi bỏ cuộc. */
+let osmPollTransientFailures = 0;
+const OSM_POLL_BASE_MS = 4000;
+const OSM_POLL_MAX_TRANSIENT_FAILURES = 15;
 
 function clearOSMPollTimer() {
   if (osmPollTimer) {
     clearTimeout(osmPollTimer);
     osmPollTimer = null;
   }
+  osmPollTransientFailures = 0;
 }
 
 function setOSMRunButtons(isRunning) {
@@ -1902,6 +1958,7 @@ function setOSMRunButtons(isRunning) {
 
 async function fetchOSMSummary() {
   const response = await fetchWithApiFallback("/osm/summary", {
+    cache: "no-store",
     headers: getAuthHeader(),
   });
 
@@ -1925,6 +1982,7 @@ async function triggerOSMJob(options = {}) {
 
   const response = await fetchWithApiFallback("/osm/trigger", {
     method: "POST",
+    cache: "no-store",
     headers: {
       "Content-Type": "application/json",
       ...getAuthHeader(),
@@ -1951,6 +2009,7 @@ async function triggerOSMJob(options = {}) {
 
 async function fetchOSMJobStatus() {
   const response = await fetchWithApiFallback("/osm/job", {
+    cache: "no-store",
     headers: getAuthHeader(),
   });
 
@@ -2028,9 +2087,17 @@ function renderOSMJob(job) {
   adjustActivePageHeight();
 }
 
+function isLikelyTransientFetchFailure(err) {
+  if (!err) return false;
+  const msg = String(err.message || err);
+  if (err.name === "TypeError" && /failed to fetch|networkerror|load failed|aborted/i.test(msg)) return true;
+  return false;
+}
+
 async function pollOSMUntilDone() {
   try {
     const payload = await fetchOSMJobStatus();
+    osmPollTransientFailures = 0;
     const job = payload?.job;
     const status = job?.status || "idle";
 
@@ -2038,7 +2105,7 @@ async function pollOSMUntilDone() {
 
     if (status === "running") {
       setOSMRunButtons(true);
-      osmPollTimer = setTimeout(pollOSMUntilDone, 4000);
+      osmPollTimer = setTimeout(pollOSMUntilDone, OSM_POLL_BASE_MS);
       return;
     }
 
@@ -2059,10 +2126,35 @@ async function pollOSMUntilDone() {
       return;
     }
   } catch (error) {
+    osmPollTransientFailures += 1;
+    if (
+      isLikelyTransientFetchFailure(error) &&
+      osmPollTransientFailures <= OSM_POLL_MAX_TRANSIENT_FAILURES
+    ) {
+      const delay = Math.min(
+        30000,
+        Math.round(OSM_POLL_BASE_MS * Math.pow(1.28, osmPollTransientFailures - 1))
+      );
+      if (osmPollTransientFailures === 2 && showToast) {
+        showToast("Mất kết nối tạm thời tới API — vẫn thử lại theo dõi OSM job.", "warning");
+      }
+      console.warn(
+        `OSM poll retry ${osmPollTransientFailures}/${OSM_POLL_MAX_TRANSIENT_FAILURES} in ${delay}ms`,
+        error
+      );
+      setOSMRunButtons(true);
+      osmPollTimer = setTimeout(pollOSMUntilDone, delay);
+      return;
+    }
+
+    osmPollTransientFailures = 0;
     setOSMRunButtons(false);
     console.error("OSM poll error:", error);
     if (showToast) {
-      showToast("Không thể theo dõi trạng thái OSM job", "danger");
+      const hint = isLikelyTransientFetchFailure(error)
+        ? " (kiểm tra mạng / proxy; tắt extension chặn fetch nếu có)"
+        : "";
+      showToast(`Không thể theo dõi trạng thái OSM job${hint}`, "danger");
     }
   }
 }
@@ -4964,7 +5056,7 @@ async function initDataExplorer() {
       else if (dId) params.append('district_id', String(dId));
       else if (pId) params.append('province_id', String(pId));
 
-      const res = await fetch(`${API_BASE}/explorer/queue?${params}`, { headers: getAuthHeader() });
+      const res = await fetchWithApiFallback(`/explorer/queue?${params}`, { headers: getAuthHeader() });
       let data;
       try {
         data = await res.json();
@@ -5182,8 +5274,10 @@ function adjustActivePageHeight() {
   const activePage = document.querySelector('.page.active');
   if (!activePage) return;
 
-  // PreLabeler Labeling Suite: natural page scroll only.
-  if (activePage.id === 'prelabeler-cases') return;
+  // PreLabeler + experiment history: stacked cards / tables — natural page scroll only.
+  // Otherwise adjustActivePageHeight splits maxHeight across multiple .table-container and the
+  // lower block (e.g. Retrieval eval runs) ends up clipped or with maxHeight cleared (overflow).
+  if (activePage.id === 'prelabeler-cases' || activePage.id === 'experiment-history') return;
 
   const pageContent = document.getElementById('page-content');
   if (!pageContent) return;
@@ -7364,7 +7458,15 @@ async function initEvidenceView() {
   }
 
   function normalizeCaseForApi(c, idx = 0) {
-    const input = String((c && c.input != null) ? c.input : '');
+    let input = '';
+    const rawIn = c && c.input != null ? c.input : '';
+    if (typeof rawIn === 'string') {
+      input = rawIn;
+    } else if (rawIn && typeof rawIn === 'object' && !Array.isArray(rawIn)) {
+      input = String(rawIn.raw_address != null ? rawIn.raw_address : '').trim();
+    } else {
+      input = String(rawIn);
+    }
     const expectedRaw = Array.isArray(c?.expected) ? c.expected : [];
     const expected = expectedRaw
       .filter(e => e && typeof e === 'object')

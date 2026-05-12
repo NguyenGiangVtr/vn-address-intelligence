@@ -3103,7 +3103,15 @@ def run_prelabeler_cases(payload: PreLabelerLabelingRunPayload, current_user=Dep
 
     results = []
     for idx, case in enumerate(payload.cases):
-        expected = case.expected or []  # [{"label": "STR", "text": "Tam Bình"}]
+        raw_expected = case.expected or []
+        expected: List[Dict[str, str]] = []
+        for e in raw_expected:
+            if not isinstance(e, dict):
+                continue
+            lab = str(e.get("label") or "").strip().upper()
+            txt = str(e.get("text") or "").strip()
+            if lab and txt:
+                expected.append({"label": lab, "text": txt})
         strict_mode = bool(case.strict) if case.strict is not None else True
         case_id = str(case.id or f"case_{idx}")
         raw_address = case.input if isinstance(case.input, str) else ""
@@ -3121,46 +3129,56 @@ def run_prelabeler_cases(payload: PreLabelerLabelingRunPayload, current_user=Dep
                 district_name=district_name,
                 province_name=province_name,
             )
-        except Exception as e:
-            results.append({
-                "id": case_id, "passed": False, "error": str(e),
-                "actual": [], "expected": expected, "details": [], "unexpected": []
-            })
-            continue
+            actual: List[Dict[str, str]] = []
+            for p in predictions or []:
+                if not isinstance(p, dict):
+                    continue
+                v = p.get("value") or {}
+                if not isinstance(v, dict):
+                    continue
+                labs = v.get("labels") or []
+                lab0 = str(labs[0]).strip().upper() if labs else ""
+                actual.append({"label": lab0, "text": str(v.get("text") or "").strip()})
 
-        actual = []
-        for p in predictions:
-            v = p.get("value") or {}
-            labs = v.get("labels") or []
-            lab0 = str(labs[0]).strip().upper() if labs else ""
-            actual.append({"label": lab0, "text": str(v.get("text") or "").strip()})
-
-        validation = validate_expected_against_actual(
-            raw_address=raw_address,
-            expected=expected,
-            actual=actual,
-        )
-        unexpected_items = validation.get("unexpected", [])
-        validation_errors = validation.get("validation_errors", [])
-        details = validation.get("details", [])
-        passed = bool(validation.get("passed"))
-        if not strict_mode:
-            # Non-strict: chỉ kiểm tra expected có mặt hay không; bỏ qua unexpected.
-            unexpected_items = []
-            passed = (
-                not any(not bool(d.get("found")) for d in details)
-                and not any(str(err).startswith("missing_expected_admin:") for err in validation_errors)
-                and not any(str(err).startswith("admin_expected_missing_type:") for err in validation_errors)
+            validation = validate_expected_against_actual(
+                raw_address=raw_address,
+                expected=expected,
+                actual=actual,
             )
+            unexpected_items = validation.get("unexpected", [])
+            validation_errors = validation.get("validation_errors", [])
+            details = validation.get("details", [])
+            passed = bool(validation.get("passed"))
+            if not strict_mode:
+                # Non-strict: chỉ kiểm tra expected có mặt hay không; bỏ qua unexpected.
+                unexpected_items = []
+                passed = (
+                    not any(not bool(d.get("found")) for d in details)
+                    and not any(str(err).startswith("missing_expected_admin:") for err in validation_errors)
+                    and not any(str(err).startswith("admin_expected_missing_type:") for err in validation_errors)
+                )
 
-        results.append({
-            "id": case_id, "passed": passed,
-            "actual": actual, "expected": expected,
-            "details": details,
-            "unexpected": unexpected_items,
-            "validation_errors": validation_errors,
-            "strict": strict_mode,
-        })
+            results.append({
+                "id": case_id, "passed": passed,
+                "actual": actual, "expected": expected,
+                "details": details,
+                "unexpected": unexpected_items,
+                "validation_errors": validation_errors,
+                "strict": strict_mode,
+            })
+        except Exception as e:
+            logger.exception("prelabeler-cases/run failed for case_id=%s", case_id)
+            results.append({
+                "id": case_id,
+                "passed": False,
+                "error": str(e),
+                "actual": [],
+                "expected": expected,
+                "details": [],
+                "unexpected": [],
+                "validation_errors": [],
+                "strict": strict_mode,
+            })
 
     # Persist latest run result and time.
     try:

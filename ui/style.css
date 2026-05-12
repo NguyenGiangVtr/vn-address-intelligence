@@ -5640,6 +5640,11 @@ body.no-scroll {
   min-height: 0;
 }
 
+/* Experiment history: two stacked tables — same flex scroll contract as prelabeler (no per-table maxHeight fight). */
+#experiment-history.page.active {
+  min-height: 0;
+}
+
 #prelabeler-cases > .page-header {
   flex-wrap: wrap;
   align-items: flex-start;

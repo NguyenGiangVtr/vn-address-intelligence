@@ -232,6 +232,8 @@ def validate_expected_against_actual(
             all_passed = False
 
     for exp in expected:
+        if not isinstance(exp, dict):
+            continue
         label = str(exp.get("label") or "").upper()
         text = str(exp.get("text") or "").strip()
         if label in ("WDS", "DST", "PRO"):

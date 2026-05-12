@@ -50,6 +50,7 @@ import hashlib
 import io
 import json
 import random
+import time
 import re
 import secrets
 import subprocess
@@ -665,6 +666,12 @@ def cmd_eval(run_id: int | None) -> int:
             ):
                 if k in qm:
                     metrics[k] = qm[k]
+            if metrics.get("n_latency_samples", 0) > 0:
+                metrics["latency_ms_semantics"] = (
+                    "prq.supa_benchmark_specimen.latency_ms: pipeline values if present in import CSV; "
+                    "otherwise per-row wall time for UPDATE pred_standardized during import-preds "
+                    "(see reports/supa_benchmark_last_import_manifest.json → latency_ms_fill)."
+                )
             row_dicts = [dict(s) for s in scored]
             by_st = compute_metrics_by_stratum(row_dicts)
             if by_st:
@@ -849,8 +856,17 @@ def cmd_import_preds(
     csv_path: Path,
     source_note: str,
     dry_run: bool,
+    measure_row_latency: bool = True,
 ) -> int:
-    """CSV columns: either (specimen_id, pred_standardized) or (run_id, local_idx, pred_standardized)."""
+    """CSV columns: either (specimen_id, pred_standardized) or (run_id, local_idx, pred_standardized).
+
+    When the CSV has no ``latency_ms`` column (or a row leaves it blank) and the DB has
+    ``prq.supa_benchmark_specimen.latency_ms`` (migration 20260513), each successful
+    ``UPDATE`` of ``pred_standardized`` is timed; the wall-clock milliseconds for that
+    statement are stored as ``latency_ms`` for that specimen. This records **DB write /
+    round-trip** latency for ingest, not model inference — use CSV ``latency_ms`` when
+    your pipeline exports per-address inference time.
+    """
     with csv_path.open(encoding="utf-8-sig", newline="") as f:
         raw = f.read()
 
@@ -939,12 +955,28 @@ def cmd_import_preds(
         WHERE run_id = :rid AND local_idx = :lidx
         """
     )
+    upd_lat_only_sid = text(
+        "UPDATE prq.supa_benchmark_specimen SET latency_ms = :lat WHERE id = :sid"
+    )
+    upd_lat_only_pair = text(
+        "UPDATE prq.supa_benchmark_specimen SET latency_ms = :lat "
+        "WHERE run_id = :rid AND local_idx = :lidx"
+    )
 
     rows_read = 0
     rows_updated = 0
+    n_latency_from_csv = 0
+    n_latency_from_import_wall_ms = 0
     errors: list[str] = []
 
     with engine.begin() as conn:
+        lat_supported = False
+        try:
+            conn.execute(text("SELECT latency_ms FROM prq.supa_benchmark_specimen LIMIT 1"))
+            lat_supported = True
+        except ProgrammingError:
+            pass
+
         for row in reader:
             rows_read += 1
             pred_val = (row.get(pred_key) or "").strip()
@@ -958,7 +990,8 @@ def cmd_import_preds(
                         lat_val = float(raw_lat)
                     except ValueError:
                         errors.append(f"row {rows_read}: bad latency {raw_lat!r}")
-            use_lat = lat_val is not None
+                        continue
+            use_csv_lat = lat_val is not None
             try:
                 if has_sid:
                     sid_s = (row.get(fn["specimen_id"]) or "").strip()
@@ -967,32 +1000,92 @@ def cmd_import_preds(
                     sid = int(sid_s)
                     if dry_run:
                         rows_updated += 1
+                        if use_csv_lat:
+                            n_latency_from_csv += 1
+                        elif measure_row_latency and lat_supported:
+                            n_latency_from_import_wall_ms += 1
                     else:
-                        if use_lat:
+                        if use_csv_lat and lat_supported:
                             r = conn.execute(
                                 upd_by_sid_lat, {"pred": pred_val, "lat": lat_val, "sid": sid}
                             )
-                        else:
+                            rows_updated += int(r.rowcount or 0)
+                            if int(r.rowcount or 0) > 0:
+                                n_latency_from_csv += 1
+                        elif use_csv_lat and not lat_supported:
                             r = conn.execute(upd_by_sid, {"pred": pred_val, "sid": sid})
-                        rows_updated += int(r.rowcount or 0)
+                            rows_updated += int(r.rowcount or 0)
+                            errors.append(
+                                f"row {rows_read}: CSV latency present but DB has no latency_ms column "
+                                f"(apply migration 20260513_supa_stratified_specimen_and_ath_summary.sql)"
+                            )
+                        else:
+                            t0 = time.perf_counter()
+                            r = conn.execute(upd_by_sid, {"pred": pred_val, "sid": sid})
+                            t1 = time.perf_counter()
+                            measured_ms = (t1 - t0) * 1000.0
+                            rows_updated += int(r.rowcount or 0)
+                            if (
+                                lat_supported
+                                and measure_row_latency
+                                and int(r.rowcount or 0) > 0
+                            ):
+                                conn.execute(
+                                    upd_lat_only_sid,
+                                    {"lat": round(measured_ms, 6), "sid": sid},
+                                )
+                                n_latency_from_import_wall_ms += 1
                 else:
                     rid = int((row.get(fn["run_id"]) or "").strip())
                     lidx = int((row.get(fn["local_idx"]) or "").strip())
                     if dry_run:
                         rows_updated += 1
+                        if use_csv_lat:
+                            n_latency_from_csv += 1
+                        elif measure_row_latency and lat_supported:
+                            n_latency_from_import_wall_ms += 1
                     else:
-                        if use_lat:
+                        if use_csv_lat and lat_supported:
                             r = conn.execute(
                                 upd_by_pair_lat,
                                 {"pred": pred_val, "lat": lat_val, "rid": rid, "lidx": lidx},
                             )
-                        else:
+                            rows_updated += int(r.rowcount or 0)
+                            if int(r.rowcount or 0) > 0:
+                                n_latency_from_csv += 1
+                        elif use_csv_lat and not lat_supported:
                             r = conn.execute(
                                 upd_by_pair, {"pred": pred_val, "rid": rid, "lidx": lidx}
                             )
-                        rows_updated += int(r.rowcount or 0)
+                            rows_updated += int(r.rowcount or 0)
+                            errors.append(
+                                f"row {rows_read}: CSV latency present but DB has no latency_ms column "
+                                f"(apply migration 20260513_supa_stratified_specimen_and_ath_summary.sql)"
+                            )
+                        else:
+                            t0 = time.perf_counter()
+                            r = conn.execute(
+                                upd_by_pair, {"pred": pred_val, "rid": rid, "lidx": lidx}
+                            )
+                            t1 = time.perf_counter()
+                            measured_ms = (t1 - t0) * 1000.0
+                            rows_updated += int(r.rowcount or 0)
+                            if (
+                                lat_supported
+                                and measure_row_latency
+                                and int(r.rowcount or 0) > 0
+                            ):
+                                conn.execute(
+                                    upd_lat_only_pair,
+                                    {
+                                        "lat": round(measured_ms, 6),
+                                        "rid": rid,
+                                        "lidx": lidx,
+                                    },
+                                )
+                                n_latency_from_import_wall_ms += 1
             except ProgrammingError as pe:
-                if use_lat:
+                if use_csv_lat:
                     errors.append(f"row {rows_read}: latency_ms column missing? Apply migration ({pe})")
                 else:
                     errors.append(f"row {rows_read}: {pe}")
@@ -1000,6 +1093,16 @@ def cmd_import_preds(
                 errors.append(f"row {rows_read}: {e}")
 
     iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    if dry_run:
+        latency_fill_summary = "dry_run"
+    elif n_latency_from_csv > 0 and n_latency_from_import_wall_ms > 0:
+        latency_fill_summary = "mixed_csv_and_import_wall_ms"
+    elif n_latency_from_csv > 0:
+        latency_fill_summary = "csv_column"
+    elif n_latency_from_import_wall_ms > 0:
+        latency_fill_summary = "import_pred_update_wall_ms_per_row"
+    else:
+        latency_fill_summary = "none"
     manifest = {
         "utc_iso": iso,
         "csv_path": str(csv_path.resolve()),
@@ -1008,6 +1111,18 @@ def cmd_import_preds(
         "rows_updated": rows_updated,
         "source_note": source_note,
         "git_commit_at_import": _git_head(),
+        "latency_ms_fill": {
+            "summary": latency_fill_summary,
+            "rows_with_csv_latency": n_latency_from_csv,
+            "rows_with_measured_import_wall_ms": n_latency_from_import_wall_ms,
+            "measure_row_latency": bool(measure_row_latency),
+            "db_latency_ms_column": lat_supported,
+            "semantics_note": (
+                "import_pred_update_wall_ms_per_row: latency_ms = time for UPDATE pred_standardized "
+                "(DB round-trip), not model inference. Export latency_ms from your normalizer CSV for "
+                "pipeline timings."
+            ),
+        },
         "errors": errors[:50],
     }
     LAST_IMPORT_MANIFEST.parent.mkdir(parents=True, exist_ok=True)
@@ -1239,10 +1354,13 @@ def cmd_aggregate_supa(
         "em_v1_pct": _stat_summary(em1),
         "rollup_metrics": rollup_metrics,
         "runs": run_rows,
-        "note": (
-            "Rollup from eval_metrics_json per run. Oracle demo (--preds-demo-ref-v2) yields em_v2 ~ 100. "
-            "F1/latency keys require eval after metrics upgrade + migration 20260513."
-        ),
+            "note": (
+                "Rollup from eval_metrics_json per run. Oracle demo (--preds-demo-ref-v2) yields em_v2 ~ 100. "
+                "F1 keys require eval after metrics upgrade + migration 20260513. "
+                "latency_ms / throughput: filled from CSV column when present; otherwise import-preds records "
+                "per-row UPDATE wall time (see reports/supa_benchmark_last_import_manifest.json latency_ms_fill) "
+                "unless --no-measured-latency."
+            ),
     }
 
     out_json.parent.mkdir(parents=True, exist_ok=True)
@@ -1756,6 +1874,14 @@ def main() -> int:
         help="Provenance for the paper, e.g. production_pipeline commit=... config=... GPU=...",
     )
     p_imp.add_argument("--dry-run", action="store_true")
+    p_imp.add_argument(
+        "--no-measured-latency",
+        action="store_true",
+        help=(
+            "When CSV has no latency column (or blank cells), do not fill latency_ms from timed "
+            "pred UPDATE (restores pre-20260514 behavior; eval rollup latency n stays 0 unless CSV supplies it)."
+        ),
+    )
 
     p_tx = sub.add_parser("export-tex", help="vnai-supa-generated-metrics.tex from metrics JSON")
     p_tx.add_argument("--metrics-json", type=str, default=str(LAST_METRICS))
@@ -1968,6 +2094,7 @@ def main() -> int:
             Path(ns.csv).resolve(),
             source_note=ns.source_note,
             dry_run=ns.dry_run,
+            measure_row_latency=not bool(getattr(ns, "no_measured_latency", False)),
         )
     if ns.cmd == "export-tex":
         return cmd_export_tex(Path(ns.metrics_json).resolve(), Path(ns.out).resolve())
