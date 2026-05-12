@@ -1,17 +1,17 @@
 # SUPA-Bench — chạy demo / kiểm thử lặp lại (PowerShell)
-# Repo root: chứa thư mục `app/`
 #
 # Bước 0 (một lần trên DB, không cần psql):
 #   python scripts/sql/apply_sql_file.py scripts/migration/20260209_prq_supa_benchmark_tables.sql
 #
 # Tham số mẫu:
-#   .\scripts\experiments\run_supa_benchmark.ps1 -N 500 -Seed 7
+#   .\scripts\experiments\run_supa_benchmark.ps1 -N 500                    # cohort ngẫu nhiên mỗi lần (không truyền -Seed)
+#   .\scripts\experiments\run_supa_benchmark.ps1 -N 500 -Seed 7          # cohort cố định (tái lập)
 #   .\scripts\experiments\run_supa_benchmark.ps1 -SkipExtract -RunId 12 -PredsCsv reports\supa_preds.csv -SourceNote "demo"
 #   .\scripts\experiments\run_supa_benchmark.ps1 -SkipExtract -RunId 1 -DemoPredsCopyRef   # oracle smoke (--preds-demo-ref-v2)
 
 param(
     [int] $N = 1000,
-    [int] $Seed = 42,
+    [Nullable[int]] $Seed = $null,
     [string] $NoiseProfile = "SUP-1.0.0",
     [switch] $SkipExtract,
     [int] $RunId = 0,
@@ -23,20 +23,24 @@ param(
 
 $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
-if (-not (Test-Path (Join-Path $Root "app"))) {
-    $Root = (Get-Location).Path
+if (-not (Test-Path (Join-Path $Root "scripts\experiments\supa_benchmark.py"))) {
+    if (-not (Test-Path (Join-Path $Root "src\app"))) {
+        $Root = (Get-Location).Path
+    }
 }
 Set-Location $Root
-$env:PYTHONPATH = "."
+$env:PYTHONPATH = ".;$Root\src"
 
 $supa = "scripts/experiments/supa_benchmark.py"
 $argsList = @(
     "workflow",
     "--n", "$N",
-    "--seed", "$Seed",
     "--noise-profile", $NoiseProfile,
     "--specimens-out", $SpecimensOut
 )
+if ($null -ne $Seed) {
+    $argsList += @("--seed", "$Seed")
+}
 
 if ($SkipExtract) {
     $argsList += @("--skip-extract")

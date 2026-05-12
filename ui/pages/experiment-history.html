@@ -1,0 +1,65 @@
+<!-- ══════ PAGE: EXPERIMENT HISTORY (SUPA + retrieval) ══════ -->
+<div class="page" id="experiment-history">
+    <div class="page-header">
+        <div class="flex justify-between items-center">
+            <div>
+                <h2>Lịch sử thực nghiệm</h2>
+                <p>SUPA-Bench theo <code>run_id</code> và các lần đo retrieval (R@k, MRR) — dữ liệu từ API</p>
+            </div>
+            <button class="btn btn-sm btn-primary" type="button" id="btn-exp-history-refresh">
+                <i class="fa-solid fa-sync"></i> Tải lại
+            </button>
+        </div>
+    </div>
+
+    <div class="card mb-20">
+        <div class="card-header">
+            <span class="card-title">SUPA runs</span>
+        </div>
+        <div class="card-body">
+            <p class="text-secondary mb-16" id="supa-runs-summary">—</p>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>run_id</th>
+                            <th>created_at</th>
+                            <th>seed</th>
+                            <th>n_realized</th>
+                            <th>EM@v2 %</th>
+                            <th>EM@v1 %</th>
+                            <th>noise</th>
+                        </tr>
+                    </thead>
+                    <tbody id="supa-runs-table-body">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">Retrieval eval runs</span>
+        </div>
+        <div class="card-body">
+            <p class="text-secondary mb-16" id="retrieval-runs-summary">—</p>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>id</th>
+                            <th>created_at</th>
+                            <th>model</th>
+                            <th>limit_pairs</th>
+                            <th>top_k</th>
+                            <th>top1 / MRR</th>
+                        </tr>
+                    </thead>
+                    <tbody id="retrieval-runs-table-body">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

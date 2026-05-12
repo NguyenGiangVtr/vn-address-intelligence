@@ -76,7 +76,7 @@ async function fetchWithApiFallback(path, options = {}) {
 
 const PAGES = [
   "overview", "parser", "batch", "training", "label-studio",
-  "experiments", "explorer", "osm-enrichment", "lookup", "boundary-visualization",
+  "experiments", "experiment-history", "explorer", "osm-enrichment", "lookup", "boundary-visualization",
   "admin-units", "nso-sync", "settings", "evidence", "label-registry", "prelabeler-cases",
   "documentation",
 ];
@@ -236,6 +236,11 @@ const PAGE_META = {
     title: 'So sánh mô hình - Vietnamese Address Intelligence',
     description: 'So sánh hiệu suất và độ chính xác của các mô hình AI khác nhau',
     keywords: 'model comparison, so sánh mô hình, benchmarking, evaluation'
+  },
+  'experiment-history': {
+    title: 'Lịch sử thực nghiệm - Vietnamese Address Intelligence',
+    description: 'Lịch sử chạy SUPA-Bench và đánh giá retrieval (R@k, MRR) từ cơ sở dữ liệu',
+    keywords: 'SUPA, benchmark history, retrieval metrics, experiment runs'
   },
   'label-registry': {
     title: 'Danh sách nhãn NER - Vietnamese Address Intelligence',
@@ -401,6 +406,11 @@ function initializePageSpecific(pageId) {
       break;
     case 'documentation':
       initDocumentationHub();
+      break;
+    case 'experiment-history':
+      if (typeof window.__vnaiExperimentHistoryRefresh === 'function') {
+        window.__vnaiExperimentHistoryRefresh();
+      }
       break;
     // Add more page-specific initialization as needed
   }
@@ -1120,6 +1130,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   safeInit("initMappingV3", initMappingV3);
   safeInit("initIntelligenceChart", initIntelligenceChart);
   safeInit("initModelBenchmarkUI", initModelBenchmarkUI);
+  safeInit("initExperimentHistoryPage", initExperimentHistoryPage);
   safeInit("initEvidenceView", initEvidenceView);
   safeInit("initTrainingHub", initTrainingHub);
   safeInit("initBoundaryVisualizationUI", initBoundaryVisualizationUI);
@@ -1700,6 +1711,120 @@ function initModelBenchmarkUI() {
   renderLatest({ silent: true });
 }
 
+function initExperimentHistoryPage() {
+  const root = document.getElementById("experiment-history");
+  if (!root) return;
+
+  const tbodySupa = document.getElementById("supa-runs-table-body");
+  const tbodyRet = document.getElementById("retrieval-runs-table-body");
+  const sumSupa = document.getElementById("supa-runs-summary");
+  const sumRet = document.getElementById("retrieval-runs-summary");
+  if (!tbodySupa || !tbodyRet) return;
+
+  const fmt = (x) => (x == null || Number.isNaN(x) ? "—" : Number(x).toFixed(4));
+  const esc = (s) => String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+
+  const stats = (values) => {
+    const xs = values.filter((v) => typeof v === "number" && !Number.isNaN(v));
+    if (!xs.length) return null;
+    const mean = xs.reduce((a, b) => a + b, 0) / xs.length;
+    const variance = xs.reduce((a, b) => a + (b - mean) ** 2, 0) / xs.length;
+    const std = Math.sqrt(variance);
+    return { mean, std, min: Math.min(...xs), max: Math.max(...xs), n: xs.length };
+  };
+
+  const load = async () => {
+    let supaRuns = [];
+    let retRuns = [];
+    try {
+      const [r1, r2] = await Promise.all([
+        fetchWithApiFallback("/experiments/supa-runs", { headers: getAuthHeader() }),
+        fetchWithApiFallback("/experiments/retrieval-runs", { headers: getAuthHeader() }),
+      ]);
+      if (!r1.ok) throw new Error(`supa-runs HTTP ${r1.status}`);
+      if (!r2.ok) throw new Error(`retrieval-runs HTTP ${r2.status}`);
+      const j1 = await r1.json();
+      const j2 = await r2.json();
+      supaRuns = Array.isArray(j1.runs) ? j1.runs : [];
+      retRuns = Array.isArray(j2.runs) ? j2.runs : [];
+    } catch (err) {
+      console.error("Experiment history fetch:", err);
+      if (sumSupa) sumSupa.textContent = `Lỗi tải SUPA runs: ${err.message || err}`;
+      if (sumRet) sumRet.textContent = `Lỗi tải retrieval runs: ${err.message || err}`;
+      tbodySupa.innerHTML = "";
+      tbodyRet.innerHTML = "";
+      if (showToast) showToast("Không tải được lịch sử thực nghiệm (kiểm tra DB migration và đăng nhập).", "danger");
+      return;
+    }
+
+    tbodySupa.innerHTML = supaRuns.map((row) => {
+      const m = row.eval_metrics_json && typeof row.eval_metrics_json === "object" ? row.eval_metrics_json : {};
+      const em2 = m.em_v2_pct;
+      const em1 = m.em_v1_pct;
+      return `<tr>
+        <td>${esc(row.id)}</td>
+        <td>${esc(row.created_at)}</td>
+        <td>${esc(row.rng_seed)}</td>
+        <td>${esc(row.n_realized)}</td>
+        <td>${em2 == null ? "—" : esc(em2)}</td>
+        <td>${em1 == null ? "—" : esc(em1)}</td>
+        <td>${esc(row.noise_profile_id)}</td>
+      </tr>`;
+    }).join("");
+
+    const em2s = supaRuns.map((r) => {
+      const m = r.eval_metrics_json;
+      return m && typeof m.em_v2_pct === "number" ? m.em_v2_pct : null;
+    });
+    const st = stats(em2s.filter((x) => x != null));
+    if (sumSupa) {
+      sumSupa.textContent = st
+        ? `SUPA: ${supaRuns.length} run(s) trong cửa sổ — EM@v2 mean=${st.mean.toFixed(4)} σ=${st.std.toFixed(4)} min=${st.min.toFixed(4)} max=${st.max.toFixed(4)} (n=${st.n})`
+        : `SUPA: ${supaRuns.length} run(s) — chưa có EM@v2 trong eval_metrics_json (chạy eval sau import preds, hoặc migration).`;
+    }
+
+    tbodyRet.innerHTML = retRuns.map((row) => {
+      const m = row.metrics_json && typeof row.metrics_json === "object" ? row.metrics_json : {};
+      const top1 = m.top1_exact_rate;
+      const mrr = m.mrr_at_top_k;
+      return `<tr>
+        <td>${esc(row.id)}</td>
+        <td>${esc(row.created_at)}</td>
+        <td title="${esc(row.model_name)}">${esc((row.model_name || "").slice(0, 36))}${(row.model_name || "").length > 36 ? "…" : ""}</td>
+        <td>${esc(row.limit_pairs)}</td>
+        <td>${esc(row.top_k_max)}</td>
+        <td>${fmt(top1)} / ${fmt(mrr)}</td>
+      </tr>`;
+    }).join("");
+
+    if (sumRet) {
+      const mrrs = retRuns.map((r) => {
+        const m = r.metrics_json;
+        return m && typeof m.mrr_at_top_k === "number" ? m.mrr_at_top_k : null;
+      }).filter((x) => x != null);
+      const stR = stats(mrrs);
+      sumRet.textContent = stR
+        ? `Retrieval: ${retRuns.length} run(s) — MRR mean=${stR.mean.toFixed(4)} σ=${stR.std.toFixed(4)} (n=${stR.n})`
+        : `Retrieval: ${retRuns.length} run(s) — chưa có bản ghi ath.retrieval_eval_run (chạy evaluate_retriever --persist-db sau migration).`;
+    }
+
+    adjustActivePageHeight?.();
+  };
+
+  window.__vnaiExperimentHistoryRefresh = load;
+
+  const btn = document.getElementById("btn-exp-history-refresh");
+  if (btn && !btn.dataset.vnaiBound) {
+    btn.dataset.vnaiBound = "1";
+    btn.addEventListener("click", () => load());
+  }
+
+  load();
+}
+
 function populateTrainingHistory() {
   const tbody = document.getElementById("training-history-body");
   if (!tbody) return;
@@ -2084,6 +2209,7 @@ const PAGE_GROUP_MAP = {
   'label-studio': 'ai-bench',
   'training': 'ai-bench',
   'experiments': 'ai-bench',
+  'experiment-history': 'ai-bench',
   'label-registry': 'ai-bench',
   'prelabeler-cases': 'ai-bench',
   'documentation': 'ai-bench',
@@ -5745,7 +5871,7 @@ async function initEvidenceView() {
       console.warn('[PreLabeler] ensureNerLabelsLoaded:', e);
     }
     try {
-      const res = await fetch(`${API_BASE}/config/ner-labels`);
+      const res = await fetchWithApiFallback('/config/ner-labels');
       if (!res.ok) throw new Error(String(res.status));
       const data = await res.json();
       nerLabelsOrdered = applyNerLabelOrder(data.labels);
@@ -6217,10 +6343,11 @@ async function initEvidenceView() {
     }
 
     try {
-      const resp = await fetch(`${API_BASE}/prelabeler-cases`, { headers: authHdr() });
-      if (!resp.ok) throw new Error(resp.status);
+      const resp = await fetchWithApiFallback('/prelabeler-cases', { headers: authHdr() });
+      if (!resp.ok) throw new Error(String(resp.status));
       const raw = await resp.json();
-      cases = raw.map(c => {
+      const rows = Array.isArray(raw) ? raw : [];
+      cases = rows.map(c => {
         const sugRaw = c?.suggested;
         let sugArr =
           sugRaw == null ? [] : typeof sugRaw === 'string'
@@ -6267,7 +6394,11 @@ async function initEvidenceView() {
       }
     } catch (e) {
       console.warn('PreLabeler labeling: cannot load from DB, trying localStorage', e);
-      cases = JSON.parse(localStorage.getItem('plt_cases') || '[]');
+      try {
+        cases = JSON.parse(localStorage.getItem('plt_cases') || '[]');
+      } catch (_parseErr) {
+        cases = [];
+      }
     }
     cases = (cases || []).map(c => ({
       ...c,
@@ -6423,7 +6554,7 @@ async function initEvidenceView() {
     }
 
     try {
-      const res = await fetch(`${API_BASE}/prelabeler-cases/random-predict`, {
+      const res = await fetchWithApiFallback('/prelabeler-cases/random-predict', {
         headers: authHdr(),
       });
       if (res.status === 401) {
@@ -6592,7 +6723,7 @@ async function initEvidenceView() {
     clearTimeout(saveTimer);
     saveTimer = setTimeout(async () => {
       try {
-        await fetch(`${API_BASE}/prelabeler-cases`, {
+        await fetchWithApiFallback('/prelabeler-cases', {
           method: 'POST',
           headers: authHdr(),
           body: JSON.stringify(cases),
@@ -6743,7 +6874,7 @@ async function initEvidenceView() {
       try {
         const ctrl = new AbortController();
         pltTypingSuggestAbort = ctrl;
-        const res = await fetch(`${API_BASE}/parser/analyze?model=prelabeler`, {
+        const res = await fetchWithApiFallback('/parser/analyze?model=prelabeler', {
           method: 'POST',
           headers: authHdr(),
           body: JSON.stringify({ raw_address: latestText }),
@@ -6963,7 +7094,7 @@ async function initEvidenceView() {
       btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
     }
     try {
-      const res = await fetch(`${API_BASE}/prelabeler-cases/run`, {
+      const res = await fetchWithApiFallback('/prelabeler-cases/run', {
         method: 'POST',
         headers: authHdr(),
         body: JSON.stringify({ cases: [normalizeCaseForApi(c, 0)] }),
@@ -7000,7 +7131,7 @@ async function initEvidenceView() {
       btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
     }
     try {
-      const res = await fetch(`${API_BASE}/prelabeler-cases/run`, {
+      const res = await fetchWithApiFallback('/prelabeler-cases/run', {
         method: 'POST',
         headers: authHdr(),
         body: JSON.stringify({ cases: cases.map((c, i) => normalizeCaseForApi(c, i)) }),
@@ -7120,7 +7251,7 @@ async function initEvidenceView() {
       btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang xuất…';
     }
     try {
-      const res = await fetch(`${API_BASE}/prelabeler-cases/export-label-studio`, {
+      const res = await fetchWithApiFallback('/prelabeler-cases/export-label-studio', {
         method: 'POST',
         headers: authHdr(),
         body: JSON.stringify({ limit }),
@@ -7162,7 +7293,12 @@ async function initEvidenceView() {
     const reader = new FileReader();
     reader.onload = async e => {
       try {
-        cases = JSON.parse(e.target.result);
+        const parsed = JSON.parse(e.target.result);
+        if (!Array.isArray(parsed)) {
+          window.showToast?.('Tệp JSON phải là một mảng các mẫu', 'warning');
+          return;
+        }
+        cases = parsed;
         await pltSave();
         renderList();
         updateSummary();
@@ -7503,13 +7639,9 @@ async function initEvidenceView() {
 
   pltBindDelegatedEvents();
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-      void pltInit();
-    });
-  } else {
-    setTimeout(() => {
-      void pltInit();
-    }, 50);
-  }
+  // Không gọi pltInit ở đây: listener DOMContentLoaded của app chính là async và await
+  // ensureNerLabelsLoaded/loadPages — pltInit chạy song song có thể xong trước khi
+  // `pages/prelabeler-cases.html` được inject, khiến renderList() thoát sớm (#plt-list
+  // chưa có) và UI kẹt / trống. Luồng đúng: `initializePageSpecific('prelabeler-cases')`
+  // sau khi loadPages + navigate (kể cả hash #/prelabeler-cases).
 })();

@@ -1,14 +1,18 @@
 #!/usr/bin/env bash
-# SUPA-Bench — repeatable demo (bash)
+# SUPA-Bench — repeatable demo (bash). Omit SEED for random cohort each run; set SEED=42 to pin.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$ROOT"
-export PYTHONPATH="."
+export PYTHONPATH="${ROOT}:${ROOT}/src"
 
 N="${N:-1000}"
-SEED="${SEED:-42}"
 NOISE="${NOISE_PROFILE:-SUP-1.0.0}"
 SPEC_OUT="${SPECIMENS_OUT:-reports/supa_workflow_specimens_latest.csv}"
+
+SEED_ARGS=()
+if [[ -n "${SEED:-}" ]]; then
+  SEED_ARGS=(--seed "$SEED")
+fi
 
 SKIP=()
 RUN=()
@@ -28,6 +32,7 @@ fi
 
 echo ">>> python scripts/experiments/supa_benchmark.py workflow ..."
 python scripts/experiments/supa_benchmark.py workflow \
-  --n "$N" --seed "$SEED" --noise-profile "$NOISE" \
+  --n "$N" --noise-profile "$NOISE" \
   --specimens-out "$SPEC_OUT" \
+  "${SEED_ARGS[@]}" \
   "${SKIP[@]}" "${RUN[@]}" "${PRED[@]}"
