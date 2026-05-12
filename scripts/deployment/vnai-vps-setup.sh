@@ -191,7 +191,8 @@ autostart=true
 autorestart=true
 stderr_logfile=/var/log/vnai/api-error.log
 stdout_logfile=/var/log/vnai/api-access.log
-environment=PATH="/opt/vnai/.venv/bin:%(ENV_PATH)s"
+; Repo dùng package app dưới src/app — PYTHONPATH bắt buộc để trùng với start.py / máy dev
+environment=PYTHONPATH="/opt/vnai/src",PATH="/opt/vnai/.venv/bin:%(ENV_PATH)s"
 SUPERVISOR
 
 supervisorctl reread 2>/dev/null || true

@@ -57,9 +57,14 @@ rsync -avz --progress \
 # ── 3. Remote: install deps + restart ──
 echo "[3/5] Installing dependencies on VPS..."
 ssh "$REMOTE" << 'REMOTE_CMD'
+    set -e
     cd /opt/vnai
     source .venv/bin/activate
-    pip install -r requirements.txt -q
+    if [ -f requirements-prod.txt ]; then
+        pip install -r requirements-prod.txt -q
+    else
+        pip install -r requirements.txt -q
+    fi
     pip install uvicorn gunicorn seqeval -q 2>/dev/null
 REMOTE_CMD
 
