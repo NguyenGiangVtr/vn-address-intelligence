@@ -1,14 +1,19 @@
 <!-- ══════ PAGE: EXPERIMENT HISTORY (SUPA + retrieval) ══════ -->
 <div class="page" id="experiment-history">
     <div class="page-header">
-        <div class="flex justify-between items-center">
+            <div class="flex justify-between items-center flex-wrap gap-12">
             <div>
                 <h2>Lịch sử thực nghiệm</h2>
-                <p>SUPA-Bench theo <code>run_id</code> và các lần đo retrieval (R@k, MRR) — dữ liệu từ API</p>
+                <p>SUPA-Bench theo <code>run_id</code> và các lần đo retrieval (R@k, MRR) — dữ liệu từ API. Nhấp một dòng SUPA để xem chi tiết.</p>
             </div>
-            <button class="btn btn-sm btn-primary" type="button" id="btn-exp-history-refresh">
-                <i class="fa-solid fa-sync"></i> Tải lại
-            </button>
+            <div class="flex gap-8 flex-wrap">
+                <button class="btn btn-sm btn-outline" type="button" id="btn-open-supa-console">
+                    <i class="fa-solid fa-flask"></i> Bảng điều khiển SUPA-Bench
+                </button>
+                <button class="btn btn-sm btn-primary" type="button" id="btn-exp-history-refresh">
+                    <i class="fa-solid fa-sync"></i> Tải lại
+                </button>
+            </div>
         </div>
     </div>
 
@@ -59,6 +64,23 @@
                     <tbody id="retrieval-runs-table-body">
                     </tbody>
                 </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-supa-run-detail" class="modal-overlay" style="display:none;">
+        <div class="modal-card" style="max-width:800px;width:95%;">
+            <div class="modal-header flex justify-between items-center">
+                <h3 id="modal-supa-run-title">SUPA run</h3>
+                <button type="button" class="btn btn-ghost btn-sm close-supa-modal" aria-label="Đóng">&times;</button>
+            </div>
+            <div class="modal-body p-16">
+                <p class="text-secondary mb-12" id="modal-supa-run-meta"></p>
+                <pre id="modal-supa-run-json" style="max-height:360px;overflow:auto;font-size:11px;background:var(--bg-elevated);padding:12px;border-radius:8px;"></pre>
+            </div>
+            <div class="modal-footer flex justify-end gap-8 p-16">
+                <button type="button" class="btn btn-outline btn-sm close-supa-modal">Đóng</button>
+                <button type="button" class="btn btn-primary btn-sm" id="btn-modal-supa-goto-console">Mở bảng điều khiển SUPA-Bench</button>
             </div>
         </div>
     </div>

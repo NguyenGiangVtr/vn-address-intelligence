@@ -41,6 +41,38 @@ def _parser_mgte_device() -> str:
     return "auto"
 
 
+def _supa_benchmark_ui_actions() -> bool:
+    """Bật POST/subprocess SUPA-Bench từ API (UI Console). Mặc định tắt."""
+    return os.getenv("SUPA_BENCHMARK_UI_ACTIONS", "").strip().lower() in ("1", "true", "yes", "on")
+
+
+def _supa_benchmark_cli_timeout_sec() -> float:
+    raw = os.getenv("SUPA_BENCHMARK_CLI_TIMEOUT_SEC", "").strip()
+    if not raw:
+        return 7200.0
+    try:
+        return max(30.0, float(raw))
+    except ValueError:
+        return 7200.0
+
+
+def _supa_benchmark_max_replicate_runs() -> int:
+    raw = os.getenv("SUPA_BENCHMARK_MAX_REPLICATE_RUNS", "").strip()
+    if not raw:
+        return 50
+    try:
+        return max(1, min(int(raw), 500))
+    except ValueError:
+        return 50
+
+
+def _supa_publication_baseline_json() -> str:
+    return os.getenv(
+        "SUPA_PUBLICATION_BASELINE_JSON",
+        "reports/supa_benchmark_aggregate_stratified_k5_oracle_run56-60_20260513.json",
+    ).strip()
+
+
 def _jwt_access_token_expire_minutes() -> int:
     """Thời hạn JWT (phút). Mặc định 7 ngày; có thể giảm/tăng qua JWT_ACCESS_TOKEN_EXPIRE_MINUTES."""
     raw = os.getenv("JWT_ACCESS_TOKEN_EXPIRE_MINUTES", "").strip()
@@ -111,6 +143,12 @@ class Config:
     # Parser / Siamese: số địa chỉ tối đa load từ DB khi encode corpus
     PARSER_CORPUS_MAX_ADDRESSES = _parser_corpus_max_addresses()
     PARSER_MGTE_DEVICE = _parser_mgte_device()
+
+    # SUPA-Bench UI (subprocess → scripts/experiments/supa_benchmark.py)
+    SUPA_BENCHMARK_UI_ACTIONS = _supa_benchmark_ui_actions()
+    SUPA_BENCHMARK_CLI_TIMEOUT_SEC = _supa_benchmark_cli_timeout_sec()
+    SUPA_BENCHMARK_MAX_REPLICATE_RUNS = _supa_benchmark_max_replicate_runs()
+    SUPA_PUBLICATION_BASELINE_JSON = _supa_publication_baseline_json()
 
     # SMTP Settings
     SMTP_HOST = os.getenv("SMTP_HOST", "smtp.gmail.com")

@@ -127,7 +127,7 @@ async function fetchWithApiFallback(path, options = {}) {
 
 const PAGES = [
   "overview", "parser", "batch", "training", "label-studio",
-  "experiments", "experiment-history", "explorer", "osm-enrichment", "lookup", "boundary-visualization",
+  "experiments", "experiment-history", "supa-bench", "explorer", "osm-enrichment", "lookup", "boundary-visualization",
   "admin-units", "nso-sync", "settings", "evidence", "label-registry", "prelabeler-cases",
   "documentation",
 ];
@@ -292,6 +292,11 @@ const PAGE_META = {
     title: 'Lịch sử thực nghiệm - Vietnamese Address Intelligence',
     description: 'Lịch sử chạy SUPA-Bench và đánh giá retrieval (R@k, MRR) từ cơ sở dữ liệu',
     keywords: 'SUPA, benchmark history, retrieval metrics, experiment runs'
+  },
+  'supa-bench': {
+    title: 'Bảng điều khiển SUPA-Bench (Console) - Vietnamese Address Intelligence',
+    description: 'Runbook SUPA-Bench trên giao diện: trích mẫu, đánh giá, tổng hợp; đối chiếu chỉ số với báo cáo (Ch. 9.5)',
+    keywords: 'SUPA, benchmark, runbook, aggregate, stratified, console'
   },
   'label-registry': {
     title: 'Danh sách nhãn NER - Vietnamese Address Intelligence',
@@ -461,6 +466,11 @@ function initializePageSpecific(pageId) {
     case 'experiment-history':
       if (typeof window.__vnaiExperimentHistoryRefresh === 'function') {
         window.__vnaiExperimentHistoryRefresh();
+      }
+      break;
+    case 'supa-bench':
+      if (typeof window.__vnaiSupaBenchRefresh === 'function') {
+        window.__vnaiSupaBenchRefresh();
       }
       break;
     // Add more page-specific initialization as needed
@@ -1182,6 +1192,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   safeInit("initIntelligenceChart", initIntelligenceChart);
   safeInit("initModelBenchmarkUI", initModelBenchmarkUI);
   safeInit("initExperimentHistoryPage", initExperimentHistoryPage);
+  safeInit("initSupaBenchPage", initSupaBenchPage);
   safeInit("initEvidenceView", initEvidenceView);
   safeInit("initTrainingHub", initTrainingHub);
   safeInit("initBoundaryVisualizationUI", initBoundaryVisualizationUI);
@@ -1815,7 +1826,7 @@ function initExperimentHistoryPage() {
       const m = row.eval_metrics_json && typeof row.eval_metrics_json === "object" ? row.eval_metrics_json : {};
       const em2 = m.em_v2_pct;
       const em1 = m.em_v1_pct;
-      return `<tr>
+      return `<tr data-run-id="${esc(row.id)}" class="supa-run-row" style="cursor:pointer" title="Xem chi tiết">
         <td>${esc(row.id)}</td>
         <td>${esc(row.created_at)}</td>
         <td>${esc(row.rng_seed)}</td>
@@ -1867,6 +1878,60 @@ function initExperimentHistoryPage() {
 
   window.__vnaiExperimentHistoryRefresh = load;
 
+  const openModal = (runId) => {
+    const overlay = document.getElementById("modal-supa-run-detail");
+    const title = document.getElementById("modal-supa-run-title");
+    const meta = document.getElementById("modal-supa-run-meta");
+    const pre = document.getElementById("modal-supa-run-json");
+    if (!overlay || !pre) return;
+    title.textContent = `SUPA run #${runId}`;
+    meta.textContent = "Đang tải…";
+    pre.textContent = "";
+    overlay.style.display = "flex";
+    fetchWithApiFallback(`/experiments/supa-runs/${encodeURIComponent(runId)}`, { headers: getAuthHeader() })
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
+      .then((j) => {
+        const run = j.run || {};
+        meta.textContent = `n_requested=${run.n_requested ?? "—"} n_realized=${run.n_realized ?? "—"} seed=${run.rng_seed ?? "—"} noise=${run.noise_profile_id ?? "—"} specimens=${run.specimen_count ?? "—"}`;
+        pre.textContent = JSON.stringify(j, null, 2);
+      })
+      .catch((e) => {
+        meta.textContent = String(e.message || e);
+        pre.textContent = "";
+      });
+  };
+
+  const closeModal = () => {
+    const overlay = document.getElementById("modal-supa-run-detail");
+    if (overlay) overlay.style.display = "none";
+  };
+
+  if (!root.dataset.vnaiSupaHistoryUi) {
+    root.dataset.vnaiSupaHistoryUi = "1";
+    tbodySupa.addEventListener("click", (ev) => {
+      const tr = ev.target.closest("tr[data-run-id]");
+      if (!tr) return;
+      const id = tr.getAttribute("data-run-id");
+      if (id) openModal(id);
+    });
+    document.getElementById("btn-open-supa-console")?.addEventListener("click", () => {
+      navigateToPage("supa-bench", true);
+    });
+    document.getElementById("btn-modal-supa-goto-console")?.addEventListener("click", () => {
+      closeModal();
+      navigateToPage("supa-bench", true);
+    });
+    root.querySelectorAll(".close-supa-modal").forEach((el) => {
+      el.addEventListener("click", closeModal);
+    });
+    document.getElementById("modal-supa-run-detail")?.addEventListener("click", (ev) => {
+      if (ev.target && ev.target.id === "modal-supa-run-detail") closeModal();
+    });
+  }
+
   const btn = document.getElementById("btn-exp-history-refresh");
   if (btn && !btn.dataset.vnaiBound) {
     btn.dataset.vnaiBound = "1";
@@ -1874,6 +1939,356 @@ function initExperimentHistoryPage() {
   }
 
   load();
+}
+
+function initSupaBenchPage() {
+  const root = document.getElementById("supa-bench");
+  if (!root) return;
+
+  const logEl = document.getElementById("supa-bench-console-log");
+  const noteEl = document.getElementById("supa-compare-note");
+  const tbodyCmp = document.getElementById("supa-compare-tbody");
+
+  const SUPA_ACTION_LABEL_VI = {
+    extract: "Trích mẫu (extract)",
+    "extract-stratified": "Trích phân tầng (extract-stratified)",
+    eval: "Đánh giá (eval)",
+    "export-specimens": "Xuất mẫu CSV (export-specimens)",
+    "export-tex": "Xuất macro LaTeX (export-tex)",
+    workflow: "Luồng gộp (workflow)",
+    "make-demo-preds": "Sinh CSV minh hoạ (make-demo-preds)",
+    replicate: "Lặp nhiều vòng (replicate)",
+    "replicate-stratified": "Lặp phân tầng (replicate-stratified)",
+    "import-preds": "Nhập dự đoán (import-preds)",
+  };
+  const supaActionVi = (p) => SUPA_ACTION_LABEL_VI[p] || p;
+
+  const supaAttrTitle = (s) => String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;");
+  const supaQ = (t) => `<span class="vnai-term-hint" title="${supaAttrTitle(t)}">?</span>`;
+
+  const log = (msg, obj) => {
+    if (!logEl) return;
+    const t = new Date().toISOString();
+    let chunk = `[${t}] ${msg}\n`;
+    if (obj !== undefined) {
+      try {
+        chunk += `${typeof obj === "string" ? obj : JSON.stringify(obj, null, 2)}\n`;
+      } catch (_e) {
+        chunk += `${String(obj)}\n`;
+      }
+    }
+    logEl.textContent += chunk;
+    logEl.scrollTop = logEl.scrollHeight;
+  };
+
+  const supaFmtAggMean = (payload, key) => {
+    if (!payload || typeof payload !== "object") return "—";
+    const roll = payload.rollup_metrics && payload.rollup_metrics[key];
+    const top = payload[key];
+    const blk = roll || top;
+    if (!blk || typeof blk !== "object") return "—";
+    if (blk.n === 0 || blk.mean == null || Number.isNaN(blk.mean)) return "—";
+    const pctKeys = ["em_v2_pct", "em_v1_pct", "f1_duong_pct", "f1_phuong_pct", "f1_quan_pct", "f1_tinh_pct"];
+    const suf = pctKeys.includes(key) ? "%" : key.includes("throughput") ? " addr/s" : key.includes("latency") ? " ms" : "";
+    const sd = blk.stdev != null && typeof blk.stdev === "number" ? ` σ=${blk.stdev.toFixed(3)}` : "";
+    return `${Number(blk.mean).toFixed(2)}${suf}${sd} (n=${blk.n})`;
+  };
+
+  const compareRows = [
+    {
+      labelHtml: `Độ trùng khớp chuỗi v2, trung bình gộp (EM@v2, rollup mean) ${supaQ("Exact match so khớp tuyệt đối sau chuẩn hoá NFC/trim/whitespace giữa pred và ref_address_v2; rollup mean là trung bình trên các run trong batch.")}`,
+      key: "em_v2_pct",
+    },
+    {
+      labelHtml: `Độ trùng khớp chuỗi v1 (EM@v1, rollup mean) ${supaQ("So pred (chuẩn hậu cải cách) với ref_address_v1 — thường thấp hơn EM@v2 khi diễn ngôn tiền/hậu cải cách khác nhau.")}`,
+      key: "em_v1_pct",
+    },
+    {
+      labelHtml: `F1 thành phần đường (F1 đường, f1_duong_pct) ${supaQ("F1 theo token/chuỗi thành phần đường so với ref v2 sau bóc tách địa chỉ.")}`,
+      key: "f1_duong_pct",
+    },
+    {
+      labelHtml: `F1 phường/xã (f1_phuong_pct) ${supaQ("F1 thành phần cấp phường/xã so với tham chiếu v2.")}`,
+      key: "f1_phuong_pct",
+    },
+    {
+      labelHtml: `F1 quận/huyện (f1_quan_pct) ${supaQ("F1 thành phần cấp quận/huyện/TP trực thuộc.")}`,
+      key: "f1_quan_pct",
+    },
+    {
+      labelHtml: `F1 tỉnh/thành (f1_tinh_pct) ${supaQ("F1 thành phần cấp tỉnh/thành phố.")}`,
+      key: "f1_tinh_pct",
+    },
+    {
+      labelHtml: `Độ trễ trung bình (mean latency, ms) ${supaQ("Trung bình latency_ms trên các mẫu có giá trị hợp lệ sau import; nên lấy từ pipeline (CSV), không thay bằng đo ingest DB khi báo cáo hiệu năng.")}`,
+      key: "latency_mean_ms",
+    },
+    {
+      labelHtml: `Độ trễ P95 (P95 latency, ms) ${supaQ("Phân vị thứ 95 của latency_ms trên cùng tập mẫu có đo.")}`,
+      key: "latency_p95_ms",
+    },
+    {
+      labelHtml: `Thông lượng (throughput, địa chỉ/giây) ${supaQ("Suy ra từ độ trễ trung bình khi có dữ liệu (addr/s); định nghĩa chi tiết trong app/ai/metrics.py.")}`,
+      key: "throughput_addr_per_s",
+    },
+  ];
+
+  const renderCompare = (baselinePayload, athPayload) => {
+    if (!tbodyCmp) return;
+    tbodyCmp.innerHTML = compareRows.map((row) => `
+      <tr>
+        <td>${row.labelHtml}</td>
+        <td>${supaFmtAggMean(baselinePayload, row.key)}</td>
+        <td>${supaFmtAggMean(athPayload, row.key)}</td>
+      </tr>
+    `).join("");
+  };
+
+  const loadCompare = async () => {
+    if (noteEl) noteEl.textContent = "Đang tải đường cơ sở (baseline) và bản tổng hợp mới nhất trên ath…";
+    let basePayload = null;
+    let athPayload = null;
+    try {
+      const [r1, r2] = await Promise.all([
+        fetchWithApiFallback("/experiments/supa-publication-baseline", { headers: getAuthHeader() }),
+        fetchWithApiFallback("/experiments/supa-stratified-summaries?limit=1", { headers: getAuthHeader() }),
+      ]);
+      const j1 = r1.ok ? await r1.json() : null;
+      const j2 = r2.ok ? await r2.json() : null;
+      basePayload = j1 && j1.payload ? j1.payload : null;
+      const sums = j2 && Array.isArray(j2.summaries) ? j2.summaries : [];
+      athPayload = sums.length && sums[0].metrics_json ? sums[0].metrics_json : null;
+      if (noteEl) {
+        const bmsg = j1 && j1.message ? j1.message : (basePayload ? `Baseline: ${j1.path}` : "Chưa có file baseline (baseline JSON)");
+        const amid = sums[0]
+          ? `DB: id=${sums[0].id}, khoảng run_id ${sums[0].run_id_min}–${sums[0].run_id_max}`
+          : "Chưa có bản ghi trong ath.supa_stratified_eval_summary";
+        noteEl.textContent = `${bmsg} · ${amid}`;
+      }
+      renderCompare(basePayload, athPayload);
+    } catch (e) {
+      if (noteEl) noteEl.textContent = String(e.message || e);
+      renderCompare(null, null);
+    }
+    adjustActivePageHeight?.();
+  };
+
+  const postAction = async (path, body) => {
+    const r = await fetchWithApiFallback(`/experiments/supa-actions/${path}`, {
+      method: "POST",
+      headers: { ...getAuthHeader(), "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      log(`ERROR ${path} HTTP ${r.status}`, j.detail != null ? j.detail : j);
+      if (showToast) showToast(`${supaActionVi(path)} — lỗi HTTP ${r.status}`, "danger");
+      return;
+    }
+    log(path, j);
+    if (showToast) {
+      showToast(
+        `${supaActionVi(path)} — hoàn tất (mã thoát exit=${j.exit_code})`,
+        j.ok ? "success" : "warning",
+      );
+    }
+  };
+
+  if (!root.dataset.vnaiSupaBenchBound) {
+    root.dataset.vnaiSupaBenchBound = "1";
+
+    document.getElementById("supa-btn-clear-log")?.addEventListener("click", () => {
+      if (logEl) logEl.textContent = "";
+    });
+    document.getElementById("supa-btn-refresh-compare")?.addEventListener("click", () => loadCompare());
+    document.getElementById("supa-btn-aggregate-preview")?.addEventListener("click", async () => {
+      const minV = document.getElementById("supa-agg-min")?.value;
+      const maxV = document.getElementById("supa-agg-max")?.value;
+      const lastN = document.getElementById("supa-agg-lastn")?.value;
+      const persist = document.getElementById("supa-agg-persist")?.checked;
+      const body = { persist_ath: !!persist, methodology_version: "strat-v1" };
+      if (minV && maxV) {
+        body.min_run_id = parseInt(minV, 10);
+        body.max_run_id = parseInt(maxV, 10);
+      } else if (lastN) {
+        body.last_n = parseInt(lastN, 10);
+      } else {
+        body.last_n = 50;
+      }
+      const r = await fetchWithApiFallback("/experiments/supa-aggregate-preview", {
+        method: "POST",
+        headers: { ...getAuthHeader(), "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const j = await r.json().catch(() => ({}));
+      const out = document.getElementById("supa-aggregate-out");
+      if (!r.ok) {
+        log("aggregate-preview error", j.detail != null ? j.detail : j);
+        if (showToast) showToast(`Xem trước tổng hợp (aggregate-preview) — lỗi ${r.status}`, "danger");
+        return;
+      }
+      if (out) {
+        out.style.display = "block";
+        out.textContent = JSON.stringify(j, null, 2);
+      }
+      log("aggregate-preview", { exit_code: j.exit_code, stderr: j.stderr });
+      if (showToast) {
+        showToast(
+          `Xem trước tổng hợp (aggregate-preview) — exit=${j.exit_code}`,
+          j.exit_code === 0 ? "success" : "warning",
+        );
+      }
+    });
+
+    root.querySelectorAll("[data-supa-action]").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const action = btn.getAttribute("data-supa-action");
+        if (!action) return;
+        if (action === "extract") {
+          const n = parseInt(document.getElementById("supa-extract-n")?.value || "0", 10);
+          const seedRaw = document.getElementById("supa-extract-seed")?.value;
+          const body = {
+            n,
+            noise_profile: document.getElementById("supa-extract-noise")?.value || undefined,
+            notes: document.getElementById("supa-extract-notes")?.value || undefined,
+          };
+          if (seedRaw) body.seed = parseInt(seedRaw, 10);
+          await postAction("extract", body);
+        } else if (action === "extract-stratified") {
+          const body = {
+            n: parseInt(document.getElementById("supa-exs-n")?.value || "2000", 10),
+            strat_version: document.getElementById("supa-exs-ver")?.value || "strat-v1",
+            max_pool_rows: parseInt(document.getElementById("supa-exs-pool")?.value || "100000", 10),
+          };
+          const sx = document.getElementById("supa-exs-seed")?.value;
+          if (sx) body.seed = parseInt(sx, 10);
+          await postAction("extract-stratified", body);
+        } else if (action === "eval") {
+          const rid = document.getElementById("supa-eval-rid")?.value;
+          const body = {};
+          if (rid) body.run_id = parseInt(rid, 10);
+          await postAction("eval", body);
+        } else if (action === "export-specimens") {
+          const body = {
+            out_relative: document.getElementById("supa-exp-out")?.value || "reports/supa_ui_export_specimens.csv",
+          };
+          const rid = document.getElementById("supa-exp-rid")?.value;
+          if (rid) body.run_id = parseInt(rid, 10);
+          await postAction("export-specimens", body);
+        } else if (action === "export-tex") {
+          const mj = document.getElementById("supa-tex-mj")?.value;
+          const body = {
+            out_relative: document.getElementById("supa-tex-out")?.value || "docs/scientific-report/vnai-supa-generated-metrics.tex",
+          };
+          if (mj) body.metrics_json_relative = mj;
+          await postAction("export-tex", body);
+        } else if (action === "workflow") {
+          const body = {
+            n: parseInt(document.getElementById("supa-wf-n")?.value || "1000", 10),
+            noise_profile: document.getElementById("supa-wf-noise")?.value || undefined,
+            specimens_out_relative: document.getElementById("supa-wf-spec")?.value || "reports/supa_workflow_specimens_latest.csv",
+            skip_extract: document.getElementById("supa-wf-skip")?.checked || false,
+            preds_demo_ref_v2: document.getElementById("supa-wf-oracle")?.checked || false,
+          };
+          const ws = document.getElementById("supa-wf-seed")?.value;
+          if (ws) body.seed = parseInt(ws, 10);
+          const wn = document.getElementById("supa-wf-srcnote")?.value;
+          if (wn) body.source_note = wn;
+          const pr = document.getElementById("supa-wf-preds")?.value;
+          if (pr) body.preds_relative = pr;
+          const wr = document.getElementById("supa-wf-rid")?.value;
+          if (wr) body.run_id = parseInt(wr, 10);
+          await postAction("workflow", body);
+        } else if (action === "make-demo-preds") {
+          await postAction("make-demo-preds", {
+            from_relative: document.getElementById("supa-demo-from")?.value,
+            out_relative: document.getElementById("supa-demo-out")?.value,
+            column: document.getElementById("supa-demo-col")?.value || "ref_address_v2",
+          });
+        } else if (action === "replicate") {
+          await postAction("replicate", {
+            n_runs: parseInt(document.getElementById("supa-rep-nruns")?.value || "1", 10),
+            mode: document.getElementById("supa-rep-mode")?.value || "sweep-seed",
+            n: parseInt(document.getElementById("supa-rep-n")?.value || "500", 10),
+            preds_demo_ref_v2: document.getElementById("supa-rep-oracle")?.checked || false,
+          });
+        } else if (action === "replicate-stratified") {
+          await postAction("replicate-stratified", {
+            k_runs: parseInt(document.getElementById("supa-rst-k")?.value || "2", 10),
+            n: parseInt(document.getElementById("supa-rst-n")?.value || "500", 10),
+            preds_demo_ref_v2: document.getElementById("supa-rst-oracle")?.checked || false,
+          });
+        }
+      });
+    });
+
+    document.getElementById("supa-btn-import-preds")?.addEventListener("click", async () => {
+      const fileEl = document.getElementById("supa-import-file");
+      const note = document.getElementById("supa-import-note")?.value;
+      const f = fileEl && fileEl.files && fileEl.files[0];
+      if (!f || !note) {
+        if (showToast) showToast("Chọn file CSV và điền ghi chú nguồn (source_note)", "danger");
+        return;
+      }
+      const fd = new FormData();
+      fd.append("file", f);
+      fd.append("source_note", note);
+      if (document.getElementById("supa-import-dry")?.checked) fd.append("dry_run", "true");
+      if (document.getElementById("supa-import-nolat")?.checked) fd.append("no_measured_latency", "true");
+      const r = await fetchWithApiFallback("/experiments/supa-actions/import-preds", {
+        method: "POST",
+        headers: { ...getAuthHeader() },
+        body: fd,
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        log("import-preds error", j.detail != null ? j.detail : j);
+        if (showToast) showToast(`${supaActionVi("import-preds")} — lỗi HTTP ${r.status}`, "danger");
+        return;
+      }
+      log("import-preds", j);
+      if (showToast) {
+        showToast(
+          `${supaActionVi("import-preds")} — hoàn tất (exit=${j.exit_code})`,
+          j.ok ? "success" : "warning",
+        );
+      }
+    });
+
+    document.getElementById("supa-btn-download-specimens")?.addEventListener("click", async () => {
+      const rid = document.getElementById("supa-exp-rid")?.value;
+      if (!rid) {
+        if (showToast) showToast("Nhập ID lần chạy (run_id) để tải CSV mẫu", "danger");
+        return;
+      }
+      const r = await fetchWithApiFallback(`/experiments/supa-runs/${encodeURIComponent(rid)}/export-specimens-csv`, {
+        headers: getAuthHeader(),
+      });
+      if (!r.ok) {
+        const j = await r.json().catch(() => ({}));
+        log("download specimens error", j.detail != null ? j.detail : j);
+        if (showToast) showToast(`Tải CSV mẫu — lỗi HTTP ${r.status}`, "danger");
+        return;
+      }
+      const blob = await r.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `supa_specimens_run_${rid}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      if (showToast) showToast("Đã tải file CSV mẫu (export-specimens)", "success");
+    });
+  }
+
+  window.__vnaiSupaBenchRefresh = () => {
+    loadCompare();
+  };
+
+  loadCompare();
 }
 
 function populateTrainingHistory() {
@@ -2302,6 +2717,7 @@ const PAGE_GROUP_MAP = {
   'training': 'ai-bench',
   'experiments': 'ai-bench',
   'experiment-history': 'ai-bench',
+  'supa-bench': 'ai-bench',
   'label-registry': 'ai-bench',
   'prelabeler-cases': 'ai-bench',
   'documentation': 'ai-bench',
@@ -5277,7 +5693,7 @@ function adjustActivePageHeight() {
   // PreLabeler + experiment history: stacked cards / tables — natural page scroll only.
   // Otherwise adjustActivePageHeight splits maxHeight across multiple .table-container and the
   // lower block (e.g. Retrieval eval runs) ends up clipped or with maxHeight cleared (overflow).
-  if (activePage.id === 'prelabeler-cases' || activePage.id === 'experiment-history') return;
+  if (activePage.id === 'prelabeler-cases' || activePage.id === 'experiment-history' || activePage.id === 'supa-bench') return;
 
   const pageContent = document.getElementById('page-content');
   if (!pageContent) return;
@@ -5294,7 +5710,9 @@ function adjustActivePageHeight() {
       '#osm-job-log',
       '#nso-sync-logs',
       '.lookup-results-table',
-      '.ner-output'
+      '.ner-output',
+      '#supa-bench-console-log',
+      '#supa-aggregate-out'
     ];
 
     const scrollableElements = activePage.querySelectorAll(scrollableSelectors.join(', '));

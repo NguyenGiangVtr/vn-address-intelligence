@@ -53,6 +53,7 @@ from app.api.boundary import router as boundary_router
 from app.api.spatial import router as spatial_router
 from app.api.repo_docs import router as repo_docs_router
 from app.api.experiments_history import router as experiments_history_router
+from app.api.supa_benchmark_ui import router as supa_benchmark_ui_router
 from typing import Any, Dict, List, Optional, Union
 import json
 
@@ -3259,6 +3260,7 @@ def download_prelabeler_export_file(name: str, current_user=Depends(get_current_
 api_router.include_router(boundary_router, prefix="/boundary")
 api_router.include_router(spatial_router)
 api_router.include_router(experiments_history_router, prefix="/experiments")
+api_router.include_router(supa_benchmark_ui_router, prefix="/experiments")
 app.include_router(repo_docs_router, prefix="/api")
 app.include_router(api_router, prefix="/api") # Match frontend API_BASE
 app.include_router(api_router_v1) # Support /api/v1/*

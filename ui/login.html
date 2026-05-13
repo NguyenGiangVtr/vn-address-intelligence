@@ -70,6 +70,65 @@
             border: 1px solid rgba(248, 113, 113, 0.2);
             text-align: center;
         }
+        /* Register / login: full-width controls on narrow viewports */
+        .login-mode-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+        .login-mode-row .btn {
+            flex: 1;
+            width: 100%;
+            padding: 10px 12px;
+        }
+        .login-email-row {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            width: 100%;
+        }
+        .login-email-row .form-input {
+            width: 100%;
+            min-width: 0;
+            box-sizing: border-box;
+        }
+        .login-email-row #send-code-btn {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 10px 12px;
+            white-space: normal;
+        }
+        #login-form .form-group .form-input {
+            width: 100%;
+            box-sizing: border-box;
+        }
+        @media (min-width: 520px) {
+            .login-email-row {
+                flex-direction: row;
+                align-items: stretch;
+            }
+            .login-email-row .form-input {
+                flex: 1;
+            }
+            .login-email-row #send-code-btn {
+                width: auto;
+                flex-shrink: 0;
+                white-space: nowrap;
+            }
+        }
+        @media (max-width: 519px) {
+            body {
+                padding: 12px;
+                box-sizing: border-box;
+                align-items: flex-start;
+            }
+            .login-card {
+                max-width: none;
+                width: 100%;
+                padding: 24px 16px;
+                box-sizing: border-box;
+            }
+        }
     </style>
 </head>
 <body>
@@ -82,9 +141,9 @@
 
         <div id="error-msg" class="login-error">Invalid username or password</div>
 
-        <div style="display:flex; gap:10px; margin-bottom:16px;">
-            <button type="button" id="mode-login" class="btn btn-primary" style="flex:1; padding:10px 12px;">Sign In</button>
-            <button type="button" id="mode-register" class="btn btn-outline" style="flex:1; padding:10px 12px;">Register</button>
+        <div class="login-mode-row">
+            <button type="button" id="mode-login" class="btn btn-primary">Sign In</button>
+            <button type="button" id="mode-register" class="btn btn-outline">Register</button>
         </div>
 
         <form id="login-form">
@@ -98,9 +157,9 @@
             </div>
             <div class="form-group" id="email-group" style="display:none;">
                 <label class="form-label">Email</label>
-                <div style="display:flex; gap:8px;">
-                    <input type="email" id="email" class="form-input" placeholder="example@email.com" style="flex:1;">
-                    <button type="button" id="send-code-btn" class="btn btn-outline" style="padding: 0 12px; font-size: 12px; white-space: nowrap;">Send Code</button>
+                <div class="login-email-row">
+                    <input type="email" id="email" class="form-input" placeholder="example@email.com" autocomplete="email">
+                    <button type="button" id="send-code-btn" class="btn btn-outline">Send Code</button>
                 </div>
             </div>
             <div class="form-group" id="code-group" style="display:none;">
@@ -144,6 +203,20 @@
         const sendCodeBtn = document.getElementById('send-code-btn');
         const emailInput = document.getElementById('email');
         const codeInput = document.getElementById('verification-code');
+
+        /** FastAPI: detail may be string, object, or validation array */
+        function formatApiDetail(detail) {
+            if (detail == null || detail === '') return '';
+            if (typeof detail === 'string') return detail;
+            if (Array.isArray(detail)) {
+                return detail
+                    .map((e) => (e && typeof e.msg === 'string' ? e.msg : JSON.stringify(e)))
+                    .filter(Boolean)
+                    .join(' ');
+            }
+            if (typeof detail === 'object' && typeof detail.msg === 'string') return detail.msg;
+            return String(detail);
+        }
 
         function setMode(nextMode) {
             mode = nextMode;
@@ -191,8 +264,9 @@
                         }
                     }, 1000);
                 } else {
-                    const err = await response.json();
-                    errorEl.textContent = err.detail || 'Failed to send code';
+                    const err = await response.json().catch(() => ({}));
+                    const msg = formatApiDetail(err.detail) || 'Failed to send code';
+                    errorEl.textContent = msg;
                     errorEl.style.display = 'block';
                     sendCodeBtn.disabled = false;
                     sendCodeBtn.textContent = 'Send Code';
@@ -210,9 +284,9 @@
 
         document.getElementById('login-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const user = document.getElementById('username').value;
+            const user = (document.getElementById('username').value || '').trim();
             const pass = document.getElementById('password').value;
-            const displayName = displayNameInput.value;
+            const displayName = (displayNameInput.value || '').trim();
             
             errorEl.style.display = 'none';
 
@@ -220,12 +294,22 @@
                 const endpoint = mode === 'register' ? '/register' : '/login';
                 let body;
                 if (mode === 'register') {
+                    if (!(emailInput.value || '').trim()) {
+                        errorEl.textContent = 'Please enter your email';
+                        errorEl.style.display = 'block';
+                        return;
+                    }
+                    if (!(codeInput.value || '').trim()) {
+                        errorEl.textContent = 'Please enter the verification code';
+                        errorEl.style.display = 'block';
+                        return;
+                    }
                     body = JSON.stringify({ 
                         username: user, 
                         email: (emailInput.value || '').trim(),
                         password: pass, 
-                        verification_code: codeInput.value,
-                        display_name: displayName 
+                        verification_code: (codeInput.value || '').trim(),
+                        display_name: displayName || undefined
                     });
                 } else {
                     body = new URLSearchParams({ username: user, password: pass });
@@ -246,7 +330,9 @@
                 } else {
                     const errData = await response.json().catch(() => ({}));
                     console.error('Auth failed:', errData);
-                    errorEl.textContent = errData.detail || (mode === 'register' ? 'Registration failed' : 'Invalid username or password');
+                    errorEl.textContent =
+                        formatApiDetail(errData.detail) ||
+                        (mode === 'register' ? 'Registration failed' : 'Invalid username or password');
                     errorEl.style.display = 'block';
                 }
             } catch (err) {
