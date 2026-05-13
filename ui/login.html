@@ -222,7 +222,7 @@
                 if (mode === 'register') {
                     body = JSON.stringify({ 
                         username: user, 
-                        email: emailInput.value,
+                        email: (emailInput.value || '').trim(),
                         password: pass, 
                         verification_code: codeInput.value,
                         display_name: displayName 

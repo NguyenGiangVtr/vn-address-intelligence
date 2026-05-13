@@ -38,10 +38,21 @@ def send_verification_email(to_email: str, code: str):
         """
         msg.attach(MIMEText(body, 'html'))
 
-        with smtplib.SMTP(Config.SMTP_HOST, Config.SMTP_PORT) as server:
-            server.starttls()
-            server.login(Config.SMTP_USER, Config.SMTP_PASS)
-            server.send_message(msg)
+        # Envelope (MAIL FROM / RCPT TO) explicit so recipients match the registrant;
+        # some servers otherwise only deliver to the authenticated mailbox.
+        envelope_from = Config.SMTP_USER
+        envelope_to = [to_email]
+
+        # 465 = implicit TLS (SMTPS); 587 and most others = plain then STARTTLS
+        if int(Config.SMTP_PORT) == 465:
+            with smtplib.SMTP_SSL(Config.SMTP_HOST, Config.SMTP_PORT) as server:
+                server.login(Config.SMTP_USER, Config.SMTP_PASS)
+                server.send_message(msg, from_addr=envelope_from, to_addrs=envelope_to)
+        else:
+            with smtplib.SMTP(Config.SMTP_HOST, Config.SMTP_PORT) as server:
+                server.starttls()
+                server.login(Config.SMTP_USER, Config.SMTP_PASS)
+                server.send_message(msg, from_addr=envelope_from, to_addrs=envelope_to)
         
         logger.info(f"Verification email sent to {to_email}")
         return True
