@@ -1945,29 +1945,57 @@ function initSupaBenchPage() {
   const root = document.getElementById("supa-bench");
   if (!root) return;
 
-  const logEl = document.getElementById("supa-bench-console-log");
-  const noteEl = document.getElementById("supa-compare-note");
-  const tbodyCmp = document.getElementById("supa-compare-tbody");
+  const $ = (id) => document.getElementById(id);
 
-  const SUPA_ACTION_LABEL_VI = {
-    extract: "Trích mẫu (extract)",
-    "extract-stratified": "Trích phân tầng (extract-stratified)",
-    eval: "Đánh giá (eval)",
-    "export-specimens": "Xuất mẫu CSV (export-specimens)",
-    "export-tex": "Xuất macro LaTeX (export-tex)",
-    workflow: "Luồng gộp (workflow)",
-    "make-demo-preds": "Sinh CSV minh hoạ (make-demo-preds)",
-    replicate: "Lặp nhiều vòng (replicate)",
-    "replicate-stratified": "Lặp phân tầng (replicate-stratified)",
-    "import-preds": "Nhập dự đoán (import-preds)",
+  const logEl = $("supa-bench-console-log");
+  const noteEl = $("supa-compare-note");
+  const tbodyCmp = $("supa-compare-tbody");
+  const tbodySpec = $("supa-specimens-tbody");
+  const runSelect = $("supa-run-select");
+  const runMeta = $("supa-run-meta");
+  const specHint = $("supa-specimens-hint");
+  const specPageLabel = $("supa-spec-page-label");
+  const metricsHero = $("supa-metrics-hero");
+  const metricsGrid = $("supa-metrics-grid");
+
+  let runs = [];
+  let selectedRunId = null;
+  let runDetail = null;
+  let specimenOffset = 0;
+  let specimenLimit = 50;
+  let specimenTotal = 0;
+  let hasPredEver = false;
+
+  const SUPA_EVAL_LABEL_VI = {
+    em_v2_pct: "Khớp hoàn toàn với địa chỉ chuẩn (diễn đạt hiện tại)",
+    em_v1_pct: "Khớp hoàn toàn với cách ghi cũ (trước cải cách)",
+    f1_duong_pct: "Độ đúng phần tên đường",
+    f1_phuong_pct: "Độ đúng phần phường / xã",
+    f1_quan_pct: "Độ đúng phần quận / huyện",
+    f1_tinh_pct: "Độ đúng phần tỉnh / thành phố",
+    latency_mean_ms: "Độ trễ trung bình (ms)",
+    latency_p95_ms: "Độ trễ mức 95% (ms)",
+    latency_p99_ms: "Độ trễ mức 99% (ms)",
+    throughput_addr_per_s: "Số địa chỉ xử lý mỗi giây (ước lượng)",
   };
-  const supaActionVi = (p) => SUPA_ACTION_LABEL_VI[p] || p;
 
-  const supaAttrTitle = (s) => String(s)
+  const compareRows = [
+    { label: "Khớp hoàn toàn với địa chỉ chuẩn mới (trung bình gộp)", key: "em_v2_pct" },
+    { label: "Khớp hoàn toàn với địa chỉ chuẩn cũ (trung bình gộp)", key: "em_v1_pct" },
+    { label: "Độ đúng phần tên đường (trung bình gộp)", key: "f1_duong_pct" },
+    { label: "Độ đúng phần phường / xã (trung bình gộp)", key: "f1_phuong_pct" },
+    { label: "Độ đúng phần quận / huyện (trung bình gộp)", key: "f1_quan_pct" },
+    { label: "Độ đúng phần tỉnh / thành phố (trung bình gộp)", key: "f1_tinh_pct" },
+    { label: "Độ trễ trung bình (ms)", key: "latency_mean_ms" },
+    { label: "Độ trễ mức 95% (ms)", key: "latency_p95_ms" },
+    { label: "Số địa chỉ xử lý mỗi giây", key: "throughput_addr_per_s" },
+  ];
+
+  const escapeHtml = (s) => String(s ?? "")
     .replace(/&/g, "&amp;")
-    .replace(/"/g, "&quot;")
-    .replace(/</g, "&lt;");
-  const supaQ = (t) => `<span class="vnai-term-hint" title="${supaAttrTitle(t)}">?</span>`;
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 
   const log = (msg, obj) => {
     if (!logEl) return;
@@ -1992,55 +2020,16 @@ function initSupaBenchPage() {
     if (!blk || typeof blk !== "object") return "—";
     if (blk.n === 0 || blk.mean == null || Number.isNaN(blk.mean)) return "—";
     const pctKeys = ["em_v2_pct", "em_v1_pct", "f1_duong_pct", "f1_phuong_pct", "f1_quan_pct", "f1_tinh_pct"];
-    const suf = pctKeys.includes(key) ? "%" : key.includes("throughput") ? " addr/s" : key.includes("latency") ? " ms" : "";
-    const sd = blk.stdev != null && typeof blk.stdev === "number" ? ` σ=${blk.stdev.toFixed(3)}` : "";
+    const suf = pctKeys.includes(key) ? "%" : key.includes("throughput") ? " địa chỉ/giây" : key.includes("latency") ? " ms" : "";
+    const sd = blk.stdev != null && typeof blk.stdev === "number" ? ` (độ lệch ${blk.stdev.toFixed(3)})` : "";
     return `${Number(blk.mean).toFixed(2)}${suf}${sd} (n=${blk.n})`;
   };
-
-  const compareRows = [
-    {
-      labelHtml: `Độ trùng khớp chuỗi v2, trung bình gộp (EM@v2, rollup mean) ${supaQ("Exact match so khớp tuyệt đối sau chuẩn hoá NFC/trim/whitespace giữa pred và ref_address_v2; rollup mean là trung bình trên các run trong batch.")}`,
-      key: "em_v2_pct",
-    },
-    {
-      labelHtml: `Độ trùng khớp chuỗi v1 (EM@v1, rollup mean) ${supaQ("So pred (chuẩn hậu cải cách) với ref_address_v1 — thường thấp hơn EM@v2 khi diễn ngôn tiền/hậu cải cách khác nhau.")}`,
-      key: "em_v1_pct",
-    },
-    {
-      labelHtml: `F1 thành phần đường (F1 đường, f1_duong_pct) ${supaQ("F1 theo token/chuỗi thành phần đường so với ref v2 sau bóc tách địa chỉ.")}`,
-      key: "f1_duong_pct",
-    },
-    {
-      labelHtml: `F1 phường/xã (f1_phuong_pct) ${supaQ("F1 thành phần cấp phường/xã so với tham chiếu v2.")}`,
-      key: "f1_phuong_pct",
-    },
-    {
-      labelHtml: `F1 quận/huyện (f1_quan_pct) ${supaQ("F1 thành phần cấp quận/huyện/TP trực thuộc.")}`,
-      key: "f1_quan_pct",
-    },
-    {
-      labelHtml: `F1 tỉnh/thành (f1_tinh_pct) ${supaQ("F1 thành phần cấp tỉnh/thành phố.")}`,
-      key: "f1_tinh_pct",
-    },
-    {
-      labelHtml: `Độ trễ trung bình (mean latency, ms) ${supaQ("Trung bình latency_ms trên các mẫu có giá trị hợp lệ sau import; nên lấy từ pipeline (CSV), không thay bằng đo ingest DB khi báo cáo hiệu năng.")}`,
-      key: "latency_mean_ms",
-    },
-    {
-      labelHtml: `Độ trễ P95 (P95 latency, ms) ${supaQ("Phân vị thứ 95 của latency_ms trên cùng tập mẫu có đo.")}`,
-      key: "latency_p95_ms",
-    },
-    {
-      labelHtml: `Thông lượng (throughput, địa chỉ/giây) ${supaQ("Suy ra từ độ trễ trung bình khi có dữ liệu (addr/s); định nghĩa chi tiết trong app/ai/metrics.py.")}`,
-      key: "throughput_addr_per_s",
-    },
-  ];
 
   const renderCompare = (baselinePayload, athPayload) => {
     if (!tbodyCmp) return;
     tbodyCmp.innerHTML = compareRows.map((row) => `
       <tr>
-        <td>${row.labelHtml}</td>
+        <td>${escapeHtml(row.label)}</td>
         <td>${supaFmtAggMean(baselinePayload, row.key)}</td>
         <td>${supaFmtAggMean(athPayload, row.key)}</td>
       </tr>
@@ -2048,7 +2037,7 @@ function initSupaBenchPage() {
   };
 
   const loadCompare = async () => {
-    if (noteEl) noteEl.textContent = "Đang tải đường cơ sở (baseline) và bản tổng hợp mới nhất trên ath…";
+    if (noteEl) noteEl.textContent = "Đang tải bảng so sánh nội bộ…";
     let basePayload = null;
     let athPayload = null;
     try {
@@ -2062,11 +2051,10 @@ function initSupaBenchPage() {
       const sums = j2 && Array.isArray(j2.summaries) ? j2.summaries : [];
       athPayload = sums.length && sums[0].metrics_json ? sums[0].metrics_json : null;
       if (noteEl) {
-        const bmsg = j1 && j1.message ? j1.message : (basePayload ? `Baseline: ${j1.path}` : "Chưa có file baseline (baseline JSON)");
-        const amid = sums[0]
-          ? `DB: id=${sums[0].id}, khoảng run_id ${sums[0].run_id_min}–${sums[0].run_id_max}`
-          : "Chưa có bản ghi trong ath.supa_stratified_eval_summary";
-        noteEl.textContent = `${bmsg} · ${amid}`;
+        if (basePayload && athPayload) noteEl.textContent = "Đã tải dữ liệu so sánh nội bộ (mốc đã chốt và bản gộp gần nhất).";
+        else if (basePayload) noteEl.textContent = "Đã tải mốc chuẩn. Chưa có bản tổng hợp gần nhất trong kho lưu nội bộ.";
+        else if (athPayload) noteEl.textContent = "Đã tải bản tổng hợp gần nhất. Chưa có mốc chuẩn để đối chiếu.";
+        else noteEl.textContent = "Chưa đủ dữ liệu để hiển thị so sánh nội bộ.";
       }
       renderCompare(basePayload, athPayload);
     } catch (e) {
@@ -2076,7 +2064,210 @@ function initSupaBenchPage() {
     adjustActivePageHeight?.();
   };
 
-  const postAction = async (path, body) => {
+  const fmtPct = (v) => {
+    if (v == null || Number.isNaN(Number(v))) return "—";
+    return `${Number(v).toFixed(2)}%`;
+  };
+
+  const renderEvalMetrics = (metrics) => {
+    if (!metricsHero || !metricsGrid) return;
+    if (!metrics || typeof metrics !== "object") {
+      metricsHero.innerHTML = `<p class="text-secondary mb-0">Chưa có điểm số tổng hợp. Sau khi đã tải lên kết quả chuẩn hóa, nhấn <strong>Cập nhật tỉ lệ khớp</strong> ở trên.</p>`;
+      metricsGrid.innerHTML = "";
+      return;
+    }
+    const em2 = metrics.em_v2_pct;
+    const pctNum = em2 != null && !Number.isNaN(Number(em2)) ? Math.max(0, Math.min(100, Number(em2))) : null;
+    const bar = pctNum != null
+      ? `<div class="supa-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pctNum.toFixed(1)}"><span style="width:${pctNum}%"></span></div>`
+      : "";
+    metricsHero.innerHTML = `
+      <p class="text-secondary mb-4" style="font-size: 14px;">${escapeHtml(SUPA_EVAL_LABEL_VI.em_v2_pct)}</p>
+      <p class="supa-hero-metric">${fmtPct(em2)}</p>
+      ${bar}
+    `;
+    const keys = Object.keys(SUPA_EVAL_LABEL_VI).filter((k) => k !== "em_v2_pct");
+    const parts = keys.map((k) => {
+      const v = metrics[k];
+      if (v == null || Number.isNaN(Number(v))) return "";
+      const suf = k.includes("latency") ? " ms" : k.includes("throughput") ? "" : "%";
+      const disp = k.includes("throughput") ? Number(v).toFixed(2) : fmtPct(v);
+      return `<div class="supa-metric-item"><div class="label">${escapeHtml(SUPA_EVAL_LABEL_VI[k])}</div><div class="value">${escapeHtml(disp)}${suf}</div></div>`;
+    }).filter(Boolean);
+    metricsGrid.innerHTML = parts.join("") || `<p class="text-secondary">Không có thêm chỉ số phụ.</p>`;
+  };
+
+  const refreshStepper = () => {
+    const s1 = !!selectedRunId;
+    const s2 = specimenTotal > 0;
+    const s3 = hasPredEver;
+    const s4 = !!(runDetail && runDetail.eval_metrics_json && typeof runDetail.eval_metrics_json === "object"
+      && runDetail.eval_metrics_json.em_v2_pct != null);
+    let active = 1;
+    if (!s1) active = 1;
+    else if (!s2) active = 2;
+    else if (!s3) active = 3;
+    else if (!s4) active = 4;
+    else active = 4;
+    for (let i = 1; i <= 4; i++) {
+      const el = $(`supa-step-wrap-${i}`);
+      if (!el) continue;
+      el.classList.remove("is-active", "is-done", "is-disabled");
+      if (i < active) el.classList.add("is-done");
+      if (i === active) el.classList.add("is-active");
+      if (i > 1 && !s1) el.classList.add("is-disabled");
+    }
+  };
+
+  const fillRunSelect = () => {
+    if (!runSelect) return;
+    const cur = selectedRunId;
+    runSelect.innerHTML = runs.length
+      ? runs.map((r) => `<option value="${r.id}">Lần thử #${r.id} — ${r.n_realized ?? "?"} địa chỉ — ${escapeHtml((r.created_at || "").slice(0, 19))}</option>`).join("")
+      : `<option value="">— Chưa có lần thử —</option>`;
+    if (cur != null && runs.some((r) => r.id === cur)) runSelect.value = String(cur);
+    else if (runs.length) {
+      selectedRunId = runs[0].id;
+      runSelect.value = String(selectedRunId);
+    } else selectedRunId = null;
+  };
+
+  const loadRuns = async () => {
+    try {
+      const r = await fetchWithApiFallback("/experiments/supa-runs?limit=500", { headers: getAuthHeader() });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        if (runMeta) runMeta.textContent = "Không tải được danh sách lần thử. Liên hệ quản trị nếu cần bật tính năng hoặc cập nhật cơ sở dữ liệu.";
+        runs = [];
+        fillRunSelect();
+        return;
+      }
+      runs = Array.isArray(j.runs) ? j.runs : [];
+      fillRunSelect();
+      if (selectedRunId == null && runs.length) selectedRunId = runs[0].id;
+    } catch (e) {
+      if (runMeta) runMeta.textContent = String(e.message || e);
+      runs = [];
+      fillRunSelect();
+    }
+  };
+
+  const loadRunDetail = async () => {
+    if (!selectedRunId) {
+      runDetail = null;
+      if (runMeta) runMeta.textContent = "Chọn một lần thử trong danh sách.";
+      renderEvalMetrics(null);
+      refreshStepper();
+      return;
+    }
+    try {
+      const r = await fetchWithApiFallback(`/experiments/supa-runs/${encodeURIComponent(selectedRunId)}`, {
+        headers: getAuthHeader(),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        if (runMeta) runMeta.textContent = "Không đọc được thông tin lần thử đã chọn.";
+        runDetail = null;
+        renderEvalMetrics(null);
+        refreshStepper();
+        return;
+      }
+      runDetail = j.run || null;
+      if (runMeta && runDetail) {
+        const n = runDetail.n_realized ?? "—";
+        const cnt = runDetail.specimen_count != null ? runDetail.specimen_count : "—";
+        const noise = runDetail.noise_profile_id ?? "—";
+        runMeta.textContent = `Lần thử #${runDetail.id}: ${n} địa chỉ đã rút, ${cnt} dòng trong bảng mẫu. Kiểu nhiễu: ${noise}.`;
+      }
+      renderEvalMetrics(runDetail && runDetail.eval_metrics_json);
+      refreshStepper();
+    } catch (e) {
+      if (runMeta) runMeta.textContent = String(e.message || e);
+      runDetail = null;
+      renderEvalMetrics(null);
+      refreshStepper();
+    }
+  };
+
+  const renderSpecimenRows = (items) => {
+    if (!tbodySpec) return;
+    if (!items || !items.length) {
+      tbodySpec.innerHTML = `<tr><td colspan="6" class="text-secondary">Chưa có dòng mẫu cho lần thử này.</td></tr>`;
+      return;
+    }
+    tbodySpec.innerHTML = items.map((row) => {
+      const pred = row.pred_standardized;
+      const hasPred = pred != null && String(pred).trim() !== "";
+      let matchHtml = `<span class="supa-badge supa-badge-wait">Chưa có kết quả</span>`;
+      if (hasPred && row.match_v2 != null) {
+        matchHtml = row.match_v2
+          ? `<span class="supa-badge supa-badge-ok">Khớp</span>`
+          : `<span class="supa-badge supa-badge-no">Chưa khớp</span>`;
+      }
+      const stratum = row.stratum_code != null && String(row.stratum_code).trim() !== ""
+        ? escapeHtml(row.stratum_code)
+        : "—";
+      return `<tr data-local-idx="${row.local_idx}">
+        <td>${row.local_idx}</td>
+        <td class="supa-cell supa-col-ref" title="Nhấn để mở rộng">${escapeHtml(row.ref_address_v2 || "")}</td>
+        <td class="supa-cell supa-col-noisy" title="Nhấn để mở rộng">${escapeHtml(row.noisy_raw_address || "")}</td>
+        <td class="supa-cell supa-col-pred" title="Nhấn để mở rộng">${escapeHtml(hasPred ? pred : "")}</td>
+        <td>${stratum}</td>
+        <td>${matchHtml}</td>
+      </tr>`;
+    }).join("");
+    tbodySpec.querySelectorAll(".supa-cell").forEach((cell) => {
+      cell.addEventListener("click", () => cell.classList.toggle("is-expanded"));
+    });
+  };
+
+  const loadSpecimens = async () => {
+    if (!selectedRunId) {
+      specimenTotal = 0;
+      if (specHint) specHint.textContent = "Chọn một lần thử ở bước 1 để xem bảng.";
+      renderSpecimenRows([]);
+      if (specPageLabel) specPageLabel.textContent = "—";
+      refreshStepper();
+      return;
+    }
+    if (specHint) specHint.textContent = "Đang tải dữ liệu mẫu…";
+    try {
+      const url = `/experiments/supa-runs/${encodeURIComponent(selectedRunId)}/specimens?limit=${specimenLimit}&offset=${specimenOffset}&include_row_match=1`;
+      const r = await fetchWithApiFallback(url, { headers: getAuthHeader() });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        if (specHint) specHint.textContent = "Không tải được bảng mẫu. Thử lại sau hoặc liên hệ quản trị.";
+        renderSpecimenRows([]);
+        if (specPageLabel) specPageLabel.textContent = "—";
+        return;
+      }
+      specimenTotal = typeof j.total === "number" ? j.total : 0;
+      const items = Array.isArray(j.items) ? j.items : [];
+      if (items.some((it) => it.pred_standardized != null && String(it.pred_standardized).trim() !== "")) {
+        hasPredEver = true;
+      }
+      if (specHint) {
+        specHint.textContent = specimenTotal
+          ? `Tổng ${specimenTotal} dòng. Đang xem ${items.length} dòng trên trang này.`
+          : "Lần thử này chưa có dòng mẫu.";
+      }
+      const from = specimenTotal ? specimenOffset + 1 : 0;
+      const to = specimenTotal ? Math.min(specimenOffset + items.length, specimenTotal) : 0;
+      if (specPageLabel) {
+        specPageLabel.textContent = specimenTotal
+          ? `Dòng ${from}–${to} trong ${specimenTotal}`
+          : "—";
+      }
+      renderSpecimenRows(items);
+    } catch (e) {
+      if (specHint) specHint.textContent = String(e.message || e);
+      renderSpecimenRows([]);
+    }
+    refreshStepper();
+    adjustActivePageHeight?.();
+  };
+
+  const postAction = async (path, body, toastOk) => {
     const r = await fetchWithApiFallback(`/experiments/supa-actions/${path}`, {
       method: "POST",
       headers: { ...getAuthHeader(), "Content-Type": "application/json" },
@@ -2084,31 +2275,30 @@ function initSupaBenchPage() {
     });
     const j = await r.json().catch(() => ({}));
     if (!r.ok) {
-      log(`ERROR ${path} HTTP ${r.status}`, j.detail != null ? j.detail : j);
-      if (showToast) showToast(`${supaActionVi(path)} — lỗi HTTP ${r.status}`, "danger");
-      return;
+      log(`Lỗi thao tác ${path}`, j.detail != null ? j.detail : j);
+      if (showToast) showToast("Thao tác trên máy chủ bị từ chối hoặc lỗi. Xem phần chi tiết kỹ thuật bên dưới.", "danger");
+      return null;
     }
     log(path, j);
     if (showToast) {
-      showToast(
-        `${supaActionVi(path)} — hoàn tất (mã thoát exit=${j.exit_code})`,
-        j.ok ? "success" : "warning",
-      );
+      showToast(toastOk || "Đã xong.", j.ok ? "success" : "warning");
     }
+    return j;
   };
 
   if (!root.dataset.vnaiSupaBenchBound) {
     root.dataset.vnaiSupaBenchBound = "1";
 
-    document.getElementById("supa-btn-clear-log")?.addEventListener("click", () => {
+    $("supa-btn-clear-log")?.addEventListener("click", () => {
       if (logEl) logEl.textContent = "";
     });
-    document.getElementById("supa-btn-refresh-compare")?.addEventListener("click", () => loadCompare());
-    document.getElementById("supa-btn-aggregate-preview")?.addEventListener("click", async () => {
-      const minV = document.getElementById("supa-agg-min")?.value;
-      const maxV = document.getElementById("supa-agg-max")?.value;
-      const lastN = document.getElementById("supa-agg-lastn")?.value;
-      const persist = document.getElementById("supa-agg-persist")?.checked;
+    $("supa-btn-refresh-compare")?.addEventListener("click", () => loadCompare());
+
+    $("supa-btn-aggregate-preview")?.addEventListener("click", async () => {
+      const minV = $("supa-agg-min")?.value;
+      const maxV = $("supa-agg-max")?.value;
+      const lastN = $("supa-agg-lastn")?.value;
+      const persist = $("supa-agg-persist")?.checked;
       const body = { persist_ath: !!persist, methodology_version: "strat-v1" };
       if (minV && maxV) {
         body.min_run_id = parseInt(minV, 10);
@@ -2124,10 +2314,10 @@ function initSupaBenchPage() {
         body: JSON.stringify(body),
       });
       const j = await r.json().catch(() => ({}));
-      const out = document.getElementById("supa-aggregate-out");
+      const out = $("supa-aggregate-out");
       if (!r.ok) {
         log("aggregate-preview error", j.detail != null ? j.detail : j);
-        if (showToast) showToast(`Xem trước tổng hợp (aggregate-preview) — lỗi ${r.status}`, "danger");
+        if (showToast) showToast("Xem trước tổng hợp — lỗi", "danger");
         return;
       }
       if (out) {
@@ -2136,108 +2326,121 @@ function initSupaBenchPage() {
       }
       log("aggregate-preview", { exit_code: j.exit_code, stderr: j.stderr });
       if (showToast) {
-        showToast(
-          `Xem trước tổng hợp (aggregate-preview) — exit=${j.exit_code}`,
-          j.exit_code === 0 ? "success" : "warning",
-        );
+        showToast("Đã chạy xem trước tổng hợp.", j.exit_code === 0 ? "success" : "warning");
       }
     });
 
-    root.querySelectorAll("[data-supa-action]").forEach((btn) => {
-      btn.addEventListener("click", async () => {
-        const action = btn.getAttribute("data-supa-action");
-        if (!action) return;
-        if (action === "extract") {
-          const n = parseInt(document.getElementById("supa-extract-n")?.value || "0", 10);
-          const seedRaw = document.getElementById("supa-extract-seed")?.value;
-          const body = {
-            n,
-            noise_profile: document.getElementById("supa-extract-noise")?.value || undefined,
-            notes: document.getElementById("supa-extract-notes")?.value || undefined,
-          };
-          if (seedRaw) body.seed = parseInt(seedRaw, 10);
-          await postAction("extract", body);
-        } else if (action === "extract-stratified") {
-          const body = {
-            n: parseInt(document.getElementById("supa-exs-n")?.value || "2000", 10),
-            strat_version: document.getElementById("supa-exs-ver")?.value || "strat-v1",
-            max_pool_rows: parseInt(document.getElementById("supa-exs-pool")?.value || "100000", 10),
-          };
-          const sx = document.getElementById("supa-exs-seed")?.value;
-          if (sx) body.seed = parseInt(sx, 10);
-          await postAction("extract-stratified", body);
-        } else if (action === "eval") {
-          const rid = document.getElementById("supa-eval-rid")?.value;
-          const body = {};
-          if (rid) body.run_id = parseInt(rid, 10);
-          await postAction("eval", body);
-        } else if (action === "export-specimens") {
-          const body = {
-            out_relative: document.getElementById("supa-exp-out")?.value || "reports/supa_ui_export_specimens.csv",
-          };
-          const rid = document.getElementById("supa-exp-rid")?.value;
-          if (rid) body.run_id = parseInt(rid, 10);
-          await postAction("export-specimens", body);
-        } else if (action === "export-tex") {
-          const mj = document.getElementById("supa-tex-mj")?.value;
-          const body = {
-            out_relative: document.getElementById("supa-tex-out")?.value || "docs/scientific-report/vnai-supa-generated-metrics.tex",
-          };
-          if (mj) body.metrics_json_relative = mj;
-          await postAction("export-tex", body);
-        } else if (action === "workflow") {
-          const body = {
-            n: parseInt(document.getElementById("supa-wf-n")?.value || "1000", 10),
-            noise_profile: document.getElementById("supa-wf-noise")?.value || undefined,
-            specimens_out_relative: document.getElementById("supa-wf-spec")?.value || "reports/supa_workflow_specimens_latest.csv",
-            skip_extract: document.getElementById("supa-wf-skip")?.checked || false,
-            preds_demo_ref_v2: document.getElementById("supa-wf-oracle")?.checked || false,
-          };
-          const ws = document.getElementById("supa-wf-seed")?.value;
-          if (ws) body.seed = parseInt(ws, 10);
-          const wn = document.getElementById("supa-wf-srcnote")?.value;
-          if (wn) body.source_note = wn;
-          const pr = document.getElementById("supa-wf-preds")?.value;
-          if (pr) body.preds_relative = pr;
-          const wr = document.getElementById("supa-wf-rid")?.value;
-          if (wr) body.run_id = parseInt(wr, 10);
-          await postAction("workflow", body);
-        } else if (action === "make-demo-preds") {
-          await postAction("make-demo-preds", {
-            from_relative: document.getElementById("supa-demo-from")?.value,
-            out_relative: document.getElementById("supa-demo-out")?.value,
-            column: document.getElementById("supa-demo-col")?.value || "ref_address_v2",
-          });
-        } else if (action === "replicate") {
-          await postAction("replicate", {
-            n_runs: parseInt(document.getElementById("supa-rep-nruns")?.value || "1", 10),
-            mode: document.getElementById("supa-rep-mode")?.value || "sweep-seed",
-            n: parseInt(document.getElementById("supa-rep-n")?.value || "500", 10),
-            preds_demo_ref_v2: document.getElementById("supa-rep-oracle")?.checked || false,
-          });
-        } else if (action === "replicate-stratified") {
-          await postAction("replicate-stratified", {
-            k_runs: parseInt(document.getElementById("supa-rst-k")?.value || "2", 10),
-            n: parseInt(document.getElementById("supa-rst-n")?.value || "500", 10),
-            preds_demo_ref_v2: document.getElementById("supa-rst-oracle")?.checked || false,
-          });
-        }
-      });
+    $("supa-btn-refresh-runs")?.addEventListener("click", async () => {
+      await loadRuns();
+      await loadRunDetail();
+      specimenOffset = 0;
+      await loadSpecimens();
     });
 
-    document.getElementById("supa-btn-import-preds")?.addEventListener("click", async () => {
-      const fileEl = document.getElementById("supa-import-file");
-      const note = document.getElementById("supa-import-note")?.value;
+    $("supa-btn-toggle-new")?.addEventListener("click", () => {
+      const p = $("supa-new-panel");
+      if (!p) return;
+      p.style.display = p.style.display === "none" ? "block" : "none";
+    });
+
+    $("supa-btn-create-run")?.addEventListener("click", async () => {
+      const n = parseInt($("supa-new-n")?.value || "0", 10);
+      if (!n || n < 1) {
+        if (showToast) showToast("Nhập số địa chỉ hợp lệ (ít nhất 1).", "danger");
+        return;
+      }
+      const body = {
+        n,
+        noise_profile: $("supa-new-noise")?.value || "SUP-1.0.0",
+        notes: $("supa-new-notes")?.value || undefined,
+      };
+      const seedRaw = $("supa-new-seed")?.value;
+      if (seedRaw) body.seed = parseInt(seedRaw, 10);
+      const j = await postAction("extract", body, "Đã tạo bộ thử mới trên máy chủ.");
+      if (j && j.last_run_id_hint != null) {
+        selectedRunId = j.last_run_id_hint;
+        await loadRuns();
+        if (runSelect) runSelect.value = String(selectedRunId);
+        hasPredEver = false;
+        specimenOffset = 0;
+        await loadRunDetail();
+        await loadSpecimens();
+      } else {
+        await loadRuns();
+        if (runs.length) {
+          selectedRunId = runs[0].id;
+          if (runSelect) runSelect.value = String(selectedRunId);
+        }
+        hasPredEver = false;
+        specimenOffset = 0;
+        await loadRunDetail();
+        await loadSpecimens();
+      }
+    });
+
+    runSelect?.addEventListener("change", async () => {
+      const v = parseInt(runSelect.value, 10);
+      selectedRunId = Number.isFinite(v) ? v : null;
+      hasPredEver = false;
+      specimenOffset = 0;
+      await loadRunDetail();
+      await loadSpecimens();
+    });
+
+    $("supa-spec-limit")?.addEventListener("change", async () => {
+      specimenLimit = parseInt($("supa-spec-limit")?.value || "50", 10) || 50;
+      specimenOffset = 0;
+      await loadSpecimens();
+    });
+
+    $("supa-spec-prev")?.addEventListener("click", async () => {
+      specimenOffset = Math.max(0, specimenOffset - specimenLimit);
+      await loadSpecimens();
+    });
+    $("supa-spec-next")?.addEventListener("click", async () => {
+      if (specimenOffset + specimenLimit < specimenTotal) {
+        specimenOffset += specimenLimit;
+        await loadSpecimens();
+      }
+    });
+
+    $("supa-btn-download-csv")?.addEventListener("click", async () => {
+      if (!selectedRunId) {
+        if (showToast) showToast("Chọn một lần thử trước khi tải file.", "danger");
+        return;
+      }
+      const r = await fetchWithApiFallback(`/experiments/supa-runs/${encodeURIComponent(selectedRunId)}/export-specimens-csv`, {
+        headers: getAuthHeader(),
+      });
+      if (!r.ok) {
+        const j = await r.json().catch(() => ({}));
+        log("Tải file mẫu lỗi", j.detail != null ? j.detail : j);
+        if (showToast) showToast("Không tải được file. Thử lại sau.", "danger");
+        return;
+      }
+      const blob = await r.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `dia_chi_thu_nghiem_${selectedRunId}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      if (showToast) showToast("Đã tải file để chạy chuẩn hóa.", "success");
+    });
+
+    $("supa-btn-import-preds")?.addEventListener("click", async () => {
+      const fileEl = $("supa-import-file");
+      const note = $("supa-import-note")?.value;
       const f = fileEl && fileEl.files && fileEl.files[0];
       if (!f || !note) {
-        if (showToast) showToast("Chọn file CSV và điền ghi chú nguồn (source_note)", "danger");
+        if (showToast) showToast("Chọn file và điền ghi chú nguồn (bắt buộc).", "danger");
         return;
       }
       const fd = new FormData();
       fd.append("file", f);
       fd.append("source_note", note);
-      if (document.getElementById("supa-import-dry")?.checked) fd.append("dry_run", "true");
-      if (document.getElementById("supa-import-nolat")?.checked) fd.append("no_measured_latency", "true");
+      if ($("supa-import-dry")?.checked) fd.append("dry_run", "true");
+      if ($("supa-import-nolat")?.checked) fd.append("no_measured_latency", "true");
       const r = await fetchWithApiFallback("/experiments/supa-actions/import-preds", {
         method: "POST",
         headers: { ...getAuthHeader() },
@@ -2245,51 +2448,48 @@ function initSupaBenchPage() {
       });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) {
-        log("import-preds error", j.detail != null ? j.detail : j);
-        if (showToast) showToast(`${supaActionVi("import-preds")} — lỗi HTTP ${r.status}`, "danger");
+        log("Nhập file lỗi", j.detail != null ? j.detail : j);
+        if (showToast) showToast("Tải lên không thành công. Xem chi tiết kỹ thuật.", "danger");
         return;
       }
       log("import-preds", j);
-      if (showToast) {
-        showToast(
-          `${supaActionVi("import-preds")} — hoàn tất (exit=${j.exit_code})`,
-          j.ok ? "success" : "warning",
-        );
-      }
+      if (showToast) showToast("Đã áp dụng kết quả từ file.", j.ok ? "success" : "warning");
+      hasPredEver = true;
+      specimenOffset = 0;
+      await loadRunDetail();
+      await loadSpecimens();
     });
 
-    document.getElementById("supa-btn-download-specimens")?.addEventListener("click", async () => {
-      const rid = document.getElementById("supa-exp-rid")?.value;
-      if (!rid) {
-        if (showToast) showToast("Nhập ID lần chạy (run_id) để tải CSV mẫu", "danger");
+    $("supa-btn-run-eval")?.addEventListener("click", async () => {
+      if (!selectedRunId) {
+        if (showToast) showToast("Chọn một lần thử trước.", "danger");
         return;
       }
-      const r = await fetchWithApiFallback(`/experiments/supa-runs/${encodeURIComponent(rid)}/export-specimens-csv`, {
-        headers: getAuthHeader(),
-      });
-      if (!r.ok) {
-        const j = await r.json().catch(() => ({}));
-        log("download specimens error", j.detail != null ? j.detail : j);
-        if (showToast) showToast(`Tải CSV mẫu — lỗi HTTP ${r.status}`, "danger");
-        return;
-      }
-      const blob = await r.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `supa_specimens_run_${rid}.csv`;
-      a.click();
-      URL.revokeObjectURL(url);
-      if (showToast) showToast("Đã tải file CSV mẫu (export-specimens)", "success");
+      await postAction("eval", { run_id: selectedRunId }, "Đã cập nhật tỉ lệ khớp.");
+      await loadRunDetail();
+      await loadSpecimens();
     });
   }
 
-  window.__vnaiSupaBenchRefresh = () => {
+  window.__vnaiSupaBenchRefresh = async () => {
+    await loadRuns();
+    fillRunSelect();
+    await loadRunDetail();
+    await loadSpecimens();
     loadCompare();
   };
 
+  const limEl = $("supa-spec-limit");
+  if (limEl) specimenLimit = parseInt(limEl.value || "50", 10) || 50;
+
+  loadRuns().then(async () => {
+    fillRunSelect();
+    await loadRunDetail();
+    await loadSpecimens();
+  });
   loadCompare();
 }
+
 
 function populateTrainingHistory() {
   const tbody = document.getElementById("training-history-body");

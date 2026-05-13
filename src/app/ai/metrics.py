@@ -141,6 +141,11 @@ def _norm_em_supa(s: str | None) -> str:
     return t
 
 
+def supa_strings_exact_match(pred: str | None, ref: str | None) -> bool:
+    """True nếu pred và ref khớp tuyệt đối theo quy tắc EM SUPA (NFC/trim/gộp khoảng trắng)."""
+    return _norm_em_supa(pred) == _norm_em_supa(ref)
+
+
 def _latency_stats_from_optional(latencies: List[Any]) -> Dict[str, float]:
     vals: List[float] = []
     for v in latencies:

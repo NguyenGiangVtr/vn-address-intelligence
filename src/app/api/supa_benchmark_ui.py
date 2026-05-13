@@ -16,6 +16,7 @@ from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import text
 from sqlalchemy.exc import ProgrammingError
 
+from app.ai.metrics import supa_strings_exact_match
 from app.api.deps import get_current_user
 from app.api.experiments_history import _json_ready
 from app.core.config import Config
@@ -84,6 +85,88 @@ def _read_last_run_id_file() -> int | None:
         return int(p.read_text(encoding="utf-8").strip())
     except (ValueError, OSError):
         return None
+
+
+_SPECIMEN_PAGE_SQL_FULL = text(
+    """
+    SELECT id, local_idx, ground_truth_id, ref_address_v2, ref_address_v1,
+           noisy_raw_address, pred_standardized, stratum_code, latency_ms
+    FROM prq.supa_benchmark_specimen
+    WHERE run_id = :rid
+    ORDER BY local_idx ASC
+    LIMIT :lim OFFSET :off
+    """
+)
+
+_SPECIMEN_PAGE_SQL_BASE = text(
+    """
+    SELECT id, local_idx, ground_truth_id, ref_address_v2, ref_address_v1,
+           noisy_raw_address, pred_standardized
+    FROM prq.supa_benchmark_specimen
+    WHERE run_id = :rid
+    ORDER BY local_idx ASC
+    LIMIT :lim OFFSET :off
+    """
+)
+
+
+@router.get("/supa-runs/{run_id}/specimens", summary="Paginated SUPA benchmark specimens")
+def list_supa_run_specimens(
+    run_id: int,
+    current_user: str = Depends(get_current_user),
+    limit: int = Query(50, ge=1, le=100),
+    offset: int = Query(0, ge=0, le=500_000),
+    include_row_match: bool = Query(False, description="Include match_v2/match_v1 (same EM normalization as eval)"),
+) -> dict[str, Any]:
+    del current_user
+    rid = int(run_id)
+    lim = int(limit)
+    off = int(offset)
+    try:
+        with engine.connect() as conn:
+            exists = conn.execute(
+                text("SELECT 1 FROM prq.supa_benchmark_run WHERE id = :id LIMIT 1"),
+                {"id": rid},
+            ).first()
+            if not exists:
+                raise HTTPException(status_code=404, detail="run not found")
+            total = conn.execute(
+                text("SELECT COUNT(*)::bigint FROM prq.supa_benchmark_specimen WHERE run_id = :id"),
+                {"id": rid},
+            ).scalar_one()
+            params = {"rid": rid, "lim": lim, "off": off}
+            try:
+                rows = conn.execute(_SPECIMEN_PAGE_SQL_FULL, params).mappings().all()
+            except ProgrammingError:
+                rows = conn.execute(_SPECIMEN_PAGE_SQL_BASE, params).mappings().all()
+    except ProgrammingError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Database schema missing SUPA specimen tables: {exc}",
+        ) from exc
+
+    items: list[dict[str, Any]] = []
+    for r in rows:
+        d = dict(r)
+        pred = d.get("pred_standardized")
+        ref2 = d.get("ref_address_v2")
+        ref1 = d.get("ref_address_v1")
+        if "stratum_code" not in d:
+            d["stratum_code"] = None
+        if "latency_ms" not in d:
+            d["latency_ms"] = None
+        if include_row_match:
+            d["match_v2"] = supa_strings_exact_match(pred, ref2)
+            d["match_v1"] = supa_strings_exact_match(pred, ref1)
+        items.append(d)
+
+    return {
+        "run_id": rid,
+        "total": int(total),
+        "limit": lim,
+        "offset": off,
+        "items": items,
+    }
 
 
 @router.get("/supa-runs/{run_id}", summary="SUPA run detail + specimen counts")

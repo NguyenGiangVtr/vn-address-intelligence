@@ -1,277 +1,365 @@
-<!-- ══════ PAGE: SUPA-BENCH CONSOLE (Việt hóa) ══════ -->
+<!-- SUPA — Runbook theo giai đoạn (thân thiện người mới) -->
 <style>
-  #supa-bench .vnai-term-hint {
+  #supa-bench .supa-stepper {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    margin-bottom: 24px;
+    padding: 16px;
+    border-radius: 12px;
+    background: var(--bg-elevated, rgba(0, 0, 0, 0.04));
+    border: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.08));
+  }
+  #supa-bench .supa-step {
+    flex: 1 1 140px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    min-width: 120px;
+    opacity: 0.55;
+    transition: opacity 0.15s ease;
+  }
+  #supa-bench .supa-step.is-active {
+    opacity: 1;
+    font-weight: 600;
+  }
+  #supa-bench .supa-step.is-done {
+    opacity: 0.95;
+  }
+  #supa-bench .supa-step.is-disabled {
+    opacity: 0.35;
+  }
+  #supa-bench .supa-step-num {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 14px;
-    height: 14px;
-    margin-left: 4px;
-    padding: 0 3px;
-    font-size: 10px;
+    font-size: 13px;
     font-weight: 700;
-    line-height: 1;
-    border-radius: 50%;
-    border: 1px solid var(--text-tertiary, #888);
-    color: var(--text-tertiary);
-    cursor: help;
-    vertical-align: middle;
-    user-select: none;
-    flex-shrink: 0;
+    background: var(--bg-secondary, #e8e8e8);
+    color: var(--text-primary, #111);
+    border: 2px solid transparent;
   }
-  #supa-bench .vnai-term-hint:hover {
-    color: var(--accent, #5b8cff);
+  #supa-bench .supa-step.is-active .supa-step-num {
     border-color: var(--accent, #5b8cff);
+    background: var(--accent-soft, rgba(91, 140, 255, 0.15));
+    color: var(--accent, #5b8cff);
   }
-  #supa-bench .vnai-cli-name {
-    font-size: 11px;
-    color: var(--text-secondary);
+  #supa-bench .supa-step.is-done .supa-step-num {
+    background: var(--success-soft, rgba(46, 160, 67, 0.2));
+    color: var(--success, #2ea043);
+  }
+  #supa-bench .supa-step-label {
+    font-size: 13px;
+    line-height: 1.35;
+    color: var(--text-secondary, #555);
+  }
+  #supa-bench .supa-step.is-active .supa-step-label {
+    color: var(--text-primary, #111);
+  }
+  #supa-bench .supa-col-ref {
+    color: var(--text-primary, #111);
     font-weight: 500;
   }
+  #supa-bench .supa-col-noisy {
+    color: var(--accent, #3d6fd8);
+  }
+  #supa-bench .supa-col-pred {
+    color: var(--success, #217a3a);
+  }
+  #supa-bench .supa-cell {
+    max-width: 280px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: default;
+    vertical-align: top;
+  }
+  #supa-bench .supa-cell.is-expanded {
+    white-space: normal;
+    word-break: break-word;
+    max-width: 420px;
+  }
+  #supa-bench .supa-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  #supa-bench .supa-badge-ok {
+    background: rgba(46, 160, 67, 0.15);
+    color: #217a3a;
+  }
+  #supa-bench .supa-badge-no {
+    background: rgba(200, 80, 60, 0.12);
+    color: #b23c2a;
+  }
+  #supa-bench .supa-badge-wait {
+    background: var(--bg-secondary, #eee);
+    color: var(--text-tertiary, #888);
+  }
+  #supa-bench .supa-hero-metric {
+    font-size: clamp(1.75rem, 4vw, 2.5rem);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    margin: 0 0 8px;
+  }
+  #supa-bench .supa-progress {
+    height: 10px;
+    border-radius: 999px;
+    background: var(--bg-secondary, #e4e4e4);
+    overflow: hidden;
+    margin-top: 8px;
+    max-width: 480px;
+  }
+  #supa-bench .supa-progress > span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--accent, #5b8cff), #7aa3ff);
+    transition: width 0.35s ease;
+  }
+  #supa-bench .supa-metric-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px 20px;
+    margin-top: 16px;
+  }
+  #supa-bench .supa-metric-item {
+    padding: 12px 14px;
+    border-radius: 10px;
+    background: var(--bg-elevated, rgba(0, 0, 0, 0.03));
+    border: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.06));
+  }
+  #supa-bench .supa-metric-item .label {
+    font-size: 12px;
+    color: var(--text-secondary, #666);
+    margin-bottom: 4px;
+  }
+  #supa-bench .supa-metric-item .value {
+    font-size: 1.25rem;
+    font-weight: 700;
+  }
 </style>
+
 <div class="page" id="supa-bench">
-    <div class="page-header">
-        <div class="flex justify-between items-center flex-wrap gap-12">
-            <div>
-                <h2>Bảng điều khiển SUPA-Bench <span class="vnai-cli-name">(Console)</span></h2>
-                <p class="text-secondary">Luồng thao tác tương đương script <code>scripts/experiments/supa_benchmark.py</code>
-                    <span class="vnai-term-hint" title="Runbook: trích mẫu từ ground truth (chỉ đọc), gây nhiễu, xuất CSV, nhập dự đoán, đánh giá EM/F1, tổng hợp batch. Không ghi đè prq.ground_truth.">?</span>
-                    — Bật <code>SUPA_BENCHMARK_UI_ACTIONS=1</code> trong .env để cho phép gọi lệnh từ giao diện.
-                    <span class="vnai-term-hint" title="Biến môi trường bảo vệ: khi tắt, API trả 403 cho các thao tác subprocess (extract, eval, workflow, …).">?</span>
-                </p>
-            </div>
-            <div class="flex gap-8 flex-wrap">
-                <button type="button" class="btn btn-sm btn-primary" id="supa-btn-refresh-compare"><i class="fa-solid fa-sync"></i> Tải lại đối chiếu</button>
-                <button type="button" class="btn btn-sm btn-ghost" id="supa-btn-clear-log"><i class="fa-solid fa-eraser"></i> Xóa nhật ký</button>
-            </div>
-        </div>
+  <div class="page-header">
+    <div class="flex justify-between items-start flex-wrap gap-16">
+      <div>
+        <h2>Thử nghiệm địa chỉ (SUPA)</h2>
+        <p class="text-secondary" style="max-width: 720px;">
+          Bốn bước đơn giản: chọn hoặc tạo một bộ địa chỉ thử → xem địa chỉ chuẩn và bản “giống người dùng hay gõ”
+          → tải lên kết quả sau khi hệ thống của bạn chuẩn hóa → xem tỉ lệ khớp với địa chỉ chuẩn.
+          Nếu không thấy nút thao tác tự động, hãy liên hệ quản trị để bật thử nghiệm trên máy chủ.
+        </p>
+      </div>
     </div>
+  </div>
 
-    <div class="card mb-20" id="supa-card-prereq">
-        <div class="card-header"><span class="card-title">0. Điều kiện cơ sở dữ liệu (DDL)</span>
-            <span class="vnai-term-hint" title="DDL (Data Definition Language): các lệnh migration tạo bảng prq.supa_benchmark_* và cột metric; cần chạy một lần trên PostgreSQL trước khi dùng SUPA.">?</span>
-        </div>
-        <div class="card-body text-secondary">
-            <p class="mb-12">Áp migration (tham chiếu đầy đủ trong <code>docs/scientific-report/SUPA-BENCH-RUNBOOK.md</code>):</p>
-            <pre class="mb-0" style="white-space:pre-wrap;font-size:12px;background:var(--bg-elevated);padding:12px;border-radius:8px;">python scripts/sql/apply_sql_file.py scripts/migration/20260209_prq_supa_benchmark_tables.sql
-python scripts/sql/apply_sql_file.py scripts/migration/20260512_retrieval_eval_and_supa_metrics.sql
-python scripts/sql/apply_sql_file.py scripts/migration/20260513_supa_stratified_specimen_and_ath_summary.sql</pre>
-        </div>
+  <div class="supa-stepper" id="supa-stepper" aria-label="Các bước thử nghiệm">
+    <div class="supa-step" data-supa-step="1" id="supa-step-wrap-1">
+      <span class="supa-step-num">1</span>
+      <div>
+        <div class="supa-step-label">Chọn hoặc tạo bộ thử</div>
+      </div>
     </div>
+    <div class="supa-step" data-supa-step="2" id="supa-step-wrap-2">
+      <span class="supa-step-num">2</span>
+      <div>
+        <div class="supa-step-label">Xem dữ liệu mẫu</div>
+      </div>
+    </div>
+    <div class="supa-step" data-supa-step="3" id="supa-step-wrap-3">
+      <span class="supa-step-num">3</span>
+      <div>
+        <div class="supa-step-label">Nhập kết quả chuẩn hóa</div>
+      </div>
+    </div>
+    <div class="supa-step" data-supa-step="4" id="supa-step-wrap-4">
+      <span class="supa-step-num">4</span>
+      <div>
+        <div class="supa-step-label">Xem tỉ lệ khớp</div>
+      </div>
+    </div>
+  </div>
 
-    <div class="card mb-20" id="supa-card-compare">
-        <div class="card-header"><span class="card-title">Đối chiếu báo cáo (Chương 9.5 / 9.5.1)</span>
-            <span class="vnai-term-hint" title="So sánh chỉ số rollup (trung bình trên nhiều lần chạy) giữa file JSON baseline đã chốt trong repo và bản ghi tổng hợp mới nhất trong schema ath.">?</span>
-        </div>
-        <div class="card-body">
-            <p class="text-secondary mb-16" id="supa-compare-note">—</p>
-            <div class="table-container">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Chỉ số <span class="vnai-term-hint" title="rollup mean: trung bình các metric đã eval trên từng run_id trong batch (aggregate-runs).">?</span></th>
-                            <th>Đường cơ sở (baseline) — file JSON chốt</th>
-                            <th>Tổng hợp DB mới nhất <span class="vnai-cli-name">(ath.supa_stratified_eval_summary)</span></th>
-                        </tr>
-                    </thead>
-                    <tbody id="supa-compare-tbody"></tbody>
-                </table>
-            </div>
-        </div>
+  <!-- Bước 1 -->
+  <div class="card mb-20" data-supa-section="1">
+    <div class="card-header">
+      <span class="card-title">Bước 1 — Chọn lần thử hoặc tạo bộ mới</span>
     </div>
+    <div class="card-body">
+      <div class="form-grid" style="max-width: 640px;">
+        <div class="form-group" style="grid-column: 1 / -1;">
+          <label for="supa-run-select">Lần thử hiện có</label>
+          <select id="supa-run-select" class="form-input"></select>
+        </div>
+      </div>
+      <p class="text-secondary mt-12 mb-0" id="supa-run-meta">—</p>
+      <div class="mt-16 flex flex-wrap gap-8 items-center">
+        <button type="button" class="btn btn-sm btn-outline" id="supa-btn-toggle-new">Tạo bộ thử mới</button>
+        <button type="button" class="btn btn-sm btn-ghost" id="supa-btn-refresh-runs">Làm mới danh sách</button>
+      </div>
+      <div id="supa-new-panel" class="mt-16" style="display: none; max-width: 520px;">
+        <p class="text-secondary mb-12">Hệ thống sẽ lấy địa chỉ chuẩn từ kho dữ liệu nội bộ, tạo thêm bản có lỗi chính tả và cách gõ giống thực tế — không thay đổi dữ liệu gốc.</p>
+        <input type="hidden" id="supa-new-noise" value="SUP-1.0.0" />
+        <div class="form-group">
+          <label for="supa-new-n">Số địa chỉ trong bộ thử</label>
+          <input type="number" id="supa-new-n" class="form-input" value="500" min="1" max="50000" />
+        </div>
+        <div class="form-group">
+          <label for="supa-new-seed">Mã lặp lại (tuỳ chọn — để trống nếu mỗi lần muốn khác nhau)</label>
+          <input type="number" id="supa-new-seed" class="form-input" placeholder="Để trống" />
+        </div>
+        <div class="form-group">
+          <label for="supa-new-notes">Ghi chú ngắn (tuỳ chọn)</label>
+          <input type="text" id="supa-new-notes" class="form-input" placeholder="Ví dụ: thử pipeline tháng 5" />
+        </div>
+        <button type="button" class="btn btn-primary btn-sm" id="supa-btn-create-run">Bắt đầu tạo bộ</button>
+      </div>
+    </div>
+  </div>
 
-    <div class="card mb-20" id="supa-card-aggregate">
-        <div class="card-header"><span class="card-title">Xem trước tổng hợp (aggregate preview)</span> <span class="vnai-cli-name">(POST · aggregate-runs)</span>
-            <span class="vnai-term-hint" title="Gọi lệnh aggregate-runs: gộp eval_metrics_json theo khoảng run_id hoặc last_n; trả JSON (file tạm). Có thể ghi thêm bảng ath nếu chọn persist.">?</span>
-        </div>
-        <div class="card-body">
-            <div class="form-grid" style="max-width:720px;">
-                <div class="form-group">
-                    <label>ID run tối thiểu <span class="vnai-cli-name">(min_run_id)</span>
-                        <span class="vnai-term-hint" title="Cận dưới run_id (bao gồm) khi tổng hợp theo batch; dùng cùng max_run_id.">?</span></label>
-                    <input type="number" id="supa-agg-min" class="form-input" placeholder="vd. 56">
-                </div>
-                <div class="form-group">
-                    <label>ID run tối đa <span class="vnai-cli-name">(max_run_id)</span>
-                        <span class="vnai-term-hint" title="Cận trên run_id (bao gồm). Ví dụ batch K=5 thường là 56–60.">?</span></label>
-                    <input type="number" id="supa-agg-max" class="form-input" placeholder="vd. 60">
-                </div>
-                <div class="form-group">
-                    <label>Số run mới nhất <span class="vnai-cli-name">(last_n)</span>
-                        <span class="vnai-term-hint" title="Lấy N run gần nhất theo id giảm dần; bỏ qua nếu đã chọn min/max.">?</span></label>
-                    <input type="number" id="supa-agg-lastn" class="form-input" placeholder="50">
-                </div>
-                <div class="form-group flex items-end">
-                    <label class="flex items-center gap-8">Ghi tổng hợp vào <span class="vnai-cli-name">ath</span> <span class="vnai-cli-name">(persist ath)</span>
-                        <span class="vnai-term-hint" title="persist-ath: INSERT một dòng vào ath.supa_stratified_eval_summary chứa payload JSON đầy đủ (provenance cho báo cáo).">?</span>
-                        <input type="checkbox" id="supa-agg-persist"></label>
-                </div>
-            </div>
-            <button type="button" class="btn btn-primary btn-sm mt-12" id="supa-btn-aggregate-preview">Chạy xem trước tổng hợp</button>
-            <pre id="supa-aggregate-out" class="mt-16" style="display:none;max-height:280px;overflow:auto;font-size:11px;background:var(--bg-elevated);padding:12px;border-radius:8px;"></pre>
-        </div>
+  <!-- Bước 2 -->
+  <div class="card mb-20" data-supa-section="2">
+    <div class="card-header flex justify-between items-center flex-wrap gap-8">
+      <span class="card-title">Bước 2 — Xem địa chỉ chuẩn và bản sau khi làm “giống thực tế”</span>
+      <button type="button" class="btn btn-sm btn-outline" id="supa-btn-download-csv">Tải file để chạy chuẩn hóa</button>
     </div>
+    <div class="card-body">
+      <p class="text-secondary mb-16" id="supa-specimens-hint">Chọn một lần thử ở bước 1 để xem bảng.</p>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:52px;">#</th>
+              <th>Địa chỉ chuẩn (tham chiếu)</th>
+              <th>Địa chỉ giống người dùng thường gõ</th>
+              <th>Kết quả sau khi chuẩn hóa</th>
+              <th style="width:100px;">Nhóm</th>
+              <th style="width:120px;">Khớp chuẩn</th>
+            </tr>
+          </thead>
+          <tbody id="supa-specimens-tbody"></tbody>
+        </table>
+      </div>
+      <div class="flex justify-between items-center flex-wrap gap-12 mt-16">
+        <span class="text-secondary" id="supa-spec-page-label">—</span>
+        <div class="flex gap-8 items-center flex-wrap">
+          <label class="flex items-center gap-8 text-secondary" style="font-size: 13px;">
+            Số dòng mỗi trang
+            <select id="supa-spec-limit" class="form-input" style="width: auto; min-width: 72px; padding: 4px 8px;">
+              <option value="20">20</option>
+              <option value="50" selected>50</option>
+              <option value="100">100</option>
+            </select>
+          </label>
+          <button type="button" class="btn btn-sm btn-ghost" id="supa-spec-prev">Trang trước</button>
+          <button type="button" class="btn btn-sm btn-ghost" id="supa-spec-next">Trang sau</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
-    <div class="grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;">
-        <div class="card">
-            <div class="card-header"><span class="card-title">Trích mẫu <span class="vnai-cli-name">(extract)</span></span>
-                <span class="vnai-term-hint" title="extract: SELECT từ prq.ground_truth (chỉ đọc), áp profile nhiễu, tạo prq.supa_benchmark_run và các specimen.">?</span></div>
-            <div class="card-body">
-                <div class="form-group"><label>Kích thước mẫu <span class="vnai-cli-name">(n)</span>
-                    <span class="vnai-term-hint" title="Số mẫu mục tiêu trong cohort (sau lọc có thể nhỏ hơn n).">?</span></label><input type="number" id="supa-extract-n" class="form-input" value="1000"></div>
-                <div class="form-group"><label>Hạt giống ngẫu nhiên <span class="vnai-cli-name">(seed)</span>
-                    <span class="vnai-term-hint" title="Để trống: rng_seed ngẫu nhiên mỗi lần (cohort + nhiễu khác nhau). Có số: tái lập cohort cố định cho báo cáo.">?</span></label><input type="number" id="supa-extract-seed" class="form-input"></div>
-                <div class="form-group"><label>Profile nhiễu <span class="vnai-cli-name">(noise_profile)</span>
-                    <span class="vnai-term-hint" title="Chuỗi định danh profile nhiễu tổng hợp, mặc định SUP-1.0.0; D2 nặng dùng SUP-D2-1.0.0.">?</span></label><input type="text" id="supa-extract-noise" class="form-input" value="SUP-1.0.0"></div>
-                <div class="form-group"><label>Ghi chú <span class="vnai-cli-name">(notes)</span></label><input type="text" id="supa-extract-notes" class="form-input"></div>
-                <button type="button" class="btn btn-primary btn-sm" data-supa-action="extract">Chạy</button>
-            </div>
-        </div>
-        <div class="card">
-            <div class="card-header"><span class="card-title">Trích mẫu phân tầng <span class="vnai-cli-name">(extract-stratified)</span></span>
-                <span class="vnai-term-hint" title="Lấy mẫu theo tỉ lệ stratum D1–D4 (đô thị, nhiễu cao, lưỡng thời hành chính, ranh giới không gian).">?</span></div>
-            <div class="card-body">
-                <div class="form-group"><label>Tổng cỡ cohort <span class="vnai-cli-name">(n)</span></label><input type="number" id="supa-exs-n" class="form-input" value="2000"></div>
-                <div class="form-group"><label><span class="vnai-cli-name">seed</span></label><input type="number" id="supa-exs-seed" class="form-input"></div>
-                <div class="form-group"><label>Phiên bản phân tầng <span class="vnai-cli-name">(strat_version)</span>
-                    <span class="vnai-term-hint" title="Nhãn methodology (vd. strat-v1) lưu kèm run/aggregate.">?</span></label><input type="text" id="supa-exs-ver" class="form-input" value="strat-v1"></div>
-                <div class="form-group"><label>Giới hạn quét GT <span class="vnai-cli-name">(max_pool_rows)</span>
-                    <span class="vnai-term-hint" title="Giới hạn an toàn số dòng ground_truth quét khi phân tầng.">?</span></label><input type="number" id="supa-exs-pool" class="form-input" value="100000"></div>
-                <button type="button" class="btn btn-primary btn-sm" data-supa-action="extract-stratified">Chạy</button>
-            </div>
-        </div>
-        <div class="card">
-            <div class="card-header"><span class="card-title">Đánh giá <span class="vnai-cli-name">(eval)</span></span>
-                <span class="vnai-term-hint" title="eval: tính EM@v1/v2, F1 thành phần, latency/throughput nếu có; ghi eval_metrics_json và file reports/supa_metrics_run_*.json.">?</span></div>
-            <div class="card-body">
-                <div class="form-group"><label>ID lần chạy <span class="vnai-cli-name">(run_id)</span>
-                    <span class="vnai-term-hint" title="Để trống: script dùng run mới nhất (theo quy ước CLI).">?</span></label><input type="number" id="supa-eval-rid" class="form-input"></div>
-                <button type="button" class="btn btn-primary btn-sm" data-supa-action="eval">Chạy</button>
-            </div>
-        </div>
-        <div class="card">
-            <div class="card-header"><span class="card-title">Xuất mẫu CSV <span class="vnai-cli-name">(export-specimens)</span></span>
-                <span class="vnai-term-hint" title="Xuất noisy_raw_address + id để chạy pipeline chuẩn hóa ngoài; đường dẫn phải nằm dưới reports/.">?</span></div>
-            <div class="card-body">
-                <div class="form-group"><label><span class="vnai-cli-name">run_id</span></label><input type="number" id="supa-exp-rid" class="form-input"></div>
-                <div class="form-group"><label>Đường dẫn xuất tương đối <span class="vnai-cli-name">(out_relative)</span>
-                    <span class="vnai-term-hint" title="Bắt đầu bằng reports/ — ghi file trên repo server.">?</span></label><input type="text" id="supa-exp-out" class="form-input" value="reports/supa_ui_export_specimens.csv"></div>
-                <button type="button" class="btn btn-primary btn-sm" data-supa-action="export-specimens">Chạy xuất</button>
-                <button type="button" class="btn btn-outline btn-sm mt-8" id="supa-btn-download-specimens">Tải CSV tạm <span class="vnai-cli-name">(GET)</span>
-                    <span class="vnai-term-hint" title="Tải file tạm do API tạo (không ghi vào reports/); cần run_id.">?</span></button>
-            </div>
-        </div>
-        <div class="card">
-            <div class="card-header"><span class="card-title">Nhập dự đoán <span class="vnai-cli-name">(import-preds · multipart)</span></span>
-                <span class="vnai-term-hint" title="Đọc CSV có cột pred_standardized (và tùy chọn latency_ms); cập nhật specimen; ghi manifest provenance (source_note bắt buộc).">?</span></div>
-            <div class="card-body">
-                <div class="form-group"><label>Tệp CSV</label><input type="file" id="supa-import-file" accept=".csv,text/csv"></div>
-                <div class="form-group"><label>Ghi chú nguồn / provenance <span class="vnai-cli-name">(source_note)</span>
-                    <span class="vnai-term-hint" title="Mô tả pipeline, checkpoint, commit, GPU… để truy vết trong báo cáo khoa học.">?</span></label><input type="text" id="supa-import-note" class="form-input" placeholder="vd. production_pipeline; commit=…; config=…"></div>
-                <label class="flex items-center gap-8 mb-12"><input type="checkbox" id="supa-import-dry"> Chỉ thử (không ghi DB) <span class="vnai-cli-name">(dry_run)</span>
-                    <span class="vnai-term-hint" title="dry_run: kiểm tra CSV và logic nhập mà không commit thay đổi.">?</span></label>
-                <label class="flex items-center gap-8 mb-12"><input type="checkbox" id="supa-import-nolat"> Không đo độ trễ hàng <span class="vnai-cli-name">(no_measured_latency)</span>
-                    <span class="vnai-term-hint" title="Khi CSV thiếu latency_ms, mặc định import có thể đo thời gian UPDATE; tick để tắt (xem runbook).">?</span></label>
-                <button type="button" class="btn btn-primary btn-sm" id="supa-btn-import-preds">Chạy nhập</button>
-            </div>
-        </div>
-        <div class="card">
-            <div class="card-header"><span class="card-title">Xuất macro LaTeX <span class="vnai-cli-name">(export-tex)</span></span>
-                <span class="vnai-term-hint" title="Sinh vnai-supa-generated-metrics.tex từ JSON metric (phục vụ biên dịch báo cáo).">?</span></div>
-            <div class="card-body">
-                <div class="form-group"><label>File metric JSON <span class="vnai-cli-name">(metrics_json_relative)</span> — tuỳ chọn</label><input type="text" id="supa-tex-mj" class="form-input" placeholder="reports/supa_benchmark_last_metrics.json"></div>
-                <div class="form-group"><label>File TeX đích <span class="vnai-cli-name">(out_relative)</span></label><input type="text" id="supa-tex-out" class="form-input" value="docs/scientific-report/vnai-supa-generated-metrics.tex"></div>
-                <button type="button" class="btn btn-primary btn-sm" data-supa-action="export-tex">Chạy</button>
-            </div>
-        </div>
-        <div class="card" style="grid-column:1/-1;">
-            <div class="card-header"><span class="card-title">Luồng gộp một lần <span class="vnai-cli-name">(workflow)</span></span>
-                <span class="vnai-term-hint" title="extract → export-specimens → [import-preds] → eval → export-tex theo tham số form.">?</span></div>
-            <div class="card-body">
-                <div class="form-grid" style="max-width:900px;">
-                    <div class="form-group"><label><span class="vnai-cli-name">n</span></label><input type="number" id="supa-wf-n" class="form-input" value="1000"></div>
-                    <div class="form-group"><label><span class="vnai-cli-name">seed</span></label><input type="number" id="supa-wf-seed" class="form-input"></div>
-                    <div class="form-group"><label><span class="vnai-cli-name">noise_profile</span></label><input type="text" id="supa-wf-noise" class="form-input" value="SUP-1.0.0"></div>
-                    <div class="form-group"><label>CSV mẫu xuất <span class="vnai-cli-name">(specimens_out_relative)</span></label><input type="text" id="supa-wf-spec" class="form-input" value="reports/supa_workflow_specimens_latest.csv"></div>
-                    <div class="form-group"><label>CSV dự đoán <span class="vnai-cli-name">(preds_relative)</span> hoặc chế độ oracle</label><input type="text" id="supa-wf-preds" class="form-input"></div>
-                    <div class="form-group"><label><span class="vnai-cli-name">source_note</span></label><input type="text" id="supa-wf-srcnote" class="form-input"></div>
-                    <div class="form-group"><label><span class="vnai-cli-name">run_id</span> khi bỏ qua trích <span class="vnai-cli-name">(skip_extract)</span></label><input type="number" id="supa-wf-rid" class="form-input"></div>
-                </div>
-                <label class="flex items-center gap-8 mr-16"><input type="checkbox" id="supa-wf-skip"> Bỏ bước trích <span class="vnai-cli-name">(skip_extract)</span>
-                    <span class="vnai-term-hint" title="Dùng run_id hiện có để xuất/nhập/eval, không tạo cohort mới.">?</span></label>
-                <label class="flex items-center gap-8"><input type="checkbox" id="supa-wf-oracle"> Dự đoán minh hoạ ref v2 <span class="vnai-cli-name">(preds_demo_ref_v2)</span>
-                    <span class="vnai-term-hint" title="Oracle: copy ref_address_v2 → pred; chỉ để kiểm thử ống dẫn, không dùng số liệu báo cáo chính.">?</span></label>
-                <button type="button" class="btn btn-primary btn-sm mt-12" data-supa-action="workflow">Chạy workflow</button>
-            </div>
-        </div>
-        <div class="card">
-            <div class="card-header"><span class="card-title">Sinh CSV dự đoán minh hoạ <span class="vnai-cli-name">(make-demo-preds)</span></span>
-                <span class="vnai-term-hint" title="Tạo pred_standardized từ cột tham chiếu để smoke test.">?</span></div>
-            <div class="card-body">
-                <div class="form-group"><label>CSV nguồn <span class="vnai-cli-name">(from_relative)</span></label><input type="text" id="supa-demo-from" class="form-input" value="reports/supa_workflow_specimens_latest.csv"></div>
-                <div class="form-group"><label>CSV đích <span class="vnai-cli-name">(out_relative)</span></label><input type="text" id="supa-demo-out" class="form-input" value="reports/supa_preds_demo.csv"></div>
-                <div class="form-group"><label>Cột tham chiếu <span class="vnai-cli-name">(column)</span></label>
-                    <select id="supa-demo-col" class="form-input">
-                        <option value="ref_address_v2">ref_address_v2 (hậu cải cách)</option>
-                        <option value="ref_address_v1">ref_address_v1 (tiền cải cách)</option>
-                    </select>
-                </div>
-                <button type="button" class="btn btn-primary btn-sm" data-supa-action="make-demo-preds">Chạy</button>
-            </div>
-        </div>
-        <div class="card">
-            <div class="card-header"><span class="card-title">Lặp lại nhiều lần <span class="vnai-cli-name">(replicate)</span></span>
-                <span class="vnai-term-hint" title="Chạy nhiều vòng extract→… theo seed; có thể lâu và tải DB. Giới hạn n_runs theo SUPA_BENCHMARK_MAX_REPLICATE_RUNS.">?</span></div>
-            <div class="card-body">
-                <div class="form-group"><label>Số vòng <span class="vnai-cli-name">(n_runs)</span></label><input type="number" id="supa-rep-nruns" class="form-input" value="3"></div>
-                <div class="form-group"><label>Chế độ <span class="vnai-cli-name">(mode)</span>
-                    <span class="vnai-term-hint" title="sweep-seed: seed tăng dần; repeat-determinism: cùng seed cố định mỗi vòng.">?</span></label>
-                    <select id="supa-rep-mode" class="form-input"><option value="sweep-seed">sweep-seed (quét seed)</option><option value="repeat-determinism">repeat-determinism (lặp xác định)</option></select>
-                </div>
-                <div class="form-group"><label><span class="vnai-cli-name">n</span> mỗi vòng</label><input type="number" id="supa-rep-n" class="form-input" value="500"></div>
-                <label class="flex items-center gap-8"><input type="checkbox" id="supa-rep-oracle"> <span class="vnai-cli-name">preds_demo_ref_v2</span> (oracle)</label>
-                <button type="button" class="btn btn-primary btn-sm mt-12" data-supa-action="replicate">Chạy</button>
-            </div>
-        </div>
-        <div class="card">
-            <div class="card-header"><span class="card-title">Lặp phân tầng <span class="vnai-cli-name">(replicate-stratified)</span></span>
-                <span class="vnai-term-hint" title="K cohort độc lập (seed lệch bước), mỗi cohort stratified — thiết kế mục 9.5.1.">?</span></div>
-            <div class="card-body">
-                <div class="form-group"><label>Số cohort <span class="vnai-cli-name">(k_runs)</span></label><input type="number" id="supa-rst-k" class="form-input" value="2"></div>
-                <div class="form-group"><label><span class="vnai-cli-name">n</span> mỗi cohort</label><input type="number" id="supa-rst-n" class="form-input" value="500"></div>
-                <label class="flex items-center gap-8"><input type="checkbox" id="supa-rst-oracle"> <span class="vnai-cli-name">preds_demo_ref_v2</span> (oracle)</label>
-                <button type="button" class="btn btn-primary btn-sm mt-12" data-supa-action="replicate-stratified">Chạy</button>
-            </div>
-        </div>
+  <!-- Bước 3 -->
+  <div class="card mb-20" data-supa-section="3">
+    <div class="card-header">
+      <span class="card-title">Bước 3 — Gửi lên file kết quả của pipeline chuẩn hóa</span>
     </div>
+    <div class="card-body" style="max-width: 640px;">
+      <p class="text-secondary mb-16">
+        Dùng file đã tải ở bước 2, chạy qua hệ thống chuẩn hóa của bạn, rồi tải lên lại đúng định dạng đã hướng dẫn trong file.
+        Cần ghi rõ <strong>ai hoặc phiên bản nào</strong> đã tạo file (một dòng là đủ).
+      </p>
+      <div class="form-group">
+        <label for="supa-import-file">File kết quả</label>
+        <input type="file" id="supa-import-file" accept=".csv,text/csv" />
+      </div>
+      <div class="form-group">
+        <label for="supa-import-note">Ghi chú nguồn (bắt buộc)</label>
+        <input type="text" id="supa-import-note" class="form-input" placeholder="Ví dụ: nhóm A; phiên bản dịch vụ ngày 12/05" />
+      </div>
+      <details class="mb-12">
+        <summary class="text-secondary" style="cursor: pointer; font-size: 13px;">Tuỳ chọn nâng cao</summary>
+        <label class="flex items-center gap-8 mt-12 mb-8">
+          <input type="checkbox" id="supa-import-dry" /> Chỉ kiểm tra, chưa ghi vào cơ sở dữ liệu
+        </label>
+        <label class="flex items-center gap-8">
+          <input type="checkbox" id="supa-import-nolat" /> Không cập nhật cột độ trễ (nếu file không có)
+        </label>
+      </details>
+      <button type="button" class="btn btn-primary btn-sm" id="supa-btn-import-preds">Tải lên và áp dụng</button>
+    </div>
+  </div>
 
-    <div class="card mb-20 mt-20">
-        <div class="card-header"><span class="card-title">Ngưỡng kỳ vọng phương pháp luận <span class="vnai-cli-name">(đối chiếu · mục 9.5)</span></span>
-            <span class="vnai-term-hint" title="Bảng tham chiếu khi chạy pipeline chuẩn hóa thật và có latency đo từ pipeline; oracle không dùng để kết luận đạt ngưỡng.">?</span></div>
-        <div class="card-body">
-            <div class="table-container">
-                <table>
-                    <thead><tr><th>Chỉ số</th><th>Ngưỡng</th><th>Mức độ kỳ vọng</th></tr></thead>
-                    <tbody>
-                        <tr><td>F1 thành phần tỉnh <span class="vnai-cli-name">(Tỉnh/TP)</span></td><td>≥ 98,5%</td><td>Rất cao</td></tr>
-                        <tr><td>F1 thành phần phường <span class="vnai-cli-name">(Phường/Xã)</span></td><td>≥ 92,0%</td><td>Cao</td></tr>
-                        <tr><td>Trùng khớp tuyệt đối cả chuỗi <span class="vnai-cli-name">(EM)</span></td><td>≥ 85,0%</td><td>Trung bình</td></tr>
-                        <tr><td>Độ trễ trung bình <span class="vnai-cli-name">(mean latency)</span></td><td>≤ 120 ms</td><td>Cao</td></tr>
-                        <tr><td>Độ trễ phân vị 95 <span class="vnai-cli-name">(P95 latency)</span></td><td>≤ 500 ms</td><td>Cao</td></tr>
-                        <tr><td>Thông lượng lô <span class="vnai-cli-name">(throughput batch)</span></td><td>≥ 22 địa chỉ/giây</td><td>Trung bình</td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
+  <!-- Bước 4 -->
+  <div class="card mb-20" data-supa-section="4">
+    <div class="card-header flex justify-between items-center flex-wrap gap-8">
+      <span class="card-title">Bước 4 — Tỉ lệ khớp và chấm điểm</span>
+      <button type="button" class="btn btn-sm btn-primary" id="supa-btn-run-eval">Cập nhật tỉ lệ khớp</button>
     </div>
+    <div class="card-body">
+      <div id="supa-metrics-hero"></div>
+      <div class="supa-metric-grid" id="supa-metrics-grid"></div>
+      <p class="text-secondary mt-16 mb-0" style="font-size: 13px;">
+        Sau mỗi lần nhập file hoặc chấm điểm, bảng ở bước 2 sẽ tự làm mới. Cột “Khớp chuẩn” dùng cùng quy tắc so khớp với bước chấm điểm.
+      </p>
+    </div>
+  </div>
 
-    <div class="card">
-        <div class="card-header flex justify-between items-center">
-            <span class="card-title">Nhật ký thực thi <span class="vnai-cli-name">(stdout / stderr / JSON)</span></span>
-            <span class="vnai-term-hint" title="Phản hồi thô từ subprocess và API; dùng để gỡ lỗi khi exit_code ≠ 0.">?</span>
+  <details class="card mb-20" id="supa-tech-details">
+    <summary class="card-header" style="cursor: pointer; list-style: none;">
+      <span class="card-title">Chi tiết kỹ thuật (dành cho hỗ trợ / quản trị)</span>
+    </summary>
+    <div class="card-body">
+      <p class="text-secondary mb-16" id="supa-compare-note">—</p>
+      <div class="table-container mb-20">
+        <table>
+          <thead>
+            <tr>
+              <th>Chỉ số (so sánh nội bộ)</th>
+              <th>Mốc đã chốt</th>
+              <th>Tổng hợp gần nhất</th>
+            </tr>
+          </thead>
+          <tbody id="supa-compare-tbody"></tbody>
+        </table>
+      </div>
+      <div class="flex gap-8 flex-wrap mb-16">
+        <button type="button" class="btn btn-sm btn-ghost" id="supa-btn-refresh-compare">Tải lại bảng so sánh nội bộ</button>
+        <button type="button" class="btn btn-sm btn-ghost" id="supa-btn-clear-log">Xóa nhật ký chi tiết</button>
+      </div>
+      <div class="mb-20">
+        <div class="text-secondary mb-8" style="font-size: 13px;">Xem trước tổng hợp theo khoảng lần thử (tùy cấu hình máy chủ)</div>
+        <div class="form-grid" style="max-width: 720px;">
+          <div class="form-group">
+            <label for="supa-agg-min">ID lần thử từ</label>
+            <input type="number" id="supa-agg-min" class="form-input" placeholder="vd. 56" />
+          </div>
+          <div class="form-group">
+            <label for="supa-agg-max">ID lần thử đến</label>
+            <input type="number" id="supa-agg-max" class="form-input" placeholder="vd. 60" />
+          </div>
+          <div class="form-group">
+            <label for="supa-agg-lastn">Hoặc lấy N lần gần nhất</label>
+            <input type="number" id="supa-agg-lastn" class="form-input" placeholder="50" />
+          </div>
+          <div class="form-group flex items-end">
+            <label class="flex items-center gap-8">
+              <input type="checkbox" id="supa-agg-persist" /> Ghi bản tổng hợp vào kho lưu nội bộ
+            </label>
+          </div>
         </div>
-        <div class="card-body">
-            <pre id="supa-bench-console-log" style="max-height:420px;overflow:auto;font-size:11px;background:var(--bg-elevated);padding:12px;border-radius:8px;white-space:pre-wrap;"></pre>
-        </div>
+        <button type="button" class="btn btn-sm btn-outline mt-8" id="supa-btn-aggregate-preview">Chạy xem trước</button>
+        <pre id="supa-aggregate-out" class="mt-12" style="display: none; max-height: 240px; overflow: auto; font-size: 11px; background: var(--bg-elevated); padding: 12px; border-radius: 8px;"></pre>
+      </div>
+      <div class="text-secondary mb-8" style="font-size: 13px;">Nhật ký phản hồi từ máy chủ (khi cần gỡ lỗi)</div>
+      <pre id="supa-bench-console-log" style="max-height: 320px; overflow: auto; font-size: 11px; background: var(--bg-elevated); padding: 12px; border-radius: 8px; white-space: pre-wrap;"></pre>
     </div>
+  </details>
 </div>
