@@ -2670,6 +2670,124 @@ select.form-input {
   }
 }
 
+/* Tablet (Portrait) — iPad; document scroll instead of viewport-locked shell */
+@media only screen and (min-width: 768px) and (max-width: 1024px) {
+  html {
+    height: auto;
+  }
+
+  body {
+    overflow-x: hidden;
+    overflow-y: auto;
+    height: auto;
+    min-height: 100vh;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .app-container {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+
+  .main-content {
+    overflow: visible;
+    flex: 1 1 auto;
+  }
+
+  #page-content {
+    overflow-x: hidden;
+    overflow-y: visible;
+    flex: 1 1 auto;
+    height: auto;
+    min-height: 0;
+  }
+
+  #page-content:has(.full-height-page.active) {
+    overflow: visible !important;
+  }
+
+  .page,
+  .page.active {
+    flex: 0 0 auto;
+    overflow: visible;
+    height: auto;
+    min-height: 0;
+  }
+
+  .full-height-page,
+  .full-height-page.active {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .full-height-page .dm-page-shell,
+  .full-height-page .dm-page-main {
+    flex: 1 1 auto;
+    overflow: visible;
+    min-height: 0;
+  }
+}
+
+/* Tablet (Landscape) — iPad Pro / iPad horizontal */
+@media only screen and (min-width: 1024px) and (max-width: 1366px) {
+  html {
+    height: auto;
+  }
+
+  body {
+    overflow-x: hidden;
+    overflow-y: auto;
+    height: auto;
+    min-height: 100vh;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .app-container {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+
+  .main-content {
+    overflow: visible;
+    flex: 1 1 auto;
+  }
+
+  #page-content {
+    overflow-x: hidden;
+    overflow-y: visible;
+    flex: 1 1 auto;
+    height: auto;
+    min-height: 0;
+  }
+
+  #page-content:has(.full-height-page.active) {
+    overflow: visible !important;
+  }
+
+  .page,
+  .page.active {
+    flex: 0 0 auto;
+    overflow: visible;
+    height: auto;
+    min-height: 0;
+  }
+
+  .full-height-page,
+  .full-height-page.active {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .full-height-page .dm-page-shell,
+  .full-height-page .dm-page-main {
+    flex: 1 1 auto;
+    overflow: visible;
+    min-height: 0;
+  }
+}
+
 .p-12 {
   padding: 12px !important;
 }
