@@ -66,6 +66,19 @@ def list_supa_runs(
     return {"runs": out}
 
 
+def _mount_supa_benchmark_ui_routes() -> None:
+    """Bundle SUPA console/read routes on the same router as list endpoints.
+
+    Keeps a single ``include_router(..., prefix="/experiments")`` in ``server.py`` so
+    deployments cannot accidentally register list routes without the SUPA UI paths.
+    """
+    from app.api import supa_benchmark_ui as _supa_ui
+
+    router.include_router(_supa_ui.router)
+
+_mount_supa_benchmark_ui_routes()
+
+
 @router.get("/retrieval-runs", summary="List Siamese/mGTE retrieval evaluation runs")
 def list_retrieval_runs(
     current_user: str = Depends(get_current_user),

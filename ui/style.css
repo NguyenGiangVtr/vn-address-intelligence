@@ -5763,6 +5763,44 @@ body.no-scroll {
   min-height: 0;
 }
 
+/* SUPA-Bench: skip viewport-locked 100vh shell — long runbook scrolls with the window (avoids clipped / nested-scroll bugs). */
+body:has(#supa-bench.page.active) {
+  height: auto;
+  min-height: 100vh;
+  overflow-y: auto;
+}
+
+.app-container:has(#supa-bench.page.active) {
+  height: auto;
+  min-height: 100vh;
+}
+
+.main-content:has(#supa-bench.page.active) {
+  overflow: visible;
+}
+
+#page-content:has(#supa-bench.page.active) {
+  overflow: visible;
+  flex: 1 1 auto;
+  height: auto;
+  min-height: 0;
+}
+
+#supa-bench.page.active {
+  flex: 0 0 auto;
+  height: auto;
+  min-height: 0;
+  overflow: visible;
+  display: flex;
+  flex-direction: column;
+}
+
+#supa-bench.page.active .table-container {
+  flex: none !important;
+  min-height: 0;
+  max-height: none !important;
+}
+
 #prelabeler-cases > .page-header {
   flex-wrap: wrap;
   align-items: flex-start;
