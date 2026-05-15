@@ -27,7 +27,12 @@ from epoch_detector import EpochDetector
 logging.basicConfig(level=logging.INFO, format="%(asctime)s.%(msecs)03d [%(levelname)s] %(message)s", datefmt="%H:%M:%S")
 logger = logging.getLogger("ProductionPipeline")
 
-def run_pipeline(config_path: str, limit: int = None):
+def run_pipeline(config_path: str, limit: int = None, 
+                 use_ner: bool = True, 
+                 use_retrieval: bool = True, 
+                 use_llm: bool = True,
+                 retriever_type: str = "mgte",
+                 supa_run_id: int = None):
     cfg = load_config_with_env(config_path)
     db_cfg = cfg["database"]
     mod_cfg = cfg["models"]
@@ -49,79 +54,84 @@ def run_pipeline(config_path: str, limit: int = None):
         corpus_limit = 50000
     
     # 1. Khởi tạo các mô hình ──────────────────────────────────────────────────
-    logger.info("Initializing models...")
-    retriever = SiameseMGTE(model_name=mod_cfg["siamese_mgte"]["model_name"])
+    logger.info("Initializing models (NER=%s, Retrieval=%s [%s], LLM=%s)...", 
+                use_ner, use_retrieval, retriever_type, use_llm)
     
-    # Load corpus từ bảng address_clean_corpus với fallback
-    corpus_loaded = False
-    try:
-        logger.info("Loading corpus from prq.address_clean_corpus (limit=%s)...", corpus_limit)
-        corpus_addresses, corpus_metadata = db.load_clean_corpus_with_metadata(
-            admin_epoch="2025",
-            source_types=["ADMINISTRATIVE", "QUEUE_STANDARDIZED", "HF_NER_DERIVED"],
-            min_quality_score=0.7,
-            limit=corpus_limit,
-        )
-        
-        if len(corpus_addresses) > 0:
-            logger.info("Using clean corpus with %d addresses", len(corpus_addresses))
-            retriever.encode_corpus_with_metadata(corpus_addresses, corpus_metadata)
-            corpus_loaded = True
+    retriever = None
+    if use_retrieval:
+        if retriever_type == "phobert":
+            from models import PhoBERTSiamese
+            retriever = PhoBERTSiamese(model_name=mod_cfg.get("phobert_siamese", {}).get("model_name", "vinai/phobert-base"))
         else:
-            logger.warning("Clean corpus empty, falling back to hierarchical corpus")
-            
-    except Exception as e:
-        logger.warning("Failed to load clean corpus (%s), will try fallback", e)
-    
-    # Fallback: load hierarchical corpus if needed
-    if not corpus_loaded:
+            retriever = SiameseMGTE(model_name=mod_cfg["siamese_mgte"]["model_name"])
+        
+        # Load corpus
+        corpus_loaded = False
         try:
-            hierarchical_corpus = db.load_hierarchical_corpus()
-            if not hierarchical_corpus or len(hierarchical_corpus) == 0:
-                logger.error("Hierarchical corpus is also empty. Pipeline cannot proceed.")
-                raise ValueError("No corpus available after trying all sources.")
-            logger.info("Using hierarchical corpus with %d addresses", len(hierarchical_corpus))
-            retriever.encode_corpus(hierarchical_corpus)
-            corpus_loaded = True
+            logger.info("Loading corpus for %s (limit=%s)...", retriever_type, corpus_limit)
+            corpus_addresses, corpus_metadata = db.load_clean_corpus_with_metadata(
+                admin_epoch="2025",
+                source_types=["ADMINISTRATIVE", "QUEUE_STANDARDIZED", "HF_NER_DERIVED"],
+                min_quality_score=0.7,
+                limit=corpus_limit,
+            )
+            
+            if len(corpus_addresses) > 0:
+                logger.info("Using clean corpus with %d addresses", len(corpus_addresses))
+                retriever.encode_corpus_with_metadata(corpus_addresses, corpus_metadata)
+                corpus_loaded = True
+            else:
+                logger.warning("Clean corpus empty, falling back to hierarchical corpus")
         except Exception as e:
-            logger.error("Critical: Failed to load any corpus: %s", e)
-            raise RuntimeError("Cannot initialize pipeline without corpus data.") from e
-    
-    if not corpus_loaded:
-        logger.error("Critical: Corpus was not loaded successfully")
-        raise RuntimeError("Pipeline initialization failed: corpus not loaded.")
-    
-    ner_model_path = resolve_ner_model_path()
-    if ner_model_path == DEFAULT_HF_NER_MODEL_ID:
-        logger.info(
-            "No local NER at models/phobert-ner-vn and NER_MODEL_ID unset; "
-            "using Hugging Face model %s (first run may download weights).",
-            DEFAULT_HF_NER_MODEL_ID,
-        )
-    ner = AddressNER(model_path=ner_model_path)
-    
-    llm = LLMQwen3(
-        model_name=mod_cfg["llm"]["model_name"],
-        use_quantization=bool(mod_cfg["llm"].get("use_quantization", True)),
-        quantization_bits=int(mod_cfg["llm"].get("quantization_bits", 8)),
-        max_new_tokens=int(mod_cfg["llm"].get("max_new_tokens", 128)),
-        temperature=float(mod_cfg["llm"].get("temperature", 0.0)),
-    )
+            logger.warning("Failed to load clean corpus (%s), will try fallback", e)
+        
+        if not corpus_loaded:
+            hierarchical_corpus = db.load_hierarchical_corpus()
+            if hierarchical_corpus:
+                retriever.encode_corpus(hierarchical_corpus)
+            else:
+                logger.error("No corpus available for retrieval. Disabling retrieval.")
+                use_retrieval = False
 
-    # ACS Calculator và Epoch Detector (không cần DB session ở pipeline standalone)
-    acs_calc     = ACSCalculator(db_session=None)
+    ner = None
+    if use_ner:
+        ner_model_path = resolve_ner_model_path()
+        ner = AddressNER(model_path=ner_model_path)
+    
+    llm = None
+    if use_llm:
+        llm = LLMQwen3(
+            model_name=mod_cfg["llm"]["model_name"],
+            use_quantization=bool(mod_cfg["llm"].get("use_quantization", True)),
+            quantization_bits=int(mod_cfg["llm"].get("quantization_bits", 8)),
+            max_new_tokens=int(mod_cfg["llm"].get("max_new_tokens", 128)),
+            temperature=float(mod_cfg["llm"].get("temperature", 0.0)),
+        )
+
+    acs_calc = ACSCalculator(db_session=None)
     epoch_detector = EpochDetector(db_session=None)
 
     # 2. Xử lý Dữ liệu ─────────────────────────────────────────────────────────
-    # Lấy những bản ghi đang PENDING hoặc chưa có address_standardized
-    query = f"""
-        SELECT id, raw_address, street_address, ward_name, district_name, province_name,
-               ward_id, district_id, province_id,
-               old_ward_id, old_district_id, old_province_id,
-               latitude, longitude
-        FROM prq.address_cleansing_queue
-        WHERE processing_status = 'PENDING' OR address_standardized IS NULL
-    """
+    if supa_run_id:
+        logger.info(f"Targeting SUPA Specimens for run_id={supa_run_id}")
+        query = f"""
+            SELECT id, noisy_raw_address as raw_address, 
+                   ward_id, district_id, province_id,
+                   latitude, longitude
+            FROM prq.supa_benchmark_specimen
+            WHERE run_id = {supa_run_id}
+        """
+        table_to_save = "supa_benchmark_specimen"
+    else:
+        query = f"""
+            SELECT id, raw_address, street_address, ward_name, district_name, province_name,
+                   ward_id, district_id, province_id,
+                   latitude, longitude
+            FROM prq.address_cleansing_queue
+            WHERE processing_status = 'PENDING' OR address_standardized IS NULL
+        """
+        table_to_save = db_cfg["table_name"]
+
     if limit: 
         query += f" LIMIT {limit}"
         
@@ -134,28 +144,36 @@ def run_pipeline(config_path: str, limit: int = None):
         db.disconnect()
         return
 
-    logger.info(f"Processing {len(rows):,} rows with Hybrid Pipeline...")
+    # Xác định tag phương pháp dựa trên cấu hình
+    method_parts = ["HYBRID"]
+    if use_ner: method_parts.append("NER")
+    if use_retrieval: method_parts.append(retriever_type.upper())
+    if use_llm: method_parts.append("LLM")
+    method_tag = "_".join(method_parts)
+
+    logger.info(f"Processing {len(rows):,} rows with {method_tag}...")
 
     batch_results = []
     for row in rows:
+        start_time = datetime.now()
         try:
             raw_addr = row.get('raw_address') or row.get('street_address')
-            if not raw_addr:
-                continue
+            if not raw_addr: continue
                 
-            # A. NER bóc tách street_address
-            ner_results = ner.extract(raw_addr)
+            # A. NER
+            ner_results = {}
+            if use_ner:
+                ner_results = ner.extract(raw_addr)
             
-            # B. Chuẩn hóa sơ bộ bằng Dictionary
+            # B. Dictionary Normalization (Street name)
             street_name = ner_results.get('STR', raw_addr)
             for k, v in abbr_map.get('STREET_PREFIX', {}).items():
                 if street_name.lower().startswith(k.lower()):
                     street_name = v + street_name[len(k):]
             
-            # C. Tổng hợp context cho LLM
+            # C. Context Assembly
             nhb_part = ner_results.get('NHB', '')
             num_part = ner_results.get('NUM', '')
-            
             context_parts = []
             if num_part: context_parts.append(num_part)
             if street_name: context_parts.append(street_name)
@@ -163,39 +181,41 @@ def run_pipeline(config_path: str, limit: int = None):
             if row.get('ward_name'): context_parts.append(row['ward_name'])
             if row.get('district_name'): context_parts.append(row['district_name'])
             if row.get('province_name'): context_parts.append(row['province_name'])
-            
             context_addr = ", ".join([p for p in context_parts if p])
             
-            # D. Retrieval + LLM Final Normalization (Phase 4.1: keep top-1 metadata
-            # so we can recover lat/long for back-fill).
-            ranked = retriever.retrieve_top_k_with_meta(context_addr, top_k=5)
-            top_candidates = [c for c, _, _ in ranked]
-            top_meta = ranked[0][2] if ranked else {}
-            top_score = float(ranked[0][1]) if ranked else 0.0
-            llm_data, llm_score, _ = llm.normalize(context_addr, top_candidates)
+            # D. Retrieval
+            ranked = []
+            top_meta = {}
+            top_score = 0.0
+            if use_retrieval:
+                ranked = retriever.retrieve_top_k_with_meta(context_addr, top_k=5)
+                if ranked:
+                    top_score = float(ranked[0][1])
+                    top_meta = ranked[0][2]
+            
+            # E. LLM
+            llm_score = 0.0
+            if use_llm:
+                top_candidates = [c for c, _, _ in ranked] if use_retrieval else []
+                llm_data, llm_score, _ = llm.normalize(context_addr, top_candidates)
+                if not isinstance(llm_data, dict):
+                    llm_data = {"full_address": str(llm_data)}
+                standardized = llm_data.get("full_address") or context_addr
+            else:
+                # Fallback if no LLM: Use top candidate from retrieval or context_addr
+                if use_retrieval and ranked:
+                    standardized = ranked[0][0]
+                else:
+                    standardized = context_addr
 
-            if not isinstance(llm_data, dict):
-                llm_data = {"full_address": str(llm_data)}
-
-            standardized = llm_data.get("full_address") or context_addr
-
-            # E. Epoch Detection
+            # F. Decision & ACS
             epoch_result = epoch_detector.detect(raw_addr)
+            semantic_score = max(float(llm_score), top_score)
 
-            # F. ACS Calculation
-            mgte_score = top_score
-            semantic_score = max(float(llm_score), mgte_score)
-
-            # Back-fill latitude/longitude from the top corpus candidate's metadata
-            # when the queue row itself does not already have coordinates.
             row_lat = row.get("latitude")
             row_lon = row.get("longitude")
-            backfill_lat = None
-            backfill_lon = None
-            if (row_lat is None) and top_meta.get("latitude") is not None:
-                backfill_lat = top_meta.get("latitude")
-            if (row_lon is None) and top_meta.get("longitude") is not None:
-                backfill_lon = top_meta.get("longitude")
+            backfill_lat = top_meta.get("latitude") if row_lat is None else None
+            backfill_lon = top_meta.get("longitude") if row_lon is None else None
 
             acs = acs_calc.compute(
                 raw_address=raw_addr,
@@ -204,86 +224,59 @@ def run_pipeline(config_path: str, limit: int = None):
                 province_id=row.get("province_id"),
                 district_id=row.get("district_id"),
                 ward_id=row.get("ward_id"),
-                admin_version=2,  # Default Post-2025; epoch detector cập nhật
+                admin_version=2,
                 latitude=row_lat if row_lat is not None else backfill_lat,
                 longitude=row_lon if row_lon is not None else backfill_lon,
             )
 
+            latency_ms = (datetime.now() - start_time).total_seconds() * 1000
+            
             result_payload = {
                 "id": row['id'],
                 "processing_status": "DONE",
-                "processing_method": "HYBRID_V1",
+                "processing_method": method_tag,
                 "address_standardized": standardized,
                 "phobert_confidence_score": float(llm_score),
                 "phobert_parsed_components": json.dumps(ner_results),
-                "mgte_confidence_score": mgte_score,
+                "mgte_confidence_score": top_score,
                 "acs_score": float(acs.acs_score),
                 "acs_decision": acs.acs_decision,
-                "s_text": float(acs.s_text),
-                "s_sem": float(acs.s_sem),
-                "v_hierarchy": float(acs.v_hierarchy),
-                "v_temporal": float(acs.v_temporal),
                 "address_epoch": epoch_result.epoch,
+                "latency_ms": latency_ms
             }
-            if backfill_lat is not None:
-                result_payload["latitude"] = backfill_lat
-            if backfill_lon is not None:
-                result_payload["longitude"] = backfill_lon
+            if supa_run_id:
+                # Map standardized to pred_standardized for SUPA table
+                result_payload["pred_standardized"] = standardized
+
+            if backfill_lat is not None: result_payload["latitude"] = backfill_lat
+            if backfill_lon is not None: result_payload["longitude"] = backfill_lon
             batch_results.append(result_payload)
             
             if len(batch_results) % 50 == 0:
                 logger.info(f" Progress: {len(batch_results):,}/{len(rows):,}")
                 
-        except IndexError as e:
-            row_id = row.get("id")
-            row_id_display = f"{row_id:,}" if isinstance(row_id, int) else str(row_id)
-            error_context = traceback.format_exc()
-            logger.error(
-                f"IndexError processing row {row_id_display}: {e}\n"
-                f"This may indicate corrupt embeddings or invalid corpus state.\n"
-                f"Stack trace:\n{error_context}"
-            )
-            batch_results.append({
-                "id": row['id'],
-                "processing_status": "ERROR",
-                "error_message": f"IndexError: {str(e)}"
-            })
-            
         except Exception as e:
-            row_id = row.get("id")
-            row_id_display = f"{row_id:,}" if isinstance(row_id, int) else str(row_id)
-            error_context = traceback.format_exc()
-            logger.error(
-                f"Error processing row {row_id_display}: {e}\n"
-                f"Type: {type(e).__name__}\n"
-                f"Stack trace:\n{error_context}"
-            )
-            batch_results.append({
-                "id": row['id'],
-                "processing_status": "ERROR",
-                "error_message": str(e)
-            })
+            logger.error(f"Error row {row.get('id')}: {e}")
+            batch_results.append({"id": row['id'], "processing_status": "ERROR", "error_message": str(e)})
 
-    # 3. Lưu kết quả ────────────────────────────────────────────────────────────
+    # 3. Lưu kết quả
     if batch_results:
         ids = [r["id"] for r in batch_results]
-        
-        # Cập nhật từng cột (Phase 4.1: include mgte_confidence_score + lat/lon back-fill)
-        cols_to_update = [
-            "processing_status", "processing_method", "address_standardized",
-            "phobert_confidence_score", "phobert_parsed_components",
-            "mgte_confidence_score",
-            "latitude", "longitude",
-            "error_message",
-            "acs_score", "acs_decision", "s_text", "s_sem",
-            "v_hierarchy", "v_temporal", "address_epoch",
-        ]
-        
+        if supa_run_id:
+            # SUPA Mode: only update relevant evaluation columns
+            cols_to_update = ["pred_standardized", "latency_ms"]
+        else:
+            cols_to_update = [
+                "processing_status", "processing_method", "address_standardized",
+                "phobert_confidence_score", "phobert_parsed_components",
+                "mgte_confidence_score", "latitude", "longitude", "error_message",
+                "acs_score", "acs_decision", "address_epoch"
+            ]
+            
         for col in cols_to_update:
             vals = [r.get(col) for r in batch_results]
-            # Chỉ update nếu có dữ liệu (tránh overwrite bằng None nếu không muốn)
             if any(v is not None for v in vals):
-                db.save_results(db_cfg["table_name"], col, ids, vals)
+                db.save_results(table_to_save, col, ids, vals)
 
     db.disconnect()
     logger.info("Pipeline hoàn tất.")
@@ -294,5 +287,19 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default=ai_config_yaml_relative_posix())
     parser.add_argument("--limit", type=int)
+    parser.add_argument("--no-ner", action="store_true", help="Skip AddressNER component")
+    parser.add_argument("--no-retrieval", action="store_true", help="Skip Siamese Retrieval component")
+    parser.add_argument("--no-llm", action="store_true", help="Skip LLM Normalization component")
+    parser.add_argument("--retriever-type", choices=["mgte", "phobert"], default="mgte", help="Backbone for retrieval")
+    parser.add_argument("--supa-run-id", type=int, help="Target a specific SUPA benchmark run")
+    
     args = parser.parse_args()
-    run_pipeline(args.config, args.limit)
+    run_pipeline(
+        args.config, 
+        args.limit,
+        use_ner=not args.no_ner,
+        use_retrieval=not args.no_retrieval,
+        use_llm=not args.no_llm,
+        retriever_type=args.retriever_type,
+        supa_run_id=args.supa_run_id
+    )

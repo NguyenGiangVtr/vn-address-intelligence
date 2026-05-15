@@ -1,0 +1,541 @@
+<!-- SUPA Benchmark Page -->
+<style>
+  /* Minimal SUPA-specific styles - follow project standards */
+  #supa-bench .supa-stepper {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+
+  #supa-bench .supa-step {
+    flex: 1;
+    min-width: 90px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: var(--radius-sm);
+    transition: var(--transition);
+  }
+
+  #supa-bench .supa-step:hover {
+    background: var(--bg-hover);
+  }
+
+  #supa-bench .supa-step.is-active {
+    background: var(--accent-glow);
+  }
+
+  #supa-bench .supa-step-num {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    background: var(--bg-elevated);
+    color: var(--text-secondary);
+  }
+
+  #supa-bench .supa-step.is-active .supa-step-num {
+    background: var(--accent);
+    color: white;
+  }
+
+  #supa-bench .supa-step.is-done .supa-step-num {
+    background: var(--success);
+    color: white;
+  }
+
+  #supa-bench .supa-step-label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-secondary);
+  }
+
+  #supa-bench .supa-step.is-active .supa-step-label {
+    color: var(--accent);
+  }
+
+  #supa-bench .supa-mini-log {
+    font-family: 'JetBrains Mono', 'Consolas', monospace;
+    font-size: 10px;
+    background: var(--bg-elevated);
+    color: var(--text-secondary);
+    padding: 8px 12px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-left: 3px solid var(--accent);
+  }
+
+  #supa-bench .supa-tab-content {
+    display: none;
+  }
+
+  #supa-bench .supa-tab-content.is-active {
+    display: block;
+  }
+
+  @media (max-width: 768px) {
+    #supa-bench .supa-step {
+      min-width: 80px;
+      padding: 4px;
+    }
+  }
+</style>
+
+<div class="page" id="supa-bench">
+  <!-- Loading Overlay -->
+  <div id="supa-loading-overlay" class="loading-overlay">
+    <div class="spinner"></div>
+    <div class="loading-text">Đang xử lý Workflow...</div>
+  </div>
+
+  <!-- Stepper Navigation -->
+  <div style="margin-bottom: 16px;">
+    <div class="supa-stepper" id="supa-stepper">
+      <div class="supa-step is-active" data-supa-tab="1">
+        <span class="supa-step-num">1</span>
+        <span class="supa-step-label">Khởi tạo</span>
+      </div>
+      <div class="supa-step" data-supa-tab="2">
+        <span class="supa-step-num">2</span>
+        <span class="supa-step-label">Dữ liệu</span>
+      </div>
+      <div class="supa-step" data-supa-tab="3">
+        <span class="supa-step-num">3</span>
+        <span class="supa-step-label">Chuẩn hóa</span>
+      </div>
+      <div class="supa-step" data-supa-tab="4">
+        <span class="supa-step-num">4</span>
+        <span class="supa-step-label">Kết quả</span>
+      </div>
+    </div>
+    
+    <div class="supa-mini-log">
+      <span id="supa-mini-log-msg">Sẵn sàng</span>
+      <span id="supa-mini-progress-text" style="font-weight: 700; color: var(--success);">0/4</span>
+    </div>
+  </div>
+    <div class="flex justify-between items-start mb-24">
+      <div style="flex: 1;">
+        <h2 class="mb-4">Bước 1: Thiết lập Cohort thử nghiệm</h2>
+        <p class="text-secondary mb-12">Lấy mẫu dữ liệu từ Ground Truth và áp dụng các mô hình nhiễu thực tế.</p>
+        <div class="p-12 rounded-8" style="background: rgba(99, 102, 241, 0.1); border-left: 3px solid var(--supa-accent);">
+          <div class="text-sm" style="color: var(--text-primary);">
+            <strong>📥 Input:</strong> Dữ liệu từ bảng <code style="background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px;">prq.ground_truth</code> (địa chỉ đã được kiểm chứng)<br>
+            <strong>📤 Output:</strong> Bộ dữ liệu thử nghiệm với nhiễu được lưu vào <code style="background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px;">prq.supa_benchmark_specimen</code>
+          </div>
+        </div>
+      </div>
+      <div class="flex gap-12" style="flex-shrink: 0; align-self: flex-start;">
+        <button type="button" class="btn btn-xs btn-outline" id="supa-btn-refresh-runs">Làm mới danh sách</button>
+        <button type="button" class="btn btn-xs btn-primary" id="supa-btn-toggle-new">Tạo bộ thử mới</button>
+      </div>
+    </div>
+
+    <div class="card mb-24">
+      <div class="card-body">
+        <div class="form-group mb-0">
+          <label class="flex items-center">
+            Chọn lần thử hiện có
+            <span class="info-tooltip" title="Chọn một bộ dữ liệu đã được trích xuất trước đó để tiếp tục làm việc.">ⓘ</span>
+          </label>
+          <select id="supa-run-select" class="form-input"></select>
+          <div class="input-desc" id="supa-run-meta">Thông tin về lần thử sẽ hiện ở đây.</div>
+        </div>
+
+        <!-- Quick Action Guide -->
+        <div class="mt-16 p-12 rounded-8" style="background: rgba(139, 92, 246, 0.08); border: 1px solid rgba(139, 92, 246, 0.2);">
+          <div class="text-xs font-semibold mb-8" style="color: #a78bfa;">⚡ Muốn chạy lại với Luồng Tự động?</div>
+          <div class="text-xs" style="color: var(--text-secondary); line-height: 1.6;">
+            Nếu bạn muốn chạy lại bộ thử này với pipeline tự động (không cần CSV thủ công):
+            <ol style="margin: 8px 0 0 16px; padding: 0;">
+              <li>Mở phần <strong>"Cấu hình bộ thử mới"</strong> bên dưới</li>
+              <li>Tích checkbox <strong>"TỰ ĐỘNG CHẠY NORMALIZATION"</strong></li>
+              <li>Chọn cấu hình model mong muốn</li>
+              <li>Click <strong>"Bắt đầu Workflow"</strong></li>
+            </ol>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="supa-new-panel" class="card" style="display: none; border-top: 4px solid var(--supa-accent);">
+      <div class="card-header">
+        <span class="card-title">Cấu hình bộ thử mới</span>
+      </div>
+      <div class="card-body">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Số lượng mẫu (--n)</label>
+            <input type="number" id="supa-new-n" class="form-input" value="1000" />
+            <div class="input-desc">Số lượng địa chỉ tối đa muốn lấy từ Ground Truth.</div>
+          </div>
+          <div class="form-group">
+            <label>Hạt giống ngẫu nhiên (--seed)</label>
+            <input type="number" id="supa-new-seed" class="form-input" placeholder="Để trống để lấy ngẫu nhiên" />
+            <div class="input-desc">Dùng cùng một số seed để tái lập chính xác bộ dữ liệu này sau này.</div>
+          </div>
+          <div class="form-group">
+            <label>Profile Nhiễu (--noise-profile)</label>
+            <select id="supa-new-noise" class="form-input">
+              <option value="SUP-1.0.0">SUP-1.0.0 (Mặc định - Đa dạng lỗi)</option>
+              <option value="SUP-D2-1.0.0">SUP-D2-1.0.0 (Tập trung nhiễu nặng)</option>
+            </select>
+            <div class="input-desc">Quy định cách thức giả lập lỗi gõ của người dùng.</div>
+          </div>
+          <div class="form-group">
+            <label>Ghi chú (--notes)</label>
+            <input type="text" id="supa-new-notes" class="form-input" placeholder="Tự động: [Số mẫu]-[Seed]-[Profile]" />
+            <div class="input-desc">Để trống để tự động tạo theo pattern: 1000-42-SUP-1.0.0</div>
+          </div>
+        </div>
+
+        <div class="mt-24 p-16 rounded-8" style="background: var(--bg-secondary); border: 1px dashed var(--border-default);">
+          <label class="flex items-center gap-8 mb-8" style="font-weight: 700; color: var(--supa-accent);">
+            <input type="checkbox" id="supa-wf-run-norm" /> TỰ ĐỘNG CHẠY NORMALIZATION (ABLATION STUDY)
+          </label>
+          <div class="text-xs mb-16" style="color: var(--text-secondary); line-height: 1.6;">
+            Nếu bật, hệ thống sẽ tự động chạy pipeline AI (NER + Retrieval + LLM) ngay sau khi trích mẫu, không cần import CSV thủ công. Phù hợp cho ablation study và so sánh các cấu hình model.
+          </div>
+          
+          <div id="supa-norm-options" class="form-grid" style="opacity: 0.5; pointer-events: none; transition: all 0.2s;">
+            <div class="form-group" style="grid-column: 1 / -1;">
+              <label class="mb-8 block">Thành phần mô hình kích hoạt:</label>
+              <div class="flex gap-16">
+                <label class="flex items-center gap-6"><input type="checkbox" id="supa-norm-ner" checked /> NER (PhoBERT)</label>
+                <label class="flex items-center gap-6"><input type="checkbox" id="supa-norm-retrieval" checked /> Retrieval</label>
+                <label class="flex items-center gap-6"><input type="checkbox" id="supa-norm-llm" checked /> LLM (Qwen3)</label>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Retriever Backbone</label>
+              <div class="flex gap-16 mt-4">
+                <label class="flex items-center gap-6"><input type="radio" name="supa-retriever" value="mgte" checked /> mGTE (Toàn cầu)</label>
+                <label class="flex items-center gap-6"><input type="radio" name="supa-retriever" value="phobert" /> PhoBERT (Việt Nam)</label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-24 flex gap-12">
+          <button type="button" class="btn btn-primary" id="supa-btn-create-run">Bắt đầu Workflow</button>
+          <button type="button" class="btn btn-outline" id="supa-btn-extract-only">Chỉ trích mẫu (Extract)</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab 2: Dữ liệu mẫu -->
+  <div class="supa-tab-content" id="supa-tab-2">
+    <div class="mb-24">
+      <h2 class="mb-4">Bước 2: Xem trước Dữ liệu mẫu</h2>
+      <p class="text-secondary mb-12">Kiểm tra dữ liệu đã được trích xuất và áp dụng nhiễu.</p>
+      <div class="p-12 rounded-8" style="background: rgba(16, 185, 129, 0.1); border-left: 3px solid var(--supa-success);">
+        <div class="text-sm" style="color: var(--text-primary);">
+          <strong>📥 Input:</strong> Dữ liệu từ Bước 1 (bộ thử đã được tạo)<br>
+          <strong>📤 Output:</strong> File CSV có thể tải xuống để chạy pipeline chuẩn hóa bên ngoài, hoặc tiếp tục sang Bước 3 để chuẩn hóa
+        </div>
+      </div>
+    </div>
+
+    <!-- Flow Guide -->
+    <div class="mb-24 p-16 rounded-12" style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1)); border: 2px solid rgba(99, 102, 241, 0.3);">
+      <div class="flex items-start gap-16">
+        <div style="font-size: 32px;">🎯</div>
+        <div style="flex: 1;">
+          <h4 class="mb-12" style="color: var(--supa-accent);">Bạn có 2 lựa chọn để tiếp tục:</h4>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+            <div class="p-12 rounded-8" style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);">
+              <div class="font-semibold mb-8" style="color: var(--text-primary);">🔄 Luồng Ngoại vi (Manual)</div>
+              <ol class="text-xs" style="color: var(--text-secondary); line-height: 1.8; padding-left: 16px;">
+                <li>Click nút <strong>"Tải CSV"</strong> bên dưới</li>
+                <li>Chạy pipeline của bạn (Python, API, etc.)</li>
+                <li>Điền kết quả vào cột <code style="background: rgba(0,0,0,0.3); padding: 2px 4px; border-radius: 3px;">pred_standardized</code></li>
+                <li>Sang Bước 3 → Upload file CSV đã điền</li>
+              </ol>
+            </div>
+            <div class="p-12 rounded-8" style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);">
+              <div class="font-semibold mb-8" style="color: var(--text-primary);">⚡ Luồng Tự động (Auto)</div>
+              <ol class="text-xs" style="color: var(--text-secondary); line-height: 1.8; padding-left: 16px;">
+                <li>Quay lại Bước 1</li>
+                <li>Tích checkbox <strong>"TỰ ĐỘNG CHẠY NORMALIZATION"</strong></li>
+                <li>Chọn cấu hình model (NER, Retrieval, LLM)</li>
+                <li>Click <strong>"Bắt đầu Workflow"</strong></li>
+                <li>Hệ thống tự động chạy và chuyển sang Bước 4</li>
+              </ol>
+            </div>
+          </div>
+          <div class="mt-12 text-xs" style="color: var(--text-tertiary);">
+            💡 <strong>Gợi ý:</strong> Nếu chỉ muốn xem demo nhanh, dùng Luồng Tự động. Nếu muốn test model riêng, dùng Luồng Ngoại vi.
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="flex justify-between items-center mb-16">
+      <h3 class="mb-0">Bảng đối soát dữ liệu mẫu</h3>
+      <button type="button" class="btn btn-sm btn-outline" id="supa-btn-download-csv">📥 Tải CSV cho Pipeline ngoại vi</button>
+    </div>
+    
+    <div class="card">
+      <div class="card-body p-0">
+        <div class="table-container">
+          <table class="table-hover">
+            <thead style="background: var(--bg-secondary);">
+              <tr>
+                <th style="width:60px;">ID</th>
+                <th>Tham chiếu (V2)</th>
+                <th>Dữ liệu nhiễu (Input)</th>
+                <th>Dự đoán (Output)</th>
+                <th style="width:80px;">Tầng</th>
+                <th style="width:100px;">Trạng thái</th>
+              </tr>
+            </thead>
+            <tbody id="supa-specimens-tbody">
+              <tr><td colspan="6" class="text-center p-40 text-secondary">Vui lòng chọn hoặc tạo bộ thử ở Bước 1.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        
+        <div class="p-16 border-t flex justify-between items-center">
+          <span id="supa-spec-page-label" class="text-secondary text-sm">Hiển thị 0 địa chỉ</span>
+          <div class="flex items-center gap-12">
+            <select id="supa-spec-limit" class="form-input py-4" style="width: auto;">
+              <option value="20">20 dòng</option>
+              <option value="50" selected>50 dòng</option>
+              <option value="100">100 dòng</option>
+            </select>
+            <div class="flex gap-4">
+              <button class="btn btn-xs btn-ghost" id="supa-spec-prev">←</button>
+              <button class="btn btn-xs btn-ghost" id="supa-spec-next">→</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab 3: Chuẩn hóa -->
+  <div class="supa-tab-content" id="supa-tab-3">
+    <div class="mb-24">
+      <h2 class="mb-4">Bước 3: Chuẩn hóa Địa chỉ</h2>
+      <p class="text-secondary mb-12">Chạy pipeline AI để chuẩn hóa các địa chỉ có nhiễu.</p>
+      <div class="p-12 rounded-8" style="background: rgba(245, 158, 11, 0.1); border-left: 3px solid var(--warning);">
+        <div class="text-sm" style="color: var(--text-primary);">
+          <strong>📥 Input:</strong> Dữ liệu nhiễu từ Bước 2 (cột <code style="background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px;">noisy_raw_address</code>)<br>
+          <strong>📤 Output:</strong> Địa chỉ đã chuẩn hóa (cột <code style="background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px;">pred_standardized</code>) được lưu vào DB để đánh giá ở Bước 4
+        </div>
+      </div>
+    </div>
+    
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; max-width: 100%; overflow: hidden;">
+      <!-- Option A: Import CSV -->
+      <div class="card" style="min-width: 0;">
+        <div class="card-header">
+          <span class="card-title">Phương án 1: Nhập kết quả từ Pipeline ngoại vi</span>
+        </div>
+        <div class="card-body">
+          <div class="p-12 rounded-8 mb-16" style="background: rgba(59, 130, 246, 0.1); border-left: 3px solid #3b82f6;">
+            <div class="text-xs" style="color: var(--text-primary); line-height: 1.6;">
+              <strong>📋 Quy trình:</strong><br>
+              1️⃣ Tải file CSV từ Bước 2 (nút "Tải CSV cho Pipeline ngoại vi")<br>
+              2️⃣ Chạy pipeline chuẩn hóa của bạn (Python script, API riêng, v.v.)<br>
+              3️⃣ Điền kết quả vào cột <code style="background: rgba(0,0,0,0.3); padding: 2px 4px; border-radius: 3px; font-size: 10px;">pred_standardized</code><br>
+              4️⃣ Upload file CSV đã điền kết quả ở form bên dưới
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label>Chọn file CSV kết quả</label>
+            <input type="file" id="supa-import-file" class="form-input" accept=".csv" style="max-width: 100%;" />
+            <div class="input-desc">File phải có cột 'specimen_id' và 'pred_standardized' đã được điền.</div>
+          </div>
+          
+          <div class="form-group">
+            <label>Mô tả nguồn kết quả <span style="color: var(--danger);">*</span></label>
+            <input type="text" id="supa-import-note" class="form-input" placeholder="Ví dụ: Model V3 - Epoch 50 - GPU A100" style="max-width: 100%;" />
+            <div class="input-desc">Thông tin này sẽ được lưu để đối soát hiệu năng giữa các phiên bản model.</div>
+          </div>
+
+          <div class="mb-16">
+            <label class="flex items-center gap-8 mb-8 cursor-pointer">
+              <input type="checkbox" id="supa-import-dry" />
+              <span class="text-sm font-semibold">Chế độ Test (Dry Run)</span>
+              <span class="info-tooltip" title="Kiểm tra file CSV mà không lưu vào database. Dùng để validate format trước khi import thật.">ⓘ</span>
+            </label>
+            <div class="text-xs text-secondary ml-24">Kiểm tra định dạng file mà không lưu vào database. Dùng để validate trước khi import thật.</div>
+          </div>
+
+          <div class="mb-20">
+            <label class="flex items-center gap-8 mb-8 cursor-pointer">
+              <input type="checkbox" id="supa-import-nolat" />
+              <span class="text-sm font-semibold">Bỏ qua Latency</span>
+              <span class="info-tooltip" title="Không đo thời gian xử lý khi import. Chỉ dùng khi file CSV đã có cột latency_ms.">ⓘ</span>
+            </label>
+            <div class="text-xs text-secondary ml-24">Không đo thời gian import. Chỉ bật nếu file CSV của bạn đã có cột <code style="background: rgba(0,0,0,0.2); padding: 2px 4px; border-radius: 3px; font-size: 10px;">latency_ms</code> từ pipeline.</div>
+          </div>
+          
+          <button type="button" class="btn btn-primary w-full" id="supa-btn-import-preds" style="max-width: 100%;">
+            📤 Tải lên & Xử lý
+          </button>
+
+          <div class="mt-16 p-12 rounded-8" style="background: rgba(245, 158, 11, 0.1); border: 1px dashed var(--warning);">
+            <div class="text-xs font-semibold mb-8" style="color: var(--warning);">🧪 Chế độ Demo (Không có file CSV?)</div>
+            <p class="text-xs mb-12" style="color: var(--text-secondary);">
+              Nếu bạn chưa có file CSV kết quả, có thể dùng chế độ demo để test flow. Hệ thống sẽ tự động copy dữ liệu tham chiếu V2 làm kết quả (EM = 100%).
+            </p>
+            <button type="button" class="btn btn-sm btn-outline w-full" id="supa-btn-demo-import" style="max-width: 100%;">
+              🎭 Import Demo (Copy từ ref_address_v2)
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Option B: Auto Pipeline -->
+      <div class="card" style="min-width: 0;">
+        <div class="card-header">
+          <span class="card-title">Phương án 2: Tự động chạy Pipeline trên Server</span>
+        </div>
+        <div class="card-body">
+          <div class="p-16 rounded-12 mb-20" style="background: rgba(139, 92, 246, 0.1); border: 2px dashed #8b5cf6;">
+            <div class="text-center">
+              <div class="text-lg font-bold mb-8" style="color: #8b5cf6;">⚡ Chế độ Tự động (Ablation Study)</div>
+              <p class="text-sm mb-16" style="color: var(--text-secondary);">
+                Pipeline AI sẽ tự động chạy trên server ngay sau khi tạo bộ thử ở Bước 1.
+              </p>
+              <div class="p-12 rounded-8 text-left text-xs" style="background: rgba(0,0,0,0.2); color: var(--text-primary); line-height: 1.7;">
+                <strong>🔧 Cách kích hoạt:</strong><br>
+                1️⃣ Quay lại <strong>Bước 1</strong><br>
+                2️⃣ Tích vào checkbox <strong>"TỰ ĐỘNG CHẠY NORMALIZATION"</strong><br>
+                3️⃣ Chọn các thành phần model (NER, Retrieval, LLM)<br>
+                4️⃣ Click <strong>"Bắt đầu Workflow"</strong><br>
+                5️⃣ Hệ thống sẽ tự động: Extract → Normalize → Eval
+              </div>
+              <button class="btn btn-sm btn-accent mt-16" onclick="document.querySelector('[data-supa-tab=\"1\"]').click()">
+                ← Quay lại Bước 1 để cấu hình
+              </button>
+            </div>
+          </div>
+
+          <div class="p-12 rounded-8" style="background: rgba(16, 185, 129, 0.1); border-left: 3px solid var(--supa-success);">
+            <div class="text-xs font-semibold mb-8" style="color: var(--supa-success);">✅ Ưu điểm của Phương án 2:</div>
+            <ul class="text-xs" style="color: var(--text-primary); line-height: 1.8; padding-left: 20px;">
+              <li>Không cần tải file CSV thủ công</li>
+              <li>Không cần chạy pipeline riêng</li>
+              <li>Tự động đo latency chính xác</li>
+              <li>Phù hợp cho ablation study (so sánh các cấu hình model)</li>
+            </ul>
+          </div>
+          
+          <div class="mt-24">
+            <h5 class="mb-12 text-sm font-semibold">Nhật ký hệ thống chi tiết</h5>
+            <pre id="supa-bench-console-log" style="height: 180px; font-size: 10px; background: #0f172a; color: #38bdf8; padding: 12px; border-radius: 8px; overflow-y: auto; max-width: 100%; word-wrap: break-word; white-space: pre-wrap;"></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab 4: Kết quả -->
+  <div class="supa-tab-content" id="supa-tab-4">
+    <div class="flex justify-between items-center mb-24">
+      <div style="flex: 1;">
+        <h2 class="mb-4">Bước 4: Phân tích Kết quả Đánh giá</h2>
+        <p class="text-secondary mb-12">So sánh kết quả chuẩn hóa với dữ liệu tham chiếu để tính toán độ chính xác.</p>
+        <div class="p-12 rounded-8 mb-12" style="background: rgba(139, 92, 246, 0.1); border-left: 3px solid #8b5cf6;">
+          <div class="text-sm" style="color: var(--text-primary);">
+            <strong>📥 Input:</strong> Kết quả chuẩn hóa từ Bước 3 + Dữ liệu tham chiếu (V1 & V2)<br>
+            <strong>📤 Output:</strong> Các chỉ số đánh giá (Exact Match, F1-Score, Latency) và báo cáo so sánh
+          </div>
+        </div>
+        <p class="text-secondary" id="supa-metrics-summary-label">Chưa có dữ liệu đánh giá cho lần thử này.</p>
+      </div>
+      <button type="button" class="btn btn-primary" id="supa-btn-run-eval">Tính toán lại Metrics</button>
+    </div>
+
+    <!-- Hero Metrics -->
+    <div class="grid grid-cols-3 gap-24 mb-24">
+      <div class="supa-metric-card text-center" style="border-top: 6px solid #10b981; background: linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(16, 185, 129, 0.02));">
+        <div class="font-semibold text-xs uppercase mb-8" style="color: #10b981;">Exact Match (V2)</div>
+        <div class="supa-hero-metric" id="supa-hero-em-v2" style="background: linear-gradient(135deg, #10b981, #059669); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">0.0%</div>
+        <div class="text-sm" style="color: #6ee7b7;">Tỉ lệ khớp 100% với tham chiếu mới nhất</div>
+      </div>
+      <div class="supa-metric-card text-center" style="border-top: 6px solid #3b82f6; background: linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(59, 130, 246, 0.02));">
+        <div class="font-semibold text-xs uppercase mb-8" style="color: #3b82f6;">Exact Match (V1)</div>
+        <div class="supa-hero-metric" id="supa-hero-em-v1" style="background: linear-gradient(135deg, #3b82f6, #2563eb); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">0.0%</div>
+        <div class="text-sm" style="color: #93c5fd;">Tỉ lệ khớp với địa chỉ cũ (legacy)</div>
+      </div>
+      <div class="supa-metric-card text-center" style="border-top: 6px solid #f59e0b; background: linear-gradient(135deg, rgba(245, 158, 11, 0.08), rgba(245, 158, 11, 0.02));">
+        <div class="font-semibold text-xs uppercase mb-8" style="color: #f59e0b;">Latency (Mean)</div>
+        <div class="supa-hero-metric" id="supa-hero-latency" style="background: linear-gradient(135deg, #f59e0b, #d97706); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">0 ms</div>
+        <div class="text-sm" style="color: #fcd34d;">Thời gian xử lý trung bình mỗi địa chỉ</div>
+      </div>
+    </div>
+
+    <div class="supa-metric-grid" id="supa-metrics-grid">
+      <!-- Detailed metrics like F1 per level will be injected here -->
+    </div>
+
+    <!-- Comparison Table -->
+    <div class="mt-40 card">
+      <div class="card-header flex justify-between items-center">
+        <span class="card-title">Bảng so sánh với các Benchmark trước đó</span>
+        <button class="btn btn-xs btn-outline" id="supa-btn-refresh-compare">Làm mới so sánh</button>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-container">
+          <table class="text-sm">
+            <thead>
+              <tr>
+                <th>Chỉ số</th>
+                <th>Mốc Benchmark (SOTA)</th>
+                <th>Phiên bản hiện tại</th>
+                <th>Chênh lệch</th>
+              </tr>
+            </thead>
+            <tbody id="supa-compare-tbody">
+              <tr><td colspan="4" class="text-center p-24 text-secondary">Đang tải dữ liệu đối soát...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Technical Advanced Panel (Collapsible) -->
+  <details class="mt-40 opacity-50 hover:opacity-100 transition-opacity">
+    <summary class="text-secondary cursor-pointer py-12 text-sm font-semibold">Cấu hình nâng cao & Debugging</summary>
+    <div class="card mt-12">
+      <div class="card-body">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>ID bắt đầu (Min)</label>
+            <input type="number" id="supa-agg-min" class="form-input" placeholder="Ví dụ: 10" />
+            <div class="input-desc">ID của phiên chạy (run_id) đầu tiên trong dải cần tổng hợp. ID này được tạo tự động khi bạn tạo bộ thử.</div>
+          </div>
+          <div class="form-group">
+            <label>ID kết thúc (Max)</label>
+            <input type="number" id="supa-agg-max" class="form-input" placeholder="Ví dụ: 59" />
+            <div class="input-desc">ID của phiên chạy cuối cùng trong dải. Dùng để xem báo cáo tổng hợp cho một đợt thí nghiệm gồm nhiều lần chạy.</div>
+          </div>
+          <div class="form-group" style="display: flex; align-items: flex-end;">
+            <button type="button" class="btn btn-sm btn-outline" id="supa-btn-aggregate-preview">Tổng hợp kết quả (Preview)</button>
+          </div>
+        </div>
+        <pre id="supa-aggregate-out" class="mt-16 bg-secondary p-12 rounded-8 text-xs" style="display:none"></pre>
+      </div>
+    </div>
+  </details>
+  </div><!-- End supa-body -->
+</div><!-- End page -->

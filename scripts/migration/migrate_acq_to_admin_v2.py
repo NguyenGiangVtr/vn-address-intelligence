@@ -116,7 +116,7 @@ def count_queue_rows_ward_mapping_lineage(db):
             WITH per_acq AS (
               SELECT acq.id,
                      bool_or(
-                       wm.ward_id_new IS NOT NULL
+                       wm.ward_id_v2 IS NOT NULL
                        AND COALESCE(wm.is_deleted, FALSE) = FALSE
                      ) AS has_wm
               FROM prq.address_cleansing_queue acq
@@ -124,7 +124,7 @@ def count_queue_rows_ward_mapping_lineage(db):
                 AND """
             + _WHERE_WARD_V1_MASTER
             + """
-              LEFT JOIN mat.ward_mapping wm ON wm.ward_id_old = wl.ward_id
+              LEFT JOIN mat.ward_mapping wm ON wm.ward_id_v1 = wl.ward_id
               WHERE acq.old_ward_id IS NOT NULL
               GROUP BY acq.id
             )
@@ -136,25 +136,25 @@ def count_queue_rows_ward_mapping_lineage(db):
         return cur.fetchone()
 
 
-def apply_ward_mapping_lineage_updates(db, dry_run: bool = False) -> int:
+def _apply_ward_mapping_lineage_updates(db, table_name: str, dry_run: bool = False) -> int:
     """
     Cập nhật denorm P/D/W + tên từ mat (v2) theo mat.ward_mapping, khóa lineage v1.
     Trả về số hàng queue đã UPDATE (hoặc 0 nếu dry_run).
     """
     _log(
-        "   [ward_mapping] "
+        f"   [ward_mapping] {table_name}: "
         + ("COUNT eligible rows (dry-run)..." if dry_run else "Applying UPDATE from mat.ward_mapping...")
     )
     subq = (
-        """
+        f"""
         SELECT acq2.id AS acq_row_id,
-               COALESCE(wm.province_id_new, dn.province_id) AS res_province_id,
-               COALESCE(wm.district_id_new, wn.district_id) AS res_district_id,
-               wm.ward_id_new AS res_ward_id,
+               COALESCE(wm.province_id_v2, dn.province_id) AS res_province_id,
+               COALESCE(wm.district_id_v2, wn.district_id) AS res_district_id,
+               wm.ward_id_v2 AS res_ward_id,
                pn.province_name AS res_province_name,
                dn.district_name AS res_district_name,
                wn.ward_name AS res_ward_name
-        FROM prq.address_cleansing_queue acq2
+        FROM {table_name} acq2
         INNER JOIN mat.ward wl
           ON acq2.old_ward_id IS NOT DISTINCT FROM wl.old_id
           AND """
@@ -163,24 +163,24 @@ def apply_ward_mapping_lineage_updates(db, dry_run: bool = False) -> int:
         INNER JOIN LATERAL (
           SELECT *
           FROM mat.ward_mapping wm0
-          WHERE wm0.ward_id_old = wl.ward_id
+          WHERE wm0.ward_id_v1 = wl.ward_id
             AND COALESCE(wm0.is_deleted, FALSE) = FALSE
-            AND wm0.ward_id_new IS NOT NULL
+            AND wm0.ward_id_v2 IS NOT NULL
           ORDER BY wm0.effective_date_from DESC NULLS LAST, wm0.ward_mapping_id DESC
           LIMIT 1
         ) wm ON TRUE
         INNER JOIN mat.ward wn
-          ON wn.ward_id = wm.ward_id_new
+          ON wn.ward_id = wm.ward_id_v2
           AND wn.admin_version = 2
           AND COALESCE(wn.is_deleted, FALSE) = FALSE
           AND COALESCE(wn.is_active, TRUE) = TRUE
         LEFT JOIN mat.district dn
-          ON dn.district_id = COALESCE(wm.district_id_new, wn.district_id)
+          ON dn.district_id = COALESCE(wm.district_id_v2, wn.district_id)
           AND dn.admin_version = 2
           AND COALESCE(dn.is_deleted, FALSE) = FALSE
           AND COALESCE(dn.is_active, TRUE) = TRUE
         LEFT JOIN mat.province pn
-          ON pn.province_id = COALESCE(wm.province_id_new, dn.province_id)
+          ON pn.province_id = COALESCE(wm.province_id_v2, dn.province_id)
           AND pn.admin_version = 2
           AND COALESCE(pn.is_deleted, FALSE) = FALSE
           AND COALESCE(pn.is_active, TRUE) = TRUE
@@ -195,8 +195,8 @@ def apply_ward_mapping_lineage_updates(db, dry_run: bool = False) -> int:
         return 0
 
     upd = (
-        """
-        UPDATE prq.address_cleansing_queue acq
+        f"""
+        UPDATE {table_name} acq
         SET province_id = x.res_province_id,
             district_id = x.res_district_id,
             ward_id = x.res_ward_id,
@@ -210,7 +210,7 @@ def apply_ward_mapping_lineage_updates(db, dry_run: bool = False) -> int:
     with db.cursor() as cur:
         cur.execute(upd)
         n = cur.rowcount
-    _log(f"   Updated {n:,} queue rows via mat.ward_mapping (lineage v1 -> v2)")
+    _log(f"   Updated {n:,} rows in {table_name} via mat.ward_mapping (lineage v1 -> v2)")
     return n
 
 
@@ -452,134 +452,207 @@ def validate_mapping_coverage(db):
 
     return True
 
-def migrate_address_cleansing_queue(db, dry_run=False):
+def _migrate_table_to_admin_v2(db, table_name: str, dry_run=False):
     """Migration chính: ward_mapping (ưu tiên) rồi temp.admin_v1_v2_mapping theo lineage."""
 
-    _log(f"{'[DRY RUN] ' if dry_run else ''}Migrating address_cleansing_queue to admin_version=2...")
+    _log(f"   Migrating {table_name} to admin_version=2...")
 
-    _log("   Counting ward_mapping coverage via lineage (GROUP BY acq.id)...")
-    wm = count_queue_rows_ward_mapping_lineage(db)
+    # Detect join columns
+    with db.cursor() as cur:
+        cur.execute(f"SELECT column_name FROM information_schema.columns WHERE table_schema || '.' || table_name = '{table_name}'")
+        cols = {r['column_name'] for r in cur.fetchall()}
+    
+    use_lineage = "old_ward_id" in cols
+    key_p = "old_province_id" if use_lineage else "province_id"
+    key_d = "old_district_id" if use_lineage else "district_id"
+    key_w = "old_ward_id" if use_lineage else "ward_id"
+
+    _log(f"   [config] Using keys: {key_p}, {key_d}, {key_w} (lineage={use_lineage})")
+
+    _log(f"   [stats] Counting ward_mapping coverage via lineage for {table_name}...")
+    with db.cursor() as cur:
+        cur.execute(
+            f"""
+            SELECT COUNT(*)::bigint AS queue_with_old_ward,
+                   COUNT(wm.ward_id_v2)::bigint AS updatable_via_ward_mapping
+            FROM {table_name} acq
+            INNER JOIN mat.ward wl ON acq.{key_w} = wl.old_id
+              AND {_WHERE_WARD_V1_MASTER}
+            LEFT JOIN mat.ward_mapping wm ON wm.ward_id_v1 = wl.ward_id
+              AND COALESCE(wm.is_deleted, FALSE) = FALSE
+              AND wm.ward_id_v2 IS NOT NULL
+            WHERE acq.{key_w} IS NOT NULL
+            """
+        )
+        wm = cur.fetchone()
+    
     qow = int(wm["queue_with_old_ward"] or 0)
     uwm = int(wm["updatable_via_ward_mapping"] or 0)
     pct_wm = round(100.0 * uwm / qow, 2) if qow else 0.0
     _log(
-        "   ward_mapping (lineage v1 ward_id): "
-        f"rows with non-null old_ward={qow:,}; with mapping={uwm:,} ({pct_wm}%)"
+        "   [stats] ward_mapping (lineage v1 ward_id): "
+        f"rows with non-null {key_w}={qow:,}; with mapping={uwm:,} ({pct_wm}%)"
     )
 
-    apply_ward_mapping_lineage_updates(db, dry_run=dry_run)
-
-    _log("   Running expanded / dedup stats (LEFT JOIN lineage + temp mapping)...")
-    expanded_sql = (
+    # _apply_ward_mapping_lineage_updates Generalized
+    _log(
+        f"   [ward_mapping] {table_name}: "
+        + ("COUNT eligible rows (dry-run)..." if dry_run else "Applying UPDATE from mat.ward_mapping...")
+    )
+    subq = (
+        f"""
+        SELECT acq2.id AS acq_row_id,
+               COALESCE(wm.province_id_v2, dn.province_id) AS res_province_id,
+               COALESCE(wm.district_id_v2, wn.district_id) AS res_district_id,
+               wm.ward_id_v2 AS res_ward_id,
+               pn.province_name AS res_province_name,
+               dn.district_name AS res_district_name,
+               wn.ward_name AS res_ward_name
+        FROM {table_name} acq2
+        INNER JOIN mat.ward wl
+          ON acq2.{key_w} = wl.old_id
+          AND {_WHERE_WARD_V1_MASTER}
+        INNER JOIN LATERAL (
+          SELECT *
+          FROM mat.ward_mapping wm0
+          WHERE wm0.ward_id_v1 = wl.ward_id
+            AND COALESCE(wm0.is_deleted, FALSE) = FALSE
+            AND wm0.ward_id_v2 IS NOT NULL
+          ORDER BY wm0.effective_date_from DESC NULLS LAST, wm0.ward_mapping_id DESC
+          LIMIT 1
+        ) wm ON TRUE
+        INNER JOIN mat.ward wn
+          ON wn.ward_id = wm.ward_id_v2
+          AND wn.admin_version = 2
+          AND COALESCE(wn.is_deleted, FALSE) = FALSE
+          AND COALESCE(wn.is_active, TRUE) = TRUE
+        LEFT JOIN mat.district dn
+          ON dn.district_id = COALESCE(wm.district_id_v2, wn.district_id)
+          AND dn.admin_version = 2
+          AND COALESCE(dn.is_deleted, FALSE) = FALSE
+          AND COALESCE(dn.is_active, TRUE) = TRUE
+        LEFT JOIN mat.province pn
+          ON pn.province_id = COALESCE(wm.province_id_v2, dn.province_id)
+          AND pn.admin_version = 2
+          AND COALESCE(pn.is_deleted, FALSE) = FALSE
+          AND COALESCE(pn.is_active, TRUE) = TRUE
         """
-            WITH expanded AS (
-              SELECT acq.id,
-                     pm.v2_id AS pm_v2,
-                     dm.v2_id AS dm_v2,
-                     wm.v2_id AS wm_v2
-              FROM prq.address_cleansing_queue acq
-              LEFT JOIN mat.province pl
-                ON acq.old_province_id = pl.old_id AND """
-        + _WHERE_PROVINCE_V1_MASTER
-        + """
-              LEFT JOIN mat.district dl
-                ON acq.old_district_id = dl.old_id AND """
-        + _WHERE_DISTRICT_V1_MASTER
-        + """
-              LEFT JOIN mat.ward wl
-                ON acq.old_ward_id = wl.old_id AND """
-        + _WHERE_WARD_V1_MASTER
-        + """
-              LEFT JOIN temp.admin_v1_v2_mapping pm
-                ON pm.level = 'province' AND pm.v1_id = pl.province_id
-              LEFT JOIN temp.admin_v1_v2_mapping dm
-                ON dm.level = 'district' AND dm.v1_id = dl.district_id
-              LEFT JOIN temp.admin_v1_v2_mapping wm
-                ON wm.level = 'ward' AND wm.v1_id = wl.ward_id
-            ),
-            dedup AS (
-              SELECT id,
-                     bool_or(pm_v2 IS NOT NULL) AS prov_ok,
-                     bool_or(dm_v2 IS NOT NULL) AS dist_ok,
-                     bool_or(wm_v2 IS NOT NULL) AS ward_ok
-              FROM expanded
-              GROUP BY id
+    )
+
+    if not dry_run:
+        # Build dynamic SET clause
+        set_parts = []
+        if "province_id" in cols: set_parts.append("province_id = x.res_province_id")
+        if "district_id" in cols: set_parts.append("district_id = x.res_district_id")
+        if "ward_id" in cols: set_parts.append("ward_id = x.res_ward_id")
+        if "province_name" in cols: set_parts.append("province_name = x.res_province_name")
+        if "district_name" in cols: set_parts.append("district_name = x.res_district_name")
+        if "ward_name" in cols: set_parts.append("ward_name = x.res_ward_name")
+        
+        if set_parts:
+            upd = (
+                f"""
+                UPDATE {table_name} acq
+                SET {", ".join(set_parts)}
+                FROM ("""
+                + subq
+                + ") AS x\n            WHERE acq.id = x.acq_row_id"
             )
+            with db.cursor() as cur:
+                cur.execute(upd)
+                n = cur.rowcount
+            _log(f"   Updated {n:,} rows in {table_name} via mat.ward_mapping (lineage v1 -> v2)")
+    else:
+        with db.cursor() as cur:
+            cur.execute(f"SELECT COUNT(*)::bigint AS n FROM ({subq}) q")
+            n = cur.fetchone()["n"]
+        _log(f"   [dry-run] Rows match ward_mapping (lineage) for {table_name}: {int(n):,}")
+
+
+    _log(f"   [stats] Running expanded / dedup stats for {table_name}...")
+    expanded_sql = (
+        f"""
             SELECT
               COUNT(*)::bigint AS total,
-              COUNT(*) FILTER (WHERE prov_ok)::bigint AS province_mappable,
-              COUNT(*) FILTER (WHERE dist_ok)::bigint AS district_mappable,
-              COUNT(*) FILTER (WHERE ward_ok)::bigint AS ward_mappable
-            FROM dedup
+              COUNT(pm.v2_id)::bigint AS province_mappable,
+              COUNT(dm.v2_id)::bigint AS district_mappable,
+              COUNT(wm.v2_id)::bigint AS ward_mappable
+            FROM {table_name} acq
+            LEFT JOIN mat.province pl ON acq.{key_p} = pl.old_id AND {_WHERE_PROVINCE_V1_MASTER}
+            LEFT JOIN mat.district dl ON acq.{key_d} = dl.old_id AND {_WHERE_DISTRICT_V1_MASTER}
+            LEFT JOIN mat.ward wl ON acq.{key_w} = wl.old_id AND {_WHERE_WARD_V1_MASTER}
+            LEFT JOIN temp.admin_v1_v2_mapping pm ON pm.level = 'province' AND pm.v1_id = pl.province_id
+            LEFT JOIN temp.admin_v1_v2_mapping dm ON dm.level = 'district' AND dm.v1_id = dl.district_id
+            LEFT JOIN temp.admin_v1_v2_mapping wm ON wm.level = 'ward' AND wm.v1_id = wl.ward_id
         """
     )
 
     with db.cursor() as cur:
         cur.execute(expanded_sql)
-
         stats = cur.fetchone()
-        _log("   Records analysis (name-based temp mapping still available after ward_mapping):")
+        _log(f"   [stats] Records analysis for {table_name}:")
         _log(f"     Total records: {stats['total']:,}")
         _log(f"     Province mappable: {stats['province_mappable']:,}")
         _log(f"     District mappable: {stats['district_mappable']:,}")
         _log(f"     Ward mappable: {stats['ward_mappable']:,}")
 
         if not dry_run:
-            _log("   Updating province_id (temp mapping via lineage)...")
+            _log(f"   Updating province_id in {table_name} (temp mapping via lineage)...")
+            p_name_set = ", province_name = pm.v2_name" if "province_name" in cols else ""
             cur.execute(
-                """
-                UPDATE prq.address_cleansing_queue acq
-                SET province_id = pm.v2_id,
-                    province_name = pm.v2_name
+                f"""
+                UPDATE {table_name} acq
+                SET province_id = pm.v2_id {p_name_set}
                 FROM temp.admin_v1_v2_mapping pm
                 INNER JOIN mat.province pl
-                  ON pl.province_id = pm.v1_id AND """
-                + _WHERE_PROVINCE_V1_MASTER
-                + """
+                  ON pl.province_id = pm.v1_id AND {_WHERE_PROVINCE_V1_MASTER}
                 WHERE pm.level = 'province'
-                  AND acq.old_province_id IS NOT DISTINCT FROM pl.old_id
+                  AND acq.{key_p} = pl.old_id
             """
             )
             province_updated = cur.rowcount
             _log(f"     Updated {province_updated:,} province references")
 
-            _log("   Updating district_id (temp mapping via lineage)...")
+            _log(f"   Updating district_id in {table_name} (temp mapping via lineage)...")
+            d_name_set = ", district_name = dm.v2_name" if "district_name" in cols else ""
             cur.execute(
-                """
-                UPDATE prq.address_cleansing_queue acq
-                SET district_id = dm.v2_id,
-                    district_name = dm.v2_name
+                f"""
+                UPDATE {table_name} acq
+                SET district_id = dm.v2_id {d_name_set}
                 FROM temp.admin_v1_v2_mapping dm
                 INNER JOIN mat.district dl
-                  ON dl.district_id = dm.v1_id AND """
-                + _WHERE_DISTRICT_V1_MASTER
-                + """
+                  ON dl.district_id = dm.v1_id AND {_WHERE_DISTRICT_V1_MASTER}
                 WHERE dm.level = 'district'
-                  AND acq.old_district_id IS NOT DISTINCT FROM dl.old_id
+                  AND acq.{key_d} = dl.old_id
             """
             )
             district_updated = cur.rowcount
             _log(f"     Updated {district_updated:,} district references")
 
-            _log("   Updating ward_id (temp mapping via lineage)...")
+            _log(f"   Updating ward_id in {table_name} (temp mapping via lineage)...")
+            w_name_set = ", ward_name = wm.v2_name" if "ward_name" in cols else ""
             cur.execute(
-                """
-                UPDATE prq.address_cleansing_queue acq
-                SET ward_id = wm.v2_id,
-                    ward_name = wm.v2_name
+                f"""
+                UPDATE {table_name} acq
+                SET ward_id = wm.v2_id {w_name_set}
                 FROM temp.admin_v1_v2_mapping wm
                 INNER JOIN mat.ward wl
-                  ON wl.ward_id = wm.v1_id AND """
-                + _WHERE_WARD_V1_MASTER
-                + """
+                  ON wl.ward_id = wm.v1_id AND {_WHERE_WARD_V1_MASTER}
                 WHERE wm.level = 'ward'
-                  AND acq.old_ward_id IS NOT DISTINCT FROM wl.old_id
+                  AND acq.{key_w} = wl.old_id
             """
             )
             ward_updated = cur.rowcount
             _log(f"     Updated {ward_updated:,} ward references")
+
+            # Update admin_version if column exists
+            if "admin_version" in cols:
+                _log(f"   Setting admin_version=2 in {table_name}...")
+                cur.execute(f"UPDATE {table_name} SET admin_version = 2 WHERE admin_version IS DISTINCT FROM 2")
+                _log(f"     Updated {cur.rowcount:,} rows.")
+
         else:
-            _log("   [DRY RUN] Skipping UPDATE statements (province/district/ward).")
+            _log(f"   [DRY RUN] Skipping UPDATE statements for {table_name}.")
 
     return True
 
@@ -664,8 +737,8 @@ def main():
     
     try:
         _log(f"Starting admin_version migration - {datetime.now()}")
-        _log("Loading config (app/ai/config.yaml + env)...")
-        cfg = load_config_with_env('app/ai/config.yaml')
+        _log("Loading config (src/app/ai/config.yaml + env)...")
+        cfg = load_config_with_env('src/app/ai/config.yaml')
         db = DBConnector(cfg['database'])
         _log(
             f"Connecting to PostgreSQL {cfg['database'].get('host')}:{cfg['database'].get('port')}/"
@@ -690,21 +763,36 @@ def main():
                 + (" [DRY RUN: no queue UPDATE]" if args.dry_run else "")
             )
 
-            # Create backup if requested
-            if args.backup:
-                backup_table = create_backup_table(db)
-                _log(f"   Backup created: prq.{backup_table}")
-
             # Create mapping
             create_admin_mapping_table(db)
             validate_mapping_coverage(db)
 
-            # Run migration
-            migrate_address_cleansing_queue(db, dry_run=args.dry_run)
+            # Tables to migrate
+            target_tables = [
+                "prq.address_clean_corpus",
+                "prq.address_cleansing_queue",
+                "prq.ground_truth"
+            ]
 
-            # Đọc lại snapshot sau luồng (dry-run: queue không đổi; vẫn hữu ích để xác nhận script chạy hết)
-            if args.dry_run:
-                _log("[DRY RUN] Post-check read-only (queue unchanged):")
+            for table_full_name in target_tables:
+                _log(f"\n>>> Migrating table: {table_full_name}")
+                
+                # Create backup if requested
+                if args.backup:
+                    # Extract table name from schema.table
+                    tbl_name = table_full_name.split('.')[-1]
+                    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                    backup_table = f"{tbl_name}_backup_{timestamp}"
+                    _log(f"   Creating backup table: prq.{backup_table}")
+                    with db.cursor() as cur:
+                        cur.execute(f"CREATE TABLE prq.{backup_table} AS SELECT * FROM {table_full_name}")
+                        _log(f"   Backup created.")
+
+                # Run migration for this table
+                _migrate_table_to_admin_v2(db, table_full_name, dry_run=args.dry_run)
+
+            # Post-check (using address_cleansing_queue as smoke test)
+            _log("\n[Post-migration Check]")
             print_mat_v1_duplicate_old_id_smoke(db)
             validate_migration_result(db)
 

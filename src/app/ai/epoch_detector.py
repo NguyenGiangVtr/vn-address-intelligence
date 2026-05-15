@@ -230,10 +230,10 @@ class EpochDetector:
             for m in mappings:
                 # Tra cứu tên ward cũ
                 old_ward = self._db.query(Ward).filter(
-                    Ward.ward_id == m.ward_id_old
+                    Ward.ward_id == m.ward_id_v1
                 ).first()
                 new_ward = self._db.query(Ward).filter(
-                    Ward.ward_id == m.ward_id_new
+                    Ward.ward_id == m.ward_id_v2
                 ).first()
 
                 if old_ward and new_ward and old_ward.ward_name:

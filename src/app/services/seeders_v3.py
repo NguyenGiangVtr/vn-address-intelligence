@@ -184,16 +184,40 @@ def _extract_name(s: Optional[str]) -> Optional[str]:
     return re.sub(r'\s*\(\d+\)\s*$', '', str(s)).strip().strip('\n')
 
 
-# cp850-decoded prefix patterns (Vietnamese through cp850 codec)
+# cp850-decoded prefix patterns + Clean UTF-8 patterns
 _TYPE_PREFIXES = [
+    # Clean UTF-8 (for Excel)
+    ("Thành phố", "Thành phố"),
+    ("Thành Phố", "Thành phố"),
+    ("Tỉnh",      "Tỉnh"),
+    ("Quận",      "Quận"),
+    ("Huyện",     "Huyện"),
+    ("Thị xã",    "Thị xã"),
+    ("Thị Xã",    "Thị xã"),
+    ("phường",    "Phường"),
+    ("Phường",    "Phường"),
+    ("Xã",        "Xã"),
+    ("xã",        "Xã"),
+    ("Thị trấn",  "Thị trấn"),
+    ("Thị Trấn",  "Thị trấn"),
+    ("Đặc khu",   "Đặc khu"),
+    
+    # Legacy/Corrupted (for CSV)
+    ("Thành ph?", "Thành phố"),
     ("Thành ph",  "Thành phố"),
-    ("T?nh",       "Tỉnh"),
-    ("Qu?n",       "Quận"),
-    ("Huy?n",      "Huyện"),
+    ("Thành Ph?", "Thành phố"),
+    ("Thành Ph",  "Thành phố"),
+    ("T?nh",      "Tỉnh"),
+    ("Qu?n",      "Quận"),
+    ("Huy?n",     "Huyện"),
     ("Th? xã",    "Thị xã"),
-    ("Ph??ng",     "Phường"),
-    ("X?",         "Xã"),
+    ("Th? Xã",    "Thị Xã"),
+    ("ph??ng",    "phường"),
+    ("Ph??ng",    "Phường"),
+    ("x?",        "Xã"),
+    ("X?",        "Xã"),
     ("Th? tr?n",  "Thị trấn"),
+    ("Th? Tr?n",  "Thị trấn"),
     ("??c khu",   "Đặc khu"),
 ]
 
@@ -228,15 +252,55 @@ def remove_vietnamese_marks(s, strip_prefix=True):
     return s
 
 
+def _get_versioned_id(code: int, version: int, level: str) -> int:
+    """
+    Tạo ID duy nhất không trùng lặp giữa các version và luôn tăng.
+    Offsets:
+      - Province: version * 1000 + code
+      - District: version * 100000 + code
+      - Ward:     version * 10000000 + code
+    """
+    if code is None or pd.isna(code): return None
+    if level == "province": return (version * 1000) + int(code)
+    if level == "district": return (version * 100000) + int(code)
+    if level == "ward":     return (version * 10000000) + int(code)
+    return int(code)
+
 def _extract_type(name: Optional[str]) -> str:
-    """Đoán type_name từ prefix tên đơn vị (cp850-decoded strings)."""
+    """Đoán type_name từ prefix tên đơn vị (hỗ trợ cả UTF-8 và corrupted)."""
     if not name:
         return ""
-    n = name.strip()
+    n = str(name).strip()
     for prefix, tname in _TYPE_PREFIXES:
         if n.startswith(prefix):
             return tname
     return ""
+
+def _clean_v1_name(name: str, type_name: str) -> str:
+    """Clean name cho v1 (có thể cần heal font trước)."""
+    # Heal prefixes common in CSV
+    s = str(name)
+    for prefix, tname in _TYPE_PREFIXES:
+        if s.startswith(prefix):
+            s = s.replace(prefix, tname, 1)
+            break
+    # Then clean
+    clean = clean_admin_unit_name(s, type_name)
+    # Generic heal for name part
+    from app.services.seeders_v3 import _heal_corrupted_name # Forward ref safety
+    return _heal_corrupted_name(clean)
+
+def _heal_corrupted_name(s: str) -> str:
+    """Heal common corrupted patterns in name part."""
+    if not s or not isinstance(s, str): return s
+    replacements = {
+        "Qu?ng Ninh": "Quảng Ninh", "Qu?ng Nam": "Quảng Nam", "Qu?ng Ng?i": "Quảng Ngãi",
+        "Qu?ng Tr?": "Quảng Trị", "Hà N?i": "Hà Nội", "Ba ?ình": "Ba Đình", "Ng?c Hà": "Ngọc Hà",
+        "Thành ph?": "Thành phố", "??": "Đ", "?ình": "Đình", "ph?": "phố", "N?i": "Nội", "Ng?c": "Ngọc"
+    }
+    for old, new in replacements.items():
+        if old in s: s = s.replace(old, new)
+    return s
 
 
 def _load_data(file_path: str) -> pd.DataFrame:
@@ -323,10 +387,10 @@ def seed_provinces_v1(df: pd.DataFrame):
 
     records = [
         {
-            "province_id":      int(r.prov_code_old),
+            "province_id":      _get_versioned_id(r.prov_code_old, 1, "province"),
             "province_no":      str(r.prov_code_old).zfill(2),
             "type_name":        (tn := _extract_type(r.prov_name_old)),
-            "province_name":    (pn := clean_admin_unit_name(r.prov_name_old, tn)),
+            "province_name":    (pn := _clean_v1_name(r.prov_name_old, tn)),
             "province_name_en": derive_admin_unit_name_en(pn),
             "admin_version":    1,
             "is_deleted":       False,
@@ -362,13 +426,13 @@ def seed_districts_v1(df: pd.DataFrame):
 
     records = [
         {
-            "district_id":      int(r.dist_code_old),
+            "district_id":      _get_versioned_id(r.dist_code_old, 1, "district"),
             "district_no":      str(r.dist_code_old).zfill(3),
             "type_name":        (tn := _extract_type(r.dist_name_old)),
             "type_name_en":     derive_admin_type_name_en(tn),
-            "district_name":    (dn := clean_admin_unit_name(r.dist_name_old, tn)),
+            "district_name":    (dn := _clean_v1_name(r.dist_name_old, tn)),
             "district_name_en": derive_admin_unit_name_en(dn),
-            "province_id":      int(r.prov_code_old),
+            "province_id":      _get_versioned_id(r.prov_code_old, 1, "province"),
             "admin_version":    1,
             "is_deleted":       False,
             "is_default":       True,
@@ -404,13 +468,13 @@ def seed_wards_v1(df: pd.DataFrame):
 
     records = [
         {
-            "ward_id":          int(r.ward_int_old),
+            "ward_id":          _get_versioned_id(r.ward_int_old, 1, "ward"),
             "ward_no":          str(int(r.ward_int_old)).zfill(5),
             "type_name":        (tn := _extract_type(r.ward_name_old)),
             "type_name_en":     derive_admin_type_name_en(tn),
-            "ward_name":        (wn := clean_admin_unit_name(r.ward_name_old, tn)),
+            "ward_name":        (wn := _clean_v1_name(r.ward_name_old, tn)),
             "ward_name_en":     derive_admin_unit_name_en(wn),
-            "district_id":      int(r.dist_code_old) if r.dist_code_old and not pd.isna(r.dist_code_old) else 0,
+            "district_id":      _get_versioned_id(r.dist_code_old, 1, "district") if r.dist_code_old and not pd.isna(r.dist_code_old) else 0,
             "province_no":      str(int(r.prov_code_old)).zfill(2) if r.prov_code_old and not pd.isna(r.prov_code_old) else None,
             "admin_version":    1,
             "is_deleted":       False,
@@ -477,10 +541,10 @@ def seed_provinces_v2(df: pd.DataFrame):
 
     records = [
         {
-            "province_id":      int(r.prov_code_new),
+            "province_id":      _get_versioned_id(r.prov_code_new, 2, "province"),
             "province_no":      str(r.prov_code_new).zfill(2),
-            "type_name":        r.type_name,
-            "province_name":    (pn := clean_admin_unit_name(r.prov_name_new, r.type_name)),
+            "type_name":        (tn := _extract_type(r.prov_name_new)),
+            "province_name":    (pn := clean_admin_unit_name(r.prov_name_new, tn)),
             "province_name_en": derive_admin_unit_name_en(pn),
             "admin_version":    2,
             "is_deleted":       False,
@@ -524,13 +588,13 @@ def seed_districts_v2(df: pd.DataFrame):
 
     records = [
         {
-            "district_id":      int(r.prov_code_new),
+            "district_id":      _get_versioned_id(r.prov_code_new, 2, "district"),
             "district_no":      str(int(r.prov_code_new)).zfill(3),
             "type_name":        (tn := _extract_type(r.prov_name_new)),
             "type_name_en":     derive_admin_type_name_en(tn),
             "district_name":    (dn := clean_admin_unit_name(r.prov_name_new, tn)),
             "district_name_en": derive_admin_unit_name_en(dn),
-            "province_id":      int(r.prov_code_new),
+            "province_id":      _get_versioned_id(r.prov_code_new, 2, "province"),
             "admin_version":    2,
             "is_deleted":       False,
             "is_default":       True,
@@ -570,13 +634,13 @@ def seed_wards_v2(df: pd.DataFrame):
 
     records = [
         {
-            "ward_id":          int(r.ward_int_new),
+            "ward_id":          _get_versioned_id(r.ward_int_new, 2, "ward"),
             "ward_no":          str(int(r.ward_int_new)).zfill(5),
             "type_name":        (tn := _extract_type(r.ward_name_new)),
             "type_name_en":     derive_admin_type_name_en(tn),
             "ward_name":        (wn := clean_admin_unit_name(r.ward_name_new, tn)),
             "ward_name_en":     derive_admin_unit_name_en(wn),
-            "district_id":      int(r.prov_code_new) if r.prov_code_new and not pd.isna(r.prov_code_new) else 0,
+            "district_id":      _get_versioned_id(r.prov_code_new, 2, "district") if r.prov_code_new and not pd.isna(r.prov_code_new) else 0,
             "province_no":      str(int(r.prov_code_new)).zfill(2) if r.prov_code_new and not pd.isna(r.prov_code_new) else None,
             "admin_version":    2,
             "is_deleted":       False,
@@ -604,9 +668,9 @@ def seed_ward_mapping_v3(df: pd.DataFrame):
     """
     Insert mat.ward_mapping — ánh xạ v1 → v2.
 
-    ward_id_old = ward_int_old (ward_no v1, int)
+    ward_id_v1 = ward_int_old (ward_no v1, int)
                   hoặc -1 nếu SPECIAL_ZONE (cả huyện → đặc khu)
-    ward_id_new = ward_int_new (ward_no v2, int)
+    ward_id_v2 = ward_int_new (ward_no v2, int)
 
     Dùng ward_no làm key thay vì ward_id vì:
       - ward_id trong DB được seed = ward_no (xem seed_master_data)
@@ -616,7 +680,7 @@ def seed_ward_mapping_v3(df: pd.DataFrame):
 
     # Xóa toàn bộ ward_mapping cũ để insert sạch
     with engine.connect() as conn:
-        conn.execute(sql_text("TRUNCATE TABLE mat.ward_mapping RESTART IDENTITY"))
+        conn.execute(sql_text("TRUNCATE TABLE mat.ward_mapping RESTART IDENTITY CASCADE"))
         conn.commit()
 
     # Tính mapping_total: số old ward → cùng 1 new ward
@@ -631,17 +695,18 @@ def seed_ward_mapping_v3(df: pd.DataFrame):
     for idx, r in enumerate(df.itertuples(), start=1):
         # SPECIAL_ZONE: cả huyện → đặc khu, không có ward_code_old → dùng -1
         if r.rel_type == "SPECIAL_ZONE" or pd.isna(r.ward_int_old):
-            ward_id_old = -1
+            ward_id_v1 = -1
         else:
-            ward_id_old = int(r.ward_int_old)
+            ward_id_v1 = int(r.ward_int_old)
 
         records.append({
             "ward_mapping_id":    idx,
-            "ward_id_old":        ward_id_old,
-            "province_id_old":    int(r.prov_code_old) if r.prov_code_old and not pd.isna(r.prov_code_old) else None,
-            "district_id_old":    int(r.dist_code_old) if r.dist_code_old and not pd.isna(r.dist_code_old) else None,
-            "ward_id_new":        int(r.ward_int_new) if not pd.isna(r.ward_int_new) else None,
-            "province_id_new":    int(r.prov_code_new) if r.prov_code_new and not pd.isna(r.prov_code_new) else None,
+            "ward_id_v1":        _get_versioned_id(ward_id_v1, 1, "ward") if ward_id_v1 != -1 else -1,
+            "province_id_v1":    _get_versioned_id(r.prov_code_old, 1, "province") if r.prov_code_old and not pd.isna(r.prov_code_old) else None,
+            "district_id_v1":    _get_versioned_id(r.dist_code_old, 1, "district") if r.dist_code_old and not pd.isna(r.dist_code_old) else None,
+            "ward_id_v2":        _get_versioned_id(r.ward_int_new, 2, "ward") if not pd.isna(r.ward_int_new) else None,
+            "province_id_v2":    _get_versioned_id(r.prov_code_new, 2, "province") if r.prov_code_new and not pd.isna(r.prov_code_new) else None,
+            "district_id_v2":    _get_versioned_id(r.prov_code_new, 2, "district") if r.prov_code_new and not pd.isna(r.prov_code_new) else None,
             "effective_date_from": EFFECTIVE_DATE,
             "effective_date_to":  None,
             "created_date":       NOW,
@@ -652,6 +717,15 @@ def seed_ward_mapping_v3(df: pd.DataFrame):
             "updated_note":       str(r.note).strip() if r.note and not pd.isna(r.note) else None,
             "relationship_type":  r.rel_type,
             "mapping_total":      int(r.mapping_total) if not pd.isna(r.mapping_total) else 1,
+
+            # Origin Data (Cleaned)
+            "prov_name_v1":       (p1 := _clean_v1_name(r.province_old, _extract_type(r.province_old))),
+            "dist_name_v1":       (d1 := _clean_v1_name(r.district_old, _extract_type(r.district_old))),
+            "ward_name_v1":       (w1 := _clean_v1_name(r.ward_name_old, _extract_type(r.ward_name_old))),
+            
+            "prov_name_v2":       (p2 := clean_admin_unit_name(r.province_new, _extract_type(r.province_new))),
+            "dist_name_v2":       (d2 := clean_admin_unit_name(r.province_new, _extract_type(r.province_new))),
+            "ward_name_v2":       (w2 := clean_admin_unit_name(r.ward_name_new, _extract_type(r.ward_name_new))),
         })
 
     # Insert theo batch

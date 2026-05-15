@@ -240,12 +240,27 @@ class WardMapping(Base):
     __table_args__ = {'schema': 'mat'}
     
     ward_mapping_id = Column(Integer, primary_key=True)
-    ward_id_old = Column(Integer)
-    province_id_old = Column(Integer)
-    district_id_old = Column(Integer)
-    ward_id_new = Column(Integer)
-    province_id_new = Column(Integer)
-    district_id_new = Column(Integer)
+    
+    # IDs (Linkage to mat.ward/district/province)
+    ward_id_v1 = Column(Integer)
+    district_id_v1 = Column(Integer)
+    province_id_v1 = Column(Integer)
+    
+    ward_id_v2 = Column(Integer)
+    district_id_v2 = Column(Integer)
+    province_id_v2 = Column(Integer)
+
+    # Origin Data (Exact text from AdministrativeUnitConversion excel)
+    prov_name_v1 = Column(Text)
+    dist_name_v1 = Column(Text)
+    ward_name_v1 = Column(Text)
+    ward_code_v1 = Column(String(20))
+    
+    ward_name_v2 = Column(Text)
+    ward_code_v2 = Column(String(20))
+    dist_name_v2 = Column(Text)
+    prov_name_v2 = Column(Text)
+
     effective_date_from = Column(DateTime)
     effective_date_to = Column(DateTime)
     created_date = Column(DateTime, default=func.now())

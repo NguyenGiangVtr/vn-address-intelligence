@@ -6,6 +6,7 @@ import json
 import os
 import re
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 from typing import Any, Literal
@@ -409,6 +410,13 @@ class SupaWorkflowBody(BaseModel):
     source_note: str | None = None
     skip_extract: bool = False
     run_id: int | None = None
+    
+    # Automated Normalization fields
+    run_normalization: bool = False
+    no_ner: bool = False
+    no_retrieval: bool = False
+    no_llm: bool = False
+    retriever_type: str | None = None
 
 
 class SupaMakeDemoPredsBody(BaseModel):
@@ -432,6 +440,13 @@ class SupaReplicateBody(BaseModel):
     source_note: str | None = None
     export_tex_last: bool = False
     skip_import: bool = False
+
+    # Automated Normalization fields
+    run_normalization: bool = False
+    no_ner: bool = False
+    no_retrieval: bool = False
+    no_llm: bool = False
+    retriever_type: str | None = None
 
 
 class SupaReplicateStratifiedBody(BaseModel):
@@ -602,17 +617,15 @@ def supa_action_workflow(
 ) -> dict[str, Any]:
     del current_user
     _require_supa_ui_actions()
+    
     if body.preds_demo_ref_v2 and body.preds_relative:
         raise HTTPException(status_code=400, detail="Use either preds_relative or preds_demo_ref_v2, not both")
+    
     spec = _reports_output_path(body.specimens_out_relative)
     spec.parent.mkdir(parents=True, exist_ok=True)
-    argv = [
-        "workflow",
-        "--n",
-        str(body.n),
-        "--specimens-out",
-        str(spec),
-    ]
+    
+    # 1. Extraction (or use existing run_id)
+    argv = ["workflow", "--n", str(body.n), "--specimens-out", str(spec)]
     if body.seed is not None:
         argv += ["--seed", str(body.seed)]
     if body.noise_profile:
@@ -623,14 +636,82 @@ def supa_action_workflow(
         argv.append("--skip-extract")
     if body.run_id is not None:
         argv += ["--run-id", str(body.run_id)]
-    if body.preds_relative:
-        pr = _repo_relative_path(body.preds_relative)
-        argv += ["--preds", str(pr)]
-        if body.source_note:
-            argv += ["--source-note", body.source_note]
-    elif body.preds_demo_ref_v2:
-        argv.append("--preds-demo-ref-v2")
-    return {**_run_cli_and_response(argv), "specimens_out": str(spec)}
+    
+    # If not running normalization, we follow the standard workflow (importing CSV)
+    if not body.run_normalization:
+        if body.preds_relative:
+            pr = _repo_relative_path(body.preds_relative)
+            argv += ["--preds", str(pr)]
+            if body.source_note:
+                argv += ["--source-note", body.source_note]
+        elif body.preds_demo_ref_v2:
+            argv.append("--preds-demo-ref-v2")
+            if body.source_note:
+                argv += ["--source-note", body.source_note]
+        
+        return {**_run_cli_and_response(argv), "specimens_out": str(spec)}
+    
+    # 2. Automated Normalization Run
+    # Step A: Extract/Setup run
+    res = _run_cli_and_response(argv)
+    if not res["ok"]:
+        return res
+    
+    run_id = res.get("last_run_id_hint")
+    if not run_id:
+        # Fallback to reading the file if hint missing
+        run_id = _read_last_run_id_file()
+    
+    if not run_id:
+        raise HTTPException(status_code=500, detail="Failed to determine run_id for normalization")
+
+    # Step B: Run production_pipeline.py
+    # We use sys.executable -m app.ai.production_pipeline to ensure correct imports
+    pipeline_argv = [
+        sys.executable, "-m", "app.ai.production_pipeline",
+        "--supa-run-id", str(run_id),
+        "--limit", str(body.n)
+    ]
+    if body.no_ner: pipeline_argv.append("--no-ner")
+    if body.no_retrieval: pipeline_argv.append("--no-retrieval")
+    if body.no_llm: pipeline_argv.append("--no-llm")
+    if body.retriever_type:
+        pipeline_argv += ["--retriever-type", body.retriever_type]
+    
+    try:
+        from app.services.supa_cli_runner import build_pythonpath_env
+        # We run it synchronously for simplicity in this workflow action
+        cp = subprocess.run(
+            pipeline_argv, 
+            capture_output=True, 
+            text=True, 
+            check=False, 
+            timeout=600,
+            env=build_pythonpath_env(),
+            cwd=str(repo_root())
+        )
+        res["pipeline_stdout"] = cp.stdout
+        res["pipeline_stderr"] = cp.stderr
+        if cp.returncode != 0:
+            res["ok"] = False
+            res["error"] = f"Pipeline failed with code {cp.returncode}"
+            return res
+    except Exception as e:
+        res["ok"] = False
+        res["error"] = f"Failed to launch pipeline: {str(e)}"
+        return res
+
+    # Step C: Run eval (via supa_benchmark.py eval)
+    eval_argv = ["eval", "--run-id", str(run_id)]
+    eval_res = _run_cli_and_response(eval_argv)
+    
+    return {
+        **res,
+        "eval_stdout": eval_res["stdout"],
+        "eval_stderr": eval_res["stderr"],
+        "eval_ok": eval_res["ok"],
+        "specimens_out": str(spec)
+    }
 
 
 @router.post("/supa-actions/make-demo-preds")

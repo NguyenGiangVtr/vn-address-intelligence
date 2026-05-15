@@ -1997,6 +1997,30 @@ function initSupaBenchPage() {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
 
+  const updateSupaStatus = (msg, progress = null) => {
+    const statusEl = $("supa-mini-log-msg");
+    const progressEl = $("supa-mini-progress-text");
+    if (statusEl) statusEl.textContent = msg;
+    if (progressEl && progress !== null) {
+      // Progress is now displayed as "completed/total" format
+      const completed = Math.floor(progress / 25); // 0%, 25%, 50%, 75%, 100% -> 0, 1, 2, 3, 4
+      progressEl.textContent = `${completed}/4`;
+    }
+  };
+
+  const switchTab = (tabId) => {
+    root.querySelectorAll(".supa-tab-content").forEach(el => el.classList.remove("is-active"));
+    const target = $(`supa-tab-${tabId}`);
+    if (target) target.classList.add("is-active");
+    
+    root.querySelectorAll(".supa-step").forEach(el => el.classList.remove("is-active"));
+    const stepEl = root.querySelector(`.supa-step[data-supa-tab="${tabId}"]`);
+    if (stepEl) stepEl.classList.add("is-active");
+    
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    adjustActivePageHeight?.();
+  };
+
   const log = (msg, obj) => {
     if (!logEl) return;
     const t = new Date().toISOString();
@@ -2010,6 +2034,9 @@ function initSupaBenchPage() {
     }
     logEl.textContent += chunk;
     logEl.scrollTop = logEl.scrollHeight;
+    
+    // Also update sticky status for visibility
+    updateSupaStatus(msg);
   };
 
   const supaFmtAggMean = (payload, key) => {
@@ -2070,31 +2097,67 @@ function initSupaBenchPage() {
   };
 
   const renderEvalMetrics = (metrics) => {
-    if (!metricsHero || !metricsGrid) return;
+    const summaryLabel = $("supa-metrics-summary-label");
+    const hEM2 = $("supa-hero-em-v2");
+    const hEM1 = $("supa-hero-em-v1");
+    const hLat = $("supa-hero-latency");
+
     if (!metrics || typeof metrics !== "object") {
-      metricsHero.innerHTML = `<p class="text-secondary mb-0">Chưa có điểm số tổng hợp. Sau khi đã tải lên kết quả chuẩn hóa, nhấn <strong>Cập nhật tỉ lệ khớp</strong> ở trên.</p>`;
-      metricsGrid.innerHTML = "";
+      if (summaryLabel) summaryLabel.textContent = "Chưa có dữ liệu đánh giá cho lần thử này.";
+      if (hEM2) hEM2.textContent = "0.0%";
+      if (hEM1) hEM1.textContent = "0.0%";
+      if (hLat) hLat.textContent = "0 ms";
+      if (metricsGrid) metricsGrid.innerHTML = "";
       return;
     }
-    const em2 = metrics.em_v2_pct;
-    const pctNum = em2 != null && !Number.isNaN(Number(em2)) ? Math.max(0, Math.min(100, Number(em2))) : null;
-    const bar = pctNum != null
-      ? `<div class="supa-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pctNum.toFixed(1)}"><span style="width:${pctNum}%"></span></div>`
-      : "";
-    metricsHero.innerHTML = `
-      <p class="text-secondary mb-4" style="font-size: 14px;">${escapeHtml(SUPA_EVAL_LABEL_VI.em_v2_pct)}</p>
-      <p class="supa-hero-metric">${fmtPct(em2)}</p>
-      ${bar}
-    `;
-    const keys = Object.keys(SUPA_EVAL_LABEL_VI).filter((k) => k !== "em_v2_pct");
-    const parts = keys.map((k) => {
-      const v = metrics[k];
-      if (v == null || Number.isNaN(Number(v))) return "";
-      const suf = k.includes("latency") ? " ms" : k.includes("throughput") ? "" : "%";
-      const disp = k.includes("throughput") ? Number(v).toFixed(2) : fmtPct(v);
-      return `<div class="supa-metric-item"><div class="label">${escapeHtml(SUPA_EVAL_LABEL_VI[k])}</div><div class="value">${escapeHtml(disp)}${suf}</div></div>`;
+
+    if (summaryLabel) summaryLabel.textContent = `Phân tích từ ${metrics.n_scored ?? "?"} địa chỉ đã chấm điểm.`;
+    if (hEM2) hEM2.textContent = fmtPct(metrics.em_v2_pct);
+    if (hEM1) hEM1.textContent = fmtPct(metrics.em_v1_pct);
+    if (hLat) hLat.textContent = `${Math.round(metrics.latency_mean_ms || 0)} ms`;
+
+    // Render detailed metrics in professional layout
+    const detailedMetrics = [
+      { key: 'f1_duong_pct', label: 'Độ đúng phần tên đường', type: 'percentage' },
+      { key: 'f1_phuong_pct', label: 'Độ đúng phần phường / xã', type: 'percentage' },
+      { key: 'f1_quan_pct', label: 'Độ đúng phần quận / huyện', type: 'percentage' },
+      { key: 'f1_tinh_pct', label: 'Độ đúng phần tỉnh / thành phố', type: 'percentage' },
+      { key: 'latency_p95_ms', label: 'Độ trễ mức 95%', type: 'latency' },
+      { key: 'latency_p99_ms', label: 'Độ trễ mức 99%', type: 'latency' },
+      { key: 'throughput_addr_per_s', label: 'Số địa chỉ xử lý mỗi giây', type: 'throughput' }
+    ];
+
+    const metricItems = detailedMetrics.map(({ key, label, type }) => {
+      const value = metrics[key];
+      if (value == null || Number.isNaN(Number(value))) return '';
+      
+      let displayValue;
+      let cssClass = '';
+      
+      if (type === 'percentage') {
+        displayValue = fmtPct(value);
+        cssClass = 'is-percentage';
+      } else if (type === 'latency') {
+        displayValue = `${Number(value).toFixed(2)} ms`;
+        cssClass = 'is-latency';
+      } else if (type === 'throughput') {
+        displayValue = Number(value).toFixed(2);
+        cssClass = 'is-throughput';
+      }
+      
+      return `
+        <div class="supa-metric-item">
+          <div class="supa-metric-label">${escapeHtml(label)}</div>
+          <div class="supa-metric-value ${cssClass}">${escapeHtml(displayValue)}</div>
+        </div>
+      `;
     }).filter(Boolean);
-    metricsGrid.innerHTML = parts.join("") || `<p class="text-secondary">Không có thêm chỉ số phụ.</p>`;
+
+    if (metricsGrid) {
+      metricsGrid.innerHTML = metricItems.length > 0 
+        ? metricItems.join('') 
+        : `<p class="text-secondary text-center" style="padding: 24px;">Không có thêm chỉ số phụ.</p>`;
+    }
   };
 
   const refreshStepper = () => {
@@ -2103,20 +2166,29 @@ function initSupaBenchPage() {
     const s3 = hasPredEver;
     const s4 = !!(runDetail && runDetail.eval_metrics_json && typeof runDetail.eval_metrics_json === "object"
       && runDetail.eval_metrics_json.em_v2_pct != null);
-    let active = 1;
-    if (!s1) active = 1;
-    else if (!s2) active = 2;
-    else if (!s3) active = 3;
-    else if (!s4) active = 4;
-    else active = 4;
+    
+    let activeStep = 1;
+    if (!s1) activeStep = 1;
+    else if (!s2) activeStep = 2;
+    else if (!s3) activeStep = 3;
+    else if (!s4) activeStep = 4;
+    else activeStep = 4;
+
     for (let i = 1; i <= 4; i++) {
-      const el = $(`supa-step-wrap-${i}`);
+      const el = root.querySelector(`.supa-step[data-supa-tab="${i}"]`);
       if (!el) continue;
-      el.classList.remove("is-active", "is-done", "is-disabled");
-      if (i < active) el.classList.add("is-done");
-      if (i === active) el.classList.add("is-active");
+      el.classList.remove("is-done", "is-disabled");
+      if (i < activeStep) el.classList.add("is-done");
       if (i > 1 && !s1) el.classList.add("is-disabled");
     }
+    
+    // Auto progress status
+    let progress = 0;
+    if (s1) progress += 25;
+    if (s2) progress += 25;
+    if (s3) progress += 25;
+    if (s4) progress += 25;
+    updateSupaStatus(s4 ? "Thử nghiệm hoàn tất." : s1 ? "Đã chọn bộ thử." : "Sẵn sàng.", progress);
   };
 
   const fillRunSelect = () => {
@@ -2268,26 +2340,39 @@ function initSupaBenchPage() {
   };
 
   const postAction = async (path, body, toastOk) => {
-    const r = await fetchWithApiFallback(`/experiments/supa-actions/${path}`, {
-      method: "POST",
-      headers: { ...getAuthHeader(), "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    const j = await r.json().catch(() => ({}));
-    if (!r.ok) {
-      log(`Lỗi thao tác ${path}`, j.detail != null ? j.detail : j);
-      if (showToast) showToast("Thao tác trên máy chủ bị từ chối hoặc lỗi. Xem phần chi tiết kỹ thuật bên dưới.", "danger");
-      return null;
+    const overlay = $("supa-loading-overlay");
+    if (overlay) overlay.classList.add("active");
+    try {
+      const r = await fetchWithApiFallback(`/experiments/supa-actions/${path}`, {
+        method: "POST",
+        headers: { ...getAuthHeader(), "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        log(`Lỗi thao tác ${path}`, j.detail != null ? j.detail : j);
+        if (showToast) showToast("Thao tác trên máy chủ bị từ chối hoặc lỗi. Xem phần chi tiết kỹ thuật bên dưới.", "danger");
+        return null;
+      }
+      log(path, j);
+      if (showToast) {
+        showToast(toastOk || "Đã xong.", j.ok ? "success" : "warning");
+      }
+      return j;
+    } finally {
+      if (overlay) overlay.classList.remove("active");
     }
-    log(path, j);
-    if (showToast) {
-      showToast(toastOk || "Đã xong.", j.ok ? "success" : "warning");
-    }
-    return j;
   };
 
   if (!root.dataset.vnaiSupaBenchBound) {
     root.dataset.vnaiSupaBenchBound = "1";
+
+    root.querySelectorAll(".supa-step").forEach(step => {
+      step.addEventListener("click", () => {
+        const tabId = step.getAttribute("data-supa-tab");
+        if (tabId) switchTab(tabId);
+      });
+    });
 
     $("supa-btn-clear-log")?.addEventListener("click", () => {
       if (logEl) logEl.textContent = "";
@@ -2295,38 +2380,44 @@ function initSupaBenchPage() {
     $("supa-btn-refresh-compare")?.addEventListener("click", () => loadCompare());
 
     $("supa-btn-aggregate-preview")?.addEventListener("click", async () => {
-      const minV = $("supa-agg-min")?.value;
-      const maxV = $("supa-agg-max")?.value;
-      const lastN = $("supa-agg-lastn")?.value;
-      const persist = $("supa-agg-persist")?.checked;
-      const body = { persist_ath: !!persist, methodology_version: "strat-v1" };
-      if (minV && maxV) {
-        body.min_run_id = parseInt(minV, 10);
-        body.max_run_id = parseInt(maxV, 10);
-      } else if (lastN) {
-        body.last_n = parseInt(lastN, 10);
-      } else {
-        body.last_n = 50;
-      }
-      const r = await fetchWithApiFallback("/experiments/supa-aggregate-preview", {
-        method: "POST",
-        headers: { ...getAuthHeader(), "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      const j = await r.json().catch(() => ({}));
-      const out = $("supa-aggregate-out");
-      if (!r.ok) {
-        log("aggregate-preview error", j.detail != null ? j.detail : j);
-        if (showToast) showToast("Xem trước tổng hợp — lỗi", "danger");
-        return;
-      }
-      if (out) {
-        out.style.display = "block";
-        out.textContent = JSON.stringify(j, null, 2);
-      }
-      log("aggregate-preview", { exit_code: j.exit_code, stderr: j.stderr });
-      if (showToast) {
-        showToast("Đã chạy xem trước tổng hợp.", j.exit_code === 0 ? "success" : "warning");
+      const overlay = $("supa-loading-overlay");
+      if (overlay) overlay.classList.add("active");
+      try {
+        const minV = $("supa-agg-min")?.value;
+        const maxV = $("supa-agg-max")?.value;
+        const lastN = $("supa-agg-lastn")?.value;
+        const persist = $("supa-agg-persist")?.checked;
+        const body = { persist_ath: !!persist, methodology_version: "strat-v1" };
+        if (minV && maxV) {
+          body.min_run_id = parseInt(minV, 10);
+          body.max_run_id = parseInt(maxV, 10);
+        } else if (lastN) {
+          body.last_n = parseInt(lastN, 10);
+        } else {
+          body.last_n = 50;
+        }
+        const r = await fetchWithApiFallback("/experiments/supa-aggregate-preview", {
+          method: "POST",
+          headers: { ...getAuthHeader(), "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        const j = await r.json().catch(() => ({}));
+        const out = $("supa-aggregate-out");
+        if (!r.ok) {
+          log("aggregate-preview error", j.detail != null ? j.detail : j);
+          if (showToast) showToast("Xem trước tổng hợp — lỗi", "danger");
+          return;
+        }
+        if (out) {
+          out.style.display = "block";
+          out.textContent = JSON.stringify(j, null, 2);
+        }
+        log("aggregate-preview", { exit_code: j.exit_code, stderr: j.stderr });
+        if (showToast) {
+          showToast("Đã chạy xem trước tổng hợp.", j.exit_code === 0 ? "success" : "warning");
+        }
+      } finally {
+        if (overlay) overlay.classList.remove("active");
       }
     });
 
@@ -2335,6 +2426,7 @@ function initSupaBenchPage() {
       await loadRunDetail();
       specimenOffset = 0;
       await loadSpecimens();
+      // Stay on current tab after refresh
     });
 
     $("supa-btn-toggle-new")?.addEventListener("click", () => {
@@ -2343,39 +2435,99 @@ function initSupaBenchPage() {
       p.style.display = p.style.display === "none" ? "block" : "none";
     });
 
+    $("supa-btn-goto-step1")?.addEventListener("click", () => {
+      const step1 = root.querySelector('[data-supa-tab="1"]');
+      if (step1) step1.click();
+    });
+
+    const getNewRunBody = () => {
+      const n = parseInt($("supa-new-n")?.value || "1000", 10);
+      const noiseProfile = $("supa-new-noise")?.value || "SUP-1.0.0";
+      const seedRaw = $("supa-new-seed")?.value;
+      const notesRaw = $("supa-new-notes")?.value;
+      
+      // Auto-generate notes if empty: [n]-[seed]-[profile]
+      let notes = notesRaw;
+      if (!notes || notes.trim() === "") {
+        const seedPart = seedRaw ? seedRaw : "auto";
+        notes = `${n}-${seedPart}-${noiseProfile}`;
+      }
+      
+      const body = {
+        n,
+        noise_profile: noiseProfile,
+        notes: notes,
+      };
+      if (seedRaw) body.seed = parseInt(seedRaw, 10);
+
+      // Auto Norm logic
+      const runNorm = !!$("supa-wf-run-norm")?.checked;
+      if (runNorm) {
+        body.run_normalization = true;
+        body.no_ner = !$("supa-norm-ner")?.checked;
+        body.no_retrieval = !$("supa-norm-retrieval")?.checked;
+        body.no_llm = !$("supa-norm-llm")?.checked;
+        body.retriever_type = document.querySelector('input[name="supa-retriever"]:checked')?.value || "mgte";
+      }
+
+      return body;
+    };
+
+    const handleRunResponse = async (j, autoSwitchTab = true) => {
+      if (j && j.last_run_id_hint != null) {
+        selectedRunId = j.last_run_id_hint;
+      } else {
+        await loadRuns();
+        if (runs.length) selectedRunId = runs[0].id;
+      }
+      await loadRuns();
+      if (runSelect) runSelect.value = String(selectedRunId);
+      hasPredEver = false;
+      specimenOffset = 0;
+      await loadRunDetail();
+      await loadSpecimens();
+
+      // Auto switch to Preview Tab only when explicitly requested
+      if (autoSwitchTab) {
+        switchTab(2);
+      }
+    };
+
     $("supa-btn-create-run")?.addEventListener("click", async () => {
-      const n = parseInt($("supa-new-n")?.value || "0", 10);
-      if (!n || n < 1) {
+      const body = getNewRunBody();
+      if (!body.n || body.n < 1) {
         if (showToast) showToast("Nhập số địa chỉ hợp lệ (ít nhất 1).", "danger");
         return;
       }
-      const body = {
-        n,
-        noise_profile: $("supa-new-noise")?.value || "SUP-1.0.0",
-        notes: $("supa-new-notes")?.value || undefined,
-      };
-      const seedRaw = $("supa-new-seed")?.value;
-      if (seedRaw) body.seed = parseInt(seedRaw, 10);
-      const j = await postAction("extract", body, "Đã tạo bộ thử mới trên máy chủ.");
-      if (j && j.last_run_id_hint != null) {
-        selectedRunId = j.last_run_id_hint;
-        await loadRuns();
-        if (runSelect) runSelect.value = String(selectedRunId);
-        hasPredEver = false;
-        specimenOffset = 0;
-        await loadRunDetail();
-        await loadSpecimens();
-      } else {
-        await loadRuns();
-        if (runs.length) {
-          selectedRunId = runs[0].id;
-          if (runSelect) runSelect.value = String(selectedRunId);
-        }
-        hasPredEver = false;
-        specimenOffset = 0;
-        await loadRunDetail();
-        await loadSpecimens();
+      // Add workflow params
+      body.specimens_out_relative = $("supa-wf-spec-out")?.value || undefined;
+      body.preds_relative = $("supa-wf-preds")?.value || undefined;
+      body.source_note = $("supa-wf-source-note")?.value || undefined;
+      body.preds_demo_ref_v2 = !!$("supa-wf-demo-v2")?.checked;
+      body.skip_extract = !!$("supa-wf-skip-extract")?.checked;
+      const ridRaw = $("supa-wf-run-id")?.value;
+      if (ridRaw) body.run_id = parseInt(ridRaw, 10);
+
+      const j = await postAction("workflow", body, "Đã chạy workflow SUPA.");
+      await handleRunResponse(j);
+    });
+
+    $("supa-btn-extract-only")?.addEventListener("click", async () => {
+      const body = getNewRunBody();
+      if (!body.n || body.n < 1) {
+        if (showToast) showToast("Nhập số địa chỉ hợp lệ (ít nhất 1).", "danger");
+        return;
       }
+      const j = await postAction("extract", body, "Đã trích mẫu mới.");
+      await handleRunResponse(j);
+    });
+
+    $("supa-wf-run-norm")?.addEventListener("change", () => {
+      const opts = $("supa-norm-options");
+      if (!opts) return;
+      const active = $("supa-wf-run-norm").checked;
+      opts.style.opacity = active ? "1" : "0.5";
+      opts.style.pointerEvents = active ? "auto" : "none";
     });
 
     runSelect?.addEventListener("change", async () => {
@@ -2385,6 +2537,7 @@ function initSupaBenchPage() {
       specimenOffset = 0;
       await loadRunDetail();
       await loadSpecimens();
+      // Don't auto-switch tab when user manually selects a run
     });
 
     $("supa-spec-limit")?.addEventListener("change", async () => {
@@ -2458,6 +2611,39 @@ function initSupaBenchPage() {
       specimenOffset = 0;
       await loadRunDetail();
       await loadSpecimens();
+      // Auto-switch to results tab after import
+      switchTab(4);
+    });
+
+    $("supa-btn-demo-import")?.addEventListener("click", async () => {
+      if (!selectedRunId) {
+        if (showToast) showToast("Chọn một lần thử trước khi dùng demo.", "danger");
+        return;
+      }
+      const confirmed = confirm(
+        "🎭 Chế độ Demo sẽ copy dữ liệu từ ref_address_v2 làm kết quả chuẩn hóa.\n\n" +
+        "Điều này sẽ cho Exact Match (V2) = 100% - chỉ dùng để test flow, không phải kết quả thật.\n\n" +
+        "Bạn có muốn tiếp tục?"
+      );
+      if (!confirmed) return;
+
+      const body = {
+        n: 1000, // dummy value, will use existing run
+        skip_extract: true,
+        run_id: selectedRunId,
+        preds_demo_ref_v2: true,
+        source_note: "Demo mode: copied from ref_address_v2 (oracle - not real model output)"
+      };
+      
+      const j = await postAction("workflow", body, "Đã import dữ liệu demo và tính toán metrics.");
+      if (j) {
+        hasPredEver = true;
+        specimenOffset = 0;
+        await loadRunDetail();
+        await loadSpecimens();
+        // Auto-switch to results tab
+        switchTab(4);
+      }
     });
 
     $("supa-btn-run-eval")?.addEventListener("click", async () => {
@@ -2468,6 +2654,7 @@ function initSupaBenchPage() {
       await postAction("eval", { run_id: selectedRunId }, "Đã cập nhật tỉ lệ khớp.");
       await loadRunDetail();
       await loadSpecimens();
+      // Stay on current tab (tab 4) after eval
     });
   }
 
@@ -2477,6 +2664,7 @@ function initSupaBenchPage() {
     await loadRunDetail();
     await loadSpecimens();
     loadCompare();
+    // Don't auto-switch tab on programmatic refresh
   };
 
   const limEl = $("supa-spec-limit");
@@ -2511,9 +2699,16 @@ function populateTrainingHistory() {
 function refreshTrainingChart() {
   if (!intelligenceChart) return;
 
-  intelligenceChart.data.labels = trainingHistoryRows.map((item) => item.version);
-  intelligenceChart.data.datasets[0].data = trainingHistoryRows.map((item) => item.accuracy);
-  intelligenceChart.data.datasets[1].data = trainingHistoryRows.map((item) => item.f1);
+  // Sort by date ascending for chronological chart display
+  const sortedRows = [...trainingHistoryRows].sort((a, b) => {
+    const dateA = new Date(a.date);
+    const dateB = new Date(b.date);
+    return dateA - dateB;
+  });
+
+  intelligenceChart.data.labels = sortedRows.map((item) => item.version);
+  intelligenceChart.data.datasets[0].data = sortedRows.map((item) => item.accuracy);
+  intelligenceChart.data.datasets[1].data = sortedRows.map((item) => item.f1);
   intelligenceChart.update();
 }
 
@@ -4964,9 +5159,9 @@ async function triggerMappingSearch(state) {
     }
     document.getElementById('mapping-result-count').textContent = `${data.length} records`;
     tbody.innerHTML = data.map(m => `
-      <tr style="cursor: pointer; transition: background 0.2s;" onclick="showDetails('ward', ${m.ward_id_new}, 2)">
+      <tr style="cursor: pointer; transition: background 0.2s;" onclick="showDetails('ward', ${m.ward_id_v2}, 2)">
         <td data-label="ĐVHC Cũ" style="padding: 16px 20px;">
-          <div class="font-700" style="font-size:15px; color:var(--text-primary)">${m.ward_name_old || (m.ward_id_old == -1 ? "(Tất cả Xã)" : "N/A")}</div>
+          <div class="font-700" style="font-size:15px; color:var(--text-primary)">${m.ward_name_old || (m.ward_id_v1 == -1 ? "(Tất cả Xã)" : "N/A")}</div>
           <div class="text-tertiary" style="font-size:12px; margin-top: 2px;">
             ${[m.district_name_old, m.province_name_old].filter(x => x).join(" - ")}
           </div>
@@ -5624,7 +5819,7 @@ async function initDataExplorer() {
   VNAIControls.renderSmartFilter('explorer-filter-container', {
     prefix: 'explorer',
     title: 'Tìm kiếm hàng đợi xử lý địa chỉ',
-    showVersion: false,
+    showVersion: true,
     searchPlaceholder: 'Tìm kiếm địa chỉ, tỉnh thành, trạng thái...',
     buttonText: 'Tìm kiếm'
   });
@@ -5661,12 +5856,14 @@ async function initDataExplorer() {
       const pId = pVal ? (typeof pVal === 'object' ? pVal.province_id : pVal) : "";
       const dVal = activeState.districts[document.getElementById('explorer-district-input')?.value];
       const dId = dVal ? (typeof dVal === 'object' ? dVal.district_id : dVal) : "";
-      const wId = activeState.wards[document.getElementById('explorer-ward-input')?.value] || "";
+      const wVal = activeState.wards[document.getElementById('explorer-ward-input')?.value];
+      const wId = wVal ? (typeof wVal === 'object' ? wVal.ward_id : wVal) : "";
 
       const params = new URLSearchParams({
         page: String(explorerPage),
         limit: String(EXPLORER_PAGE_SIZE),
         q,
+        admin_version: String(activeState.version || 1)
       });
       if (wId) params.append('ward_id', String(wId));
       else if (dId) params.append('district_id', String(dId));

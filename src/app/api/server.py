@@ -1089,12 +1089,23 @@ def lookup_mapping(
 
     base_query = db.query(
         WardMapping.ward_mapping_id.label("id"),
-        WardMapping.ward_id_old,
-        WardMapping.ward_id_new,
-        WardMapping.province_id_old,
-        WardMapping.province_id_new,
-        WardMapping.district_id_old,
-        WardMapping.district_id_new,
+        WardMapping.ward_id_v1,
+        WardMapping.ward_id_v2,
+        WardMapping.province_id_v1,
+        WardMapping.province_id_v2,
+        WardMapping.district_id_v1,
+        WardMapping.district_id_v2,
+        
+        # Origin Data
+        WardMapping.prov_name_v1,
+        WardMapping.dist_name_v1,
+        WardMapping.ward_name_v1,
+        WardMapping.ward_code_v1,
+        WardMapping.prov_name_v2,
+        WardMapping.dist_name_v2,
+        WardMapping.ward_name_v2,
+        WardMapping.ward_code_v2,
+
         WardMapping.updated_note,
         WardMapping.effective_date_from,
         WardMapping.effective_date_to,
@@ -1108,17 +1119,17 @@ def lookup_mapping(
         DistV1.district_name.label("district_name_old"),
         DistV2.district_name.label("district_name_new")
     ).outerjoin(
-        WardV1, and_(WardV1.ward_id == WardMapping.ward_id_old, WardV1.admin_version == 1) 
+        WardV1, and_(WardV1.ward_id == WardMapping.ward_id_v1, WardV1.admin_version == 1) 
     ).outerjoin(
-        WardV2, and_(WardV2.ward_id == WardMapping.ward_id_new, WardV2.is_deleted == False, WardV2.admin_version == 2)
+        WardV2, and_(WardV2.ward_id == WardMapping.ward_id_v2, WardV2.is_deleted == False, WardV2.admin_version == 2)
     ).outerjoin(
-        DistV1, and_(DistV1.district_id == func.coalesce(WardV1.district_id, WardMapping.district_id_old), DistV1.admin_version == 1)
+        DistV1, and_(DistV1.district_id == func.coalesce(WardV1.district_id, WardMapping.district_id_v1), DistV1.admin_version == 1)
     ).outerjoin(
-        DistV2, and_(DistV2.district_id == func.coalesce(WardV2.district_id, WardMapping.district_id_new), DistV2.is_deleted == False, DistV2.admin_version == 2)
+        DistV2, and_(DistV2.district_id == func.coalesce(WardV2.district_id, WardMapping.district_id_v2), DistV2.is_deleted == False, DistV2.admin_version == 2)
     ).outerjoin(
-        ProvV1, and_(ProvV1.province_id == func.coalesce(DistV1.province_id, WardMapping.province_id_old), ProvV1.admin_version == 1)
+        ProvV1, and_(ProvV1.province_id == func.coalesce(DistV1.province_id, WardMapping.province_id_v1), ProvV1.admin_version == 1)
     ).outerjoin(
-        ProvV2, and_(ProvV2.province_id == func.coalesce(DistV2.province_id, WardMapping.province_id_new), ProvV2.is_deleted == False, ProvV2.admin_version == 2)
+        ProvV2, and_(ProvV2.province_id == func.coalesce(DistV2.province_id, WardMapping.province_id_v2), ProvV2.is_deleted == False, ProvV2.admin_version == 2)
     )
 
     filters = []
@@ -1126,20 +1137,20 @@ def lookup_mapping(
     if province_id:
         if version == 1:
             filters.append(or_(
-                WardMapping.province_id_old == province_id, 
+                WardMapping.province_id_v1 == province_id, 
                 DistV1.province_id == province_id,
                 ProvV1.province_id == province_id
             ))
         elif version == 2:
             filters.append(or_(
-                WardMapping.province_id_new == province_id, 
+                WardMapping.province_id_v2 == province_id, 
                 DistV2.province_id == province_id,
                 ProvV2.province_id == province_id
             ))
         else:
             filters.append(or_(
-                WardMapping.province_id_old == province_id, 
-                WardMapping.province_id_new == province_id,
+                WardMapping.province_id_v1 == province_id, 
+                WardMapping.province_id_v2 == province_id,
                 DistV1.province_id == province_id,
                 DistV2.province_id == province_id,
                 ProvV1.province_id == province_id,
@@ -1148,13 +1159,13 @@ def lookup_mapping(
 
     if district_id:
         if version == 1:
-            filters.append(or_(WardMapping.district_id_old == district_id, WardV1.district_id == district_id, DistV1.district_id == district_id))
+            filters.append(or_(WardMapping.district_id_v1 == district_id, WardV1.district_id == district_id, DistV1.district_id == district_id))
         elif version == 2:
-            filters.append(or_(WardMapping.district_id_new == district_id, WardV2.district_id == district_id, DistV2.district_id == district_id))
+            filters.append(or_(WardMapping.district_id_v2 == district_id, WardV2.district_id == district_id, DistV2.district_id == district_id))
         else:
             filters.append(or_(
-                WardMapping.district_id_old == district_id, 
-                WardMapping.district_id_new == district_id,
+                WardMapping.district_id_v1 == district_id, 
+                WardMapping.district_id_v2 == district_id,
                 WardV1.district_id == district_id,
                 WardV2.district_id == district_id,
                 DistV1.district_id == district_id,
@@ -1163,11 +1174,11 @@ def lookup_mapping(
 
     if ward_id:
         if version == 1:
-            filters.append(WardMapping.ward_id_old == ward_id)
+            filters.append(WardMapping.ward_id_v1 == ward_id)
         elif version == 2:
-            filters.append(WardMapping.ward_id_new == ward_id)
+            filters.append(WardMapping.ward_id_v2 == ward_id)
         else:
-            filters.append(or_(WardMapping.ward_id_old == ward_id, WardMapping.ward_id_new == ward_id))
+            filters.append(or_(WardMapping.ward_id_v1 == ward_id, WardMapping.ward_id_v2 == ward_id))
 
     if query:
         q_clean = query.strip()
@@ -1196,7 +1207,7 @@ def lookup_mapping(
         try:
             res = r._asdict()
             # Handle ward -1 (All wards)
-            if res.get("ward_id_old") == -1:
+            if res.get("ward_id_v1") == -1:
                 res["ward_name_old"] = "(Tất cả Xã)"
             
             # Ensure all name fields are not None for UI
@@ -1776,7 +1787,7 @@ def get_training_history(db: Session = Depends(get_db)):
     """Return stored training history rows for the dashboard."""
     try:
         seed_training_metadata()
-        rows = db.query(TrainingHistory).order_by(TrainingHistory.created_at.asc(), TrainingHistory.id.asc()).all()
+        rows = db.query(TrainingHistory).order_by(TrainingHistory.created_at.desc(), TrainingHistory.id.desc()).all()
         history = [
             {
                 "version": row.version,
@@ -2165,6 +2176,7 @@ def _read_explorer_queue(
     province_id: Optional[int],
     district_id: Optional[int],
     ward_id: Optional[int],
+    admin_version: int = 2,
 ):
     try:
         query = db.query(
@@ -2175,12 +2187,20 @@ def _read_explorer_queue(
             AddressCleansingQueue.province_name,
             AddressCleansingQueue.processing_status,
         )
-        if ward_id is not None:
-            query = query.filter(AddressCleansingQueue.ward_id == ward_id)
-        elif district_id is not None:
-            query = query.filter(AddressCleansingQueue.district_id == district_id)
-        elif province_id is not None:
-            query = query.filter(AddressCleansingQueue.province_id == province_id)
+        if admin_version == 1:
+            if ward_id is not None:
+                query = query.filter(AddressCleansingQueue.old_ward_id == ward_id)
+            elif district_id is not None:
+                query = query.filter(AddressCleansingQueue.old_district_id == district_id)
+            elif province_id is not None:
+                query = query.filter(AddressCleansingQueue.old_province_id == province_id)
+        else:
+            if ward_id is not None:
+                query = query.filter(AddressCleansingQueue.ward_id == ward_id)
+            elif district_id is not None:
+                query = query.filter(AddressCleansingQueue.district_id == district_id)
+            elif province_id is not None:
+                query = query.filter(AddressCleansingQueue.province_id == province_id)
 
         q_stripped = (q or "").strip()
         if q_stripped:
@@ -2234,9 +2254,10 @@ def get_explorer_queue(
     province_id: Optional[int] = Query(None),
     district_id: Optional[int] = Query(None),
     ward_id: Optional[int] = Query(None),
+    admin_version: int = Query(2, ge=1, le=2),
 ):
     """Lấy danh sách các địa chỉ đang chờ hoặc đã xử lý trong hàng đợi chuẩn hóa."""
-    return _read_explorer_queue(db, page, limit, q, province_id, district_id, ward_id)
+    return _read_explorer_queue(db, page, limit, q, province_id, district_id, ward_id, admin_version)
 
 
 @app.get("/explorer/queue")
@@ -2248,8 +2269,9 @@ def get_explorer_queue_root(
     province_id: Optional[int] = Query(None),
     district_id: Optional[int] = Query(None),
     ward_id: Optional[int] = Query(None),
+    admin_version: int = Query(2, ge=1, le=2),
 ):
-    return _read_explorer_queue(db, page, limit, q, province_id, district_id, ward_id)
+    return _read_explorer_queue(db, page, limit, q, province_id, district_id, ward_id, admin_version)
 
 @api_router.get("/label-studio/debug", tags=["AI Address Parser"], summary="Kiểm tra kết nối Label Studio")
 async def debug_ls_connection(current_user: str = Depends(get_current_user)):

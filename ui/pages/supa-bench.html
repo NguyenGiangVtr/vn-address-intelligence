@@ -1,365 +1,607 @@
-<!-- SUPA — Runbook theo giai đoạn (thân thiện người mới) -->
+<!-- SUPA Benchmark - Refactored to follow project standards -->
 <style>
+  /* Override page-header to use horizontal layout */
+  #supa-bench .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  #supa-bench .page-header > div:first-child {
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* Minimal SUPA-specific styles - only for stepper */
   #supa-bench .supa-stepper {
     display: flex;
-    flex-wrap: wrap;
-    gap: 8px 12px;
-    margin-bottom: 24px;
-    padding: 16px;
-    border-radius: 12px;
-    background: var(--bg-elevated, rgba(0, 0, 0, 0.04));
-    border: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.08));
+    gap: 8px;
+    margin-bottom: 16px;
   }
+
   #supa-bench .supa-step {
-    flex: 1 1 140px;
+    flex: 1;
+    min-width: 80px;
     display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    min-width: 120px;
-    opacity: 0.55;
-    transition: opacity 0.15s ease;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: var(--radius-sm);
+    transition: var(--transition);
   }
+
+  #supa-bench .supa-step:hover {
+    background: var(--bg-hover);
+  }
+
   #supa-bench .supa-step.is-active {
-    opacity: 1;
-    font-weight: 600;
+    background: var(--accent-glow);
   }
-  #supa-bench .supa-step.is-done {
-    opacity: 0.95;
-  }
-  #supa-bench .supa-step.is-disabled {
-    opacity: 0.35;
-  }
+
   #supa-bench .supa-step-num {
-    flex-shrink: 0;
-    width: 28px;
-    height: 28px;
+    width: 24px;
+    height: 24px;
     border-radius: 50%;
-    display: inline-flex;
+    display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 13px;
-    font-weight: 700;
-    background: var(--bg-secondary, #e8e8e8);
-    color: var(--text-primary, #111);
-    border: 2px solid transparent;
-  }
-  #supa-bench .supa-step.is-active .supa-step-num {
-    border-color: var(--accent, #5b8cff);
-    background: var(--accent-soft, rgba(91, 140, 255, 0.15));
-    color: var(--accent, #5b8cff);
-  }
-  #supa-bench .supa-step.is-done .supa-step-num {
-    background: var(--success-soft, rgba(46, 160, 67, 0.2));
-    color: var(--success, #2ea043);
-  }
-  #supa-bench .supa-step-label {
-    font-size: 13px;
-    line-height: 1.35;
-    color: var(--text-secondary, #555);
-  }
-  #supa-bench .supa-step.is-active .supa-step-label {
-    color: var(--text-primary, #111);
-  }
-  #supa-bench .supa-col-ref {
-    color: var(--text-primary, #111);
-    font-weight: 500;
-  }
-  #supa-bench .supa-col-noisy {
-    color: var(--accent, #3d6fd8);
-  }
-  #supa-bench .supa-col-pred {
-    color: var(--success, #217a3a);
-  }
-  #supa-bench .supa-cell {
-    max-width: 280px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    cursor: default;
-    vertical-align: top;
-  }
-  #supa-bench .supa-cell.is-expanded {
-    white-space: normal;
-    word-break: break-word;
-    max-width: 420px;
-  }
-  #supa-bench .supa-badge {
-    display: inline-block;
-    padding: 2px 8px;
-    border-radius: 999px;
-    font-size: 11px;
-    font-weight: 600;
-  }
-  #supa-bench .supa-badge-ok {
-    background: rgba(46, 160, 67, 0.15);
-    color: #217a3a;
-  }
-  #supa-bench .supa-badge-no {
-    background: rgba(200, 80, 60, 0.12);
-    color: #b23c2a;
-  }
-  #supa-bench .supa-badge-wait {
-    background: var(--bg-secondary, #eee);
-    color: var(--text-tertiary, #888);
-  }
-  #supa-bench .supa-hero-metric {
-    font-size: clamp(1.75rem, 4vw, 2.5rem);
-    font-weight: 800;
-    letter-spacing: -0.02em;
-    line-height: 1.1;
-    margin: 0 0 8px;
-  }
-  #supa-bench .supa-progress {
-    height: 10px;
-    border-radius: 999px;
-    background: var(--bg-secondary, #e4e4e4);
-    overflow: hidden;
-    margin-top: 8px;
-    max-width: 480px;
-  }
-  #supa-bench .supa-progress > span {
-    display: block;
-    height: 100%;
-    border-radius: inherit;
-    background: linear-gradient(90deg, var(--accent, #5b8cff), #7aa3ff);
-    transition: width 0.35s ease;
-  }
-  #supa-bench .supa-metric-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 12px 20px;
-    margin-top: 16px;
-  }
-  #supa-bench .supa-metric-item {
-    padding: 12px 14px;
-    border-radius: 10px;
-    background: var(--bg-elevated, rgba(0, 0, 0, 0.03));
-    border: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.06));
-  }
-  #supa-bench .supa-metric-item .label {
     font-size: 12px;
-    color: var(--text-secondary, #666);
-    margin-bottom: 4px;
-  }
-  #supa-bench .supa-metric-item .value {
-    font-size: 1.25rem;
     font-weight: 700;
+    background: var(--bg-elevated);
+    color: var(--text-secondary);
+  }
+
+  #supa-bench .supa-step.is-active .supa-step-num {
+    background: var(--accent);
+    color: white;
+  }
+
+  #supa-bench .supa-step.is-done .supa-step-num {
+    background: var(--success);
+    color: white;
+  }
+
+  #supa-bench .supa-step-label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-secondary);
+  }
+
+  #supa-bench .supa-step.is-active .supa-step-label {
+    color: var(--accent);
+  }
+
+  /* Override card-header to use horizontal layout */
+  #supa-bench .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+  }
+
+  #supa-bench .card-header .card-title {
+    flex: 1;
+    min-width: 0;
+  }
+
+  #supa-bench .supa-tab-content {
+    display: none;
+  }
+
+  #supa-bench .supa-tab-content.is-active {
+    display: block;
+  }
+
+  #supa-bench .supa-status {
+    font-family: 'JetBrains Mono', 'Consolas', monospace;
+    font-size: 11px;
+    background: var(--bg-elevated);
+    padding: 8px 12px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    border-left: 3px solid var(--accent);
+  }
+
+  /* Professional Metrics Display */
+  #supa-bench .supa-metrics-professional {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+  }
+
+  #supa-bench .supa-metric-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    background: var(--bg-elevated);
+    border-radius: var(--radius-sm);
+    border-left: 3px solid var(--border-subtle);
+    transition: var(--transition);
+  }
+
+  #supa-bench .supa-metric-item:hover {
+    background: var(--bg-hover);
+    border-left-color: var(--accent);
+  }
+
+  #supa-bench .supa-metric-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    flex: 1;
+  }
+
+  #supa-bench .supa-metric-value {
+    font-size: 20px;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', 'Consolas', monospace;
+    color: var(--text-primary);
+    text-align: right;
+  }
+
+  #supa-bench .supa-metric-value.is-percentage {
+    color: var(--success);
+  }
+
+  #supa-bench .supa-metric-value.is-latency {
+    color: var(--warning);
+  }
+
+  #supa-bench .supa-metric-value.is-throughput {
+    color: var(--info);
+  }
+
+  /* Custom Checkbox & Radio Styling */
+  #supa-bench input[type="checkbox"],
+  #supa-bench input[type="radio"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--border);
+    border-radius: 4px;
+    background: var(--bg-elevated);
+    cursor: pointer;
+    position: relative;
+    transition: var(--transition);
+    flex-shrink: 0;
+    margin-right: 8px;
+  }
+
+  #supa-bench input[type="radio"] {
+    border-radius: 50%;
+  }
+
+  #supa-bench input[type="checkbox"]:hover,
+  #supa-bench input[type="radio"]:hover {
+    border-color: var(--accent);
+    background: var(--bg-hover);
+  }
+
+  #supa-bench input[type="checkbox"]:checked,
+  #supa-bench input[type="radio"]:checked {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+
+  #supa-bench input[type="checkbox"]:checked::after {
+    content: '✓';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 12px;
+    font-weight: bold;
+  }
+
+  #supa-bench input[type="radio"]:checked::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: white;
+  }
+
+  #supa-bench input[type="checkbox"]:disabled,
+  #supa-bench input[type="radio"]:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  #supa-bench label {
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    align-items: center;
+  }
+
+  #supa-bench label span {
+    line-height: 1.4;
+  }
+
+  /* Scroll behavior - only scroll tab content */
+  #supa-bench {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  #supa-bench .supa-stepper,
+  #supa-bench .supa-status {
+    flex-shrink: 0;
+  }
+
+  #supa-bench .supa-tab-content {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 8px;
+  }
+
+  #supa-bench .supa-tab-content::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  #supa-bench .supa-tab-content::-webkit-scrollbar-track {
+    background: var(--bg-elevated);
+    border-radius: 4px;
+  }
+
+  #supa-bench .supa-tab-content::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 4px;
+  }
+
+  #supa-bench .supa-tab-content::-webkit-scrollbar-thumb:hover {
+    background: var(--border-hover);
   }
 </style>
 
 <div class="page" id="supa-bench">
-  <div class="page-header">
-    <div class="flex justify-between items-start flex-wrap gap-16">
-      <div>
-        <h2>Thử nghiệm địa chỉ (SUPA)</h2>
-        <p class="text-secondary" style="max-width: 720px;">
-          Bốn bước đơn giản: chọn hoặc tạo một bộ địa chỉ thử → xem địa chỉ chuẩn và bản “giống người dùng hay gõ”
-          → tải lên kết quả sau khi hệ thống của bạn chuẩn hóa → xem tỉ lệ khớp với địa chỉ chuẩn.
-          Nếu không thấy nút thao tác tự động, hãy liên hệ quản trị để bật thử nghiệm trên máy chủ.
-        </p>
-      </div>
-    </div>
+  <!-- Loading Overlay -->
+  <div id="supa-loading-overlay" class="loading-overlay">
+    <div class="spinner"></div>
+    <div class="loading-text">Đang xử lý...</div>
   </div>
 
-  <div class="supa-stepper" id="supa-stepper" aria-label="Các bước thử nghiệm">
-    <div class="supa-step" data-supa-step="1" id="supa-step-wrap-1">
+  <!-- Stepper -->
+  <div class="supa-stepper" id="supa-stepper">
+    <div class="supa-step is-active" data-supa-tab="1">
       <span class="supa-step-num">1</span>
-      <div>
-        <div class="supa-step-label">Chọn hoặc tạo bộ thử</div>
-      </div>
+      <span class="supa-step-label">Khởi tạo</span>
     </div>
-    <div class="supa-step" data-supa-step="2" id="supa-step-wrap-2">
+    <div class="supa-step" data-supa-tab="2">
       <span class="supa-step-num">2</span>
-      <div>
-        <div class="supa-step-label">Xem dữ liệu mẫu</div>
-      </div>
+      <span class="supa-step-label">Dữ liệu</span>
     </div>
-    <div class="supa-step" data-supa-step="3" id="supa-step-wrap-3">
+    <div class="supa-step" data-supa-tab="3">
       <span class="supa-step-num">3</span>
-      <div>
-        <div class="supa-step-label">Nhập kết quả chuẩn hóa</div>
-      </div>
+      <span class="supa-step-label">Chuẩn hóa</span>
     </div>
-    <div class="supa-step" data-supa-step="4" id="supa-step-wrap-4">
+    <div class="supa-step" data-supa-tab="4">
       <span class="supa-step-num">4</span>
+      <span class="supa-step-label">Kết quả</span>
+    </div>
+  </div>
+
+  <!-- Status Bar -->
+  <div class="supa-status">
+    <span id="supa-mini-log-msg" style="color: var(--text-secondary);">Sẵn sàng</span>
+    <span id="supa-mini-progress-text" style="font-weight: 700; color: var(--success);">0/4</span>
+  </div>
+
+  <!-- Tab 1: Khởi tạo -->
+  <div class="supa-tab-content is-active" id="supa-tab-1">
+    <div class="page-header">
       <div>
-        <div class="supa-step-label">Xem tỉ lệ khớp</div>
+        <h2>Thiết lập Cohort</h2>
+        <p>Lấy mẫu từ Ground Truth và áp dụng nhiễu</p>
+      </div>
+      <div class="flex gap-8" style="flex-shrink: 0;">
+        <button type="button" class="btn btn-xs btn-outline" id="supa-btn-refresh-runs">Làm mới</button>
+        <button type="button" class="btn btn-xs btn-primary" id="supa-btn-toggle-new">Tạo mới</button>
       </div>
     </div>
-  </div>
 
-  <!-- Bước 1 -->
-  <div class="card mb-20" data-supa-section="1">
-    <div class="card-header">
-      <span class="card-title">Bước 1 — Chọn lần thử hoặc tạo bộ mới</span>
-    </div>
-    <div class="card-body">
-      <div class="form-grid" style="max-width: 640px;">
-        <div class="form-group" style="grid-column: 1 / -1;">
-          <label for="supa-run-select">Lần thử hiện có</label>
+    <div class="card mb-16">
+      <div class="card-body">
+        <div class="form-group mb-0">
+          <label>Chọn lần thử hiện có</label>
           <select id="supa-run-select" class="form-input"></select>
+          <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;" id="supa-run-meta">Chọn một lần thử</div>
         </div>
       </div>
-      <p class="text-secondary mt-12 mb-0" id="supa-run-meta">—</p>
-      <div class="mt-16 flex flex-wrap gap-8 items-center">
-        <button type="button" class="btn btn-sm btn-outline" id="supa-btn-toggle-new">Tạo bộ thử mới</button>
-        <button type="button" class="btn btn-sm btn-ghost" id="supa-btn-refresh-runs">Làm mới danh sách</button>
+    </div>
+
+    <div id="supa-new-panel" class="card" style="display: none;">
+      <div class="card-header">
+        <span class="card-title">Cấu hình mới</span>
+        <div class="flex gap-8" style="flex-shrink: 0;">
+          <button type="button" class="btn btn-xs btn-primary" id="supa-btn-create-run">Bắt đầu</button>
+          <button type="button" class="btn btn-xs btn-outline" id="supa-btn-extract-only">Chỉ trích mẫu</button>
+        </div>
       </div>
-      <div id="supa-new-panel" class="mt-16" style="display: none; max-width: 520px;">
-        <p class="text-secondary mb-12">Hệ thống sẽ lấy địa chỉ chuẩn từ kho dữ liệu nội bộ, tạo thêm bản có lỗi chính tả và cách gõ giống thực tế — không thay đổi dữ liệu gốc.</p>
-        <input type="hidden" id="supa-new-noise" value="SUP-1.0.0" />
-        <div class="form-group">
-          <label for="supa-new-n">Số địa chỉ trong bộ thử</label>
-          <input type="number" id="supa-new-n" class="form-input" value="500" min="1" max="50000" />
+      <div class="card-body">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Số lượng mẫu</label>
+            <input type="number" id="supa-new-n" class="form-input" value="1000" />
+          </div>
+          <div class="form-group">
+            <label>Seed</label>
+            <input type="number" id="supa-new-seed" class="form-input" placeholder="Auto" />
+          </div>
+          <div class="form-group">
+            <label>Profile Nhiễu</label>
+            <select id="supa-new-noise" class="form-input">
+              <option value="SUP-1.0.0">SUP-1.0.0</option>
+              <option value="SUP-D2-1.0.0">SUP-D2-1.0.0</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Ghi chú</label>
+            <input type="text" id="supa-new-notes" class="form-input" placeholder="Auto" />
+          </div>
         </div>
-        <div class="form-group">
-          <label for="supa-new-seed">Mã lặp lại (tuỳ chọn — để trống nếu mỗi lần muốn khác nhau)</label>
-          <input type="number" id="supa-new-seed" class="form-input" placeholder="Để trống" />
+
+        <div class="mt-16 p-16" style="background: var(--bg-elevated); border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">
+          <label class="flex items-center gap-8 mb-12" style="cursor: pointer;">
+            <input type="checkbox" id="supa-wf-run-norm" />
+            <span style="font-weight: 600; font-size: 14px;">Tự động chạy Pipeline</span>
+          </label>
+          <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 16px; padding-left: 26px;">
+            Chạy AI pipeline ngay sau khi trích mẫu
+          </div>
+          
+          <div id="supa-norm-options" style="opacity: 0.5; pointer-events: none; padding-left: 26px; border-left: 2px solid var(--border-subtle); margin-left: 8px;">
+            <div style="font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--text-secondary);">Cấu hình Pipeline</div>
+            <div class="flex gap-16 mb-12" style="font-size: 13px;">
+              <label class="flex items-center gap-6" style="cursor: pointer;">
+                <input type="checkbox" id="supa-norm-ner" checked />
+                <span>NER</span>
+              </label>
+              <label class="flex items-center gap-6" style="cursor: pointer;">
+                <input type="checkbox" id="supa-norm-retrieval" checked />
+                <span>Retrieval</span>
+              </label>
+              <label class="flex items-center gap-6" style="cursor: pointer;">
+                <input type="checkbox" id="supa-norm-llm" checked />
+                <span>LLM</span>
+              </label>
+            </div>
+            <div style="font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--text-secondary);">Retriever</div>
+            <div class="flex gap-16" style="font-size: 13px;">
+              <label class="flex items-center gap-6" style="cursor: pointer;">
+                <input type="radio" name="supa-retriever" value="mgte" checked />
+                <span>mGTE</span>
+              </label>
+              <label class="flex items-center gap-6" style="cursor: pointer;">
+                <input type="radio" name="supa-retriever" value="phobert" />
+                <span>PhoBERT</span>
+              </label>
+            </div>
+          </div>
         </div>
-        <div class="form-group">
-          <label for="supa-new-notes">Ghi chú ngắn (tuỳ chọn)</label>
-          <input type="text" id="supa-new-notes" class="form-input" placeholder="Ví dụ: thử pipeline tháng 5" />
-        </div>
-        <button type="button" class="btn btn-primary btn-sm" id="supa-btn-create-run">Bắt đầu tạo bộ</button>
       </div>
     </div>
   </div>
 
-  <!-- Bước 2 -->
-  <div class="card mb-20" data-supa-section="2">
-    <div class="card-header flex justify-between items-center flex-wrap gap-8">
-      <span class="card-title">Bước 2 — Xem địa chỉ chuẩn và bản sau khi làm “giống thực tế”</span>
-      <button type="button" class="btn btn-sm btn-outline" id="supa-btn-download-csv">Tải file để chạy chuẩn hóa</button>
-    </div>
-    <div class="card-body">
-      <p class="text-secondary mb-16" id="supa-specimens-hint">Chọn một lần thử ở bước 1 để xem bảng.</p>
-      <div class="table-container">
-        <table>
-          <thead>
-            <tr>
-              <th style="width:52px;">#</th>
-              <th>Địa chỉ chuẩn (tham chiếu)</th>
-              <th>Địa chỉ giống người dùng thường gõ</th>
-              <th>Kết quả sau khi chuẩn hóa</th>
-              <th style="width:100px;">Nhóm</th>
-              <th style="width:120px;">Khớp chuẩn</th>
-            </tr>
-          </thead>
-          <tbody id="supa-specimens-tbody"></tbody>
-        </table>
+  <!-- Tab 2: Dữ liệu -->
+  <div class="supa-tab-content" id="supa-tab-2">
+    <div class="page-header">
+      <div>
+        <h2>Dữ liệu mẫu</h2>
+        <p>Kiểm tra dữ liệu đã trích xuất</p>
       </div>
-      <div class="flex justify-between items-center flex-wrap gap-12 mt-16">
-        <span class="text-secondary" id="supa-spec-page-label">—</span>
-        <div class="flex gap-8 items-center flex-wrap">
-          <label class="flex items-center gap-8 text-secondary" style="font-size: 13px;">
-            Số dòng mỗi trang
-            <select id="supa-spec-limit" class="form-input" style="width: auto; min-width: 72px; padding: 4px 8px;">
+      <button type="button" class="btn btn-sm btn-outline" id="supa-btn-download-csv" style="flex-shrink: 0;">Tải CSV</button>
+    </div>
+
+    <div class="card">
+      <div class="card-body p-0">
+        <div style="overflow-x: auto;">
+          <table class="table-hover">
+            <thead style="background: var(--bg-elevated);">
+              <tr>
+                <th style="width:60px;">ID</th>
+                <th>Tham chiếu (V2)</th>
+                <th>Dữ liệu nhiễu</th>
+                <th>Dự đoán</th>
+                <th style="width:80px;">Tầng</th>
+                <th style="width:100px;">Trạng thái</th>
+              </tr>
+            </thead>
+            <tbody id="supa-specimens-tbody">
+              <tr><td colspan="6" style="text-align: center; padding: 40px; color: var(--text-secondary);">Chọn bộ thử ở Bước 1</td></tr>
+            </tbody>
+          </table>
+        </div>
+        
+        <div class="p-16" style="border-top: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center;">
+          <span id="supa-spec-page-label" style="font-size: 13px; color: var(--text-secondary);">0 địa chỉ</span>
+          <div class="flex items-center gap-12">
+            <select id="supa-spec-limit" class="form-input" style="width: auto; padding: 4px 8px;">
               <option value="20">20</option>
               <option value="50" selected>50</option>
               <option value="100">100</option>
             </select>
-          </label>
-          <button type="button" class="btn btn-sm btn-ghost" id="supa-spec-prev">Trang trước</button>
-          <button type="button" class="btn btn-sm btn-ghost" id="supa-spec-next">Trang sau</button>
+            <div class="flex gap-4">
+              <button class="btn btn-xs btn-ghost" id="supa-spec-prev">←</button>
+              <button class="btn btn-xs btn-ghost" id="supa-spec-next">→</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab 3: Chuẩn hóa -->
+  <div class="supa-tab-content" id="supa-tab-3">
+    <div class="page-header">
+      <div>
+        <h2>Chuẩn hóa</h2>
+        <p>Chạy pipeline AI để chuẩn hóa địa chỉ</p>
+      </div>
+    </div>
+
+    <div class="content-grid">
+      <!-- Import CSV -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Import CSV</span>
+        </div>
+        <div class="card-body">
+          <div class="form-group">
+            <label>File CSV</label>
+            <input type="file" id="supa-import-file" class="form-input" accept=".csv" />
+          </div>
+          
+          <div class="form-group">
+            <label>Mô tả nguồn</label>
+            <input type="text" id="supa-import-note" class="form-input" placeholder="Model V3" />
+          </div>
+
+          <div class="flex gap-12 mb-16" style="font-size: 13px;">
+            <label class="flex items-center gap-6"><input type="checkbox" id="supa-import-dry" /> Dry Run</label>
+            <label class="flex items-center gap-6"><input type="checkbox" id="supa-import-nolat" /> Skip Latency</label>
+          </div>
+          
+          <button type="button" class="btn btn-primary w-full" id="supa-btn-import-preds">Tải lên</button>
+
+          <div class="mt-12 p-12" style="background: var(--bg-elevated); border-radius: var(--radius-sm);">
+            <div style="font-size: 12px; font-weight: 600; margin-bottom: 8px; color: var(--warning);">Demo Mode</div>
+            <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">
+              Copy ref_v2 làm kết quả (EM=100%)
+            </p>
+            <button type="button" class="btn btn-sm btn-outline w-full" id="supa-btn-demo-import">Import Demo</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Auto Pipeline -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Auto Pipeline</span>
+        </div>
+        <div class="card-body">
+          <div class="p-12" style="background: var(--bg-elevated); border-radius: var(--radius-sm); text-align: center;">
+            <div style="font-size: 14px; font-weight: 600; margin-bottom: 8px; color: var(--accent);">Tự động</div>
+            <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">
+              Kích hoạt ở Bước 1 → Tích "Tự động chạy Pipeline"
+            </p>
+            <button class="btn btn-sm btn-accent" id="supa-btn-goto-step1">← Bước 1</button>
+          </div>
+          
+          <div class="mt-16">
+            <div style="font-size: 13px; font-weight: 600; margin-bottom: 8px;">Console</div>
+            <pre id="supa-bench-console-log" style="height: 140px; font-size: 10px; background: var(--bg-elevated); color: var(--info); padding: 12px; border-radius: var(--radius-sm); overflow-y: auto;"></pre>
+          </div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Bước 3 -->
-  <div class="card mb-20" data-supa-section="3">
-    <div class="card-header">
-      <span class="card-title">Bước 3 — Gửi lên file kết quả của pipeline chuẩn hóa</span>
-    </div>
-    <div class="card-body" style="max-width: 640px;">
-      <p class="text-secondary mb-16">
-        Dùng file đã tải ở bước 2, chạy qua hệ thống chuẩn hóa của bạn, rồi tải lên lại đúng định dạng đã hướng dẫn trong file.
-        Cần ghi rõ <strong>ai hoặc phiên bản nào</strong> đã tạo file (một dòng là đủ).
-      </p>
-      <div class="form-group">
-        <label for="supa-import-file">File kết quả</label>
-        <input type="file" id="supa-import-file" accept=".csv,text/csv" />
+  <!-- Tab 4: Kết quả -->
+  <div class="supa-tab-content" id="supa-tab-4">
+    <div class="page-header">
+      <div>
+        <h2>Kết quả</h2>
+        <p>Phân tích độ chính xác và hiệu năng</p>
       </div>
-      <div class="form-group">
-        <label for="supa-import-note">Ghi chú nguồn (bắt buộc)</label>
-        <input type="text" id="supa-import-note" class="form-input" placeholder="Ví dụ: nhóm A; phiên bản dịch vụ ngày 12/05" />
-      </div>
-      <details class="mb-12">
-        <summary class="text-secondary" style="cursor: pointer; font-size: 13px;">Tuỳ chọn nâng cao</summary>
-        <label class="flex items-center gap-8 mt-12 mb-8">
-          <input type="checkbox" id="supa-import-dry" /> Chỉ kiểm tra, chưa ghi vào cơ sở dữ liệu
-        </label>
-        <label class="flex items-center gap-8">
-          <input type="checkbox" id="supa-import-nolat" /> Không cập nhật cột độ trễ (nếu file không có)
-        </label>
-      </details>
-      <button type="button" class="btn btn-primary btn-sm" id="supa-btn-import-preds">Tải lên và áp dụng</button>
+      <button type="button" class="btn btn-primary" id="supa-btn-run-eval" style="flex-shrink: 0;">Tính toán</button>
     </div>
-  </div>
 
-  <!-- Bước 4 -->
-  <div class="card mb-20" data-supa-section="4">
-    <div class="card-header flex justify-between items-center flex-wrap gap-8">
-      <span class="card-title">Bước 4 — Tỉ lệ khớp và chấm điểm</span>
-      <button type="button" class="btn btn-sm btn-primary" id="supa-btn-run-eval">Cập nhật tỉ lệ khớp</button>
+    <!-- Hero Metrics -->
+    <div class="stats-grid mb-16">
+      <div class="stat-card" style="border-left: 4px solid var(--success);">
+        <div class="stat-label">EM (V2)</div>
+        <div class="stat-value" id="supa-hero-em-v2" style="color: var(--success);">0%</div>
+        <div class="stat-sublabel">Khớp tham chiếu mới</div>
+      </div>
+      <div class="stat-card" style="border-left: 4px solid var(--info);">
+        <div class="stat-label">EM (V1)</div>
+        <div class="stat-value" id="supa-hero-em-v1" style="color: var(--info);">0%</div>
+        <div class="stat-sublabel">Khớp địa chỉ cũ</div>
+      </div>
+      <div class="stat-card" style="border-left: 4px solid var(--warning);">
+        <div class="stat-label">Latency</div>
+        <div class="stat-value" id="supa-hero-latency" style="color: var(--warning);">0ms</div>
+        <div class="stat-sublabel">Thời gian TB</div>
+      </div>
     </div>
-    <div class="card-body">
-      <div id="supa-metrics-hero"></div>
-      <div class="supa-metric-grid" id="supa-metrics-grid"></div>
-      <p class="text-secondary mt-16 mb-0" style="font-size: 13px;">
-        Sau mỗi lần nhập file hoặc chấm điểm, bảng ở bước 2 sẽ tự làm mới. Cột “Khớp chuẩn” dùng cùng quy tắc so khớp với bước chấm điểm.
-      </p>
-    </div>
-  </div>
 
-  <details class="card mb-20" id="supa-tech-details">
-    <summary class="card-header" style="cursor: pointer; list-style: none;">
-      <span class="card-title">Chi tiết kỹ thuật (dành cho hỗ trợ / quản trị)</span>
-    </summary>
-    <div class="card-body">
-      <p class="text-secondary mb-16" id="supa-compare-note">—</p>
-      <div class="table-container mb-20">
-        <table>
-          <thead>
-            <tr>
-              <th>Chỉ số (so sánh nội bộ)</th>
-              <th>Mốc đã chốt</th>
-              <th>Tổng hợp gần nhất</th>
-            </tr>
-          </thead>
-          <tbody id="supa-compare-tbody"></tbody>
-        </table>
+    <!-- Detailed Metrics Grid -->
+    <div class="card mb-16">
+      <div class="card-header">
+        <span class="card-title">Chi tiết độ chính xác</span>
       </div>
-      <div class="flex gap-8 flex-wrap mb-16">
-        <button type="button" class="btn btn-sm btn-ghost" id="supa-btn-refresh-compare">Tải lại bảng so sánh nội bộ</button>
-        <button type="button" class="btn btn-sm btn-ghost" id="supa-btn-clear-log">Xóa nhật ký chi tiết</button>
-      </div>
-      <div class="mb-20">
-        <div class="text-secondary mb-8" style="font-size: 13px;">Xem trước tổng hợp theo khoảng lần thử (tùy cấu hình máy chủ)</div>
-        <div class="form-grid" style="max-width: 720px;">
-          <div class="form-group">
-            <label for="supa-agg-min">ID lần thử từ</label>
-            <input type="number" id="supa-agg-min" class="form-input" placeholder="vd. 56" />
-          </div>
-          <div class="form-group">
-            <label for="supa-agg-max">ID lần thử đến</label>
-            <input type="number" id="supa-agg-max" class="form-input" placeholder="vd. 60" />
-          </div>
-          <div class="form-group">
-            <label for="supa-agg-lastn">Hoặc lấy N lần gần nhất</label>
-            <input type="number" id="supa-agg-lastn" class="form-input" placeholder="50" />
-          </div>
-          <div class="form-group flex items-end">
-            <label class="flex items-center gap-8">
-              <input type="checkbox" id="supa-agg-persist" /> Ghi bản tổng hợp vào kho lưu nội bộ
-            </label>
-          </div>
+      <div class="card-body">
+        <div class="supa-metrics-professional" id="supa-metrics-grid">
+          <!-- Metrics will be injected here by JS -->
         </div>
-        <button type="button" class="btn btn-sm btn-outline mt-8" id="supa-btn-aggregate-preview">Chạy xem trước</button>
-        <pre id="supa-aggregate-out" class="mt-12" style="display: none; max-height: 240px; overflow: auto; font-size: 11px; background: var(--bg-elevated); padding: 12px; border-radius: 8px;"></pre>
       </div>
-      <div class="text-secondary mb-8" style="font-size: 13px;">Nhật ký phản hồi từ máy chủ (khi cần gỡ lỗi)</div>
-      <pre id="supa-bench-console-log" style="max-height: 320px; overflow: auto; font-size: 11px; background: var(--bg-elevated); padding: 12px; border-radius: 8px; white-space: pre-wrap;"></pre>
     </div>
-  </details>
+
+    <!-- Compare Table -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">So sánh Benchmark</span>
+        <button class="btn btn-xs btn-outline" id="supa-btn-refresh-compare">Làm mới</button>
+      </div>
+      <div class="card-body p-0">
+        <div style="overflow-x: auto;">
+          <table style="font-size: 13px;">
+            <thead>
+              <tr>
+                <th>Chỉ số</th>
+                <th>Benchmark</th>
+                <th>Hiện tại</th>
+                <th>Chênh lệch</th>
+              </tr>
+            </thead>
+            <tbody id="supa-compare-tbody">
+              <tr><td colspan="4" style="text-align: center; padding: 24px; color: var(--text-secondary);">Đang tải...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Advanced (Hidden by default) -->
+    <details class="mt-16" style="display: none;">
+      <summary style="cursor: pointer; padding: 12px 0; font-size: 13px; font-weight: 600; color: var(--text-secondary);">Cấu hình nâng cao</summary>
+      <div class="card mt-12">
+        <div class="card-body">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>ID Min</label>
+              <input type="number" id="supa-agg-min" class="form-input" />
+            </div>
+            <div class="form-group">
+              <label>ID Max</label>
+              <input type="number" id="supa-agg-max" class="form-input" />
+            </div>
+            <div class="form-group" style="display: flex; align-items: flex-end;">
+              <button type="button" class="btn btn-sm btn-outline" id="supa-btn-aggregate-preview">Tổng hợp</button>
+            </div>
+          </div>
+          <pre id="supa-aggregate-out" class="mt-12" style="display:none; background: var(--bg-elevated); padding: 12px; border-radius: var(--radius-sm); font-size: 11px;"></pre>
+        </div>
+      </div>
+    </details>
+  </div>
 </div>

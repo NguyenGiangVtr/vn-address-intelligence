@@ -162,37 +162,135 @@ def _resolve_supa_rng_seed(seed: int | None) -> int:
 
 
 def apply_noise(address_v2: str, rng: random.Random, profile: str) -> str:
-    """Deterministic given rng state. Operates on v2 reference (modern canonical string)."""
+    """Deterministic given rng state. Operates on v2 reference (modern canonical string).
+    
+    Upgraded with realistic Vietnamese noise patterns:
+    - Admin abbreviations (Q., P., TP., etc.) and joined forms (Q1, P12).
+    - Regional slang (Ngõ/Ngách <-> Hẻm/Kiệt) and slash variants (sẹc, -).
+    - IME errors (Telex/VNI: dđ, aâ, misplaced/missing tone marks).
+    - Structural noise (Prefixes/Suffixes: Gần, Đối diện, Tòa nhà...).
+    - Random CASE transformations (UPPER/lower).
+    """
     s = (address_v2 or "").strip()
     if not s:
         return s
+
+    # 1. Internal Helpers (capturing rng for determinism)
+    def _abbreviate(text: str, prob: float) -> str:
+        # Standard administrative units
+        mapping = [
+            (r"(?i)\bthành phố\b", ["TP.", "TP", "tp", "T.P"]),
+            (r"(?i)\bquận\b", ["Q.", "Q", "q", "Quận"]),
+            (r"(?i)\bhuyện\b", ["H.", "H", "h", "Huyện"]),
+            (r"(?i)\bphường\b", ["P.", "P", "p", "Phường"]),
+            (r"(?i)\bđường\b", ["Đ.", "đ.", "D.", "d.", "duong", "Đ"]),
+        ]
+        for pattern, choices in mapping:
+            if rng.random() < prob:
+                text = re.sub(pattern, rng.choice(choices), text)
+        
+        # Joined forms: Q. 1 -> Q1, P. 12 -> P12, Q. BT -> Q.BT
+        if rng.random() < prob:
+            text = re.sub(r"\b([QP])\.\s+(\d+)\b", r"\1\2", text)
+            text = re.sub(r"\b([QP])\s+(\d+)\b", r"\1\2", text)
+        if rng.random() < 0.20:
+            text = re.sub(r"\bQ\.\s+([A-Z]{2,})\b", r"Q.\1", text)
+        return text
+
+    def _apply_slang_and_slashes(text: str, prob: float) -> str:
+        # Ngõ/Ngách <-> Hẻm/Kiệt (Northern vs Southern preference)
+        slangs = {
+            r"(?i)\bngõ\b": ["hẻm", "kiệt", "ngo"],
+            r"(?i)\bngách\b": ["hẻm", "kiệt", "ngach"],
+            r"(?i)\bhẻm\b": ["ngõ", "kiệt", "hem"],
+        }
+        for pattern, choices in slangs.items():
+            if rng.random() < prob:
+                text = re.sub(pattern, rng.choice(choices), text)
+        
+        # Slashes: 123/45 -> 123 sẹc 45, 123-45
+        if "/" in text and rng.random() < prob:
+            variant = rng.choice([" sẹc ", " sec ", "-", " / ", " /", "/ "])
+            text = text.replace("/", variant)
+        return text
+
+    def _apply_ime_errors(text: str, prob: float) -> str:
+        # Telex/VNI double tap: đ -> dđ, đd; â -> aâ
+        if rng.random() < prob:
+            text = text.replace("đ", rng.choice(["dđ", "đd", "d"])).replace("Đ", rng.choice(["DĐ", "ĐD", "D"]))
+        if rng.random() < prob * 0.5:
+            text = text.replace("â", "aâ").replace("Â", "AÂ")
+        
+        # Misplaced marks (Hòa vs Hoà) - common in different input methods
+        if rng.random() < prob:
+            marks = [("òa", "oà"), ("óa", "oá"), ("úy", "uý"), ("òe", "oè"), ("óe", "oé")]
+            p, r = rng.choice(marks)
+            text = text.replace(p, r)
+        
+        # Missing marks at end of word (fast typing)
+        if rng.random() < prob * 0.4:
+            words = text.split()
+            if words:
+                idx = rng.randint(0, len(words) - 1)
+                w = words[idx]
+                if len(w) > 3:
+                    w_clean = "".join(c for c in unicodedata.normalize("NFD", w) if unicodedata.category(c) != "Mn")
+                    words[idx] = w_clean
+                    text = " ".join(words)
+        return text
+
+    # 2. Main Logic based on Profile
     if profile == NOISE_PROFILE_DEFAULT:
-        prefixes = ["Gần ", "Đối diện ", "Khu vực ", ""]
-        suffixes = ["", " (liên hệ)", "  --  ghi chú", ""]
-        if rng.random() < 0.40:
-            s = rng.choice(prefixes) + s
-        if rng.random() < 0.30:
-            s = s + rng.choice(suffixes)
-        if rng.random() < 0.25:
-            s = s.replace(", ", " ,  ")
-        if rng.random() < 0.15:
-            s = re.sub(r"\s+", "  ", s)
+        # Standard noise: Common abbreviations, some slang, light typos
+        prefixes = ["Gần ", "Đối diện ", "Khu vực ", "Chỗ ", "Ngay ", "Sau lưng ", ""]
+        suffixes = ["", " (liên hệ)", " - ghi chú", " (tầng 2)"]
+        if rng.random() < 0.40: s = rng.choice(prefixes) + s
+        if rng.random() < 0.20: s = s + rng.choice(suffixes)
+
+        s = _abbreviate(s, 0.65)
+        s = _apply_slang_and_slashes(s, 0.30)
+        s = _apply_ime_errors(s, 0.15)
+        
+        if rng.random() < 0.05: s = s.upper()
+        if rng.random() < 0.05: s = s.lower()
+        
+        # Spacing noise
+        if rng.random() < 0.25: s = s.replace(", ", " ,  ")
+        if rng.random() < 0.15: s = re.sub(r"\s+", "  ", s)
         return s.strip()
+
     if profile == NOISE_PROFILE_D2_HIGH:
-        s0 = address_v2.strip()
-        s0 = "".join(c for c in unicodedata.normalize("NFD", s0) if unicodedata.category(c) != "Mn")
-        if len(s0) > 8 and rng.random() < 0.45:
-            i = rng.randint(1, len(s0) - 2)
-            s0 = s0[:i] + s0[i + 1] + s0[i] + s0[i + 2 :]
-        s0 = re.sub(r"(?i)\bthanh pho\b", "TP.", s0)
-        s0 = re.sub(r"(?i)\bphuong\b", "P.", s0)
-        s0 = re.sub(r"(?i)\bquan\b", "Q.", s0)
-        s0 = re.sub(r"(?i)\bhuyen\b", "H.", s0)
-        if rng.random() < 0.55:
-            s0 = s0.replace(", ", ",")
-        if rng.random() < 0.25:
-            s0 = re.sub(r"\s+", "  ", s0)
-        return s0.strip()
+        # High noise: Aggressive abbreviations, slang, severe typos, and NO ACCENTS
+        # Note: Apply text replacements BEFORE stripping marks to ensure regex matches
+        
+        prefixes = ["Gần ", "Đối diện ", "Chỗ ", "Ngay ", "Sau lưng ", "Cạnh ", "Phía sau ", "Tầng trệt ", ""]
+        if rng.random() < 0.60: s = rng.choice(prefixes) + s
+
+        s = _abbreviate(s, 0.90) # Very high chance of abbreviations
+        s = _apply_slang_and_slashes(s, 0.60)
+        
+        # Severe character-level typos
+        if len(s) > 10:
+            # Transpose characters
+            if rng.random() < 0.50:
+                i = rng.randint(1, len(s) - 2)
+                s = s[:i] + s[i + 1] + s[i] + s[i + 2 :]
+            # Repeat characters (stuttering)
+            if rng.random() < 0.30:
+                i = rng.randint(0, len(s) - 1)
+                s = s[:i] + s[i] + s[i] + s[i + 1 :]
+
+        # Strip all marks (unaccented) - major semantic loss
+        s = "".join(c for c in unicodedata.normalize("NFD", s) if unicodedata.category(c) != "Mn")
+        
+        if rng.random() < 0.15: s = s.upper()
+        
+        # Aggressive punctuation/spacing noise
+        if rng.random() < 0.60: s = s.replace(", ", ",") # Remove spaces after commas
+        if rng.random() < 0.30: s = re.sub(r"\s+", "   ", s) # Triple spacing
+        
+        return s.strip()
+
     return s
 
 
