@@ -408,7 +408,10 @@
         <h2>Dữ liệu mẫu</h2>
         <p>Kiểm tra dữ liệu đã trích xuất</p>
       </div>
-      <button type="button" class="btn btn-sm btn-outline" id="supa-btn-download-csv" style="flex-shrink: 0;">Tải CSV</button>
+      <div class="flex gap-8" style="flex-shrink: 0;">
+        <button type="button" class="btn btn-sm btn-primary" id="supa-btn-run-norm-tab2">Chạy chuẩn hóa</button>
+        <button type="button" class="btn btn-sm btn-outline" id="supa-btn-download-csv">Tải CSV</button>
+      </div>
     </div>
 
     <div class="card">
@@ -508,7 +511,7 @@
           
           <div class="mt-16">
             <div style="font-size: 13px; font-weight: 600; margin-bottom: 8px;">Console</div>
-            <pre id="supa-bench-console-log" style="height: 140px; font-size: 10px; background: var(--bg-elevated); color: var(--info); padding: 12px; border-radius: var(--radius-sm); overflow-y: auto;"></pre>
+            <pre id="supa-bench-console-log" style="min-height: 300px; max-height: 400px; font-size: 11px; background: var(--bg-elevated); color: var(--info); padding: 12px; border-radius: var(--radius-sm); overflow-y: auto; overflow-x: hidden; white-space: pre-wrap; word-wrap: break-word;"></pre>
           </div>
         </div>
       </div>

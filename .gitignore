@@ -221,4 +221,9 @@ __marimo__/
 *.safetensors
 *.pt
 checkpoint-*/
-/docs
+
+# Sphinx documentation (build artifacts only)
+docs/_build/
+
+# Private docs (không public)
+docs/private/

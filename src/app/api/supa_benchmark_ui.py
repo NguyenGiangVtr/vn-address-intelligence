@@ -387,7 +387,7 @@ class SupaExportSpecimensBody(BaseModel):
 
 class SupaExportTexBody(BaseModel):
     metrics_json_relative: str | None = None
-    out_relative: str = Field(default="docs/scientific-report/vnai-supa-generated-metrics.tex")
+    out_relative: str = Field(default="docs/scientific-report/vnai-supa-generated-metrics.tex")  # Keep old path for LaTeX compatibility
 
     @field_validator("out_relative", "metrics_json_relative")
     @classmethod

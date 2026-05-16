@@ -2354,7 +2354,24 @@ function initSupaBenchPage() {
         if (showToast) showToast("Thao tác trên máy chủ bị từ chối hoặc lỗi. Xem phần chi tiết kỹ thuật bên dưới.", "danger");
         return null;
       }
+      
+      // Log main response
       log(path, j);
+      
+      // Log pipeline output separately for better visibility
+      if (j.pipeline_stdout) {
+        log("Pipeline Output", j.pipeline_stdout);
+      }
+      if (j.pipeline_stderr) {
+        log("Pipeline Errors", j.pipeline_stderr);
+      }
+      if (j.eval_stdout) {
+        log("Eval Output", j.eval_stdout);
+      }
+      if (j.eval_stderr) {
+        log("Eval Errors", j.eval_stderr);
+      }
+      
       if (showToast) {
         showToast(toastOk || "Đã xong.", j.ok ? "success" : "warning");
       }
@@ -2579,6 +2596,38 @@ function initSupaBenchPage() {
       a.click();
       URL.revokeObjectURL(url);
       if (showToast) showToast("Đã tải file để chạy chuẩn hóa.", "success");
+    });
+
+    $("supa-btn-run-norm-tab2")?.addEventListener("click", async () => {
+      if (!selectedRunId) {
+        if (showToast) showToast("Chọn một lần thử trước.", "danger");
+        return;
+      }
+      
+      const confirmed = !showConfirm ? true : await showConfirm(
+        "Chạy pipeline AI để chuẩn hóa địa chỉ cho lần thử này?\n\n" +
+        "Pipeline sẽ chạy: NER → Retrieval (mGTE) → LLM"
+      );
+      if (!confirmed) return;
+
+      const body = {
+        run_id: selectedRunId,
+        run_normalization: true,
+        no_ner: false,
+        no_retrieval: false,
+        no_llm: false,
+        retriever_type: "mgte"
+      };
+
+      log("Bắt đầu chạy pipeline chuẩn hóa...", body);
+      const j = await postAction("workflow", body, "Đã chạy pipeline chuẩn hóa.");
+      if (j) {
+        hasPredEver = true;
+        await loadRunDetail();
+        await loadSpecimens();
+        // Auto-switch to Tab 3 to show console
+        switchTab(3);
+      }
     });
 
     $("supa-btn-import-preds")?.addEventListener("click", async () => {

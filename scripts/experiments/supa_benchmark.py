@@ -12,7 +12,7 @@ Why there is NO built-in "normalize" calling production_pipeline here:
   export-specimens → (you run the normalizer you declare in the paper) → import-preds.
 
 Usage:
-  # One-shot demo (see docs/scientific-report/SUPA-BENCH-RUNBOOK.md):
+  # One-shot demo (see docs/07-scientific-reports/SUPA-Benchmark-Runbook.md):
   # Omit --seed on extract/workflow → random rng_seed each invocation (new cohort + noise).
   # Pass --seed <int> when you need a fixed cohort for reproducible papers.
   python scripts/experiments/supa_benchmark.py workflow --n 1000
@@ -2086,7 +2086,7 @@ def main() -> int:
     p_rep.add_argument(
         "--export-tex-last",
         action="store_true",
-        help="After the final eval, regenerate docs/scientific-report/vnai-supa-generated-metrics.tex",
+        help="After the final eval, regenerate docs/scientific-report/vnai-supa-generated-metrics.tex (LaTeX metrics)",
     )
     p_rep.add_argument(
         "--skip-import",
