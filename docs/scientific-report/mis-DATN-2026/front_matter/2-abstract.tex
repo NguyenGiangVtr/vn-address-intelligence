@@ -1,0 +1,15 @@
+\chapter*{Tóm tắt đề tài}
+% \lfoot{Tóm tắt}
+\addcontentsline{toc}{chapter}{Tóm tắt}
+
+Trong bối cảnh chuyển dịch cơ cấu mạnh mẽ từ mô hình bán lẻ truyền thống (offline) sang thương mại điện tử (online), nhu cầu về độ chính xác của dữ liệu địa chỉ giao nhận đã trở thành yếu tố quyết định năng lực cạnh tranh của các doanh nghiệp logistics và chuỗi cung ứng. Tuy nhiên, các hệ thống quản lý địa chỉ hiện hành tại Việt Nam đang bộc lộ nhiều điểm nghẽn: sự thiếu nhất quán dữ liệu giữa các doanh nghiệp đối tác, khả năng xử lý kém đối với văn bản phi cấu trúc, và đặc biệt là sai số lớn trong việc định vị không gian tại các ranh giới tiếp giáp địa lý.
+
+Nghiên cứu này đề xuất một khung giải pháp toàn diện mang tên \textbf{VN Address Intelligence (VNAI)}. Hệ thống VNAI triển khai pipeline AI đa tầng tích hợp PhoBERT (NER), mGTE (Retrieval) và LLM để chuẩn hóa, làm giàu dữ liệu địa chỉ Việt Nam lưỡng thời, đảm bảo tính nhất quán dữ liệu và độ chính xác không gian trong bối cảnh cải cách hành chính 2025. Hệ thống được kiến trúc dựa trên ba trụ cột công nghệ cốt lõi:
+
+\begin{itemize}
+\item \textbf{Tự động hóa đồng bộ (Data Orchestration):} Ứng dụng quy trình \textit{workflow} qua n8n kết hợp với SOAP API để chủ động đồng bộ danh mục hành chính từ cơ sở dữ liệu của Chính phủ (Gov), đảm bảo tính nhất quán và cập nhật liên tục cho toàn bộ mạng lưới doanh nghiệp kết nối.
+\item \textbf{Chuẩn hóa bằng Trí tuệ nhân tạo (AI-driven Normalization):} Thiết kế luồng xử lý ngôn ngữ tự nhiên (NLP) đa tầng bao gồm tác vụ Nhận dạng thực thể có tên (NER) bằng PhoBERT, so khớp ngữ nghĩa qua mạng Siamese (mGTE), và vận dụng khả năng suy luận của Mô hình ngôn ngữ lớn (LLM) nhằm xử lý các biến thể địa danh phi cấu trúc phức tạp.
+\item \textbf{Xử lý Hình học Không gian (Geospatial Computation):} Ứng dụng các thuật toán không gian trong PostGIS để phân giải chính xác vị trí tại các ranh giới nhạy cảm. Nghiên cứu đề xuất cơ chế tự động hiệu chỉnh đa giác (polygon) ranh giới dựa trên việc phân tích lịch sử tọa độ giao nhận thực tế của hệ thống logistics.
+\end{itemize}
+
+Bên cạnh đó, giải pháp còn tích hợp khả năng tự động làm giàu thông tin từ các nguồn dữ liệu mở (Open Data) như Google Maps và OpenStreetMap (OSM). Hệ thống cung cấp cơ chế tra cứu chuẩn xác lịch sử thay đổi của các đơn vị hành chính (trước và sau các đợt sáp nhập), giúp duy trì tính toàn vẹn của dữ liệu trong dài hạn. Kết quả của nghiên cứu kỳ vọng mang lại một dịch vụ chuẩn hóa địa chỉ có tính ứng dụng cao, giúp tối ưu hóa chi phí vận hành chặng cuối (last-mile delivery) cho các doanh nghiệp bán lẻ và giao nhận tại Việt Nam.

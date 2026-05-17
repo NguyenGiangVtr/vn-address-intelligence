@@ -1,0 +1,60 @@
+\chapter{TỔNG QUAN NGHIÊN CỨU}
+\label{ch:literature-review}
+
+Chương này tập trung phân tích các công trình nghiên cứu trong và ngoài nước liên quan đến bài toán chuẩn hóa địa chỉ, nhận diện thực thể tên (NER) và hệ thông tin địa lý (GIS). Từ việc đánh giá các phương pháp tiếp cận hiện đại, nghiên cứu xác định các khoảng trống tri thức (research gaps) còn tồn tại, từ đó xác lập tính cấp thiết và hướng đi của đề tài.
+
+\section{Các nghiên cứu quốc tế về chuẩn hóa địa chỉ}
+
+Trên bình diện quốc tế, bài toán chuẩn hóa địa chỉ đã được tiếp cận thông qua các mô hình học sâu (Deep Learning) mạnh mẽ. Điển hình là thư viện \textbf{DeepParse} (2020), một giải pháp sử dụng kiến trúc Bi-LSTM đa tầng hạt (multi-national) để bóc tách địa chỉ dựa trên chuỗi \cite{marcoux2020deepparse}. Mặc dù đạt trạng thái SOTA (State-of-the-art) cho các ngôn ngữ hệ Latinh như tiếng Anh hay tiếng Pháp, DeepParse bộc lộ hạn chế khi xử lý tiếng Việt do sự khác biệt về cấu trúc đơn vị hành chính và đặc thù từ ghép.
+
+Nghiên cứu về \textbf{GeoAgent} (2024) đã mở ra hướng đi mới bằng cách kết hợp sức mạnh suy luận của Mô hình ngôn ngữ lớn (LLM) với các công cụ không gian \cite{geoagent}. GeoAgent có khả năng hiểu các thực thể tương đối như "đối diện", "rẽ phải", tuy nhiên, rào cản về độ trễ (Latency > 1s) và chi phí vận hành API cao khiến giải pháp này chưa thực sự tối ưu cho các hệ thống xử lý hàng triệu vận đơn trong logistics thời gian thực.
+
+\section{Các nghiên cứu tại Việt Nam và bài toán đặc thù}
+
+Tại Việt Nam, các nghiên cứu trong 05 năm gần đây bắt đầu chuyển dịch từ các phương pháp dựa trên tập luật (Rule-based) sang học máy và học sâu.
+
+\subsection{Tiếp cận dựa trên mô hình học máy truyền thống và Deep Learning}
+\textbf{Đặng Đức Tùng (2019)} đã thực hiện các thực nghiệm so sánh giữa CRF, Bi-LSTM-CRF và SAGEL trên tập dữ liệu chuyên biệt về bất động sản \cite{dang2019crf}. Nghiên cứu đạt độ chính xác từ 85\% đến 95\%, khẳng định ưu thế của Bi-LSTM-CRF trong việc gán nhãn thực thể địa chỉ. Tuy nhiên, do dataset có quy mô nhỏ và tính chuyên biệt cao, mô hình khó có khả năng tổng quát hóa cho toàn bộ các dạng địa chỉ thô đa dạng trong logistics.
+
+Công trình của \textbf{Cao Hải Nam và Trần Việt Trung (2021)} tại hội nghị IEEE RIVF là một bước tiến quan trọng khi ứng dụng kiến trúc \textit{Siamese Network} kết hợp với \textit{Learning to Rank} \cite{cao2021deep}. Phương pháp này đạt chỉ số $F1 > 85\%$ thông qua việc so khớp vector ngữ nghĩa. Tuy nhiên, nghiên cứu này chỉ tập trung vào dữ liệu tĩnh, chưa tính đến các yếu tố biến đổi hành chính lưỡng thời và sự sai lệch ranh giới polygon.
+
+\subsection{Các tiêu chuẩn hành chính và bưu chính}
+Ở khía cạnh quản lý, \textbf{Vũ Chí Kiên và nhóm nghiên cứu Bộ Thông tin và Truyền thông (2021)} đã đề xuất xây dựng mã địa chỉ bưu chính dựa trên tiêu chuẩn ISO 19160 cho hơn 23.4 triệu địa chỉ \cite{kien2021}. Mặc dù tạo ra bộ khung định danh tốt, nhưng hướng tiếp cận này thuần túy về mặt hành chính, thiếu các thuật toán AI để tự động hóa việc làm sạch và chuẩn hóa các dữ liệu đầu vào phi cấu trúc từ phía người dùng.
+
+\subsection{Xu hướng ứng dụng LLM trong phân tích ngữ nghĩa tiếng Việt}
+Gần đây, chiến dịch \textbf{VLSP 2025} với nhiệm vụ \textbf{viSemParse} đã đưa các dòng LLM hiện đại như Qwen3, Gemma-3 vào thực nghiệm \cite{vlsp2025}. Kết quả cho thấy chỉ số Smatch đạt khoảng 0.58, cho thấy tiềm năng lớn trong việc hiểu ý định người dùng. Tuy nhiên, các mô hình này vẫn chưa được tinh chỉnh chuyên biệt cho bài toán chuẩn hóa địa chỉ lưỡng thời và ánh xạ GSOID chính xác.
+
+\section{Phân tích khoảng trống nghiên cứu (Research Gaps)}
+\label{sec:research-gaps}
+
+Dựa trên việc tổng hợp các công trình tại \cref{tab:comparison}, nghiên cứu nhận diện các khoảng trống tri thức cốt lõi sau:
+
+\begin{table}[h]
+\centering
+\caption{So sánh các công trình nghiên cứu liên quan}
+\label{tab:comparison}
+\begin{tabular}{@{}llll@{}}
+\toprule
+\textbf{Tác giả / Công trình} & \textbf{Phương pháp chính} & \textbf{Chỉ số} & \textbf{Hạn chế cốt lõi} \\ \midrule
+Cao Hải Nam (2021) & Siamese Network & F1 > 85\% & Chưa xử lý biến động 2025 \\
+Đặng Đức Tùng (2019) & Bi-LSTM-CRF & 85-95\% & Dataset nhỏ, chuyên biệt BĐS \\
+Vũ Chí Kiên (2021) & ISO 19160 & Quy mô lớn & Thiếu cơ chế chuẩn hóa AI \\
+GeoAgent (2024) & LLM + Geospatial & Hiểu ngữ cảnh & Độ trễ và chi phí cao \\
+\textbf{VNAI (Đề xuất)} & \textbf{Hybrid Pipeline (NER+Retrieval)} & \textbf{P95 < 200ms} & \textbf{Tối ưu cho bối cảnh 2025} \\ \bottomrule
+\end{tabular}
+\end{table}
+
+\begin{enumerate}
+\item \textbf{Khoảng trống về tính nhận thức thời gian (Temporal Awareness):} Hầu hết các hệ thống hiện tại đều coi dữ liệu hành chính là tĩnh. Chưa có công trình nào tích hợp kỹ thuật SCD Type 2 để xử lý bài toán ánh xạ "địa chỉ cũ - định danh mới" phát sinh từ Nghị quyết sáp nhập 2025 \cite{qh2025}.
+\item \textbf{Sự đứt gãy giữa NLP và GIS:} Các mô hình NLP hiện nay chỉ dừng lại ở việc bóc tách văn bản, chưa có sự kết nối chặt chẽ với các thuật toán hiệu chỉnh polygon thực tế. Điều này dẫn đến tình trạng địa chỉ đã được chuẩn hóa về mặt ký tự nhưng vẫn sai lệch về vị trí địa lý trên bản đồ giao nhận.
+\item \textbf{Nghịch lý giữa độ chính xác và hiệu năng:} Các giải pháp dựa trên LLM nguyên bản có độ chính xác cao nhưng không thể đáp ứng yêu cầu về throughput của hệ thống logistics. Cần một kiến trúc lai (Hybrid) để tận dụng khả năng suy luận của LLM trong khi vẫn đảm bảo độ trễ thấp thông qua PhoBERT và Typesense.
+\end{enumerate}
+
+\section{Xác lập hướng tiếp cận của đề tài}
+
+Để lấp đầy các khoảng trống trên, đề tài xác lập hướng nghiên cứu tập trung vào việc xây dựng hệ thống \textbf{VNAI} với các điểm mới:
+\begin{itemize}
+\item Thiết kế \textbf{Temporal-Aware Pipeline} sử dụng PhoBERT kết hợp mGTE để xử lý dữ liệu hành chính xuyên suốt các thời kỳ.
+\item Ứng dụng \textbf{Siamese Network} để chuyển đổi bài toán chuẩn hóa thành bài toán truy xuất ngữ nghĩa (Retrieval), giúp tăng tốc độ xử lý.
+\item Đề xuất thuật toán \textbf{Self-adjusting Polygon} trong PostGIS để tự động thu hẹp sai lệch giữa ranh giới hành chính và thực tế vận hành logistics.
+\end{itemize}
