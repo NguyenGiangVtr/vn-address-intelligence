@@ -7,6 +7,55 @@ Chương~\ref{ch:design} đã hoàn tất việc thiết kế khung giải pháp
 Tất cả số liệu trong chương được trích trực tiếp từ artifact của hệ thống --- nhật ký huấn luyện PhoBERT NER, các tệp metric JSON trong thư mục \macode{reports/}, và bảng tổng hợp đã \thuat{persist} trong schema \schema{ath}. Các hạng mục chưa có artifact đo được sẽ được khai báo minh bạch là chưa báo cáo, tránh giả định số liệu để bảo vệ tính trung thực khoa học.
 
 % =====================================================================
+\section{Chiến lược và Thứ tự Thực nghiệm}
+\label{sec:exp-strategy}
+
+Đề tài áp dụng một chiến lược thực nghiệm phân tầng theo nguyên tắc \emph{từ đơn giản đến phức tạp, từ kiểm soát đến thực tế}. Năm nhóm thực nghiệm được sắp xếp theo thứ tự logic khoa học, mỗi nhóm phục vụ một mục tiêu kiểm chứng cụ thể trước khi chuyển sang nhóm tiếp theo. Cách tiếp cận này khác biệt với nhiều nghiên cứu chỉ báo cáo một chỉ số E2E tổng hợp mà không tách bạch các tầng đo lường.
+
+\subsection{Nguyên tắc thiết kế chiến lược}
+\label{sec:exp-strategy-principle}
+
+Ba nguyên tắc định hướng thứ tự thực nghiệm:
+
+\emph{Thứ nhất, tách bạch các tầng đo lường.} Thay vì chỉ báo cáo một chỉ số E2E tổng hợp, đề tài đo riêng: (i)~chất lượng mô hình đơn lẻ (NER với P-F1, P-Acc); (ii)~chất lượng dữ liệu nghiệp vụ (Audit Bridge với G1, G2, G3); (iii)~tính đúng đắn của khung đánh giá (SUPA Oracle với EM@v2 \(= 100\%\)); (iv)~độ ổn định thống kê (SUPA K~=~5 với mean \(\pm\) std); và cuối cùng (v)~hiệu năng pipeline thật (Ablation Study với 25.000 specimens). Việc tách bạch này cho phép cô lập nguyên nhân khi một chỉ số tụt giảm --- nếu EM@v2 thấp, có thể do NER kém (kiểm tra P-F1), dữ liệu bẩn (kiểm tra G2/G3), hoặc kiến trúc pipeline chưa tối ưu (kiểm tra Ablation).
+
+\emph{Thứ hai, kiểm chứng hạ tầng trước khi đo năng lực.} Kịch bản Oracle (Mục~\ref{sec:exp-supa-oracle}) với cờ \macode{--preds-demo-ref-v2} sao chép trực tiếp \macode{ref\_address\_v2} sang \macode{pred\_standardized}, đạt EM@v2 \(= 100\%\), chứng minh chuỗi đánh giá SUPA-Bench (extract \(\to\) nhiễu \(\to\) import \(\to\) eval \(\to\) aggregate) hoạt động đúng. Chỉ khi đó, khung đánh giá mới đáng tin để đo pipeline AI thật. Đây là một thực hành \thuat{smoke test} chuẩn trong kỹ nghệ phần mềm nhưng thường bị bỏ qua trong các nghiên cứu học thuật.
+
+\emph{Thứ ba, từ cohort đơn giản đến phân tầng.} Ablation Study (Mục~\ref{sec:exp-ablation}) chạy trên cohort phổ thông (\(N = 5.000\) mỗi cấu hình, tổng 25.000 specimens) để xác lập kiến trúc tối ưu (A1\_FULL: NER + mGTE + LLM), trước khi chạy trên cohort phân tầng D1--D4 (SUPA K~=~5, \(N = 2.000\) mỗi lần) để đánh giá độ bền trên các tầng khó (nhiễu cao, lưỡng thời, ranh giới). Lý do: cohort phổ thông cho phép so sánh nhanh giữa các cấu hình với chi phí GPU hợp lý; cohort phân tầng yêu cầu nhiều tài nguyên hơn nhưng cung cấp bằng chứng về \thuat{robustness}.
+
+\subsection{Năm nhóm thực nghiệm và vai trò khoa học}
+\label{sec:exp-strategy-groups}
+
+\cref{tab:exp-strategy} tóm lược năm nhóm thực nghiệm theo thứ tự thực hiện. Mỗi nhóm trả lời một câu hỏi khoa học cụ thể và tạo tiền đề cho nhóm tiếp theo.
+
+\begin{table}[H]
+\centering
+\caption{Năm nhóm thực nghiệm theo thứ tự logic khoa học}
+\label{tab:exp-strategy}
+\small
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}p{0.8cm} >{\raggedright\arraybackslash}p{3.2cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}p{2.8cm}}
+\toprule
+\textbf{TT} & \textbf{Nhóm} & \textbf{Vai trò khoa học} & \textbf{Câu hỏi trả lời} \\
+\midrule
+1 & NER có giám sát (Mục~\ref{sec:exp-ner}) & Đo chất lượng thành phần đơn lẻ (P-F1, P-Acc); đối chiếu Gate~B & PhoBERT NER đạt F1 bao nhiêu trên tập công khai? \\
+2 & Audit Bridge (Mục~\ref{sec:exp-audit}) & Kiểm tra điều kiện tiên quyết: dữ liệu queue có khớp master không (G1, G2, G3) & Dữ liệu nghiệp vụ có đủ sạch để huấn luyện/đánh giá không? \\
+3 & SUPA Oracle (Mục~\ref{sec:exp-supa-oracle}) & Kiểm chứng tính đúng đắn của khung đánh giá (EM@v2 \(= 100\%\) khi pred \(=\) ref) & Khung SUPA-Bench có hoạt động đúng không? \\
+4 & SUPA K~=~5 phân tầng (Mục~\ref{sec:exp-supa-stratified}) & Đo độ ổn định thống kê trên cohort D1--D4; ước lượng mean \(\pm\) std & Metric có ổn định giữa các cohort không? \\
+5 & \textbf{Ablation Study} (Mục~\ref{sec:exp-ablation}) & \textbf{Đo pipeline thật}: xác lập kiến trúc tối ưu (A1\_FULL) và đóng góp từng thành phần & Thành phần nào (NER, retrieval, LLM) quan trọng nhất? \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\textbf{Tại sao Ablation là nhóm cuối cùng?} Vì nó yêu cầu pipeline AI thật chạy trên GPU, tốn kém tài nguyên (25.000 specimens trên Google Colab T4, khoảng 6 giờ tính toán). Các nhóm 1--4 đã xác nhận: (i)~NER hoạt động ở mức chấp nhận được (F1 \(\approx 94\%\)); (ii)~dữ liệu queue khớp master (\(> 96\%\) qua G2); (iii)~khung đánh giá đúng (Oracle đạt \(100\%\)); (iv)~cohort đại diện (K~=~5 cho mean \(\pm\) std). Chỉ khi đó, Ablation mới có ý nghĩa khoa học --- nếu chạy Ablation trước mà NER kém hoặc dữ liệu bẩn, kết quả sẽ không diễn giải được.
+
+\textbf{Tại sao Ablation quan trọng nhất?} Vì nó trả lời trực tiếp câu hỏi nghiên cứu cốt lõi RQ2: ``Hybrid PhoBERT + mGTE có tốt hơn baseline từ vựng truyền thống không?'' và chứng minh vai trò của từng thành phần. Kết quả cho thấy: (i)~retrieval là thành phần then chốt không thể bỏ qua (A3: 60{,}98\% vs A4: 8{,}46\%); (ii)~LLM đóng góp \(+5{,}6\) điểm phần trăm khi kết hợp đúng (A1: 66{,}58\% vs A2/A3: 60{,}98\%); (iii)~TF-IDF và mGTE tương đương trên cohort phổ thông. Đây là bằng chứng định lượng đầu tiên cho kiến trúc hybrid trên bài toán địa chỉ Việt Nam với quy mô đủ lớn (\(N = 25.000\)) để có ý nghĩa thống kê.
+
+\subsection{So sánh với các nghiên cứu trước}
+\label{sec:exp-strategy-comparison}
+
+Chiến lược thực nghiệm của đề tài khác biệt với các nghiên cứu chuẩn hoá địa chỉ trước đây ở ba điểm. \emph{Một}, hầu hết nghiên cứu chỉ báo cáo một chỉ số E2E (ví dụ accuracy hoặc F1) mà không tách bạch chất lượng dữ liệu (audit), chất lượng mô hình đơn lẻ (NER), và chất lượng pipeline tổng thể. Khi metric giảm, không rõ nguyên nhân là do mô hình kém hay dữ liệu bẩn. \emph{Hai}, ít nghiên cứu kiểm chứng tính đúng đắn của khung đánh giá bằng kịch bản oracle; nhiều nghiên cứu giả định khung đánh giá luôn đúng và chỉ tập trung vào cải thiện mô hình. \emph{Ba}, ablation study với quy mô lớn (\(N > 10.000\)) và provenance đầy đủ (git commit, seed, noise profile) chưa phổ biến trong lĩnh vực chuẩn hoá địa chỉ; hầu hết nghiên cứu so sánh 2--3 mô hình trên tập nhỏ (\(< 1.000\) mẫu) mà không báo cáo độ lệch chuẩn hoặc khoảng tin cậy.
+
+% =====================================================================
 \section{Khung chỉ số đánh giá và mục tiêu đối chiếu}
 \label{sec:exp-metrics}
 
@@ -354,7 +403,7 @@ F1 Tỉnh (\%)      & \VNAIABLATIONMeanFOneProvincePct  & \VNAIABLATIONStdFOnePr
 \subsubsection{Diễn giải khoa học và bằng chứng cho các luận điểm}
 \label{sec:exp-ablation-interpret}
 
-Số liệu trong \cref{tab:ablation-results} và \cref{tab:ablation-rollup} cho phép rút ra năm kết luận khoa học có bằng chứng định lượng đầy đủ.
+Số liệu trong \cref{tab:ablation-results} và \cref{tab:ablation-rollup} cho phép rút ra \textbf{kết luận khoa học cốt lõi: retrieval là thành phần then chốt không thể bỏ qua (A3: 60{,}98\% vs A4: 8{,}46\%), trong khi LLM chỉ phát huy giá trị khi được tích hợp đúng trong kiến trúc lai ghép cùng retrieval (A1: 66{,}58\% vs A2/A3: 60{,}98\%, đóng góp \(+5{,}6\) điểm phần trăm).} Năm bằng chứng định lượng cụ thể như sau:
 
 \emph{Thứ nhất, pipeline lai ghép đầy đủ A1\_FULL đạt hiệu năng cao nhất với khoảng cách rõ rệt.} Chỉ số EM@v2 \(= \VNAIABLATIONAOneEMvTwoPct\,\%\) của A1\_FULL vượt cấu hình tốt thứ hai (A2/A3 cùng đạt \VNAIABLATIONATwoEMvTwoPct\,\%) một khoảng \VNAIABLATIONLLMContributionPp\, điểm phần trăm. Khoảng cách này định lượng \emph{đóng góp thực sự của tầng LLM khi được tích hợp đúng cách} trong kiến trúc lai ghép cùng retrieval.
 
