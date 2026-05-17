@@ -87,6 +87,17 @@ Báo cáo khoa học, runbook thực nghiệm, kết quả đánh giá
 
 ---
 
+## 📝 LaTeX Thesis & Research - `scientific-report/`
+Luận văn LaTeX chính thức, protocols, và báo cáo nghiên cứu chi tiết
+
+- **[scientific-report/README.md](scientific-report/README.md)** - Hướng dẫn cấu trúc thư mục và biên dịch LaTeX
+- **mis-DATN-2026/** - Luận văn LaTeX chính thức (Chương 4-6: Thiết kế, Thực nghiệm, Kết luận)
+- **protocols/** - Quy trình thực nghiệm chi tiết (Protocol-Reproducible-End-to-End, SUPA-Bench)
+- **reports/** - Báo cáo tổng hợp (VNAI-he-thong-thuc-hien-tong-hop.md, MAPPING-PROOF-REPORT.md)
+- **archive/** - Session reports và drafts cũ (40+ files)
+
+---
+
 ## 📦 Thư mục khác
 - **n8n/** - Workflow N8N automation
 - **typesense/** - Typesense schema definitions
