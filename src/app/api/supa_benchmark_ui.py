@@ -10,9 +10,13 @@ import sys
 import tempfile
 from pathlib import Path
 from typing import Any, Literal
+from queue import Queue
+from datetime import datetime
+import asyncio
+import json
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Query, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import text
 from sqlalchemy.exc import ProgrammingError
@@ -26,6 +30,22 @@ from app.paths import repo_root
 from app.services.supa_cli_runner import run_supa_benchmark
 
 router = APIRouter()
+
+# Global dict to store progress queues for each workflow
+_workflow_progress_queues: dict[str, Queue] = {}
+
+
+def emit_progress(workflow_id: str, step: str, status: str, data: dict = None):
+    """Emit progress event to SSE stream"""
+    if workflow_id in _workflow_progress_queues:
+        event = {
+            "step": step,
+            "status": status,
+            "timestamp": datetime.now().isoformat(),
+            **(data or {})
+        }
+        _workflow_progress_queues[workflow_id].put(event)
+
 
 _SAFE_REL = re.compile(r"^[a-zA-Z0-9_./\-]+$")
 
@@ -610,11 +630,210 @@ def supa_action_export_tex(
     return {**_run_cli_and_response(argv), "out_path": str(out_p)}
 
 
+def run_workflow_with_progress(workflow_id: str, body: SupaWorkflowBody):
+    """Run workflow and emit progress events via SSE"""
+    try:
+        if body.preds_demo_ref_v2 and body.preds_relative:
+            emit_progress(workflow_id, "error", "error", {"error": "Use either preds_relative or preds_demo_ref_v2, not both"})
+            emit_progress(workflow_id, "done", "error")
+            return
+        
+        spec = _reports_output_path(body.specimens_out_relative)
+        spec.parent.mkdir(parents=True, exist_ok=True)
+        
+        # Step 1: Extract
+        emit_progress(workflow_id, "extract", "running")
+        
+        argv = ["workflow", "--n", str(body.n), "--specimens-out", str(spec)]
+        if body.seed is not None:
+            argv += ["--seed", str(body.seed)]
+        if body.noise_profile:
+            argv += ["--noise-profile", body.noise_profile]
+        if body.notes:
+            argv += ["--notes", body.notes]
+        if body.skip_extract:
+            argv.append("--skip-extract")
+        if body.run_id is not None:
+            argv += ["--run-id", str(body.run_id)]
+        
+        # If not running normalization, just extract
+        if not body.run_normalization:
+            if body.preds_relative:
+                pr = _repo_relative_path(body.preds_relative)
+                argv += ["--preds", str(pr)]
+                if body.source_note:
+                    argv += ["--source-note", body.source_note]
+            elif body.preds_demo_ref_v2:
+                argv.append("--preds-demo-ref-v2")
+                if body.source_note:
+                    argv += ["--source-note", body.source_note]
+            
+            res = _run_cli_and_response(argv)
+            emit_progress(workflow_id, "extract", "completed" if res["ok"] else "error")
+            emit_progress(workflow_id, "done", "success" if res["ok"] else "error", {"result": {**res, "specimens_out": str(spec)}})
+            return
+        
+        # Extract step
+        res = _run_cli_and_response(argv)
+        if not res["ok"]:
+            emit_progress(workflow_id, "extract", "error", {"error": res.get("error")})
+            emit_progress(workflow_id, "done", "error", {"result": res})
+            return
+        
+        emit_progress(workflow_id, "extract", "completed", {"run_id": res.get("last_run_id_hint")})
+        
+        run_id = res.get("last_run_id_hint") or _read_last_run_id_file()
+        if not run_id:
+            emit_progress(workflow_id, "done", "error", {"error": "Failed to determine run_id"})
+            return
+        
+        # Step 2: Pipeline (NER, Retrieval, LLM)
+        emit_progress(workflow_id, "ner", "running")
+        
+        pipeline_argv = [
+            sys.executable, "-m", "app.ai.production_pipeline",
+            "--supa-run-id", str(run_id),
+            "--limit", str(body.n)
+        ]
+        if body.no_ner: pipeline_argv.append("--no-ner")
+        if body.no_retrieval: pipeline_argv.append("--no-retrieval")
+        if body.no_llm: pipeline_argv.append("--no-llm")
+        if body.retriever_type:
+            pipeline_argv += ["--retriever-type", body.retriever_type]
+        
+        from app.services.supa_cli_runner import build_pythonpath_env
+        
+        # Run pipeline with real-time output monitoring
+        cp = subprocess.Popen(
+            pipeline_argv,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            env=build_pythonpath_env(),
+            cwd=str(repo_root())
+        )
+        
+        # Monitor stdout for progress markers
+        stdout_lines = []
+        stderr_lines = []
+        
+        import threading
+        
+        def read_stdout():
+            for line in cp.stdout:
+                stdout_lines.append(line)
+                if "NER completed" in line:
+                    emit_progress(workflow_id, "ner", "completed")
+                    emit_progress(workflow_id, "retrieval", "running")
+                elif "Retrieval completed" in line:
+                    emit_progress(workflow_id, "retrieval", "completed")
+                    emit_progress(workflow_id, "llm", "running")
+                elif "LLM completed" in line:
+                    emit_progress(workflow_id, "llm", "completed")
+        
+        def read_stderr():
+            for line in cp.stderr:
+                stderr_lines.append(line)
+        
+        stdout_thread = threading.Thread(target=read_stdout)
+        stderr_thread = threading.Thread(target=read_stderr)
+        stdout_thread.start()
+        stderr_thread.start()
+        
+        cp.wait()
+        stdout_thread.join()
+        stderr_thread.join()
+        
+        res["pipeline_stdout"] = "".join(stdout_lines)
+        res["pipeline_stderr"] = "".join(stderr_lines)
+        
+        if cp.returncode != 0:
+            emit_progress(workflow_id, "pipeline", "error", {"error": f"Pipeline failed with code {cp.returncode}"})
+            emit_progress(workflow_id, "done", "error", {"result": res})
+            return
+        
+        # Step 3: Eval
+        emit_progress(workflow_id, "eval", "running")
+        eval_argv = ["eval", "--run-id", str(run_id)]
+        eval_res = _run_cli_and_response(eval_argv)
+        emit_progress(workflow_id, "eval", "completed" if eval_res["ok"] else "error")
+        
+        # Done
+        emit_progress(workflow_id, "done", "success", {
+            "result": {
+                **res,
+                "eval_stdout": eval_res["stdout"],
+                "eval_stderr": eval_res["stderr"],
+                "eval_ok": eval_res["ok"],
+                "specimens_out": str(spec),
+                "run_id": run_id
+            }
+        })
+        
+    except Exception as e:
+        emit_progress(workflow_id, "error", "error", {"error": str(e)})
+        emit_progress(workflow_id, "done", "error")
+
+
+@router.post("/supa-actions/workflow-stream")
+async def supa_action_workflow_stream(
+    body: SupaWorkflowBody,
+    background_tasks: BackgroundTasks,
+    current_user: str = Depends(get_current_user),
+):
+    """Stream workflow progress via SSE"""
+    del current_user
+    _require_supa_ui_actions()
+    
+    # Generate unique workflow ID
+    workflow_id = f"workflow_{datetime.now().timestamp()}"
+    progress_queue = Queue()
+    _workflow_progress_queues[workflow_id] = progress_queue
+    
+    # Start background task
+    background_tasks.add_task(
+        run_workflow_with_progress,
+        workflow_id=workflow_id,
+        body=body
+    )
+    
+    # SSE generator
+    async def event_generator():
+        try:
+            while True:
+                # Check queue for events
+                if not progress_queue.empty():
+                    event = progress_queue.get()
+                    
+                    # Send SSE event
+                    yield f"data: {json.dumps(event)}\n\n"
+                    
+                    # If done, close stream
+                    if event.get("step") == "done":
+                        break
+                
+                await asyncio.sleep(0.1)  # Poll every 100ms
+        finally:
+            # Cleanup
+            if workflow_id in _workflow_progress_queues:
+                del _workflow_progress_queues[workflow_id]
+    
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+        }
+    )
+
+
 @router.post("/supa-actions/workflow")
 def supa_action_workflow(
     body: SupaWorkflowBody,
     current_user: str = Depends(get_current_user),
 ) -> dict[str, Any]:
+    """Legacy synchronous workflow endpoint (kept for backward compatibility)"""
     del current_user
     _require_supa_ui_actions()
     

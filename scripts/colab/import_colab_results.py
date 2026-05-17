@@ -23,7 +23,7 @@ def import_colab_results(csv_path: str):
     
     print(f"Reading {csv_path}...")
     df = pd.read_csv(csv_path)
-    print(f"✓ Loaded {len(df)} rows")
+    print(f"[OK] Loaded {len(df)} rows")
     print(f"  Configs: {df['config'].unique().tolist()}")
     
     with engine.connect() as conn:
@@ -37,13 +37,14 @@ def import_colab_results(csv_path: str):
             # Insert run
             result = conn.execute(text("""
                 INSERT INTO prq.supa_benchmark_run
-                (n, seed, profile, git_commit, notes, created_at)
-                VALUES (:n, :seed, :profile, :git_commit, :notes, :created_at)
+                (n_requested, n_realized, rng_seed, noise_profile_id, git_commit, notes, created_at)
+                VALUES (:n_requested, :n_realized, :rng_seed, :noise_profile_id, :git_commit, :notes, :created_at)
                 RETURNING id
             """), {
-                "n": len(config_df),
-                "seed": 3001 + idx,
-                "profile": "SUP-1.0.0",
+                "n_requested": len(config_df),
+                "n_realized": len(config_df),
+                "rng_seed": 3001 + idx,
+                "noise_profile_id": "SUP-1.0.0",
                 "git_commit": "colab-gpu-run",
                 "notes": f"Colab GPU - {config} - N={len(config_df)}",
                 "created_at": datetime.utcnow()
@@ -51,30 +52,31 @@ def import_colab_results(csv_path: str):
             
             run_id = result.fetchone()[0]
             run_ids[config] = run_id
-            print(f"✓ Created run_id {run_id} for {config}")
+            print(f"[OK] Created run_id {run_id} for {config}")
         
         conn.commit()
         
         # Import specimens
         print(f"\nImporting specimens...")
-        for _, row in df.iterrows():
+        for idx, row in df.iterrows():
             run_id = run_ids[row['config']]
             
             conn.execute(text("""
                 INSERT INTO prq.supa_benchmark_specimen
-                (run_id, gt_id, raw_address, ref_address_v2, pred_standardized, latency_ms)
-                VALUES (:run_id, :gt_id, :raw_address, :ref_address_v2, :pred_standardized, :latency_ms)
+                (run_id, local_idx, ground_truth_id, ref_address_v2, ref_address_v1, noisy_raw_address, pred_standardized)
+                VALUES (:run_id, :local_idx, :ground_truth_id, :ref_address_v2, :ref_address_v1, :noisy_raw_address, :pred_standardized)
             """), {
                 "run_id": run_id,
-                "gt_id": int(row['gt_id']),
-                "raw_address": row['raw_address'],
+                "local_idx": idx,
+                "ground_truth_id": int(row['gt_id']),
                 "ref_address_v2": row['ref_address_v2'],
-                "pred_standardized": row['pred_standardized'],
-                "latency_ms": float(row['latency_ms'])
+                "ref_address_v1": row.get('ref_address_v1', ''),  # May not exist in CSV
+                "noisy_raw_address": row['raw_address'],
+                "pred_standardized": row['pred_standardized']
             })
         
         conn.commit()
-        print(f"✓ Imported {len(df)} specimens")
+        print(f"[OK] Imported {len(df)} specimens")
     
     # Print summary
     print(f"\n{'='*60}")
@@ -91,9 +93,10 @@ def import_colab_results(csv_path: str):
     for run_id in run_ids.values():
         print(f"python scripts/experiments/supa_benchmark.py eval --run-id {run_id}")
     
-    print(f"\npython scripts/experiments/supa_benchmark.py aggregate-runs \\")
-    print(f"    --run-ids {','.join(map(str, run_ids.values()))} \\")
-    print(f"    --out-json reports/ablation_n1000_colab_aggregate.json")
+    run_id_list = ','.join(map(str, run_ids.values()))
+    min_run = min(run_ids.values())
+    max_run = max(run_ids.values())
+    print(f"\npython scripts/experiments/supa_benchmark.py aggregate-runs --min-run-id {min_run} --max-run-id {max_run} --out-json reports/ablation_n1000_colab_aggregate.json")
 
 
 if __name__ == "__main__":

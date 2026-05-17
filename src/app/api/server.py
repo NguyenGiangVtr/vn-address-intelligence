@@ -1840,6 +1840,101 @@ def create_training_history(data: dict = None, current_user: str = Depends(get_c
         db.close()
 
 
+@api_router.post("/training/trigger-ner-from-prelabeler", tags=["AI Training"])
+def trigger_ner_training_from_prelabeler(
+    min_samples: int = Query(50, description="Minimum passed cases required"),
+    epochs: int = Query(10, description="Training epochs"),
+    batch_size: int = Query(16, description="Batch size"),
+    learning_rate: float = Query(2e-5, description="Learning rate"),
+    merge_labelstudio: bool = Query(False, description="Merge with existing Label Studio data"),
+    current_user=Depends(get_current_user)
+):
+    """
+    Trigger background training job using passed prelabeler cases.
+    
+    Returns:
+        {"status": "accepted", "job_id": "...", "message": "..."}
+    """
+    # Check số mẫu đạt chuẩn
+    with engine.connect() as conn:
+        count_result = conn.execute(text("""
+            SELECT COUNT(*) as cnt
+            FROM ai.prelabeler_testcases
+            WHERE expected IS NOT NULL
+              AND jsonb_array_length(expected) > 0
+              AND (test_result->>'passed')::boolean = true
+        """)).mappings().first()
+        
+        passed_count = count_result["cnt"] if count_result else 0
+    
+    if passed_count < min_samples:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Insufficient passed cases: {passed_count} < {min_samples}"
+        )
+    
+    # Generate job_id
+    import uuid
+    job_id = str(uuid.uuid4())
+    
+    # Spawn background thread
+    def _train_background():
+        import subprocess
+        import sys
+        from pathlib import Path
+        
+        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        output_dir = f"models/phobert-ner-vn-{timestamp}"
+        
+        # Get project root
+        project_root = Path(__file__).parent.parent.parent
+        
+        cmd = [
+            sys.executable,
+            "-m", "app.ai.train_ner",
+            "--from-prelabeler",
+            "--min-prelabeler-samples", str(min_samples),
+            "--output", output_dir,
+            "--epochs", str(epochs),
+            "--batch-size", str(batch_size),
+            "--lr", str(learning_rate),
+        ]
+        
+        if merge_labelstudio:
+            # Assume latest Label Studio export
+            ls_export = project_root / "data" / "labeled_export.json"
+            if ls_export.exists():
+                cmd.extend(["--merge-labelstudio", str(ls_export)])
+        
+        try:
+            result = subprocess.run(
+                cmd, 
+                check=True, 
+                cwd=project_root,
+                capture_output=True,
+                text=True
+            )
+            logger.info(f"Training job {job_id} completed successfully")
+            logger.info(f"Training output: {result.stdout[-500:]}")  # Last 500 chars
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Training job {job_id} failed: {e}")
+            logger.error(f"Training stderr: {e.stderr[-500:]}")
+        except Exception as e:
+            logger.error(f"Training job {job_id} failed with exception: {e}")
+    
+    import threading
+    thread = threading.Thread(target=_train_background, daemon=True)
+    thread.start()
+    
+    return {
+        "status": "accepted",
+        "job_id": job_id,
+        "message": f"Training started with {passed_count} passed cases",
+        "output_dir": f"models/phobert-ner-vn-{datetime.now().strftime('%Y%m%d-%H%M%S')}",
+        "note": "Training is running in background. Check /api/training/history for results."
+    }
+
+
 @api_router.get("/benchmark/job", tags=["Huấn luyện & Benchmark AI"], summary="Trạng thái tiến trình Benchmark")
 def get_benchmark_job_status(current_user: str = Depends(get_current_user)):
     """Lấy trạng thái hiện tại (đang chạy, hoàn thành, lỗi) của tiến trình Benchmark."""

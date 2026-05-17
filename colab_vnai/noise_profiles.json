@@ -1,0 +1,58 @@
+{
+  "SUP-1.0.0": {
+    "name": "SUP-1.0.0",
+    "description": "Standard noise: Common abbreviations, some slang, light typos",
+    "parameters": {
+      "prefix_prob": 0.4,
+      "suffix_prob": 0.2,
+      "abbreviate_prob": 0.65,
+      "slang_prob": 0.3,
+      "ime_error_prob": 0.15,
+      "upper_case_prob": 0.05,
+      "lower_case_prob": 0.05,
+      "spacing_noise_prob": 0.25,
+      "double_space_prob": 0.15
+    },
+    "prefixes": [
+      "Gần ",
+      "Đối diện ",
+      "Khu vực ",
+      "Chỗ ",
+      "Ngay ",
+      "Sau lưng ",
+      ""
+    ],
+    "suffixes": [
+      "",
+      " (liên hệ)",
+      " - ghi chú",
+      " (tầng 2)"
+    ]
+  },
+  "SUP-D2-1.0.0": {
+    "name": "SUP-D2-1.0.0",
+    "description": "High noise: Aggressive abbreviations, slang, severe typos, and NO ACCENTS",
+    "parameters": {
+      "prefix_prob": 0.6,
+      "abbreviate_prob": 0.9,
+      "slang_prob": 0.6,
+      "transpose_prob": 0.5,
+      "stutter_prob": 0.3,
+      "strip_accents": true,
+      "upper_case_prob": 0.15,
+      "comma_spacing_prob": 0.6,
+      "triple_space_prob": 0.3
+    },
+    "prefixes": [
+      "Gần ",
+      "Đối diện ",
+      "Chỗ ",
+      "Ngay ",
+      "Sau lưng ",
+      "Cạnh ",
+      "Phía sau ",
+      "Tầng trệt ",
+      ""
+    ]
+  }
+}

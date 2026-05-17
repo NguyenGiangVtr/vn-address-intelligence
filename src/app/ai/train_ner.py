@@ -388,6 +388,122 @@ def load_ground_truth_weak_bio_samples(tokenizer, label2id: dict, limit: int = 1
     return out
 
 
+def _prelabeler_case_to_labelstudio(raw_address: str, expected: list) -> dict:
+    """
+    Convert prelabeler case to Label Studio format.
+    
+    Args:
+        raw_address: The raw address string
+        expected: List of {"label": "NUM", "text": "268"} entities
+    
+    Returns:
+        Label Studio format dict
+    """
+    annotations = []
+    used_ranges = []
+    
+    for entity in expected:
+        if not isinstance(entity, dict):
+            continue
+        label = entity.get("label", "").upper()
+        text = entity.get("text", "").strip()
+        
+        if not label or not text:
+            continue
+        
+        # Find character offset, avoiding already used ranges
+        start_pos = 0
+        found = False
+        while True:
+            idx = raw_address.find(text, start_pos)
+            if idx == -1:
+                break
+            
+            end_idx = idx + len(text)
+            
+            # Check if this range overlaps with any used range
+            overlaps = False
+            for used_start, used_end in used_ranges:
+                if not (end_idx <= used_start or idx >= used_end):
+                    overlaps = True
+                    break
+            
+            if not overlaps:
+                used_ranges.append((idx, end_idx))
+                annotations.append({
+                    "type": "labels",
+                    "value": {
+                        "start": idx,
+                        "end": end_idx,
+                        "text": text,
+                        "labels": [label]
+                    }
+                })
+                found = True
+                break
+            
+            start_pos = idx + 1
+        
+        if not found:
+            logger.debug(f"Could not find text '{text}' for label {label} in address")
+    
+    return {
+        "data": {"text": raw_address},
+        "annotations": [{"result": annotations}] if annotations else []
+    }
+
+
+def load_prelabeler_cases_as_bio(
+    tokenizer,
+    label2id: dict,
+    only_passed: bool = True,
+    min_samples: int = 50
+) -> list:
+    """
+    Load prelabeler cases từ DB, convert sang BIO format.
+    
+    Args:
+        tokenizer: PhoBERT tokenizer
+        label2id: Label to ID mapping
+        only_passed: If True, only load cases with test_result->>'passed' = true
+        min_samples: Minimum number of samples required
+    
+    Returns:
+        List[dict]: [{"input_ids": [...], "attention_mask": [...], "labels": [...]}, ...]
+    """
+    sql = text("""
+        SELECT id, input, expected, test_result, created_at
+        FROM ai.prelabeler_testcases
+        WHERE expected IS NOT NULL
+          AND jsonb_array_length(expected) > 0
+          AND (:only_passed = false OR (test_result->>'passed')::boolean = true)
+        ORDER BY created_at DESC
+    """)
+    
+    session = SessionLocal()
+    try:
+        rows = session.execute(sql, {"only_passed": only_passed}).mappings().all()
+    finally:
+        session.close()
+    
+    logger.info(f"Found {len(rows)} prelabeler cases (only_passed={only_passed})")
+    
+    if len(rows) < min_samples:
+        raise ValueError(f"Insufficient samples: {len(rows)} < {min_samples}")
+    
+    # Convert to Label Studio format internally
+    labelstudio_data = []
+    for r in rows:
+        item = _prelabeler_case_to_labelstudio(r["input"], r["expected"])
+        if item["annotations"]:  # Only include if has annotations
+            labelstudio_data.append(item)
+    
+    logger.info(f"Converted {len(labelstudio_data)} prelabeler cases to Label Studio format")
+    
+    # Reuse existing convert_labelstudio_to_bio
+    return convert_labelstudio_to_bio(labelstudio_data, tokenizer, label2id)
+
+
 def validate_conversion(data: list, processed: list, tokenizer, id2label: dict, n_samples: int = 5):
     """In ra một vài mẫu để kiểm tra nhãn BIO có đúng không."""
     logger.info(f"\n{'='*60}")
@@ -479,14 +595,23 @@ def train_model(
     hf_max_eval_samples: int = 5_000,
     include_ground_truth: bool = False,
     gt_max_train_samples: int = 10_000,
+    from_prelabeler: bool = False,
+    min_prelabeler_samples: int = 50,
+    merge_labelstudio_path: Optional[str] = None,
 ):
     """
-    Huấn luyện PhoBERT NER: either Label Studio JSON (``json_path``) hoặc dataset HF
-    (``hf_dataset``, ví dụ dathuynh1108/ner-address-standard-dataset).
+    Huấn luyện PhoBERT NER: either Label Studio JSON (``json_path``), dataset HF
+    (``hf_dataset``), hoặc prelabeler cases (``from_prelabeler``).
     """
     use_hf = bool(hf_dataset)
-    if use_hf == bool(json_path):
-        raise ValueError("Chỉ định đúng một nguồn: json_path (Label Studio) hoặc hf_dataset (Hugging Face).")
+    use_prelabeler = bool(from_prelabeler)
+    
+    # Count number of sources specified
+    sources_count = sum([bool(json_path), use_hf, use_prelabeler])
+    if sources_count == 0:
+        raise ValueError("Phải chỉ định ít nhất một nguồn: json_path, hf_dataset, hoặc from_prelabeler")
+    if sources_count > 1 and not (use_prelabeler and json_path):
+        raise ValueError("Chỉ có thể kết hợp prelabeler với Label Studio (merge). Không kết hợp HF với các nguồn khác.")
 
     label_list = get_ner_label_list()
     validate_required_labels(label_list)
@@ -496,7 +621,39 @@ def train_model(
 
     tokenizer = AutoTokenizer.from_pretrained("vinai/phobert-base", trust_remote_code=True)
 
-    if use_hf:
+    if use_prelabeler:
+        logger.info("Loading data from ai.prelabeler_testcases...")
+        train_data = load_prelabeler_cases_as_bio(
+            tokenizer=tokenizer,
+            label2id=label2id,
+            only_passed=True,
+            min_samples=min_prelabeler_samples,
+        )
+        
+        # Optionally merge with Label Studio
+        if merge_labelstudio_path:
+            logger.info(f"Merging with Label Studio export: {merge_labelstudio_path}")
+            try:
+                with open(merge_labelstudio_path, encoding="utf-8") as f:
+                    ls_data = json.load(f)
+                ls_processed = convert_labelstudio_to_bio(ls_data, tokenizer, label2id)
+                train_data.extend(ls_processed)
+                logger.info(f"Merged: total {len(train_data)} samples")
+            except Exception as e:
+                logger.warning(f"Failed to merge Label Studio data: {e}")
+        
+        # Split train/eval
+        np.random.seed(seed)
+        indices = np.random.permutation(len(train_data))
+        split_idx = int(len(train_data) * (1 - eval_split))
+        eval_data = [train_data[i] for i in indices[split_idx:]]
+        train_data = [train_data[i] for i in indices[:split_idx]]
+        
+        logger.info(f"Train: {len(train_data)} mẫu | Eval: {len(eval_data)} mẫu (from prelabeler)")
+        data_notes = f"prelabeler_cases={len(train_data) + len(eval_data)}"
+        if merge_labelstudio_path:
+            data_notes += f";labelstudio_merged=yes"
+    elif use_hf:
         from datasets import load_dataset
 
         logger.info(
@@ -717,10 +874,13 @@ def train_model(
 # ──────────────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Huấn luyện PhoBERT NER cho địa chỉ Việt Nam")
-    parser.add_argument("--data", default=None, help="JSON export từ Label Studio (bỏ qua nếu dùng --hf-dataset)")
+    parser.add_argument("--data", default=None, help="JSON export từ Label Studio (bỏ qua nếu dùng --hf-dataset hoặc --from-prelabeler)")
     parser.add_argument("--hf-dataset", default=None, help="VD: dathuynh1108/ner-address-standard-dataset")
     parser.add_argument("--hf-max-train", type=int, default=50_000, help="Giới hạn mẫu train từ HF")
     parser.add_argument("--hf-max-eval", type=int, default=5_000, help="Giới hạn mẫu test từ HF (split test)")
+    parser.add_argument("--from-prelabeler", action="store_true", help="Load training data from ai.prelabeler_testcases")
+    parser.add_argument("--min-prelabeler-samples", type=int, default=50, help="Minimum passed cases required")
+    parser.add_argument("--merge-labelstudio", type=str, default=None, help="Merge with Label Studio export JSON (only with --from-prelabeler)")
     parser.add_argument("--output", default="models/phobert-ner-vn", help="Thư mục lưu model")
     parser.add_argument("--epochs", type=int, default=15, help="Số epoch huấn luyện")
     parser.add_argument("--batch-size", type=int, default=16, help="Batch size")
@@ -745,6 +905,18 @@ if __name__ == "__main__":
 
         processed = convert_labelstudio_to_bio(data, tokenizer, label2id)
         validate_conversion(data, processed, tokenizer, id2label, n_samples=10)
+    elif args.from_prelabeler:
+        train_model(
+            json_path=None,
+            output_dir=args.output,
+            epochs=args.epochs,
+            batch_size=args.batch_size,
+            learning_rate=args.lr,
+            eval_split=args.eval_split,
+            from_prelabeler=True,
+            min_prelabeler_samples=args.min_prelabeler_samples,
+            merge_labelstudio_path=args.merge_labelstudio,
+        )
     elif args.hf_dataset:
         train_model(
             json_path=None,
@@ -761,7 +933,7 @@ if __name__ == "__main__":
         )
     else:
         if not args.data:
-            parser.error("Cần --data hoặc --hf-dataset")
+            parser.error("Cần --data, --hf-dataset, hoặc --from-prelabeler")
         train_model(
             json_path=args.data,
             output_dir=args.output,

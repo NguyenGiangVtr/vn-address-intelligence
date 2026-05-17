@@ -460,6 +460,9 @@ function initializePageSpecific(pageId) {
     case 'prelabeler-cases':
       if (window.pltInitPage) window.pltInitPage();
       break;
+    case 'training':
+      if (window.loadTrainingPassedCount) window.loadTrainingPassedCount();
+      break;
     case 'documentation':
       initDocumentationHub();
       break;
@@ -2160,6 +2163,38 @@ function initSupaBenchPage() {
     }
   };
 
+  const updateRunInfoCard = (detail) => {
+    const card = $("supa-run-info-card");
+    const idEl = $("supa-run-info-id");
+    const samplesEl = $("supa-run-info-samples");
+    const seedEl = $("supa-run-info-seed");
+    const noiseEl = $("supa-run-info-noise");
+    
+    if (!detail || !card) {
+      if (card) card.style.display = "none";
+      return;
+    }
+    
+    card.style.display = "block";
+    
+    if (idEl) {
+      idEl.textContent = `#${detail.id}`;
+    }
+    
+    if (samplesEl) {
+      const n = detail.n_realized ?? detail.specimen_count ?? 0;
+      samplesEl.textContent = `${n.toLocaleString()} địa chỉ`;
+    }
+    
+    if (seedEl) {
+      seedEl.textContent = detail.seed != null ? String(detail.seed) : "Auto";
+    }
+    
+    if (noiseEl) {
+      noiseEl.textContent = detail.noise_profile_id || "—";
+    }
+  };
+
   const refreshStepper = () => {
     const s1 = !!selectedRunId;
     const s2 = specimenTotal > 0;
@@ -2229,6 +2264,7 @@ function initSupaBenchPage() {
       runDetail = null;
       if (runMeta) runMeta.textContent = "Chọn một lần thử trong danh sách.";
       renderEvalMetrics(null);
+      updateRunInfoCard(null);
       refreshStepper();
       return;
     }
@@ -2252,6 +2288,7 @@ function initSupaBenchPage() {
         runMeta.textContent = `Lần thử #${runDetail.id}: ${n} địa chỉ đã rút, ${cnt} dòng trong bảng mẫu. Kiểu nhiễu: ${noise}.`;
       }
       renderEvalMetrics(runDetail && runDetail.eval_metrics_json);
+      updateRunInfoCard(runDetail);
       refreshStepper();
     } catch (e) {
       if (runMeta) runMeta.textContent = String(e.message || e);
@@ -2339,15 +2376,168 @@ function initSupaBenchPage() {
     adjustActivePageHeight?.();
   };
 
+  // Progress tracking for SUPA pipeline
+  const updateProgressStep = (step, status) => {
+    const stepEl = document.querySelector(`.supa-progress-step[data-step="${step}"]`);
+    if (!stepEl) return;
+    
+    stepEl.classList.remove('active', 'completed');
+    
+    if (status === 'active') {
+      stepEl.classList.add('active');
+      stepEl.querySelector('.supa-progress-icon').textContent = '⏳';
+    } else if (status === 'completed') {
+      stepEl.classList.add('completed');
+      stepEl.querySelector('.supa-progress-icon').textContent = '✅';
+    } else {
+      stepEl.querySelector('.supa-progress-icon').textContent = '⏺️';
+    }
+  };
+
+  const simulateProgress = async (steps, totalDuration) => {
+    const stepDuration = totalDuration / steps.length;
+    
+    for (let i = 0; i < steps.length; i++) {
+      updateProgressStep(steps[i], 'active');
+      
+      // Wait for step duration
+      await new Promise(resolve => setTimeout(resolve, stepDuration));
+      
+      updateProgressStep(steps[i], 'completed');
+    }
+  };
+
+  const connectWorkflowSSE = (body, onProgress, onComplete, onError) => {
+    // Use POST with SSE
+    fetch(`${API_BASE}/experiments/supa-actions/workflow-stream`, {
+      method: "POST",
+      headers: {
+        ...getAuthHeader(),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    }).then(response => {
+      if (!response.ok) {
+        throw new Error(`SSE connection failed: ${response.status}`);
+      }
+      
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      
+      const readStream = () => {
+        reader.read().then(({ done, value }) => {
+          if (done) {
+            return;
+          }
+          
+          // Decode chunk and add to buffer
+          buffer += decoder.decode(value, { stream: true });
+          
+          // Process complete lines
+          const lines = buffer.split('\n');
+          buffer = lines.pop(); // Keep incomplete line in buffer
+          
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              try {
+                const data = JSON.parse(line.substring(6));
+                
+                if (data.step === 'done') {
+                  if (data.status === 'success') {
+                    onComplete(data.result);
+                  } else {
+                    onError(data);
+                  }
+                } else if (data.status === 'error') {
+                  onError(data);
+                } else {
+                  onProgress(data);
+                }
+              } catch (e) {
+                console.error('Failed to parse SSE data:', line, e);
+              }
+            }
+          }
+          
+          readStream();
+        }).catch(onError);
+      };
+      
+      readStream();
+    }).catch(onError);
+  };
+
   const postAction = async (path, body, toastOk) => {
-    const overlay = $("supa-loading-overlay");
-    if (overlay) overlay.classList.add("active");
+    const overlay = $("supa-progress-overlay");
+    const isWorkflow = path === "workflow" && body.run_normalization;
+    
+    if (overlay) {
+      overlay.classList.add("active");
+      
+      // Reset all steps
+      if (isWorkflow) {
+        ['extract', 'ner', 'retrieval', 'llm', 'eval'].forEach(step => {
+          updateProgressStep(step, 'pending');
+        });
+      }
+    }
+    
+    // Use SSE for workflow with real-time progress
+    if (isWorkflow) {
+      return new Promise((resolve, reject) => {
+        connectWorkflowSSE(
+          body,
+          // onProgress
+          (event) => {
+            updateProgressStep(event.step, event.status);
+          },
+          // onComplete
+          (result) => {
+            // Wait to show all completed
+            setTimeout(() => {
+              if (overlay) overlay.classList.remove("active");
+              
+              // Log results
+              log(path, result);
+              if (result.pipeline_stdout) {
+                log("Pipeline Output", result.pipeline_stdout);
+              }
+              if (result.pipeline_stderr) {
+                log("Pipeline Errors", result.pipeline_stderr);
+              }
+              if (result.eval_stdout) {
+                log("Eval Output", result.eval_stdout);
+              }
+              if (result.eval_stderr) {
+                log("Eval Errors", result.eval_stderr);
+              }
+              
+              if (showToast) {
+                showToast(toastOk || "Đã xong.", result.ok ? "success" : "warning");
+              }
+              resolve(result);
+            }, 1000);
+          },
+          // onError
+          (error) => {
+            if (overlay) overlay.classList.remove("active");
+            log(`Lỗi thao tác ${path}`, error);
+            if (showToast) showToast("Thao tác trên máy chủ bị từ chối hoặc lỗi. Xem phần chi tiết kỹ thuật bên dưới.", "danger");
+            reject(error);
+          }
+        );
+      });
+    }
+    
+    // Non-workflow: use regular POST
     try {
       const r = await fetchWithApiFallback(`/experiments/supa-actions/${path}`, {
         method: "POST",
         headers: { ...getAuthHeader(), "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
+      
       const j = await r.json().catch(() => ({}));
       if (!r.ok) {
         log(`Lỗi thao tác ${path}`, j.detail != null ? j.detail : j);
@@ -2358,26 +2548,15 @@ function initSupaBenchPage() {
       // Log main response
       log(path, j);
       
-      // Log pipeline output separately for better visibility
-      if (j.pipeline_stdout) {
-        log("Pipeline Output", j.pipeline_stdout);
-      }
-      if (j.pipeline_stderr) {
-        log("Pipeline Errors", j.pipeline_stderr);
-      }
-      if (j.eval_stdout) {
-        log("Eval Output", j.eval_stdout);
-      }
-      if (j.eval_stderr) {
-        log("Eval Errors", j.eval_stderr);
-      }
-      
       if (showToast) {
         showToast(toastOk || "Đã xong.", j.ok ? "success" : "warning");
       }
       return j;
     } finally {
-      if (overlay) overlay.classList.remove("active");
+      // Close overlay for non-workflow
+      if (overlay && !isWorkflow) {
+        overlay.classList.remove("active");
+      }
     }
   };
 
@@ -2525,8 +2704,53 @@ function initSupaBenchPage() {
       const ridRaw = $("supa-wf-run-id")?.value;
       if (ridRaw) body.run_id = parseInt(ridRaw, 10);
 
-      const j = await postAction("workflow", body, "Đã chạy workflow SUPA.");
-      await handleRunResponse(j);
+      // Keep overlay visible during data loading for workflow
+      const isWorkflow = body.run_normalization;
+      const overlay = $("supa-progress-overlay");
+      
+      let j = null;
+      try {
+        j = await postAction("workflow", body, "Đã chạy workflow SUPA.");
+      } catch (error) {
+        console.error("Workflow error:", error);
+        if (overlay) overlay.classList.remove("active");
+        throw error;
+      }
+      
+      // If auto-pipeline was enabled, switch to results tab (4) instead of preview tab (2)
+      if (j && isWorkflow) {
+        try {
+          hasPredEver = true;
+          if (j.last_run_id_hint != null) {
+            selectedRunId = j.last_run_id_hint;
+          } else {
+            await loadRuns();
+            if (runs.length) selectedRunId = runs[0].id;
+          }
+          await loadRuns();
+          if (runSelect) runSelect.value = String(selectedRunId);
+          specimenOffset = 0;
+          await loadRunDetail();
+          await loadSpecimens();
+          // Auto-switch to results tab when pipeline was run
+          switchTab(4);
+        } catch (error) {
+          console.error("Data loading error:", error);
+        } finally {
+          // Always hide overlay after everything is loaded or error
+          if (overlay) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+            overlay.classList.remove("active");
+          }
+        }
+      } else {
+        // Not workflow or no result - close overlay and handle normally
+        if (overlay && isWorkflow) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+          overlay.classList.remove("active");
+        }
+        await handleRunResponse(j);
+      }
     });
 
     $("supa-btn-extract-only")?.addEventListener("click", async () => {
@@ -2669,11 +2893,17 @@ function initSupaBenchPage() {
         if (showToast) showToast("Chọn một lần thử trước khi dùng demo.", "danger");
         return;
       }
-      const confirmed = confirm(
-        "🎭 Chế độ Demo sẽ copy dữ liệu từ ref_address_v2 làm kết quả chuẩn hóa.\n\n" +
-        "Điều này sẽ cho Exact Match (V2) = 100% - chỉ dùng để test flow, không phải kết quả thật.\n\n" +
-        "Bạn có muốn tiếp tục?"
-      );
+      const confirmed = showConfirm 
+        ? await showConfirm(
+            "🎭 Chế độ Demo sẽ copy dữ liệu từ ref_address_v2 làm kết quả chuẩn hóa.\n\n" +
+            "Điều này sẽ cho Exact Match (V2) = 100% - chỉ dùng để test flow, không phải kết quả thật.\n\n" +
+            "Bạn có muốn tiếp tục?"
+          )
+        : confirm(
+            "🎭 Chế độ Demo sẽ copy dữ liệu từ ref_address_v2 làm kết quả chuẩn hóa.\n\n" +
+            "Điều này sẽ cho Exact Match (V2) = 100% - chỉ dùng để test flow, không phải kết quả thật.\n\n" +
+            "Bạn có muốn tiếp tục?"
+          );
       if (!confirmed) return;
 
       const body = {
@@ -3543,13 +3773,6 @@ function buildLabelRegistryAiCoachPrompt() {
     "Nếu có chỗ không chắc, sau bảng/hoặc khối 3-dòng gợi ý bằng tiêu đề văn bản:",
     "**Những chỗ chưa chắc**",
     "- (bullet có thể copy)",
-    "",
-    "## Luồng cuộc hội thoại đề xuất",
-    "Luồng 1 — Tin đầu: người dùng dán nguyên văn toàn bộ prompt này (hoặc hệ đã được cấu hình với các quy tắc tương đương); sau đó chờ họ gửi địa chỉ cụ thể.",
-    'Luồng 2 — Tin kế tiếp: một hoặc nhiều dòng địa chỉ thô (raw_address).',
-    "",
-    "> Lưu ý: các mô hình (Gemini, ChatGPT, Copilot) không truy cập trực tiếp cơ sở dữ liệu của dự án; nếu trong chuỗi không đủ tên đơn vị hành chính đừng bịa — hãy ghi vào mục «Những chỗ chưa chắc» bằng văn bản tiếng Việt đơn giản.",
-
     "",
   ].join("\n");
 }
@@ -5043,9 +5266,18 @@ async function fetchStats(options = {}) {
 function initTrainingHub() {
   const btnImport = document.getElementById('btn-import-ls');
   const btnRefresh = document.getElementById('btn-training-refresh');
+  const btnTrainFromPrelabeler = document.getElementById('btn-train-from-prelabeler');
 
   if (btnRefresh) {
     btnRefresh.addEventListener('click', () => loadTrainingHistoryFromDB());
+  }
+
+  if (btnTrainFromPrelabeler) {
+    btnTrainFromPrelabeler.addEventListener('click', () => {
+      if (window.openTrainingModal) {
+        window.openTrainingModal();
+      }
+    });
   }
 
   if (!btnImport) return;
@@ -8602,6 +8834,9 @@ async function initEvidenceView() {
   window.pltGetRandomAndPredict = pltGetRandomAndPredict;
   window.pltDismissRandomPredictLoadingOverlay = () => pltSetRandomPredictLoadingOverlay(false);
   window.pltInitPage = () => pltInit();
+  window.pltOpenTrainingModal = pltOpenTrainingModal;
+  window.pltCloseTrainingModal = pltCloseTrainingModal;
+  window.pltStartTraining = pltStartTraining;
 
   pltBindDelegatedEvents();
 
@@ -8610,4 +8845,271 @@ async function initEvidenceView() {
   // `pages/prelabeler-cases.html` được inject, khiến renderList() thoát sớm (#plt-list
   // chưa có) và UI kẹt / trống. Luồng đúng: `initializePageSpecific('prelabeler-cases')`
   // sau khi loadPages + navigate (kể cả hash #/prelabeler-cases).
+
+  // ============================================================================
+  // Training Modal Functions (for prelabeler-cases page - deprecated)
+  // ============================================================================
+
+  async function pltOpenTrainingModal() {
+    const modal = document.getElementById('plt-training-modal');
+    if (!modal) return;
+
+    // Reset modal state
+    document.getElementById('plt-training-config').hidden = false;
+    document.getElementById('plt-training-progress').hidden = true;
+    document.getElementById('plt-training-result').hidden = true;
+    document.getElementById('plt-training-error').hidden = true;
+    document.getElementById('plt-training-btn-start').hidden = false;
+    document.getElementById('plt-training-btn-cancel').hidden = false;
+    document.getElementById('plt-training-btn-done').hidden = true;
+
+    // Fetch passed cases count
+    try {
+      const response = await apiFetch('/api/prelabeler-cases');
+      const cases = await response.json();
+      const passedCount = cases.filter(c => c.test_result?.passed === true).length;
+      document.getElementById('plt-training-passed-count').textContent = passedCount;
+    } catch (err) {
+      console.error('Failed to fetch passed cases count:', err);
+      document.getElementById('plt-training-passed-count').textContent = '?';
+    }
+
+    modal.hidden = false;
+  }
+
+  function pltCloseTrainingModal() {
+    const modal = document.getElementById('plt-training-modal');
+    if (modal) modal.hidden = true;
+  }
+
+  async function pltStartTraining() {
+    const epochs = parseInt(document.getElementById('plt-training-epochs').value) || 10;
+    const batchSize = parseInt(document.getElementById('plt-training-batch-size').value) || 16;
+    const lr = parseFloat(document.getElementById('plt-training-lr').value) || 0.00002;
+    const mergeLs = document.getElementById('plt-training-merge-ls').checked;
+
+    // Hide config, show progress
+    document.getElementById('plt-training-config').hidden = true;
+    document.getElementById('plt-training-progress').hidden = false;
+    document.getElementById('plt-training-error').hidden = true;
+    document.getElementById('plt-training-btn-start').hidden = true;
+    document.getElementById('plt-training-btn-cancel').disabled = true;
+
+    // Update status
+    document.getElementById('plt-training-status-title').textContent = 'Đang khởi động huấn luyện...';
+    document.getElementById('plt-training-status-message').textContent = 'Vui lòng đợi...';
+
+    try {
+      const params = new URLSearchParams({
+        min_samples: '50',
+        epochs: epochs.toString(),
+        batch_size: batchSize.toString(),
+        learning_rate: lr.toString(),
+        merge_labelstudio: mergeLs.toString()
+      });
+
+      const response = await apiFetch(`/api/training/trigger-ner-from-prelabeler?${params}`, {
+        method: 'POST'
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }));
+        throw new Error(errorData.detail || `HTTP ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      // Generate version name with timestamp
+      const now = new Date();
+      const timestamp = now.toISOString().replace(/[-:]/g, '').split('.')[0].replace('T', '-');
+      const versionName = `phobert-ner-vn-${timestamp}`;
+
+      // Show success
+      document.getElementById('plt-training-progress').hidden = true;
+      document.getElementById('plt-training-result').hidden = false;
+      document.getElementById('plt-training-btn-cancel').hidden = true;
+      document.getElementById('plt-training-btn-done').hidden = true;
+
+      document.getElementById('plt-training-job-id').textContent = result.job_id || '—';
+      document.getElementById('plt-training-output-dir').textContent = versionName;
+      document.getElementById('plt-training-sample-count').textContent = result.message || '—';
+
+      const resultMsg = `
+        <strong>Version:</strong> ${versionName}<br>
+        <strong>Job ID:</strong> ${result.job_id}<br>
+        <strong>Trạng thái:</strong> ${result.status}<br><br>
+        Quá trình huấn luyện đang chạy nền. Bạn có thể tiếp tục làm việc.<br>
+        Kiểm tra kết quả tại trang <strong>Training History</strong> sau ~5-15 phút.
+      `;
+      document.getElementById('plt-training-result-message').innerHTML = resultMsg;
+
+      // Show notification
+      showNotification('Huấn luyện đã được kích hoạt thành công!', 'success');
+
+    } catch (err) {
+      console.error('Training trigger failed:', err);
+
+      // Show error
+      document.getElementById('plt-training-progress').hidden = true;
+      document.getElementById('plt-training-error').hidden = false;
+      document.getElementById('plt-training-btn-start').hidden = true;
+      document.getElementById('plt-training-btn-cancel').hidden = false;
+      document.getElementById('plt-training-btn-cancel').disabled = false;
+
+      document.getElementById('plt-training-error-message').textContent = err.message || 'Lỗi không xác định';
+
+      showNotification('Lỗi khi khởi động huấn luyện: ' + err.message, 'error');
+    }
+  }
+
+  // ============================================================================
+  // Training Page Functions (new location)
+  // ============================================================================
+
+  async function openTrainingModal() {
+    const modal = document.getElementById('training-modal');
+    if (!modal) return;
+
+    // Reset modal state
+    document.getElementById('training-config').hidden = false;
+    document.getElementById('training-progress').hidden = true;
+    document.getElementById('training-result').hidden = true;
+    document.getElementById('training-error').hidden = true;
+    document.getElementById('training-btn-start').hidden = false;
+    document.getElementById('training-btn-cancel').hidden = false;
+    document.getElementById('training-btn-done').hidden = true;
+
+    // Fetch passed cases count
+    try {
+      const response = await apiFetch('/api/prelabeler-cases');
+      const cases = await response.json();
+      const passedCount = cases.filter(c => c.test_result?.passed === true).length;
+      document.getElementById('training-passed-count').textContent = passedCount;
+      
+      // Also update the display count on the main card
+      const displayCount = document.getElementById('training-passed-count-display');
+      if (displayCount) {
+        displayCount.textContent = passedCount;
+      }
+    } catch (err) {
+      console.error('Failed to fetch passed cases count:', err);
+      document.getElementById('training-passed-count').textContent = '?';
+      const displayCount = document.getElementById('training-passed-count-display');
+      if (displayCount) {
+        displayCount.textContent = '?';
+      }
+    }
+
+    modal.hidden = false;
+  }
+
+  function closeTrainingModal() {
+    const modal = document.getElementById('training-modal');
+    if (modal) modal.hidden = true;
+  }
+
+  async function startTraining() {
+    const epochs = parseInt(document.getElementById('training-epochs').value) || 10;
+    const batchSize = parseInt(document.getElementById('training-batch-size').value) || 16;
+    const lr = parseFloat(document.getElementById('training-lr').value) || 0.00002;
+    const mergeLs = document.getElementById('training-merge-ls').checked;
+
+    // Hide config, show progress
+    document.getElementById('training-config').hidden = true;
+    document.getElementById('training-progress').hidden = false;
+    document.getElementById('training-error').hidden = true;
+    document.getElementById('training-btn-start').hidden = true;
+    document.getElementById('training-btn-cancel').disabled = true;
+
+    // Update status
+    document.getElementById('training-status-title').textContent = 'Đang khởi động huấn luyện...';
+    document.getElementById('training-status-message').textContent = 'Vui lòng đợi...';
+
+    try {
+      const params = new URLSearchParams({
+        min_samples: '50',
+        epochs: epochs.toString(),
+        batch_size: batchSize.toString(),
+        learning_rate: lr.toString(),
+        merge_labelstudio: mergeLs.toString()
+      });
+
+      const response = await apiFetch(`/api/training/trigger-ner-from-prelabeler?${params}`, {
+        method: 'POST'
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }));
+        throw new Error(errorData.detail || `HTTP ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      // Generate version name with timestamp
+      const now = new Date();
+      const timestamp = now.toISOString().replace(/[-:]/g, '').split('.')[0].replace('T', '-');
+      const versionName = `phobert-ner-vn-${timestamp}`;
+
+      // Show success
+      document.getElementById('training-progress').hidden = true;
+      document.getElementById('training-result').hidden = false;
+      document.getElementById('training-btn-cancel').hidden = true;
+      document.getElementById('training-btn-done').hidden = false;
+
+      document.getElementById('training-job-id').textContent = result.job_id || '—';
+      document.getElementById('training-output-dir').textContent = versionName;
+      document.getElementById('training-sample-count').textContent = result.message || '—';
+
+      const resultMsg = `
+        <strong>Version:</strong> ${versionName}<br>
+        <strong>Job ID:</strong> ${result.job_id}<br>
+        <strong>Trạng thái:</strong> ${result.status}<br><br>
+        Quá trình huấn luyện đang chạy nền. Bạn có thể tiếp tục làm việc.<br>
+        Kiểm tra kết quả tại bảng <strong>Lịch sử Tái huấn luyện</strong> bên dưới sau ~5-15 phút.
+      `;
+      document.getElementById('training-result-message').innerHTML = resultMsg;
+
+      // Show notification
+      showNotification('Huấn luyện đã được kích hoạt thành công!', 'success');
+
+    } catch (err) {
+      console.error('Training trigger failed:', err);
+
+      // Show error
+      document.getElementById('training-progress').hidden = true;
+      document.getElementById('training-error').hidden = false;
+      document.getElementById('training-btn-start').hidden = true;
+      document.getElementById('training-btn-cancel').hidden = false;
+      document.getElementById('training-btn-cancel').disabled = false;
+
+      document.getElementById('training-error-message').textContent = err.message || 'Lỗi không xác định';
+
+      showNotification('Lỗi khi khởi động huấn luyện: ' + err.message, 'error');
+    }
+  }
+
+  async function loadTrainingPassedCount() {
+    try {
+      const response = await apiFetch('/api/prelabeler-cases');
+      const cases = await response.json();
+      const passedCount = cases.filter(c => c.test_result?.passed === true).length;
+      
+      const displayCount = document.getElementById('training-passed-count-display');
+      if (displayCount) {
+        displayCount.textContent = passedCount;
+      }
+    } catch (err) {
+      console.error('Failed to fetch passed cases count:', err);
+      const displayCount = document.getElementById('training-passed-count-display');
+      if (displayCount) {
+        displayCount.textContent = '?';
+      }
+    }
+  }
+
+  // Export functions to window
+  window.openTrainingModal = openTrainingModal;
+  window.closeTrainingModal = closeTrainingModal;
+  window.startTraining = startTraining;
+  window.loadTrainingPassedCount = loadTrainingPassedCount;
 })();

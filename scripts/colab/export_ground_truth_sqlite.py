@@ -20,6 +20,13 @@ from sqlalchemy import text
 def export_ground_truth_sqlite(limit: int, output_path: str):
     """Export ground_truth từ PostgreSQL sang SQLite."""
     
+    # Xóa file cũ nếu tồn tại
+    from pathlib import Path
+    output_file = Path(output_path)
+    if output_file.exists():
+        output_file.unlink()
+        print(f"Removed existing file: {output_path}")
+    
     print(f"Connecting to PostgreSQL...")
     with engine.connect() as pg_conn:
         # Query ground_truth
@@ -27,7 +34,7 @@ def export_ground_truth_sqlite(limit: int, output_path: str):
             SELECT 
                 id, old_address, address, 
                 province_id, district_id, ward_id,
-                lat, lon, popular, created_at
+                latitude, longitude, popular, created_at
             FROM prq.ground_truth
             ORDER BY id
             LIMIT :limit
@@ -37,7 +44,7 @@ def export_ground_truth_sqlite(limit: int, output_path: str):
         rows = result.fetchall()
         columns = result.keys()
         
-        print(f"✓ Fetched {len(rows)} rows from PostgreSQL")
+        print(f"[OK] Fetched {len(rows)} rows from PostgreSQL")
     
     # Write to SQLite
     print(f"Writing to {output_path}...")
@@ -58,7 +65,7 @@ def export_ground_truth_sqlite(limit: int, output_path: str):
     sqlite_conn.commit()
     sqlite_conn.close()
     
-    print(f"✓ Exported {len(rows)} rows to {output_path}")
+    print(f"[OK] Exported {len(rows)} rows to {output_path}")
     
     # Verify
     verify_conn = sqlite3.connect(output_path)
@@ -67,17 +74,17 @@ def export_ground_truth_sqlite(limit: int, output_path: str):
     count = verify_cur.fetchone()[0]
     verify_conn.close()
     
-    print(f"✓ Verified: {count} rows in SQLite")
+    print(f"[OK] Verified: {count} rows in SQLite")
     
     # File size
     size_mb = Path(output_path).stat().st_size / (1024 * 1024)
-    print(f"✓ File size: {size_mb:.2f} MB")
+    print(f"[OK] File size: {size_mb:.2f} MB")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Export ground_truth to SQLite")
     parser.add_argument("--limit", type=int, default=15000, help="Number of rows to export")
-    parser.add_argument("--output", type=str, default="ground_truth.db", help="Output SQLite file")
+    parser.add_argument("--output", type=str, default="colab_vnai/ground_truth.db", help="Output SQLite file")
     
     args = parser.parse_args()
     
