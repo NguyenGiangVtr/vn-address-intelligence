@@ -661,9 +661,21 @@ app.add_middleware(
 )
 
 # ── Visitor Tracking & Kibana Logging Middleware ──
+def categorize_endpoint(path: str) -> str:
+    """Categorize endpoint for monitoring"""
+    if path.startswith("/api"):
+        return "API"
+    elif path.startswith("/ui") or path.startswith("/pages"):
+        return "UI"
+    elif path.startswith("/docs"):
+        return "Docs"
+    else:
+        return "Other"
+
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
     start_time = time.time()
+    request_id = request.headers.get("X-Request-ID", str(uuid4()))
     
     # Extract client IP
     forwarded = request.headers.get("X-Forwarded-For")
@@ -678,17 +690,60 @@ async def log_requests(request: Request, call_next):
     # 2. APM Server Logging
     if Config.KIBANA_LOG_ENABLED:
         duration_ms = round((time.time() - start_time) * 1000, 2)
+        
+        # Base log data
         log_data = {
+            "request_id": request_id,
             "method": request.method,
             "path": request.url.path,
+            "query_params": dict(request.query_params) if request.query_params else {},
             "status_code": response.status_code,
             "duration_ms": duration_ms,
             "client_ip": ip,
             "user_agent": request.headers.get("User-Agent", "unknown"),
+            "referer": request.headers.get("Referer"),
+            "content_type": request.headers.get("Content-Type"),
+            
+            # Performance monitoring
+            "is_slow": duration_ms > 1000,
+            "endpoint_category": categorize_endpoint(request.url.path),
+            
+            # Security flags
+            "is_error": response.status_code >= 400,
+            "is_auth_endpoint": "/login" in request.url.path or "/token" in request.url.path,
         }
-        # Log detail for APM indexing
-        logger.info(
-            f"HTTP {request.method} {request.url.path} - {response.status_code} ({duration_ms}ms)",
+        
+        # Security detection
+        query_str = str(request.query_params).lower()
+        path_lower = request.url.path.lower()
+        
+        log_data["suspicious_sql"] = any(
+            p in path_lower or p in query_str
+            for p in ["union", "select", "drop", "insert", "--", "/*"]
+        )
+        log_data["suspicious_xss"] = any(
+            p in query_str
+            for p in ["<script", "javascript:", "onerror=", "onload="]
+        )
+        log_data["suspicious_path"] = any(
+            p in request.url.path
+            for p in ["../", "..\\", "%2e%2e"]
+        )
+        
+        # Log level based on status
+        if response.status_code >= 500:
+            log_level = logging.ERROR
+        elif response.status_code >= 400:
+            log_level = logging.WARNING
+        elif duration_ms > 1000:
+            log_level = logging.WARNING
+        else:
+            log_level = logging.INFO
+        
+        # Log message
+        logger.log(
+            log_level,
+            f"[{request_id[:8]}] {request.method} {request.url.path} - {response.status_code} ({duration_ms}ms)",
             extra=log_data
         )
         
