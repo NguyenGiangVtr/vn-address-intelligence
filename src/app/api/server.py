@@ -661,9 +661,21 @@ app.add_middleware(
 )
 
 # ── Visitor Tracking & Kibana Logging Middleware ──
+def categorize_endpoint(path: str) -> str:
+    """Categorize endpoint for monitoring"""
+    if path.startswith("/api"):
+        return "API"
+    elif path.startswith("/ui") or path.startswith("/pages"):
+        return "UI"
+    elif path.startswith("/docs"):
+        return "Docs"
+    else:
+        return "Other"
+
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
     start_time = time.time()
+    request_id = request.headers.get("X-Request-ID", str(uuid4()))
     
     # Extract client IP
     forwarded = request.headers.get("X-Forwarded-For")
@@ -675,20 +687,63 @@ async def log_requests(request: Request, call_next):
         
     response = await call_next(request)
     
-    # 2. Kibana/Logstash Logging
+    # 2. APM Server Logging
     if Config.KIBANA_LOG_ENABLED:
         duration_ms = round((time.time() - start_time) * 1000, 2)
+        
+        # Base log data
         log_data = {
+            "request_id": request_id,
             "method": request.method,
             "path": request.url.path,
+            "query_params": dict(request.query_params) if request.query_params else {},
             "status_code": response.status_code,
             "duration_ms": duration_ms,
             "client_ip": ip,
             "user_agent": request.headers.get("User-Agent", "unknown"),
+            "referer": request.headers.get("Referer"),
+            "content_type": request.headers.get("Content-Type"),
+            
+            # Performance monitoring
+            "is_slow": duration_ms > 1000,
+            "endpoint_category": categorize_endpoint(request.url.path),
+            
+            # Security flags
+            "is_error": response.status_code >= 400,
+            "is_auth_endpoint": "/login" in request.url.path or "/token" in request.url.path,
         }
-        # Log detail for Kibana indexing
-        logger.info(
-            f"HTTP {request.method} {request.url.path} - {response.status_code} ({duration_ms}ms)",
+        
+        # Security detection
+        query_str = str(request.query_params).lower()
+        path_lower = request.url.path.lower()
+        
+        log_data["suspicious_sql"] = any(
+            p in path_lower or p in query_str
+            for p in ["union", "select", "drop", "insert", "--", "/*"]
+        )
+        log_data["suspicious_xss"] = any(
+            p in query_str
+            for p in ["<script", "javascript:", "onerror=", "onload="]
+        )
+        log_data["suspicious_path"] = any(
+            p in request.url.path
+            for p in ["../", "..\\", "%2e%2e"]
+        )
+        
+        # Log level based on status
+        if response.status_code >= 500:
+            log_level = logging.ERROR
+        elif response.status_code >= 400:
+            log_level = logging.WARNING
+        elif duration_ms > 1000:
+            log_level = logging.WARNING
+        else:
+            log_level = logging.INFO
+        
+        # Log message
+        logger.log(
+            log_level,
+            f"[{request_id[:8]}] {request.method} {request.url.path} - {response.status_code} ({duration_ms}ms)",
             extra=log_data
         )
         
@@ -1838,6 +1893,101 @@ def create_training_history(data: dict = None, current_user: str = Depends(get_c
         }
     finally:
         db.close()
+
+
+@api_router.post("/training/trigger-ner-from-prelabeler", tags=["AI Training"])
+def trigger_ner_training_from_prelabeler(
+    min_samples: int = Query(50, description="Minimum passed cases required"),
+    epochs: int = Query(10, description="Training epochs"),
+    batch_size: int = Query(16, description="Batch size"),
+    learning_rate: float = Query(2e-5, description="Learning rate"),
+    merge_labelstudio: bool = Query(False, description="Merge with existing Label Studio data"),
+    current_user=Depends(get_current_user)
+):
+    """
+    Trigger background training job using passed prelabeler cases.
+    
+    Returns:
+        {"status": "accepted", "job_id": "...", "message": "..."}
+    """
+    # Check số mẫu đạt chuẩn
+    with engine.connect() as conn:
+        count_result = conn.execute(text("""
+            SELECT COUNT(*) as cnt
+            FROM ai.prelabeler_testcases
+            WHERE expected IS NOT NULL
+              AND jsonb_array_length(expected) > 0
+              AND (test_result->>'passed')::boolean = true
+        """)).mappings().first()
+        
+        passed_count = count_result["cnt"] if count_result else 0
+    
+    if passed_count < min_samples:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Insufficient passed cases: {passed_count} < {min_samples}"
+        )
+    
+    # Generate job_id
+    import uuid
+    job_id = str(uuid.uuid4())
+    
+    # Spawn background thread
+    def _train_background():
+        import subprocess
+        import sys
+        from pathlib import Path
+        
+        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        output_dir = f"models/phobert-ner-vn-{timestamp}"
+        
+        # Get project root
+        project_root = Path(__file__).parent.parent.parent
+        
+        cmd = [
+            sys.executable,
+            "-m", "app.ai.train_ner",
+            "--from-prelabeler",
+            "--min-prelabeler-samples", str(min_samples),
+            "--output", output_dir,
+            "--epochs", str(epochs),
+            "--batch-size", str(batch_size),
+            "--lr", str(learning_rate),
+        ]
+        
+        if merge_labelstudio:
+            # Assume latest Label Studio export
+            ls_export = project_root / "data" / "labeled_export.json"
+            if ls_export.exists():
+                cmd.extend(["--merge-labelstudio", str(ls_export)])
+        
+        try:
+            result = subprocess.run(
+                cmd, 
+                check=True, 
+                cwd=project_root,
+                capture_output=True,
+                text=True
+            )
+            logger.info(f"Training job {job_id} completed successfully")
+            logger.info(f"Training output: {result.stdout[-500:]}")  # Last 500 chars
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Training job {job_id} failed: {e}")
+            logger.error(f"Training stderr: {e.stderr[-500:]}")
+        except Exception as e:
+            logger.error(f"Training job {job_id} failed with exception: {e}")
+    
+    import threading
+    thread = threading.Thread(target=_train_background, daemon=True)
+    thread.start()
+    
+    return {
+        "status": "accepted",
+        "job_id": job_id,
+        "message": f"Training started with {passed_count} passed cases",
+        "output_dir": f"models/phobert-ner-vn-{datetime.now().strftime('%Y%m%d-%H%M%S')}",
+        "note": "Training is running in background. Check /api/training/history for results."
+    }
 
 
 @api_router.get("/benchmark/job", tags=["Huấn luyện & Benchmark AI"], summary="Trạng thái tiến trình Benchmark")

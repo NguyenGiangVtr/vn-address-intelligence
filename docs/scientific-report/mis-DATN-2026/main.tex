@@ -1,0 +1,72 @@
+% Khai báo loại tài liệu: Cỡ chữ 12pt, khổ giấy A4, định dạng báo cáo (report)
+\documentclass[12pt,a4paper]{report}
+% Nhúng file style.tex (chứa các package và cấu hình layout đã làm ở các bước trước)
+\input{style}
+
+% Cấu hình thông số cho các liên kết PDF (Hyperref)
+\hypersetup{
+  hidelinks,       % Ẩn khung màu xung quanh các đường link
+  pdfauthor={},    % Tên tác giả (hiện trong thuộc tính file PDF)
+  pdftitle={},     % Tiêu đề tài liệu
+  pdfsubject={},   % Chủ đề
+  pdfkeywords={}   % Từ khóa
+}
+
+\begin{document} % BẮT ĐẦU NỘI DUNG TÀI LIỆU
+
+% =============================================================================
+% PHẦN ĐẦU BÁO CÁO (FRONT MATTER)
+% =============================================================================
+
+\input{front_matter/0-title_page-1}       % Trang bìa chính (ngoài cùng)
+\input{front_matter/0-title_page-2}       % Trang bìa phụ (bên trong)
+
+% Đánh số trang theo kiểu La Mã (i, ii, iii...) cho các trang thủ tục
+\pagenumbering{roman}
+
+\input{front_matter/1-acknowledgements}   % Lời cảm ơn
+\input{sections/notation}                 % Danh mục bảng ký hiệu
+\input{front_matter/2-abstract}           % Tóm tắt nội dung (tiếng Việt/Anh)
+\input{front_matter/3-table-of-content}   % Mục lục,=
+\input{front_matter/4-acronyms}           % Danh mục các từ viết tắt
+
+% =============================================================================
+% PHẦN NỘI DUNG CHÍNH (MAIN MATTER)
+% =============================================================================
+
+\newpage                                  % Ngắt trang
+% Đánh số trang theo kiểu số hiện đại (1, 2, 3...) từ chương 1 trở đi
+\pagenumbering{arabic}
+% \input{chapters/0-introduction}       % PHẦN TỔNG QUAN
+% Nhúng nội dung các chương
+\input{chapters/ch-01-introduction}       % Chương 1: Mở đầu
+\input{chapters/ch-02-literature-review}  % Chương 2: TỔNG QUAN NGHIÊN CỨU
+\input{chapters/ch-03-theory}               % Chương 3: Phân tích và thiết kế hệ thống
+
+\clearpage
+
+% Macro số đo do script benchmark sinh (NER F1, audit bridge, SUPA EM v1/v2)
+% Phải nạp TRƯỚC các chương dùng \VNAIGEN... và \VNASUPA... để không lỗi.
+\input{metrics/vnai-generated-metrics}
+\input{metrics/vnai-supa-generated-metrics}
+\clearpage
+\input{chapters/vnai-chapter-04-design}      % Chương 4: Phân tích yêu cầu và thiết kế khung giải pháp
+\input{chapters/vnai-chapter-05-experiments} % Chương 5: Thực nghiệm và đánh giá
+\input{chapters/vnai-chapter-06-conclusion}  % Chương 6: Kết luận và hướng phát triển
+
+% =============================================================================
+% PHẦN KẾT THÚC (BACK MATTER)
+% =============================================================================
+
+\clearpage                                % Đảm bảo các đối tượng trôi nổi được in hết
+\raggedright                              % Căn lề trái cho danh mục tài liệu tham khảo
+\addcontentsline{toc}{chapter}{TÀI LIỆU THAM KHẢO} % Thêm dòng "Tài liệu tham khảo" vào mục lục
+
+% Cấu hình kiểu trích dẫn theo chuẩn IEEE
+\bibliographystyle{IEEEtran}
+% Nhúng file references.bib chứa danh sách tài liệu
+\bibliography{references}
+
+\input{end_matter/2-appendices}           % Phần phụ lục (nếu có)
+
+\end{document} % KẾT THÚC TÀI LIỆU

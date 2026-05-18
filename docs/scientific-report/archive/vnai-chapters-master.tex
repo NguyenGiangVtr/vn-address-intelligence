@@ -1,0 +1,61 @@
+% !TeX program = xelatex
+%% Master file: vn-address-intelligence (VNAI) — scientific chapters 4--6.
+%% Compile: xelatex vnai-chapters-master.tex (run twice if needed).
+
+\documentclass[12pt,a4paper]{report}
+
+\usepackage{fontspec}
+\usepackage{polyglossia}
+\setmainlanguage{vietnamese}
+\setotherlanguage{english}
+
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{microtype}
+
+\hypersetup{colorlinks=true,linkcolor=blue!60!black,urlcolor=blue!60!black,citecolor=blue!60!black}
+
+\title{Khung định hướng AI cho xử lý địa chỉ Việt Nam (VNAI)\\\large Phần trình bày khoa học — Chương 4, 5, 6}
+\author{Động tác báo cáo nội bộ / luận văn (bổ sung tên \& cơ quan chủ quản)}
+\date{Cập nhật: 2026-05-10 --- mọi số liệu thực chứng kèm nguồn lệnh / thời điểm đo}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Văn bản này trình bày các chương thiết kế, thực nghiệm và kết luận cho khung \textbf{VNAI} (VietNam Address Intelligence). \textbf{Nguyên tắc báo cáo:} các đại lượng định lượng trích từ cơ sở dữ liệu vận hành hoặc từ log huấn luyện được ghi rõ \emph{nguồn đo} (script, tham số, thời điểm); các chỉ tiêu mô hình (P---F1, P---Acc, v.v.) \textbf{chỉ điền sau khi} có lần chạy \texttt{train\_ner.py} / đánh giá retriever / benchmark pipeline tương ứng --- \textbf{không} sử dụng số giả định. Phần audit bridge trong Chương~\ref{ch:experiments} phản ánh một lần đo có thể \emph{lặp lại} bằng cùng script trên snapshot DB hiện tại; con số sẽ thay đổi nếu dữ liệu thay đổi.
+\end{abstract}
+
+\tableofcontents
+\clearpage
+
+% Chỉ số SUPA-Bench (điền bằng script; mặc định --- nếu chưa chạy pipeline đo)
+\input{vnai-supa-generated-metrics.tex}
+\clearpage
+
+\input{vnai-chapter-04-design.tex}
+\input{vnai-chapter-05-experiments.tex}
+\input{vnai-chapter-06-conclusion.tex}
+
+\bibliographystyle{plain}
+\begin{thebibliography}{9}
+\bibitem{devlin2019bert}
+J. Devlin, M.-W. Chang, K. Lee, K. Toutanova.
+\newblock BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding.
+\newblock \emph{NAACL-HLT}, 2019.
+
+\bibitem{peters2003seqeval}
+Bộ công cụ đánh giá chuỗi nhãn (ví dụ \texttt{seqeval}) được dùng phổ biến trong NER BIO/BILOU.
+
+\bibitem{reimers2019sentencebert}
+N. Reimers, I. Gurevych.
+\newblock Sentence-BERT: Sentence Embeddings using Siamese BERT-Networks.
+\newblock \emph{EMNLP}, 2019.
+
+\bibitem{rag2023}
+Đánh giá hệ sinh học \& RAG trong xử lý văn bản và truy xuất tri thức (điển hình các hệ có LLM và retriever hai tầng).
+\end{thebibliography}
+
+\end{document}

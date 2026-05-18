@@ -1,0 +1,116 @@
+% =============================================================================
+% CẤU HÌNH LAYOUT VÀ ĐỊNH DẠNG TRANG
+% =============================================================================
+
+% Thiết lập lề trang (Margin) và kích thước giấy
+\usepackage[
+  a4paper,
+  left=2cm, right=2cm,    % Lề trái, phải
+  top=3.2cm, bottom=3cm,  % Lề trên, dưới
+  headheight=1cm,         % Độ cao của phần Header
+  footskip=1cm            % Khoảng cách từ nội dung đến Footer
+]{geometry}
+
+% Hỗ trợ tiếng Việt (Sử dụng font mã hóa T5)
+\usepackage[utf8]{vietnam}
+% =============================================================================
+% TOÁN HỌC VÀ FONT CHỮ
+% =============================================================================
+\usepackage{amsmath, amsfonts, amssymb} % Các ký hiệu và môi trường toán học
+\usepackage{times}                      % Sử dụng font chữ Times New Roman
+\usepackage{enumitem}                  % Hỗ trợ tuỳ chỉnh danh sách (enumerate/itemize)
+% =============================================================================
+% HÌNH ẢNH, BẢNG BIỂU VÀ MÀU SẮC
+% =============================================================================
+\usepackage{graphicx}       % Chèn hình ảnh
+\usepackage{caption}        % Tùy biến chú thích hình/bảng
+\usepackage{subcaption}
+\usepackage{longtable}      % Bảng dài xuyên trang
+\usepackage{tabularx}       % Bảng có độ rộng cột tự động điều chỉnh
+\usepackage{array}          % Tùy biến định dạng cột trong bảng
+\usepackage{multicol}       % Chia cột văn bản
+\usepackage{multirow}       % Gộp dòng trong bảng
+\usepackage{colortbl}       % Tô màu cho các ô trong bảng
+\usepackage[table,xcdraw]{xcolor} % Quản lý màu sắc (hỗ trợ bảng)
+
+% =============================================================================
+% ĐỒ HỌA TIKZ (VẼ HÌNH TRỰC TIẾP TRONG LATEX)
+% =============================================================================
+\usepackage{tikz}
+\usetikzlibrary{shapes,positioning,calc,arrows.meta}
+
+% =============================================================================
+% ĐỊNH DẠNG NỘI DUNG VÀ TRÌNH BÀY NÂNG CAO
+% =============================================================================
+\usepackage{pdflscape}      % Xoay trang ngang (Landscape) trong file PDF
+\usepackage{rotating}       % Xoay các thành phần (hình ảnh, bảng)
+\usepackage{here}           % Ép hình ảnh nằm đúng vị trí đặt code ([H])
+\usepackage{ragged2e}       % Căn lề văn bản (trái, phải, giữa) chuẩn hơn
+\usepackage{booktabs}       % Tạo đường kẻ bảng chuyên nghiệp (toprule, midrule...)
+\usepackage{float}          % Quản lý các đối tượng trôi nổi (hình, bảng)
+\usepackage[protrusion=false]{microtype} % Tinh chỉnh khoảng cách chữ (giảm lỗi tràn lề)
+
+% =============================================================================
+% TRÌNH BÀY CODE VÀ KHUNG NỘI DUNG
+% =============================================================================
+\usepackage{listings}       % Chèn mã nguồn (Code)
+\usepackage[skins,breakable]{tcolorbox} % Tạo khung trang trí, hộp nội dung đẹp
+\usepackage{makecell}       % Cho phép xuống dòng bên trong một ô của bảng
+
+% =============================================================================
+% CẤU HÌNH HEADER VÀ FOOTER (ĐẦU TRANG & CHÂN TRANG)
+% =============================================================================
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+
+% \fancyhf{} % <--- QUAN TRỌNG: Lệnh này sẽ xóa sạch mọi thiết lập mặc định (Xóa cả đầu trang và chân trang)
+
+% Thiết lập lại theo ý mình:
+% \lhead{\includegraphics[height=0.6cm]{figs/LogoBK.png}} % Logo bên trái header
+\rhead{} % Để trống nếu không muốn hiện tên chương
+% \chead{} % Để trống giữa header
+% \lfoot{} % Để trống trái footer
+% \rfoot{\thepage} % Hiện số trang ở giữa footer
+% \rfoot{} % Để trống phải footer
+
+% Đường kẻ
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0.5pt}
+
+
+% --- Liên kết & tham chiếu ------------------------------------------
+\usepackage{hyperref}
+\hypersetup{
+  colorlinks=true,
+  linkcolor=black,
+  urlcolor=blue,
+  citecolor=black,
+  pdftitle={Chương 3 — Cơ sở lý thuyết},
+  pdfauthor={Nguyễn Vũ Trọng Giang}
+}
+\usepackage[noabbrev]{cleveref}
+\crefname{table}{Bảng}{Bảng}
+\Crefname{table}{Bảng}{Bảng}
+\crefname{figure}{Hình}{Hình}
+\Crefname{figure}{Hình}{Hình}
+\crefname{equation}{Công thức}{Công thức}
+\Crefname{equation}{Công thức}{Công thức}
+\crefname{section}{Mục}{Mục}
+\Crefname{section}{Mục}{Mục}
+
+% --- Lệnh tiện ích ---------------------------------------------------
+% \thuat{...}  : in nghiêng cho thuật ngữ học thuật, in lần đầu xuất hiện.
+% \macode{...} : font đẳng cự cho mã/tên cột/định danh kỹ thuật.
+% \schema{...} : font sans-serif cho tên schema/module trong CSDL (mat, osm, ath, prq).
+% \norm{...}   : chuẩn (norm) toán học; bị `physics` package override nhưng cùng ý nghĩa.
+\newcommand{\thuat}[1]{\textit{#1}}
+\newcommand{\macode}[1]{\texttt{#1}}
+\newcommand{\schema}[1]{\textsf{#1}}
+\newcommand{\norm}[1]{\left\lVert#1\right\rVert}
+
+
+\usepackage{physics}
+% =============================================================================
+% LIÊN KẾT VÀ CHỈ MỤC (LUÔN ĐỂ CUỐI CÙNG)
+% =============================================================================
+% \usepackage[hidelinks]{hyperref} % Tạo liên kết (link) trong file, hidelinks để ẩn viền màu xung quanh link

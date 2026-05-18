@@ -3,11 +3,50 @@
     <!-- BLOCK 1: Header -->
     <div class="page-header">
         <h2>Training Hub</h2>
-        <p>Tái huấn luyện mô hình PhoBERT NER với dữ liệu từ Label Studio</p>
+        <p>Huấn luyện mô hình PhoBERT NER từ PreLabeler Cases hoặc Label Studio</p>
+    </div>
+
+    <!-- BLOCK 1.5: Training from PreLabeler Cases -->
+    <div class="card mb-20">
+        <div class="card-header">
+            <span class="card-title"><i class="fa-solid fa-brain"></i> Huấn luyện từ PreLabeler Cases</span>
+        </div>
+        <div class="card-body">
+            <div class="training-prelabeler-section">
+                <div class="training-prelabeler-main">
+                    <p class="text-secondary" style="margin-bottom: 1.5rem;">
+                        Sử dụng các mẫu đã gán nhãn và đạt chuẩn từ Address Label Studio để huấn luyện mô hình.
+                    </p>
+                    <div class="training-stats-card">
+                        <div class="stat-item">
+                            <span class="stat-label">Số mẫu đạt chuẩn:</span>
+                            <span class="stat-value" id="training-passed-count-display">—</span>
+                        </div>
+                    </div>
+                    <button class="btn btn-success btn-lg" id="btn-train-from-prelabeler">
+                        <i class="fa-solid fa-rocket"></i> Bắt đầu huấn luyện
+                    </button>
+                </div>
+                <div class="training-prelabeler-info">
+                    <h4 class="info-title">
+                        <i class="fa-solid fa-info-circle"></i> Lưu ý
+                    </h4>
+                    <ul class="info-list">
+                        <li>Chỉ sử dụng mẫu có trạng thái "Đạt"</li>
+                        <li>Checkpoint tự động đặt tên theo timestamp</li>
+                        <li>Thời gian: ~5-15 phút (CPU) hoặc ~2-5 phút (GPU)</li>
+                        <li>Quá trình chạy nền, không block UI</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- BLOCK 2: Data Import Section -->
     <div class="card mb-20">
+        <div class="card-header">
+            <span class="card-title"><i class="fa-solid fa-upload"></i> Huấn luyện từ Label Studio</span>
+        </div>
         <div class="card-body">
             <div style="display: flex; flex-wrap: wrap; align-items: flex-end;">
                 <div class="form-group" style="flex: 1; min-width: 280px; margin-bottom: 0;">
@@ -57,12 +96,115 @@
                             <th>F1-Score</th>
                             <th>Số lượng mẫu</th>
                             <th>Ngày huấn luyện</th>
+                            <th>Ghi chú</th>
                         </tr>
                     </thead>
                     <tbody id="training-history-body">
                         <!-- Filled by JS -->
                     </tbody>
                 </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Training Configuration Modal -->
+    <div id="training-modal" class="modal" hidden>
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-brain"></i> Cấu hình huấn luyện PhoBERT NER</h3>
+                <button class="modal-close" onclick="closeTrainingModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="training-config" class="training-config">
+                    <div class="form-group">
+                        <label>Số mẫu đạt chuẩn hiện có:</label>
+                        <div class="training-stat">
+                            <strong id="training-passed-count">—</strong> mẫu
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="training-epochs">Số epoch huấn luyện:</label>
+                        <input type="number" id="training-epochs" class="form-input" value="10" min="1" max="50">
+                        <small class="form-hint">Khuyến nghị: 10-15 epoch cho dữ liệu nhỏ</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="training-batch-size">Batch size:</label>
+                        <input type="number" id="training-batch-size" class="form-input" value="16" min="4" max="64" step="4">
+                        <small class="form-hint">Giảm nếu gặp lỗi out of memory</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="training-lr">Learning rate:</label>
+                        <input type="number" id="training-lr" class="form-input" value="0.00002" min="0.000001" max="0.001" step="0.000001">
+                        <small class="form-hint">Mặc định: 2e-5</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="training-merge-ls">
+                            Merge với dữ liệu Label Studio (nếu có)
+                        </label>
+                    </div>
+                    
+                    <div class="training-info">
+                        <i class="fa-solid fa-info-circle"></i>
+                        <div>
+                            <strong>Lưu ý:</strong>
+                            <ul>
+                                <li>Checkpoint sẽ được lưu với tên: <code>phobert-ner-vn-YYYYMMDD-HHMMSS</code></li>
+                                <li>Thời gian huấn luyện: ~5-15 phút (CPU) hoặc ~2-5 phút (GPU)</li>
+                                <li>Quá trình chạy nền, bạn có thể tiếp tục làm việc</li>
+                                <li>Kiểm tra kết quả tại bảng <strong>Lịch sử Tái huấn luyện</strong> bên dưới</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="training-progress" class="training-progress" hidden>
+                    <div class="training-status">
+                        <i class="fa-solid fa-spinner fa-spin"></i>
+                        <div>
+                            <h4 id="training-status-title">Đang khởi động huấn luyện...</h4>
+                            <p id="training-status-message">Vui lòng đợi...</p>
+                        </div>
+                    </div>
+                    <div class="training-details">
+                        <div><strong>Job ID:</strong> <code id="training-job-id">—</code></div>
+                        <div><strong>Checkpoint:</strong> <code id="training-output-dir">—</code></div>
+                        <div><strong>Số mẫu:</strong> <span id="training-sample-count">—</span></div>
+                    </div>
+                </div>
+                
+                <div id="training-result" class="training-result" hidden>
+                    <div class="alert alert-success">
+                        <i class="fa-solid fa-check-circle"></i>
+                        <div>
+                            <h4>Huấn luyện đã được kích hoạt thành công!</h4>
+                            <p id="training-result-message"></p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="training-error" class="training-error" hidden>
+                    <div class="alert alert-error">
+                        <i class="fa-solid fa-exclamation-triangle"></i>
+                        <div>
+                            <h4>Lỗi khi khởi động huấn luyện</h4>
+                            <p id="training-error-message"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="closeTrainingModal()" id="training-btn-cancel">Hủy</button>
+                <button class="btn btn-primary" onclick="startTraining()" id="training-btn-start">
+                    <i class="fa-solid fa-rocket"></i> Bắt đầu huấn luyện
+                </button>
+                <button class="btn btn-success" onclick="closeTrainingModal()" id="training-btn-done" hidden>
+                    <i class="fa-solid fa-check"></i> Hoàn tất
+                </button>
             </div>
         </div>
     </div>

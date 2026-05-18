@@ -1,11 +1,15 @@
 import logging
 import sys
 import os
-from logstash_async.handler import AsynchronousLogstashHandler
-from logstash_async.formatter import LogstashFormatter
 from app.core.config import Config
 
+# Global APM client instance
+apm_client = None
+
 def setup_logging():
+    """Setup logging với Elastic APM Python Client"""
+    global apm_client
+    
     # Base logging format
     log_format = "%(asctime)s.%(msecs)03d [%(levelname)s] %(name)s — %(message)s"
     date_format = "%H:%M:%S"
@@ -19,16 +23,15 @@ def setup_logging():
     )
     
     # Silence internal warnings from noisy libraries
-    logging.getLogger('logstash_async').setLevel(logging.CRITICAL)
     import warnings
     from urllib3.exceptions import DependencyWarning
     warnings.filterwarnings("ignore", category=DependencyWarning)
     
     logger = logging.getLogger("VNAI")
     
-    # Add Logstash handler if enabled
+    # Add Elastic APM handler if enabled
     if Config.KIBANA_LOG_ENABLED:
-        # Quick check if Logstash is reachable to avoid noisy socket errors
+        # Quick check if APM Server is reachable
         import socket
         is_reachable = False
         try:
@@ -38,27 +41,34 @@ def setup_logging():
             pass
 
         if not is_reachable:
-            logger.warning(f"Kibana/Logstash server at {Config.KIBANA_LOG_HOST}:{Config.KIBANA_LOG_PORT} is unreachable. Kibana logging disabled for this session.")
+            logger.warning(f"APM Server at {Config.KIBANA_LOG_HOST}:{Config.KIBANA_LOG_PORT} is unreachable. APM logging disabled for this session.")
         else:
             try:
-                logstash_handler = AsynchronousLogstashHandler(
-                    host=Config.KIBANA_LOG_HOST,
-                    port=Config.KIBANA_LOG_PORT,
-                    database_path=None,  # Use memory-based buffering
+                # Import Elastic APM
+                from elasticapm import Client
+                from elasticapm.handlers.logging import LoggingHandler
+                import elasticapm
+                
+                # Khởi tạo APM Client
+                apm_client = Client(
+                    service_name=Config.KIBANA_LOG_APP_NAME,
+                    server_url=f"http://{Config.KIBANA_LOG_HOST}:{Config.KIBANA_LOG_PORT}",
+                    environment=os.getenv("ENVIRONMENT", "production"),
+                    compress_level=0,  # Tắt nén để tránh hụt dòng EOF khi đọc stream
                 )
-                # Tạo Formatter riêng để định nghĩa metadata chuẩn JSON
-                formatter = LogstashFormatter(
-                    message_type='python-logstash',
-                    extra_prefix='extra',
-                    extra= {
-                        "application": Config.KIBANA_LOG_APP_NAME,
-                        "environment": os.getenv("ENVIRONMENT", "production")
-                    }
-                )
-                logstash_handler.setFormatter(formatter)
-                logging.getLogger().addHandler(logstash_handler)
-                logger.info(f"Kibana logging integrated via Logstash at {Config.KIBANA_LOG_HOST}:{Config.KIBANA_LOG_PORT}")
+                
+                # Đăng ký client vào hệ thống elasticapm toàn cục
+                elasticapm.instrumentation.control.instrument()
+                
+                # Tự động gom toàn bộ log từ logging mặc định của Python đẩy vào APM
+                apm_handler = LoggingHandler(client=apm_client)
+                apm_handler.setLevel(logging.INFO)
+                logging.getLogger().addHandler(apm_handler)
+                
+                logger.info(f"Elastic APM logging integrated at {Config.KIBANA_LOG_HOST}:{Config.KIBANA_LOG_PORT}")
+            except ImportError:
+                logger.error("elastic-apm package not installed. Install with: pip install elastic-apm")
             except Exception as e:
-                logger.error(f"Failed to initialize Logstash handler: {e}")
+                logger.error(f"Failed to initialize Elastic APM handler: {e}")
             
     return logger

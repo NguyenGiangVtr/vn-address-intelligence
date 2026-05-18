@@ -18,7 +18,7 @@ python scripts/experiments/supa_benchmark.py workflow --skip-extract --run-id <i
 ```
 
 Hoặc: `.\scripts\experiments\run_supa_benchmark.ps1` · `bash scripts/experiments/run_supa_benchmark.sh`  
-**Runbook đầy đủ:** `docs/scientific-report/SUPA-BENCH-RUNBOOK.md` (từ thư mục gốc repo).
+**Runbook đầy đủ:** `docs/07-scientific-reports/SUPA-Benchmark-Runbook.md` (từ thư mục gốc repo).
 
 1. Áp DDL (một lần trên DB — **không cần `psql`** nếu dùng Python):
 
@@ -58,4 +58,4 @@ Hoặc: `.\scripts\experiments\run_supa_benchmark.ps1` · `bash scripts/experime
 
    Thêm `--persist-ath` nếu đã áp migration 20260513 và muốn ghi `ath.supa_stratified_eval_summary`.
 
-Đặc tả đầy đủ: `docs/scientific-report/Protocol-Synthetic-User-Perturbation-Benchmark-Google-Ground-Truth.md`.
+Đặc tả đầy đủ: `docs/scientific-report/Protocol-Synthetic-User-Perturbation-Benchmark-Google-Ground-Truth.md` (archived in scientific-report/).

@@ -10,7 +10,7 @@ Một lần chạy lần lượt:
 4. *(tuỳ DB)* `python -m app.ai.experiment_runner --config app/ai/config.yaml --no-llm`  
 5. *(tuỳ DB)* `production_pipeline.py --limit <N>` (pilot)  
 6. *(tuỳ HF + torch)* `train_ner.py` smoke trên dataset HF chuẩn (ít epoch / ít mẫu — **không** thay thế huấn luyện production đầy đủ)  
-7. `generate_scientific_report_metrics.py` → cập nhật `docs/scientific-report/vnai-generated-metrics.tex`
+7. `generate_scientific_report_metrics.py` → cập nhật `docs/scientific-report/vnai-generated-metrics.tex` (LaTeX metrics)
 
 ## Windows (PowerShell)
 

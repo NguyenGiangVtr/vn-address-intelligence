@@ -116,7 +116,7 @@ def run_pipeline(config_path: str, limit: int = None,
         logger.info(f"Targeting SUPA Specimens for run_id={supa_run_id}")
         query = f"""
             SELECT id, noisy_raw_address as raw_address, 
-                   ward_id, district_id, province_id,
+                   NULL::bigint as ward_id, NULL::bigint as district_id, NULL::bigint as province_id,
                    latitude, longitude
             FROM prq.supa_benchmark_specimen
             WHERE run_id = {supa_run_id}

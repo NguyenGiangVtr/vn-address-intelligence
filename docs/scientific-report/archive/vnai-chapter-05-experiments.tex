@@ -1,0 +1,215 @@
+% --- Chapter 5
+\chapter{Thực nghiệm, đánh giá hiệu năng và tác động nghiệp vụ}
+\label{ch:experiments}
+
+\input{vnai-generated-metrics.tex}
+
+% Mọi con số trong mục audit-bridge trích từ một lần chạy cụ thể; re-run script nếu DB thay đổi.
+
+\section{Thiết lập thực nghiệm}
+\subsection{Tập dữ liệu}
+\begin{itemize}
+  \item \textbf{NER supervised}: các split huấn luyện/kiểm định xuất từ corpus nhãn (schema và mã BIO thống nhất). Chi tiết số mẫu, tỉ lệ lớp,~\ldots được chèn sau khi cố định nguồn dữ liệu trong DB hoặc file xuất.
+  \item \textbf{Địa chỉ thực địa (end---to---end)}: mô hình lấy từ bảng hàng chờ hoặc tập được lấy mẫu theo các kịch bản (full---text thô ghép ward/district/province; chỉ có chuỗi đầu vào tối thiểu; ca có chứa tên thời HC cũ; ca đa dạng Viết tắt đường).
+\end{itemize}
+
+\subsection{Bộ chỉ số --- đối chiếu giao thức KPI (primary vs bổ trợ)}
+\begin{table}[h]
+\centering
+\caption{Bảng chỉ số báo cáo (khóa vào một split duy nhất đối với các hàng có nhãn NER có giám sát).}
+\label{tab:metrics}
+\begin{tabular}{@{}llp{6.5cm}@{}}
+\toprule
+\textbf{ID} & \textbf{Chỉ số} & \textbf{Định nghĩa \& ý nghĩa} \\
+\midrule
+\textbf{P---F1} & Macro---F1 thực thể & Đại lượng \(\mathrm{F1}\) được tính theo \(\mathrm{macro}\)-trung bình các lớp thực thể (ngoại trừ \emph{O} nếu thỏa công cụ đánh giá).\newline \textbf{Cùng nhãn \& công thức với báo \texttt{seqeval}.} \\
+\textbf{P---Acc} & Token Accuracy & \(\dfrac{\#\text{token có nhãn dự báo khớp chuẩn}}{\#\text{token toàn corpus kiểm định}}\) trên \emph{cùng split}. \\
+\textbf{S---NER---EM} & Exact Match kiểu NER & Tỉ lệ câu mà dãy nhãn dự báo \emph{và} dãy chuẩn trùng tuyệt đối (hoặc trùng span theo định nghĩa trong phụ lục phương pháp). \\
+\textbf{S---E2E---EM} & Exact địa chỉ chuẩn & \(\mathbb{I}\!\left[\mathrm{chuẩn hóa}^{\text{suy ra}} = \mathrm{chuẩn}^{\text{benchmark}}\right]\) hoặc tương đương theo NFC/chỉ Unicode thống nhất. \\
+\textbf{S---RET} & Hiệu năng retrieval & Recall@\(k\) khi có cặp nền được gán tay; có thể báo \(\mathrm{R@}1\) khi chỉ có \emph{golden} một ứng viên; báo cosine top---1 \(\rightarrow\) \emph{confidence proxy}. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Điều kiện ngưỡng nghiên cứu và phạm vi truyền thông học}
+Trong báo nội bộ của dự án, \emph{Gate B Primary} chỉ đạt khi \textbf{P---F1 $>$ 96\,\% và P---Acc $>$ 96\,\%}. Các chỉ số có tiền tố \textbf{S---*} vẫn báo trong luận để chứng cứ đầy đủ và phân rã lỗi, nhưng \textbf{không ép} ngưỡng 96\,\% đồng thời cho \textbf{S---E2E---EM} trên toàn dữ liệu quốc gia nếu không có một \emph{mẫu khảo sát} (stratum/domain) được thống nhất.
+
+\section{Quan sát thực chứng trên hàng chờ và cầu nối master (audit bridge)}
+\label{sec:audit-bridge}
+
+Đây là phép đo \textbf{độ liên kết dữ liệu} giữa \texttt{prq.address\_cleansing\_queue} và các bảng \texttt{mat.*}, \textbf{không} phải điểm F1 của mô hình. Nó bổ sung cho phần lý thuyết ở Chương~\ref{ch:design} và giúp giải thích tại sao pipeline xuất và join cần có thứ tự ưu tiên lineage / fallback.
+
+\paragraph{Giao thức tái lập.} Chạy \texttt{python scripts/diagnostics/audit\_acq\_admin\_bridge.py} trong môi trường có \texttt{PYTHONPATH} trỏ root repo và biến DB trùng snapshot cần báo cáo. Lần ghi nhận sau đây kết thúc log tại \textbf{UTC 2026-05-10 08:28:32} (tương đương giờ Việt Nam \(\approx\) 15:28 cùng ngày); mã nguồn script tại commit hiện hành của kho \texttt{vn-address-intelligence}.
+
+\begin{table}[h]
+\centering
+\caption{Các gate G1--G4 và số liệu tổng hợp từ một lần audit (minh hoạ tính \emph{reproducible}; số sẽ khác nếu DL thay đổi).}
+\label{tab:audit-gates}
+\begin{tabular}{@{}llp{7.2cm}@{}}
+\toprule
+\textbf{Mã} & \textbf{PASS/FAIL (theo script)} & \textbf{Số liệu thực đo} \\
+\midrule
+G1 & PASS & Không có trùng khóa \texttt{old\_id} lặp (province/district/ward) trong tập kiểm smoke trên \texttt{mat}. \\
+G2 & FAIL & \(\approx 96{,}61\%\) dòng queue nằm trong \emph{lineage triple inner} chuẩn (Master); ngưỡng mặc định script đặt \(\ge 99{,}9\%\). \\
+G3/G4 & FAIL & Trên các dòng có đủ ba FK phiên huỷ: \(\approx 98{,}55\%\) có P/D/W cùng \texttt{admin\_version} và \textbf{khớp phân cấp địa lý HC} trong \texttt{mat}; \textbf{6\,353} dòng không thỏa điều kiện này. G4 báo trùng tỉ lệ trong lần đo khi cờ ``current'' trùng với căn chỉnh. \\
+Overview & --- & \(\lvert\text{queue}\rvert = 437\,862\) dòng trong log tổng quan. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Bổ sung từ khối \texttt{DECISION} của script (không sửa số tay).}
+Tỉ lệ ba dòng lineage ``khớp triple'' báo \(\approx 96{,}61\%\); ánh xạ phường qua \texttt{ward\_mapping} (theo lineage) gần \textbf{tuyệt đối} trên các dòng có \texttt{old\_ward}; phần lớn các \texttt{ward} lineage\_v1 nằm trong tập cặp ánh xạ có hoạt động. Script khuyến nghị: dùng \textbf{join lineage INNER} cho phân tích/kỹ thuật; \textbf{tránh} dùng đơn độc join FK phiên huỷ làm ngữ nghĩa master nếu không có lớp dự phòng --- phù hợp các quy tắc lineage trong repo (\texttt{.cursor/rules/address-queue-mat-lineage.mdc}, \texttt{app/domain/acq\_mat\_lineage.py}).
+
+\paragraph{Lưu ý phương pháp.}
+Hàng ``histogram tuple admin\_version'' trong log audit nhắc rằng tổng các bucket có thể vượt số queue khi một dòng có thể khớp \emph{nhiều} bản ghi master khác \texttt{admin\_version} --- đây là cảnh báo \textbf{thiết kế} khi làm chỉ báo chứ không phải lỗi biên dịch.
+
+\subsection{Đồng bộ số liệu từ artifact (tự động)}
+Bảng~\ref{tab:artifact-sync} do \texttt{scripts/flow/generate\_scientific\_report\_metrics.py} tổng hợp từ \texttt{training\_log.json} (sau \texttt{train\_ner.py}) và/hoặc JSON audit (\texttt{---} nếu chưa chạy flow hoặc thiếu file nguồn). Log huấn luyện: \texttt{\VNAIGENTrainLogPath}; nguồn dữ liệu: \texttt{\VNAIGENTrainSource}.
+
+\begin{table}[h]
+\centering
+\caption{Snapshot định lượng đồng bộ từ file (tránh chỉnh tay trùng mâu thuẫn với artifact).}
+\label{tab:artifact-sync}
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{Hạng mục} & \textbf{Giá trị} \\
+\midrule
+Queue rows (audit overview) & \VNAIGENAuditQueueTotal \\
+G1 pass flag (1=đạt) & \VNAIGENAuditGOnePass \\
+G2 lineage triple coverage (\%) & \VNAIGENAuditGTwoPct \\
+G3 denorm P/D/W aligned (\%) & \VNAIGENAuditGThreePct \\
+G3 rows failed & \VNAIGENAuditGThreeFail \\
+NER eval F1 (\%, seqeval \texttt{eval\_f1}) & \VNAIGENNERFOnePct \\
+NER precision (\%) & \VNAIGENNERPrecisionPct \\
+NER recall (\%) & \VNAIGENNERRecallPct \\
+NER token accuracy (\%) & \VNAIGENNERTokenAccPct \\
+$N_{\mathrm{train}}$ / $N_{\mathrm{eval}}$ & \VNAIGENNERTrainN\ / \VNAIGENNEREvalN \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[h]
+\centering
+\caption{Thuật ngữ macro \texttt{vnai-generated-metrics.tex} (sinh bởi \texttt{generate\_scientific\_report\_metrics.py}; \texttt{---} = thiếu artifact nguồn).}
+\label{tab:vnaigen-macro-glossary}
+\small
+\begin{tabular}{@{}p{4.8cm}p{9.8cm}@{}}
+\toprule
+\textbf{Macro} & \textbf{Ý nghĩa} \\
+\midrule
+\texttt{\textbackslash VNAIGENTrainLogPath} & Đường dẫn tệp \texttt{training\_log.json} đã đọc (hoặc \texttt{none}). \\
+\texttt{\textbackslash VNAIGENTrainSource} & Trường \texttt{data\_source} trong log (nguồn tập huấn luyện/smoke). \\
+\texttt{\textbackslash VNAIGENNERFOnePct} & F1 kiểm định từ Trainer/seqeval (\texttt{eval\_f1}) --- \% sau khi nhân 100; xem cảnh báo định nghĩa macro trong luận và header file sinh. \\
+\texttt{\textbackslash VNAIGENNERPrecisionPct} / \texttt{RecallPct} & Precision / recall đồng bộ từ cùng log đánh giá. \\
+\texttt{\textbackslash VNAIGENNERTokenAccPct} & Độ chính xác theo token nếu log có \texttt{token\_accuracy}. \\
+\texttt{\textbackslash VNAIGENNERTrainN} / \texttt{EvalN} & Số mẫu huấn luyện / kiểm định ghi trong log. \\
+\texttt{\textbackslash VNAIGENAuditQueueTotal} & \texttt{total\_rows} queue từ JSON audit (\texttt{overview}). \\
+\texttt{\textbackslash VNAIGENAuditGOnePass} & Cờ script: \texttt{1} nếu gate G1 (không trùng \texttt{old\_id} smoke) đạt. \\
+\texttt{\textbackslash VNAIGENAuditGTwoPct} & Phần trăm coverage lineage triple (G2) từ audit. \\
+\texttt{\textbackslash VNAIGENAuditGThreePct} / \texttt{GThreeFail} & Tỉ lệ căn chỉnh denorm P/D/W (G3) và số dòng fail. \\
+\texttt{\textbackslash VNAIGENExperimentCsvNote} & Ghi chú tóm tắt hàng cuối CSV thực nghiệm (nếu có). \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{SUPA-Bench: cohort từ \texttt{prq.ground\_truth} và nhiễu tổng hợp}
+\label{sec:supa-bench-exp}
+
+Đoạn này bổ sung lớp (iv) trong mục tập dữ liệu đầu chương: \textbf{đánh giá E2E có kiểm soát} trên cohort tách biệt, không trộn backlog sản xuất. Nguồn tham chiếu chỉ đọc từ \texttt{prq.ground\_truth}; bảng lưu mẫu: \texttt{prq.supa\_benchmark\_*}. Phương pháp và ràng buộc bất biến: Chương~\ref{ch:design}, mục~\ref{sec:supa-bench-design}.
+
+\paragraph{Trình tự báo cáo (chuỗi chứng cứ).} (1) \texttt{supa\_benchmark.py extract} --- ghi \texttt{run\_id}, seed, profile vào \texttt{prq.supa\_benchmark\_run}; (2) \texttt{export-specimens} --- CSV có \texttt{noisy\_raw\_address} và \texttt{specimen\_id}; (3) chạy bước chuẩn hóa \emph{mà luận văn mô tả rõ} (pipeline/API khác; không cố định trong repo) trên CSV, sinh cột dự đoán; (4) \texttt{import-preds} với \texttt{--source-note} (ghi chú nguồn gốc chuẩn hóa) --- cập nhật \texttt{pred\_standardized} và manifest \texttt{reports/supa\_benchmark\_last\_import\_manifest.json}; (5) \texttt{eval} + \texttt{export-tex}. \textbf{Không điền tay} EM: nếu thiếu (3)--(4), các macro vẫn \texttt{---}. \textbf{Không} bắt buộc lệnh \texttt{normalize} gọi \texttt{production\_pipeline} trực tiếp trên specimen --- lý do: pipeline gắn \texttt{address\_cleansing\_queue}; chuỗi export\(\rightarrow\)chuẩn hóa\(\rightarrow\)import giữ nguồn gốc dự đoán minh bạch (xem protocol SUPA-Bench).
+
+\begin{table}[h]
+\centering
+\caption{SUPA-Bench --- snapshot từ artifact (macro \texttt{vnai-supa-generated-metrics.tex}). EM\@v2 và EM\@v1 là tỉ lệ exact-match (\%) trên các mẫu có \texttt{pred\_standardized} khác rỗng; chuỗi so khớp sau NFC, trim và gom khoảng trắng.}
+\label{tab:supa-bench}
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{Hạng mục} & \textbf{Giá trị} \\
+\midrule
+\texttt{run\_id} & \VNASUPARunId \\
+\(N\) yêu cầu / \(N\) thực tế (sau lọc) & \VNASUPANRequested{} / \VNASUPANRealized \\
+Số dòng specimen / số dòng đã chấm (\texttt{pred} khác rỗng) & \VNASUPANSpecimens{} / \VNASUPANScored \\
+\textbf{EM\@v2} (\% vs \texttt{ref\_address\_v2}) & \VNASUPAEMvTwoPct \\
+\textbf{EM\@v1} (\% vs \texttt{ref\_address\_v1}) & \VNASUPAEMvOnePct \\
+Profile nhiễu / seed & \VNASUPANoiseProfile\ / \VNASUPASeed \\
+\texttt{git\_commit} (khi extract) & \VNASUPAGitCommit \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[h]
+\centering
+\caption{Thuật ngữ macro SUPA (\texttt{vnai-supa-generated-metrics.tex}) --- đồng bộ với \texttt{eval}/\texttt{export-tex}; \texttt{---} nghĩa là chưa đo hoặc thiếu dự đoán.}
+\label{tab:supa-macro-glossary}
+\small
+\begin{tabular}{@{}p{4.2cm}p{10.5cm}@{}}
+\toprule
+\textbf{Macro} & \textbf{Ý nghĩa khoa học / nguồn số liệu} \\
+\midrule
+\texttt{\textbackslash VNASUPARunId} & Khóa \texttt{prq.supa\_benchmark\_run.id} của lần cohort đang báo cáo (một lần extract = một \texttt{run\_id}). \\
+\texttt{\textbackslash VNASUPANRequested} & Tham số cỡ mẫu \(N\) yêu cầu lúc extract (cùng ý với \texttt{---n} trên CLI). \\
+\texttt{\textbackslash VNASUPANRealized} & Số bản ghi specimen thực tế tạo được sau lọc GT (có thể \(<\) \(N\) nếu không đủ hàng thỏa \texttt{address}/\texttt{old\_address}). \\
+\texttt{\textbackslash VNASUPANSpecimens} & Số hàng hiện có trong \texttt{prq.supa\_benchmark\_specimen} cho \texttt{run\_id} đó. \\
+\texttt{\textbackslash VNASUPANScored} & Số specimen có \texttt{pred\_standardized} khác rỗng sau \texttt{import-preds}; chỉ trên tập này mới tính EM. \\
+\texttt{\textbackslash VNASUPAEMvTwoPct} & \textbf{EM\@v2} (\%): tỉ lệ \emph{exact match} sau chuẩn hóa chuỗi (NFC, trim, gom space) giữa \texttt{pred\_standardized} và \texttt{ref\_address\_v2} (tham chiếu v2 / \texttt{address} lúc đóng băng). \\
+\texttt{\textbackslash VNASUPAEMvOnePct} & \textbf{EM\@v1} (\%): cùng định nghĩa so với \texttt{ref\_address\_v1} (tham chiếu v1 / \texttt{old\_address}). \\
+\texttt{\textbackslash VNASUPANoiseProfile} & Mã phiên bản hàm nhiễu tổng hợp (vd. \texttt{SUP-1.0.0}) --- ghi vào DB lúc extract. \\
+\texttt{\textbackslash VNASUPASeed} & Số nguyên \texttt{---seed}: cố định thứ tự lấy mẫu từ GT (\texttt{md5(id||seed)}) và luồng pseudo-random của bước làm nhiễu; báo cáo chính nên giữ một giá trị không đổi và ghi rõ (vd. \texttt{42} chỉ là ví dụ, không có ``độ ưu tiên'' đặc biệt) --- chi tiết runbook \texttt{SUPA-BENCH-RUNBOOK.md}, mục ``\texttt{5.2.1}''. \\
+\texttt{\textbackslash VNASUPAGitCommit} & Hash commit git tại bước extract (trích tự động; dùng chứng cứ phiên bản mã). \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Diễn giải khoa học.} EM\@v2 là chỉ số \textbf{primary} nếu pipeline nhắm chuẩn hành chính sau cải cách; EM\@v1 là \textbf{secondary} --- tỉ lệ thấp có thể phản ánh lệch phiên bản ranh giới chứ không hẳn lỗi định dạng. Khi \texttt{\textbackslash VNASUPANScored} là \texttt{---} hoặc \texttt{0}, chưa có kết quả chuẩn hóa để báo cáo EM; bảng trên vẫn hợp lệ về mặt phương pháp.
+
+\paragraph{Chứng cứ CSV / tái hiện.} File~\texttt{supa\_preds\_filled.csv} trong repo là \textbf{tùy chỗ triển khai}: có sau khi bạn hoặc hệ CI xuất từ chuẩn hóa thật, hoặc sinh cục bộ bằng \texttt{make-demo-preds} / cờ oracle \texttt{---preds-demo-ref-v2} chỉ để smoke kênh (không được trích làm chỉ số mô hình) --- chi tiết \texttt{docs/scientific-report/SUPA-BENCH-RUNBOOK.md}.
+
+\section{Kiểm thử NER định lượng}
+Bảng~\ref{tab:ner-numbers} lấy cùng macro với Bảng~\ref{tab:artifact-sync}; sau mỗi lần huấn luyện chạy lại script sinh metrics rồi biên dịch lại LaTeX.
+
+\begin{table}[h]
+\centering
+\caption{Kết quả NER từ lần huấn luyện gần nhất (đồng bộ macro \texttt{vnai-generated-metrics.tex}; xem chú thích về \texttt{eval\_f1}).}
+\label{tab:ner-numbers}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Cấu hình} & \textbf{Prec.} & \textbf{Recall} & \textbf{F1 (seqeval)} & \textbf{Token Acc.} \\
+\midrule
+PhoBERT (artifact trong log) & \VNAIGENNERPrecisionPct & \VNAIGENNERRecallPct & \VNAIGENNERFOnePct & \VNAIGENNERTokenAccPct \\
+\textbf{Baseline} (điền khi có chạy đối chứng) & --- & --- & --- & --- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Để phục vụ phân rã sai: hiển thị ma trận nhầm các lớp quan trọng (đường vs xã/phường; số nhà vs phân đoạn đường; STR vs POI).
+
+\section{Đánh giá retrieval}
+Trình tự: có sẵn các cặp (\textit{chuỗi truy vấn}, \textit{id bản corpus gold}): nạp mô hình \texttt{mGTE}; tính \(\mathrm{R@}1\), \(\mathrm{R@}3\), \(\mathrm{R@}k\), MRR; quan hệ của điểm similarity với tỉ lệ thành công chuẩn hóa sau LLM.
+
+\section{Các kịch bản đầu---cuối (pipeline cleanse)}
+Đo trên các mốc \(\{\mathrm{S}_1,\mathrm{S}_2,\mathrm{S}_3\}\):
+
+\begin{tabular}{cp{11cm}c}
+\textbf{Code} & \textbf{Đặc điểm cố ý của dữ liệu} & \textbf{S-E2E-EM} \\
+\hline
+S1 & Chuỗi ``đầy đủ + join HC chuẩn'' vào queue & \(\ldots\) \\
+S2 & Chỉ có \texttt{raw\_address} (thiếu ward/district trong hàng chờ) & \(\ldots\) \\
+S3 & Có tên HC cũ / ca khó căn chỉnh master & \(\ldots\) \\
+\end{tabular}
+
+\section{Tối ưu hóa vận hành (AI engineering)}
+Đối chứng các hạng mục kỹ thuật thực tế:
+\begin{enumerate}
+  \item \textbf{Giới hạn corpus \& batch}: \(\texttt{corpus\_limit}\) ảnh hưởng thời gian nhúng lúc khởi động song \textbf{rủi ro recall} retrieval.
+  \item \textbf{Lượng tử hoá LLM}: 4-bit và 8-bit là giá trị \emph{có trong} \texttt{app/ai/config.yaml}; các đồ thị latency/VRAM chỉ báo sau khi đo bằng profiler hoặc log thực tế một \textbf{lần chạy} có gắn thời gian \& phần cứng.
+  \item \textbf{pipeline song song \& kích thước batch}: cân với \(\texttt{db\_batch\_size}\).
+\end{enumerate}
+
+\section{Ảnh hưởng nghiệp vụ và rủi ro}
+\textbf{(a)} Chuẩn hoá vàng cho downstream CRM \& logistics; \\
+\textbf{(b)} giảm tải chỉnh tay khi chỉ báo ACS cao \& epoch rõ ràng; \\
+\textbf{(c)} Rủi ro còn lại là LLM chỉnh cấu trúc vượt ngoài phạm vi retriever \& join --- cần mẫu QA định kỳ.
+
+\paragraph{Tóm gọn đóng góp thực nghiệm của chương.}
+Điểm mạnh trình bày ở đây là \textbf{tách ba lớp chứng cứ}: (i) chỉ tiêu mô hình có giám sát (chỉ báo sau khi train/eval khóa); (ii) chỉ tiêu hệ retrieval khi có tập ``gold pairing'' thực; (iii) chỉ tiêu \emph{tin cậy schema dữ liệu vận hành} từ audit bridge --- lớp (iii) đã được minh chứng bằng số liệu tái chạy script, không dùng số kiểu mẫu.
