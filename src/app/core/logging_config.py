@@ -1,9 +1,55 @@
 import logging
 import sys
 import os
-from logstash_async.handler import AsynchronousLogstashHandler
-from logstash_async.formatter import LogstashFormatter
+import json
 from app.core.config import Config
+
+class APMHandler(logging.Handler):
+    """Custom handler để gửi logs tới Elastic APM Server qua HTTP"""
+    def __init__(self, host, port, app_name):
+        super().__init__()
+        self.host = host
+        self.port = port
+        self.app_name = app_name
+        self.url = f"http://{host}:{port}/intake/v2/events"
+        
+    def emit(self, record):
+        try:
+            import requests
+            log_entry = self.format(record)
+            
+            # Tạo event theo định dạng Elastic APM
+            event = {
+                "metadata": {
+                    "service": {
+                        "name": self.app_name,
+                        "environment": os.getenv("ENVIRONMENT", "production")
+                    }
+                },
+                "log": {
+                    "level": record.levelname,
+                    "logger": record.name,
+                    "message": log_entry,
+                    "timestamp": int(record.created * 1000000),  # microseconds
+                    "origin": {
+                        "file": {
+                            "name": record.filename,
+                            "line": record.lineno
+                        },
+                        "function": record.funcName
+                    }
+                }
+            }
+            
+            # Gửi tới APM Server
+            requests.post(
+                self.url,
+                json=event,
+                headers={"Content-Type": "application/x-ndjson"},
+                timeout=2
+            )
+        except Exception as e:
+            self.handleError(record)
 
 def setup_logging():
     # Base logging format
@@ -19,16 +65,15 @@ def setup_logging():
     )
     
     # Silence internal warnings from noisy libraries
-    logging.getLogger('logstash_async').setLevel(logging.CRITICAL)
     import warnings
     from urllib3.exceptions import DependencyWarning
     warnings.filterwarnings("ignore", category=DependencyWarning)
     
     logger = logging.getLogger("VNAI")
     
-    # Add Logstash handler if enabled
+    # Add APM handler if enabled
     if Config.KIBANA_LOG_ENABLED:
-        # Quick check if Logstash is reachable to avoid noisy socket errors
+        # Quick check if APM Server is reachable
         import socket
         is_reachable = False
         try:
@@ -38,27 +83,18 @@ def setup_logging():
             pass
 
         if not is_reachable:
-            logger.warning(f"Kibana/Logstash server at {Config.KIBANA_LOG_HOST}:{Config.KIBANA_LOG_PORT} is unreachable. Kibana logging disabled for this session.")
+            logger.warning(f"APM Server at {Config.KIBANA_LOG_HOST}:{Config.KIBANA_LOG_PORT} is unreachable. APM logging disabled for this session.")
         else:
             try:
-                logstash_handler = AsynchronousLogstashHandler(
+                apm_handler = APMHandler(
                     host=Config.KIBANA_LOG_HOST,
                     port=Config.KIBANA_LOG_PORT,
-                    database_path=None,  # Use memory-based buffering
+                    app_name=Config.KIBANA_LOG_APP_NAME
                 )
-                # Tạo Formatter riêng để định nghĩa metadata chuẩn JSON
-                formatter = LogstashFormatter(
-                    message_type='python-logstash',
-                    extra_prefix='extra',
-                    extra= {
-                        "application": Config.KIBANA_LOG_APP_NAME,
-                        "environment": os.getenv("ENVIRONMENT", "production")
-                    }
-                )
-                logstash_handler.setFormatter(formatter)
-                logging.getLogger().addHandler(logstash_handler)
-                logger.info(f"Kibana logging integrated via Logstash at {Config.KIBANA_LOG_HOST}:{Config.KIBANA_LOG_PORT}")
+                apm_handler.setFormatter(logging.Formatter(log_format, datefmt=date_format))
+                logging.getLogger().addHandler(apm_handler)
+                logger.info(f"APM logging integrated via Elastic APM Server at {Config.KIBANA_LOG_HOST}:{Config.KIBANA_LOG_PORT}")
             except Exception as e:
-                logger.error(f"Failed to initialize Logstash handler: {e}")
+                logger.error(f"Failed to initialize APM handler: {e}")
             
     return logger

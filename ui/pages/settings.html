@@ -160,25 +160,29 @@
         <details class="accordion-item">
             <summary class="accordion-header">
                 <i class="fa-solid fa-bars-staggered"></i>
-                <span>Logging & Monitoring (Kibana)</span>
+                <span>Logging & Monitoring (Elastic APM)</span>
                 <i class="fa-solid fa-chevron-down accordion-chevron"></i>
             </summary>
             <div class="accordion-body">
                 <div class="form-group">
                     <label>KIBANA_LOG_ENABLED</label>
                     <input type="text" class="form-input" data-env-key="KIBANA_LOG_ENABLED" placeholder="true/false">
+                    <small>Bật/tắt gửi logs tới APM Server</small>
                 </div>
                 <div class="form-group">
                     <label>KIBANA_LOG_HOST</label>
-                    <input type="text" class="form-input" data-env-key="KIBANA_LOG_HOST">
+                    <input type="text" class="form-input" data-env-key="KIBANA_LOG_HOST" placeholder="138.2.68.67">
+                    <small>IP Public của APM Server</small>
                 </div>
                 <div class="form-group">
                     <label>KIBANA_LOG_PORT</label>
-                    <input type="text" class="form-input" data-env-key="KIBANA_LOG_PORT">
+                    <input type="text" class="form-input" data-env-key="KIBANA_LOG_PORT" placeholder="8200">
+                    <small>Cổng APM Server (mặc định: 8200)</small>
                 </div>
                 <div class="form-group">
                     <label>KIBANA_LOG_APP_NAME</label>
-                    <input type="text" class="form-input" data-env-key="KIBANA_LOG_APP_NAME">
+                    <input type="text" class="form-input" data-env-key="KIBANA_LOG_APP_NAME" placeholder="vn-address-intelligence">
+                    <small>Tên ứng dụng hiển thị trên APM Dashboard</small>
                 </div>
             </div>
         </details>

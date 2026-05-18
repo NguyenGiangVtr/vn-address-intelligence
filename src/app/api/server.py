@@ -675,7 +675,7 @@ async def log_requests(request: Request, call_next):
         
     response = await call_next(request)
     
-    # 2. Kibana/Logstash Logging
+    # 2. APM Server Logging
     if Config.KIBANA_LOG_ENABLED:
         duration_ms = round((time.time() - start_time) * 1000, 2)
         log_data = {
@@ -686,7 +686,7 @@ async def log_requests(request: Request, call_next):
             "client_ip": ip,
             "user_agent": request.headers.get("User-Agent", "unknown"),
         }
-        # Log detail for Kibana indexing
+        # Log detail for APM indexing
         logger.info(
             f"HTTP {request.method} {request.url.path} - {response.status_code} ({duration_ms}ms)",
             extra=log_data
