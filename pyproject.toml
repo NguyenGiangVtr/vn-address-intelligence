@@ -30,6 +30,7 @@ dependencies = [
     "transformers>=4.30.0",
     "sentence-transformers>=2.2.0",
     "elastic-apm>=6.15.0",
+    "vnaddress>=1.0.0",
 ]
 
 [tool.setuptools.packages.find]
