@@ -119,7 +119,6 @@ jobs:
       - name: Install dependencies for prelabeler tests
         shell: bash
         run: |
-          pip install --no-cache-dir -r requirements-prod.txt
           pip install --no-cache-dir -e .
 
       - name: Run prelabeler regression suite
@@ -228,7 +227,6 @@ jobs:
             python3.11 -m venv .venv
             . .venv/bin/activate
             pip install --upgrade pip
-            pip install --no-cache-dir -r requirements-prod.txt
             pip install --no-cache-dir -e .
 
             ln -sfn "$RELEASE_DIR" "$DEPLOY_PATH/current"
