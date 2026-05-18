@@ -36,7 +36,7 @@ applyTo: "**/*"
 - Ton trong pipeline SQL preprocessing -> NER -> Siamese retrieval/ranking -> LLM normalization.
 - Khong khoi tao lai model trong moi record neu co the tai 1 lan va tai su dung.
 - Khi thay doi pipeline, neu anh huong output schema thi cap nhat docs va validation scripts lien quan.
-- Tai lieu tong hop workflow trainning/experiment/inference la docs/ai-training-workflow-summary.md; khi thay doi logic app/ai bat buoc cap nhat tai lieu nay trong cung dot thay doi.
+- Tai lieu tong hop workflow trainning/experiment/inference la docs/01-ai-training/11-OPERATING-PHASES-ABCD.md (nguon chan duy nhat); khi thay doi logic app/ai bat buoc cap nhat tai lieu nay trong cung dot thay doi.
 
 ### 3.4 Context: Database, SQL, and Data Safety
 - Luon dung parameterized query cho filter input tu nguoi dung.

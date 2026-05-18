@@ -20,30 +20,27 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Validate required secrets
+      - name: Check required secrets
+        id: check_secrets
         env:
           STRIX_LLM: ${{ secrets.STRIX_LLM }}
           LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
         run: |
-          missing=0
-          if [ -z "$STRIX_LLM" ]; then
-            echo "::error::Missing required secret: STRIX_LLM"
-            missing=1
-          fi
-          if [ -z "$LLM_API_KEY" ]; then
-            echo "::error::Missing required secret: LLM_API_KEY"
-            missing=1
-          fi
-          if [ "$missing" -ne 0 ]; then
-            exit 1
+          if [ -z "$STRIX_LLM" ] || [ -z "$LLM_API_KEY" ]; then
+            echo "::warning::Missing STRIX_LLM or LLM_API_KEY secrets - skipping Strix security scan"
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
           fi
 
       - name: Install Strix CLI
+        if: steps.check_secrets.outputs.skip != 'true'
         run: |
           python -m pip install --upgrade pip
           pip install usestrix
 
       - name: Strix execution step (baseline)
+        if: steps.check_secrets.outputs.skip != 'true'
         continue-on-error: true
         env:
           STRIX_LLM: ${{ secrets.STRIX_LLM }}

@@ -1,0 +1,74 @@
+% --- Chapter 4 (input from vnai-chapters-master.tex)
+\chapter{Phân tích yêu cầu và thiết kế khung giải pháp}
+\label{ch:design}
+
+\section{Tổng quan bài toán và phạm vi VNAI}
+Chuẩn hóa và làm giàu địa chỉ trong bối cảnh Việt Nam phải đối mặt với: \emph{(i)} định dạng nhập không đồng nhất (số nhà---đường---ấp/phố---thôn/phường/xã/huyện/tỉnh); \emph{(ii)} chồng chéo \emph{timeline} hành chính (sáp nhập đơn vị, các mốc \textbf{v1}/\textbf{v2}); \emph{(iii)} sai lệch chính tả/tốc ký so với tên chuẩn trong master; \emph{(iv)} khối lượng rất lớn, xử lý lô và yêu cầu truy vết lỗi. Khung \textbf{VNAI} đặt trọng tâm vào \textbf{pipeline AI lai}: NER, retrieval đa nguồn, và chuỗi khâu cuối do LLM, kết hợp chỉ báo tin cậy và nhận dạng mốc hành chính trong văn bản/metadata.
+
+\textbf{Nội dung chương:} (a) làm rõ yêu cầu chức năng \& phi chức năng; (b) mô tả kiến trúc ba lớp: dữ liệu, huấn luyện, suy luận sản phẩm; (c) luồng đồng bộ giữa hàng chờ, master hành chính và corpus chuẩn.
+
+\section{Phân loại yêu cầu}
+\subsection{Yêu cầu chức năng}
+\begin{itemize}
+  \item \textbf{Thu nạp đa nguồn}: Địa chỉ thô từ bảng hàng chờ (ví dụ \texttt{prq.address\_cleansing\_queue}), các trường phụ trợ tên xã/phường/huyện/tỉnh đã phiên hoá theo lineage (join \texttt{mat.*} qua khóa lịch sử \texttt{old\_*\_id}); corpus chuẩn và dẫn xuất từ các nguồn ADMINISTRATIVE, \texttt{QUEUE\_STANDARDIZED}, \texttt{HF\_NER\_DERIVED} và thành phần bản địa hoá/OSM trong quy trình xuất---nhãn.
+  \item \textbf{Bóc tách cấu thành}: NER dựa trên kiến trúc Transformer tiếng Việt (\textbf{PhoBERT}) với các lớp thực thể thích ứng miền địa chỉ (số nhà, nhóm/thôn/phố, đường/phố, điểm tham chiếu, v.v.).
+  \item \textbf{Chuẩn hoá \& ánh xạ}: Trình truy xuất vector ngữ nghĩa (Siamese trên backbone \textbf{mGTE}) lấy \emph{top---k} ứng viên từ corpus đã nhúng, cung cấp ngữ cảnh và siêu dữ liệu hành chính (ví dụ tọa độ, mã HC) để LLM không phải ``bịa'' tên khớp sai.
+  \item \textbf{Suy luận LLM}: mô hình instruct (ví dụ dòng Qwen, có thể chạy lượng tử hoá trong vận hành); đầu vào là chuỗi đã ghép sau NER và các tầng HC từ hàng chờ; đầu ra gồm (trong các trường khác, nếu có) định dạng từ điển (ví dụ \texttt{full\_address}) map sang \texttt{address\_standardized}.
+  \item \textbf{Đánh giá tin cậy \& thời gian định danh}: module ACS và EpochDetector gán \texttt{address\_epoch} và các trường quyết định/phụ học được kết hợp khi có chứng cứ mốc hành chính.
+\end{itemize}
+
+\subsection{Yêu cầu phi chức năng}
+\begin{itemize}
+  \item \textbf{Tái lập thí nghiệm}: tập train/test cố định (seed, split); version artifact và regression rule-based trong kênh nhãn (không nhầm với NER trên cleanse sản phẩm).
+  \item \textbf{Hiệu năng \& chi phí}: Giới hạn \texttt{corpus\_limit} khi nhúng corpus vào retrieval, batch---size NER và LLM --- lượng tử hoá 4 hoặc 8 bit theo triển khai.
+  \item \textbf{An toàn dữ liệu \& truy xuất nguồn}: Sao lưu trước migrate hàng loạt; audit lineage queue---\texttt{mat}; ghi nhật ký xử lý và trạng thái (\texttt{processing\_status}, \texttt{error\_message}) trên \texttt{prq}.
+\end{itemize}
+
+\section{Kiến trúc tổng thể và pipeline suy luận}
+\subsection{Sơ đồ khối (mô tả hình thức)}
+\textbf{Lớp 1 --- Persistence:} PostgreSQL: hàng chờ, corpus sạch, master \texttt{mat} (qua join ưu tiên phiên bản HC mới hơn trên các \texttt{old\_*} id).
+
+\textbf{Lớp 2 --- Inference pipeline} (thi hành bởi \texttt{production\_pipeline.py}):
+\begin{enumerate}
+  \item Nạp cấu hình (\texttt{config.yaml}), kết nối DB và nạp từ điển tốc viết đường (\texttt{abbreviation\_map.json}).
+  \item Khởi tạo \textbf{mGTE Siamese}; nạp và nhúng corpus ưu tiên từ \texttt{address\_clean\_corpus} có lọc chất lượng; fallback corpus phân lớp nếu thiếu dữ liệu.
+  \item Khởi tạo NER (\texttt{AddressNER}) với artefact cục bộ hay ID Hugging Face; khởi tạo LLM (\texttt{LLMQwen3}) theo độ lượng tử hoá và thông số nhiệt độ/token.
+  \item Vòng lặp theo batch dòng chờ đáng xử lý (\texttt{PENDING} hoặc chưa có \texttt{address\_standardized}).
+  \item Với mỗi địa chỉ: \emph{(a)} \textbf{NER} trên xâu đầu vào hoặc cột đường; \emph{(b)} đồng nhất tiền tố đường theo tra cứu; \emph{(c)} lắp ghép ngữ cảnh gồm số nhà --- đường --- cụm NER --- các tầng HC từ kết quả join hàng chờ; \emph{(d)} \textbf{retrieve\_top\_k\_with\_meta} với \(k\) mặc định ví dụ 5 và kèm embedding score; \emph{(e)} \textbf{LLM normalize} nhận danh sách ứng viên; \emph{(f)} \textbf{EpochDetector} \& \textbf{ACSCalculator} cập nhật các chỉ báo và quyết định học được.
+  \item Ghi lại các cột như đã định nghĩa trong pipeline (\texttt{phobert\_*}, \texttt{mgte\_confidence\_score}, \texttt{latitude/longitude}, \texttt{acs\_*}, \texttt{address\_epoch}, v.v.).
+\end{enumerate}
+
+\textbf{Lớp 3 --- Training \& augmentation} (ngoài luồng real---time cleanse): Xuất và nhận có giám sát (\texttt{export\_for\_annotation}, PreLabeler), huấn luyện NER (\texttt{train\_ner.py}), huấn luyện Siamese mGTE, đánh giá retriever và xây index vector trong thành phần không gian nếu bật \texttt{pgvector}.
+
+\section{Đa nguồn và quản trị lineage}
+Định danh HC trên queue nối vào hai mẫu bản đồ hành chính trong \texttt{mat} nhờ các \texttt{old\_*} id, có thứ tự ưu tiên phiên bản HC mới hơn. Điều này cho phép hệ đọc được cả khách hàng còn mã cũ lẫn bản đã sáp nhập. Corpus cho retrieval không chỉ từ hệ thống hành chính mà còn từ các ca đã chuẩn hoá trên chờ (\texttt{QUEUE\_STANDARDIZED}) đổ vào \texttt{address\_clean\_corpus}, tạo vòng thích nghi bán khép kín (\emph{semi-closed loop}).
+
+\section{Cơ sở thực chứng cho quyết định kiến trúc join (audit lineage --- denorm)}
+Thiết kế join trong các module xuất nhãn / pipeline không chỉ là lựa chọn biểu đồ ERD mà phải \textbf{được kiểm định} trên snapshot vận hành: script \texttt{scripts/diagnostics/audit\_acq\_admin\_bridge.py} tính các gate G1--G4 và một khối khuyến nghị dữ-liệu. \textbf{Đóng góp phương pháp:} (i) tách rõ ngữ nghĩa ``chuẩn chỉ lineage'' (triple inner trên \texttt{old\_*} \(\rightarrow\) \texttt{mat}) và ``phiên huỷ trên queue'' (\texttt{province\_id}, \ldots\,); (ii) ghi nhận các \emph{tỉ lệ quan sát được} để không ảo tưởng rằng mọi queue row đều nằm trong join inner hoàn hảo; (iii) củng cố chính sách \emph{không} dùng đơn độc FK denorm làm ``sự thật tuyệt đối'' nếu chưa có lớp fallback --- phù hợp cảnh báo nội bộ do chính audit trả về. Bảng số liệu minh hoạ một lần đo (có thể lặp lại) được đặt ở Chương~\ref{ch:experiments}, mục~\ref{sec:audit-bridge}.
+
+\section{Bộ đánh giá có kiểm soát SUPA-Bench (tách khỏi hàng chờ sản xuất)}
+\label{sec:supa-bench-design}
+
+\textbf{Mục tiêu phương pháp.} Bổ sung một lớp chứng cứ \emph{end-to-end} có thể tái lập: trích \textbf{chỉ đọc} từ kho tham chiếu \texttt{prq.ground\_truth} (chuỗi \texttt{address} tương ứng chuẩn hành chính sau cải cách --- gọi tắt tham chiếu v2; \texttt{old\_address} --- tham chiếu v1), đóng băng hai tham chiếu trên bảng riêng, sinh chuỗi đầu vào \emph{nhiễu tổng hợp} mô phỏng thói quen người dùng (phiên bản profile nhiễu có mã hóa, ví dụ \texttt{SUP-1.0.0}), rồi sau bước chuẩn hóa bằng pipeline nghiên cứu, so khớp với tham chiếu theo định nghĩa \textbf{S---E2E---EM} (Chương~\ref{ch:experiments}) --- báo \textbf{riêng} EM\@v2 và EM\@v1 để tránh diễn giải sai khi hệ thống nhắm một phiên bản hành chính.
+
+\textbf{Ràng buộc bất biến.} \textbf{Không} thực hiện \texttt{INSERT/UPDATE/DELETE} trên \texttt{prq.ground\_truth}; mọi ghi chỉ trên \texttt{prq.supa\_benchmark\_run} và \texttt{prq.supa\_benchmark\_specimen} (migration \texttt{scripts/migration/20260209\_prq\_supa\_benchmark\_tables.sql}).
+
+\textbf{Công cụ.} Script \texttt{python scripts/experiments/supa\_benchmark.py} (lệnh con \texttt{extract}, \texttt{eval}, \texttt{export-tex}); đặc tả đầy đủ: \texttt{docs/scientific-report/Protocol-Synthetic-User-Perturbation-Benchmark-Google-Ground-Truth.md}.
+
+\textbf{Điền số trong luận.} File \texttt{vnai-supa-generated-metrics.tex} định nghĩa các macro tiền tố \texttt{VNASUPA...}; chúng chỉ được thay bằng số đo thực sau \texttt{eval} + \texttt{export-tex}. Trước đó giữ \texttt{---}; \textbf{không} điền tay các chỉ số EM. \textbf{Thuật ngữ từng macro} và tham số CLI: Bảng~\ref{tab:supa-macro-glossary}; runbook \texttt{docs/scientific-report/SUPA-BENCH-RUNBOOK.md} mục ``Thuật ngữ --- ý nghĩa từng biến''.
+
+\section{Thiết kế huấn luyện NER}
+Đầu vào là bộ corpus nhãn gán thể loại BIO/BIEOS tương thích \texttt{transformers Trainer} và báo \texttt{seqeval}. Thuật ngữ \textbf{macro---F1} và \textbf{độ chính xác theo token} trên \emph{một và chỉ một} split kiểm định được chọn là \textbf{kpi primary} trong báo cáo nội bộ (xem Chương~\ref{ch:experiments}). Siêu tham số: độ dài tối đa câu, batch, thiết bị và đường dẫn cục bộ model sau huấn luyện lưu tại nhánh artefact playbook.
+
+\section{Retrieval đa tầng}
+\begin{itemize}
+  \item \textbf{Tầng 1 --- Lọc nguồn \& chất lượng}: chỉ các bản địa chỉ corpus đạt \texttt{quality\_score} tối thiểu; phân stratify theo nguồn (ADMIN/HF/FROM\_QUEUE đã chấp nhận).
+  \item \textbf{Tầng 2 --- Mã hoá \& chỉ mục ngữ nghĩa}: backbone mGTE nhúng corpus và vector truy vấn ghép từ NER + các tầng HC.
+  \item \textbf{Tầng 3 --- Ước lượng \& chuyển giao}: top---\(k\) ứng viên kèm metadata (quan trọng cho back---fill geo / cho LLM chứng cứ không suy luận hư); điểm similarity ghi vào \texttt{mgte\_confidence\_score}.
+\end{itemize}
+
+\section{Vai trò LLM và biến động hành chính}
+LLM hoạt động dưới \emph{khuếch đại chứng cứ} từ retriever và tên HC từ join; thiết kế định hướng chỉ chỉnh cách viết/tổ hợp văn bản chứ không tự đặt sai tầng HC có thật trong master. EpochDetector \& ACSCalculator là lớp tín hiệu bổ trợ khi chỉ báo retrieval/LLM mơ hồ.
+
+\section{So sánh với kiến trúc chỉ heuristic}
+PreLabeler (rule predictor) chỉ được dùng trong \textbf{vòng nhãn} và không thay đồng thời NER và LLM trên cleanse sản phẩm nhằm tránh chồng lấn giả thuyết thống nhất báo cáo nghiên cứu (\emph{scientific reproducibility}); vị trí chính thức của rule engine là chuẩn hoá dữ liệu huấn luyện và kiểm thử regress.

@@ -1,0 +1,33 @@
+% --- Chapter 6
+\chapter{Kết luận và hướng phát triển}
+\label{ch:conclusion}
+
+\section{Tóm tắt đạt được}
+Khung giải pháp \textbf{VNAI} thiết kế theo hướng \textbf{lai ghép có phân tầng rõ}: (1) học được NER bóc tách địa chỉ (PhoBERT); (2) retrieval đa nguồn (Siamese mGTE); (3) suy luận ngôn ngữ có điều kiện bằng LLM instruct (lượng tử hoá trong vận hành); kèm đường ống dữ liệu PostgreSQL (\texttt{prq}, \texttt{mat}, corpus chuẩn) và các chỉ báo tin cậy (ACS, Epoch). So với mục tiêu \textit{chuẩn hoá \& làm giàu đại trà có truy xuất nguồn}, báo cáo \textbf{đã có một lớp chứng cứ định lượng} về độ nhất quán liên kết master--queue qua audit bridge (không nhầm với F1 NER); đồng thời các thực nghiệm mô hình \textbf{vẫn cần} làm chứng \textbf{P---F1} và \textbf{P---Acc} (Chương~\ref{ch:experiments}) sau khi huấn luyện/đánh giá được khóa, kèm chuỗi chỉ bổ trợ (S-series).
+
+\section{Đối chiếu mục tiêu và tính thực tiễn}
+\begin{itemize}
+  \item \textbf{Tính khoa học:} báo cáo đầy đủ macro và mức token, giảm ``ảo giác'' khi chỉ nêu accuracy trong khi tỉ lệ nhãn \emph{O} chiếm ưu thế.
+  \item \textbf{Vận hành:} cleanse hàng loạt được \textbf{bọc kiểm soát}: backup migrate, regress rule-based và pilot \texttt{--limit}.
+  \item \textbf{Dễ nâng cấp artifact:} thay artefact và \texttt{config.yaml} mà không phá lineage master.
+\end{itemize}
+
+\section{Các giới hạn hiện tại}
+\begin{enumerate}
+  \item \textbf{Căn cứ đo được trên một snapshot queue (audit bridge, xem Chương~\ref{ch:experiments}):} \(\lvert\text{queue}\rvert = 437\,862\) hàng. \emph{(a)} Tỉ lệ nằm trong \textbf{lineage triple inner} (Master) đo được \(\approx 96{,}61\%\) --- tức khoảng \(\mathbf{3{,}39\,\%}\) \textbf{không} vào vùng join inner theo định nghĩa script (số tuyệt đối \(\approx (1-0{,}9661)\times 437\,862 \approx 1{,}49\times 10^4\) hàng --- làm tròn theo output re-run hiện tại). \emph{(b)} Trên các dòng có đủ ba FK phiên huỷ, \(\approx 98{,}55\%\) thỏa đồng thời cùng \texttt{admin\_version} và phân cấp HC trong \texttt{mat}; \textbf{6\,353} dòng còn lại \textbf{không} thỏa (tương đương \(\approx 1{,}45\,\%\) của toàn queue). Các lệch này là \textbf{giới hạn dữ liệu} độc lập với F1 của NER và cần policy reconcile / fallback join trước khi suy diễn E2E hoặc geocoding mạnh.
+  \item \textbf{Retrieval là chứng cứ mềm:} sai top \(k\) lan truyền sang LLM; cần cơ chế từ chối/trả moderator khi chỉ báo similarity thấp.
+  \item \textbf{LLM và chi phí} khi scale; cần thêm chứng cứ ôn định trước dữ liệu nhiễu hoặc văn bản nhạy cảm --- đây là mục thực nghiệm tương lai (\textbf{S---*}), không dùng số định kiến để khẳng định.
+  \item \textbf{SUPA-Bench (Chương~\ref{ch:design}, \ref{ch:experiments}):} cohort và nhiễu tổng hợp đã có đường ống kỹ thuật và bảng \texttt{prq.supa\_benchmark\_*}; \textbf{chỉ khi} đã ghi \texttt{pred\_standardized} và chạy \texttt{eval} thì các macro \texttt{VNASUPAEMvTwoPct}, \texttt{VNASUPAEMvOnePct} trong \texttt{vnai-supa-generated-metrics.tex} mới phản ánh số đo thực --- nếu \texttt{VNASUPANScored} vẫn \texttt{---} hoặc \texttt{0}, luận văn phải nêu rõ benchmark \emph{chưa hoàn tất} bước chuẩn hóa, không suy diễn EM.
+\end{enumerate}
+
+\section{Hướng phát triển và tự động làm giàu không gian}
+\begin{enumerate}
+  \item \textbf{Vòng Corpus tự cải thiện:} đưa bản ghi \texttt{QUEUE\_STANDARDIZED} đạt chất lượng vào \texttt{address\_clean\_corpus}; có chiến lược kiểm soát trôi phân phối (\emph{concept drift}).
+  \item \textbf{Active learning \& human-in-the-loop} khi chỉ báo ACS thấp hoặc trùng ứng viên.
+  \item \textbf{Suy luận không gian:} điền và hiệu đính \((\texttt{latitude},\, \texttt{longitude})\); thử \emph{ràng buộc vùng HC} và ranh polygon từ OSM / nguồn mở.
+  \item \textbf{Đa ngôn ngữ \& OCR} trên các chuỗi ingestion từ quét chứng từ.
+  \item \textbf{Hoàn thiện vòng SUPA-Bench:} nối bước chuẩn hóa tự động từ \texttt{noisy\_raw\_address} \(\rightarrow\) \texttt{pred\_standardized} (cùng snapshot model với báo cáo), mở rộng profile nhiễu (L1--L4) và stratified sampling theo vùng; xuất phân rã lỗi theo lớp nhiễu cho mục kết quả chi tiết.
+\end{enumerate}
+
+\section{Lời kết}
+Định hướng này không thay luật phân cấp hành chính thực tế của Nhà nước, mà \emph{kéo suy luận AI vào đúng bằng chứng trên master} và báo cáo chỉ tiêu theo một giao thức KPI đã khóa. Công việc tiếp theo là các vòng huấn luyện---đánh giá---triển khai dài hạn, lưu kèm artefacts và báo số trong kho lưu trữ dự án.

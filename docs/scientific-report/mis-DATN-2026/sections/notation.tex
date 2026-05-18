@@ -1,0 +1,137 @@
+\chapter*{Bảng ký hiệu}
+\addcontentsline{toc}{chapter}{Bảng ký hiệu}
+
+\begin{longtable}{p{4cm} p{10.4cm}}
+\caption{Bảng ký hiệu sử dụng trong báo cáo}\label{tab:notation}\\
+\toprule
+\textbf{Ký hiệu} & \textbf{Ý nghĩa} \\
+\midrule
+\endfirsthead
+
+\multicolumn{2}{l}{\small\textit{(tiếp Bảng~\ref{tab:notation})}}\\
+\toprule
+\textbf{Ký hiệu} & \textbf{Ý nghĩa} \\
+\midrule
+\endhead
+
+% --- Truy vấn và ứng viên ---
+$q$
+& Chuỗi truy vấn (địa chỉ người dùng nhập) \\
+
+$a_i$
+& Ứng viên địa chỉ thứ $i$ (candidate address) \\
+
+$\mathcal{D} = \{d_1, \dots, d_N\}$
+& Bộ sưu tập tài liệu địa chỉ chuẩn trong cơ sở tri thức \\
+
+$\mathbf{q}, \vec{q}$
+& Vector embedding của truy vấn $q$ trong không gian $\mathbb{R}^d$ \\
+
+$\mathbf{a}_i, \vec{d}$
+& Vector embedding của ứng viên $a_i$ hoặc tài liệu $d$ \\
+
+% --- Mô hình Transformer ---
+$Q, K, V$
+& Ma trận Truy vấn, Khoá, Giá trị trong cơ chế Self-Attention \\
+
+$W^Q, W^K, W^V$
+& Ma trận trọng số học để chiếu đầu vào sang $Q, K, V$ \\
+
+$d_k$
+& Số chiều vector Khoá; phép chia $\sqrt{d_k}$ ổn định softmax \\
+
+$\mathrm{head}_i$
+& Đầu attention thứ $i$ trong Multi-Head Attention \\
+
+$h_i, \tilde{h}_i$
+& Vector ngữ cảnh do BERT/PhoBERT sinh; $\tilde{h}_i$ qua BiLSTM \\
+
+% --- NER và CRF ---
+$y = (y_1, \dots, y_n)$
+& Chuỗi nhãn BIO dự báo cho chuỗi đầu vào dài $n$ \\
+
+$A$
+& Ma trận chuyển trạng thái CRF, kích thước $|L| \times |L|$ \\
+
+$\mathcal{Y}$
+& Tập tất cả chuỗi nhãn hợp lệ \\
+
+% --- Retrieval và similarity ---
+$\mathrm{Sim}(q, d)$
+& Hàm đo độ tương đồng ngữ nghĩa tổng quát \\
+
+$\cos(\vec{q}, \vec{d})$
+& Cosine similarity giữa hai vector \\
+
+$\mathrm{Sim}_{\text{Late}}$
+& Late Interaction MaxSim: $\sum_i \max_j \cos(\vec{q}_i, \vec{d}_j)$ \\
+
+$k$
+& Số kết quả top-$k$ trả về từ retrieval \\
+
+% --- Siamese loss ---
+$D = \norm{\vec{q} - \vec{d}}$
+& Khoảng cách Euclidean giữa hai vector \\
+
+$\alpha$ (Triplet)
+& Margin trong Triplet Loss \\
+
+$\mathcal{L}_{\text{cont}}, \mathcal{L}_{\text{triplet}}$
+& Hàm mất mát Contrastive và Triplet \\
+
+% --- Hình học không gian ---
+$P, P'$
+& Polygon ranh giới gốc và sau hiệu chỉnh \\
+
+$\mathcal{P} = \{p_1, \dots, p_k\}$
+& Đám mây điểm (cloud) toạ độ giao nhận thực tế \\
+
+$B(p, r) = \{x : \norm{x - p} \le r\}$
+& Vùng đệm (buffer) bán kính $r$ quanh điểm $p$ \\
+
+% --- Điểm tin cậy địa chỉ ACS ---
+$S_{\text{text}}$
+& Điểm khớp theo văn bản (BM25 / Typesense text score), chuẩn hoá $[0,1]$ \\
+
+$S_{\text{sem}}$
+& Điểm khớp theo ngữ nghĩa (cosine similarity), chuẩn hoá $[0,1]$ \\
+
+$V_{\text{hier}} \in \{0, 1\}$
+& Chỉ số kiểm tra phân cấp Phường $\in$ Quận $\in$ Tỉnh trong \texttt{mat} \\
+
+$V_{\text{temporal}} \in [0, 1]$
+& Trọng số thời gian: $1$ nếu hậu cải cách, $0{,}7$ nếu cũ trong cửa sổ \\
+
+$\alpha, \beta, \gamma, \delta$
+& Trọng số WSM trong công thức ACS, ràng buộc $\alpha + \beta + \gamma + \delta = 1$ \\
+
+$\mathrm{ACS}(a_i \mid q)$
+& Điểm tin cậy địa chỉ cho ứng viên $a_i$ trước truy vấn $q$ \\
+
+$\mathcal{A} = \{a_1, a_2, a_3, a_4\}$
+& Không gian quyết định: \{Auto-Accept, Auto-Convert, Suggest, Reject\} \\
+
+$\theta_{\text{high}}, \theta_{\text{low}}$
+& Ngưỡng quyết định ($\theta_{\text{high}} = 0{,}85$; $\theta_{\text{low}} = 0{,}50$) \\
+
+% --- ECE ---
+$B_m$
+& Khoảng giá trị (bin) thứ $m$ trong tính ECE \\
+
+$\mathrm{acc}(B_m), \mathrm{conf}(B_m)$
+& Độ chính xác thực nghiệm và độ tin cậy trung bình trong bin \\
+
+$\mathrm{ECE} = \sum_m \tfrac{|B_m|}{n} |\mathrm{acc}(B_m) - \mathrm{conf}(B_m)|$
+& Sai số hiệu chuẩn kỳ vọng \\
+
+% --- SUPA-Bench ---
+$K = 5$
+& Số lần lặp độc lập trong thực nghiệm phân tầng \\
+
+$n = 2.000$
+& Cỡ cohort mỗi lần chạy SUPA-Bench phân tầng \\
+
+\bottomrule
+\end{longtable}
+
+\cleardoublepage

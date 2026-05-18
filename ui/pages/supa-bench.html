@@ -6,6 +6,7 @@
     justify-content: space-between;
     align-items: flex-start;
     gap: 16px;
+    flex-wrap: wrap; /* Allow wrapping on small screens */
   }
 
   #supa-bench .page-header > div:first-child {
@@ -233,12 +234,129 @@
     line-height: 1.4;
   }
 
-  /* Scroll behavior - only scroll tab content */
-  #supa-bench {
+  /* Pipeline Progress Overlay */
+  .supa-progress-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(10, 10, 11, 0.95);
+    backdrop-filter: blur(8px);
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .supa-progress-overlay.active {
+    display: flex;
+  }
+
+  .supa-progress-panel {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    min-width: 480px;
+    max-width: 600px;
+    box-shadow: var(--shadow-lg);
+  }
+
+  .supa-progress-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .supa-progress-header h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .supa-progress-steps {
     display: flex;
     flex-direction: column;
-    height: 100%;
-    overflow: hidden;
+    gap: 12px;
+  }
+
+  .supa-progress-step {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border-radius: var(--radius-sm);
+    background: var(--bg-surface);
+    transition: var(--transition);
+  }
+
+  .supa-progress-step.active {
+    background: var(--accent-glow);
+    border-left: 3px solid var(--accent);
+  }
+
+  .supa-progress-step.completed {
+    opacity: 0.7;
+  }
+
+  .supa-progress-icon {
+    font-size: 24px;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .supa-progress-step.active .supa-progress-icon {
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.7; transform: scale(1.1); }
+  }
+
+  .supa-progress-info {
+    flex: 1;
+  }
+
+  .supa-progress-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+  }
+
+  .supa-progress-desc {
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+
+  .supa-progress-footer {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-subtle);
+    text-align: center;
+  }
+
+  .supa-progress-time {
+    font-size: 12px;
+    color: var(--text-tertiary);
+    font-style: italic;
+  }
+
+  /* Scroll behavior - only scroll tab content */
+  /* Do NOT override display/flex-direction - let .page.active handle it */
+  /* Only add page-specific styling like padding */
+  #supa-bench {
+    padding: 20px;
   }
 
   #supa-bench .supa-stepper,
@@ -251,6 +369,7 @@
     overflow-y: auto;
     overflow-x: hidden;
     padding-right: 8px;
+    min-height: 0; /* Ensure flex shrink works properly */
   }
 
   #supa-bench .supa-tab-content::-webkit-scrollbar {
@@ -273,10 +392,60 @@
 </style>
 
 <div class="page" id="supa-bench">
-  <!-- Loading Overlay -->
-  <div id="supa-loading-overlay" class="loading-overlay">
-    <div class="spinner"></div>
-    <div class="loading-text">Đang xử lý...</div>
+  <!-- Pipeline Progress Overlay -->
+  <div id="supa-progress-overlay" class="supa-progress-overlay">
+    <div class="supa-progress-panel">
+      <div class="supa-progress-header">
+        <div class="spinner"></div>
+        <h3>Đang chạy SUPA Pipeline</h3>
+      </div>
+      
+      <div class="supa-progress-steps">
+        <div class="supa-progress-step" data-step="extract">
+          <span class="supa-progress-icon">⏺️</span>
+          <div class="supa-progress-info">
+            <div class="supa-progress-label">Extract</div>
+            <div class="supa-progress-desc">Trích mẫu địa chỉ từ database</div>
+          </div>
+        </div>
+        
+        <div class="supa-progress-step" data-step="ner">
+          <span class="supa-progress-icon">⏺️</span>
+          <div class="supa-progress-info">
+            <div class="supa-progress-label">NER</div>
+            <div class="supa-progress-desc">PhoBERT nhận diện thực thể</div>
+          </div>
+        </div>
+        
+        <div class="supa-progress-step" data-step="retrieval">
+          <span class="supa-progress-icon">⏺️</span>
+          <div class="supa-progress-info">
+            <div class="supa-progress-label">Retrieval</div>
+            <div class="supa-progress-desc">mGTE tìm kiếm địa chỉ tương tự</div>
+          </div>
+        </div>
+        
+        <div class="supa-progress-step" data-step="llm">
+          <span class="supa-progress-icon">⏺️</span>
+          <div class="supa-progress-info">
+            <div class="supa-progress-label">LLM</div>
+            <div class="supa-progress-desc">Qwen3 chuẩn hóa cuối cùng</div>
+          </div>
+        </div>
+        
+        <div class="supa-progress-step" data-step="eval">
+          <span class="supa-progress-icon">⏺️</span>
+          <div class="supa-progress-info">
+            <div class="supa-progress-label">Eval</div>
+            <div class="supa-progress-desc">Tính toán metrics</div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="supa-progress-footer">
+        <div class="supa-progress-time">Ước tính: ~2-5 phút</div>
+      </div>
+    </div>
   </div>
 
   <!-- Stepper -->
@@ -408,7 +577,10 @@
         <h2>Dữ liệu mẫu</h2>
         <p>Kiểm tra dữ liệu đã trích xuất</p>
       </div>
-      <button type="button" class="btn btn-sm btn-outline" id="supa-btn-download-csv" style="flex-shrink: 0;">Tải CSV</button>
+      <div class="flex gap-8" style="flex-shrink: 0;">
+        <button type="button" class="btn btn-sm btn-primary" id="supa-btn-run-norm-tab2">Chạy chuẩn hóa</button>
+        <button type="button" class="btn btn-sm btn-outline" id="supa-btn-download-csv">Tải CSV</button>
+      </div>
     </div>
 
     <div class="card">
@@ -508,7 +680,7 @@
           
           <div class="mt-16">
             <div style="font-size: 13px; font-weight: 600; margin-bottom: 8px;">Console</div>
-            <pre id="supa-bench-console-log" style="height: 140px; font-size: 10px; background: var(--bg-elevated); color: var(--info); padding: 12px; border-radius: var(--radius-sm); overflow-y: auto;"></pre>
+            <pre id="supa-bench-console-log" style="min-height: 300px; max-height: 400px; font-size: 11px; background: var(--bg-elevated); color: var(--info); padding: 12px; border-radius: var(--radius-sm); overflow-y: auto; overflow-x: hidden; white-space: pre-wrap; word-wrap: break-word;"></pre>
           </div>
         </div>
       </div>
@@ -523,6 +695,30 @@
         <p>Phân tích độ chính xác và hiệu năng</p>
       </div>
       <button type="button" class="btn btn-primary" id="supa-btn-run-eval" style="flex-shrink: 0;">Tính toán</button>
+    </div>
+
+    <!-- Run Info Card -->
+    <div class="card mb-16" id="supa-run-info-card" style="display: none;">
+      <div class="card-body" style="padding: 16px;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+          <div>
+            <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-tertiary); margin-bottom: 4px;">Lần thử</div>
+            <div style="font-size: 16px; font-weight: 600; color: var(--text-primary);" id="supa-run-info-id">—</div>
+          </div>
+          <div>
+            <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-tertiary); margin-bottom: 4px;">Số lượng mẫu</div>
+            <div style="font-size: 16px; font-weight: 600; color: var(--text-primary);" id="supa-run-info-samples">—</div>
+          </div>
+          <div>
+            <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-tertiary); margin-bottom: 4px;">Seed</div>
+            <div style="font-size: 16px; font-weight: 600; color: var(--text-primary);" id="supa-run-info-seed">—</div>
+          </div>
+          <div>
+            <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-tertiary); margin-bottom: 4px;">Profile nhiễu</div>
+            <div style="font-size: 16px; font-weight: 600; color: var(--text-primary);" id="supa-run-info-noise">—</div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Hero Metrics -->

@@ -1,0 +1,510 @@
+% !TEX program = xelatex
+% !BIB program = biber
+% =====================================================================
+%  CHƯƠNG 3 — CƠ SỞ LÝ THUYẾT
+%  Đề án: Xây dựng khung giải pháp làm giàu và chuẩn hóa dữ liệu địa chỉ
+%         Việt Nam sử dụng tiếp cận đa nguồn và thuật toán hình học không
+%         gian trong bối cảnh sắp xếp đơn vị hành chính toàn quốc 2025
+%  Học viên: Nguyễn Vũ Trọng Giang — MSHV: 2470279
+%
+%  Quy trình biên dịch (khuyến nghị XeLaTeX do hỗ trợ UTF-8 tiếng Việt):
+%      xelatex MIS_Luan_Van_Tot_Nghiep_Ch3.tex
+%      biber   MIS_Luan_Van_Tot_Nghiep_Ch3
+%      xelatex MIS_Luan_Van_Tot_Nghiep_Ch3.tex
+%      xelatex MIS_Luan_Van_Tot_Nghiep_Ch3.tex
+%
+%  Để tích hợp vào tài liệu chính, dùng \input{MIS_Luan_Van_Tot_Nghiep_Ch3}
+%  rồi xoá khối preamble + \begin{document}/\end{document} bên dưới.
+% =====================================================================
+
+% =====================================================================
+\chapter{Cơ sở lý thuyết}
+\label{ch:co-so-ly-thuyet}
+
+Chương~\ref{ch:literature-review} đã xác lập tính cấp thiết của khung giải pháp VNAI cùng các khoảng trống nghiên cứu trong bài toán chuẩn hóa và làm giàu dữ liệu địa chỉ Việt Nam. Để hiện thực hóa các mục tiêu nghiên cứu và giải đáp ba câu hỏi cốt lõi đã đặt ra tại Mục~\ref{sec:research-questions}, chương này thiết lập nền tảng lý luận cho toàn bộ kiến trúc hệ thống được trình bày ở Chương~\ref{ch:design}.
+
+% ---------------------------------------------------------------------
+\section{Tổng quan định vị}
+\label{sec:dinh-vi}
+
+Khung giải pháp VNAI hợp nhất ba lĩnh vực kỹ thuật: xử lý ngôn ngữ tự nhiên (NLP) tiếng Việt, truy xuất thông tin (Information Retrieval) và xử lý dữ liệu địa lý (Geospatial Computing). Tương ứng với mỗi câu hỏi nghiên cứu (RQ) là một chùm nền tảng lý thuyết cần thiết, được tóm lược tại \cref{tab:dinh-vi-ly-thuyet}.
+
+\begin{table}[h]
+\centering
+\caption{Định vị nền tảng lý thuyết theo câu hỏi nghiên cứu}
+\label{tab:dinh-vi-ly-thuyet}
+\small
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}p{2cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}p{4cm}}
+\toprule
+\textbf{Câu hỏi} & \textbf{Bài toán cốt lõi} & \textbf{Nền tảng lý thuyết} \\
+\midrule
+RQ1 & Mô hình hóa biến động hành chính theo thời gian, đảm bảo truy vết \thuat{(traceability)} & Slowly Changing Dimension Type 2; tích hợp trong Mục~\ref{sec:acs} \\
+RQ2 & So sánh hybrid PhoBERT + mGTE với tìm kiếm từ vựng truyền thống & Transformer (\ref{sec:transformer}); PhoBERT NER (\ref{sec:phobert}); mGTE Retrieval (\ref{sec:mgte}); Siamese Network (\ref{sec:siamese}) \\
+RQ3 & Thuật toán hình học không gian cho tự hiệu chỉnh polygon & Geospatial \& PostGIS (\ref{sec:postgis}) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Chương được tổ chức theo trình tự logic từ kiến trúc nền đến ứng dụng cụ thể: Mục~\ref{sec:transformer} giới thiệu kiến trúc Transformer làm cơ sở cho mọi mô hình ngôn ngữ tiên tiến; Mục~\ref{sec:phobert} đi sâu vào PhoBERT cho tác vụ nhận diện thực thể tên; Mục~\ref{sec:mgte} phân tích mGTE và kiến trúc truy xuất ngữ nghĩa đa tầng; Mục~\ref{sec:siamese} trình bày mạng Siamese cùng các hàm mất mát học so khớp; Mục~\ref{sec:postgis} đi vào các thuật toán hình học không gian trong PostGIS phục vụ định vị và hiệu chỉnh ranh giới; Mục~\ref{sec:acs} thiết lập mô hình Điểm tin cậy địa chỉ (ACS) cho tầng hỗ trợ ra quyết định.
+
+% ---------------------------------------------------------------------
+\section{Kiến trúc Transformer}
+\label{sec:transformer}
+
+\subsection{Bối cảnh ra đời và động lực}
+
+Trước khi kiến trúc Transformer được đề xuất, các mô hình tiên tiến trong xử lý ngôn ngữ tự nhiên chủ yếu dựa trên mạng nơ-ron hồi quy (Recurrent Neural Network --- RNN) và các biến thể như LSTM (Long Short-Term Memory) \cite{Hochreiter1997}. Mặc dù có khả năng xử lý chuỗi văn bản với phụ thuộc dài hạn, các mô hình hồi quy bộc lộ hai hạn chế cốt lõi cản trở khả năng mở rộng. Thứ nhất, tính tuần tự (sequential nature) của phép tính hồi quy khiến quá trình huấn luyện không thể song song hóa hiệu quả trên GPU, làm tăng đáng kể thời gian huấn luyện trên các tập ngữ liệu lớn. Thứ hai, sự suy giảm gradient (vanishing gradient) khi chuỗi dài làm giảm khả năng nắm bắt ngữ cảnh xa, đặc biệt bất lợi cho các bài toán mà thông tin quan trọng phân tán trên toàn chuỗi như nhận diện thực thể địa chỉ (số nhà thường ở đầu chuỗi nhưng phụ thuộc về mặt phân cấp vào tên tỉnh ở cuối chuỗi).
+
+Năm 2017, Vaswani và cộng sự đề xuất kiến trúc \textbf{Transformer} trong công trình \emph{Attention Is All You Need} \cite{Vaswani2017}, hoàn toàn loại bỏ cơ chế hồi quy và thay thế bằng cơ chế chú ý (attention mechanism) thuần túy. Kiến trúc này nhanh chóng trở thành nền tảng cho các mô hình ngôn ngữ hiện đại như BERT, GPT, RoBERTa, T5 và các mô hình ngôn ngữ lớn (LLM) thế hệ mới.
+
+\subsection{Cơ chế Self-Attention}
+
+Cơ chế chú ý bản thân (Self-Attention) cho phép mỗi vị trí (token) trong chuỗi đầu vào tham chiếu đến tất cả các vị trí khác, qua đó xây dựng biểu diễn ngữ cảnh giàu thông tin. Cụ thể, với chuỗi đầu vào được biểu diễn dưới dạng ma trận $X \in \mathbb{R}^{n \times d}$, trong đó $n$ là độ dài chuỗi và $d$ là số chiều embedding, ba ma trận trọng số có thể học $W^Q, W^K, W^V \in \mathbb{R}^{d \times d_k}$ được sử dụng để sinh ra ba biểu diễn Truy vấn (Query), Khóa (Key) và Giá trị (Value):
+\begin{equation}
+Q = XW^Q, \quad K = XW^K, \quad V = XW^V
+\label{eq:qkv}
+\end{equation}
+
+Đầu ra của lớp Self-Attention được tính theo công thức Scaled Dot-Product Attention:
+\begin{equation}
+\mathrm{Attention}(Q, K, V) = \mathrm{softmax}\!\left(\frac{QK^{\top}}{\sqrt{d_k}}\right) V
+\label{eq:attention}
+\end{equation}
+Trong đó $d_k$ là số chiều của vector Khóa. Phép chia cho $\sqrt{d_k}$ đóng vai trò ổn định gradient, ngăn không cho hàm softmax rơi vào vùng bão hòa khi $d_k$ lớn. Ma trận $QK^{\top} \in \mathbb{R}^{n \times n}$ biểu diễn điểm tương tác giữa mọi cặp vị trí; sau khi chuẩn hóa qua softmax, kết quả là một ma trận trọng số chú ý mô tả mức độ liên quan giữa các token.
+
+\subsection{Multi-Head Attention}
+
+Để mô hình có thể nắm bắt nhiều khía cạnh ngữ nghĩa khác nhau cùng lúc, Transformer áp dụng cơ chế chú ý đa đầu (Multi-Head Attention). Đầu vào được chiếu vào $h$ không gian con khác nhau, mỗi không gian được xử lý bởi một đầu attention độc lập:
+\begin{equation}
+\mathrm{MultiHead}(Q,K,V) = \mathrm{Concat}(\mathrm{head}_1, \dots, \mathrm{head}_h) W^O
+\label{eq:multihead}
+\end{equation}
+\begin{equation}
+\mathrm{head}_i = \mathrm{Attention}(QW_i^Q,\, KW_i^K,\, VW_i^V)
+\label{eq:head-i}
+\end{equation}
+
+Trong bối cảnh xử lý địa chỉ Việt Nam, cơ chế đa đầu cho phép một đầu tập trung vào quan hệ phân cấp hành chính (Phường $\to$ Quận $\to$ Tỉnh), trong khi đầu khác nắm bắt quan hệ vị trí tương đối giữa các thành phần ký tự (Số nhà $\to$ Tên đường $\to$ Phường), giúp mô hình hiểu được cấu trúc lồng nhau đặc thù của địa chỉ.
+
+\subsection{Kiến trúc Encoder-Decoder và Positional Encoding}
+
+Transformer nguyên bản gồm hai khối chính: Encoder (ngăn xếp 6 lớp encoder giống nhau) và Decoder (ngăn xếp 6 lớp decoder). Mỗi khối Encoder bao gồm một lớp Multi-Head Self-Attention nối tiếp một lớp Feed-Forward Network (FFN), kết hợp với Residual Connection và Layer Normalization để ổn định quá trình huấn luyện sâu. Khối Decoder bổ sung lớp Encoder-Decoder Attention (cross-attention) để khớp thông tin giữa chuỗi nguồn và chuỗi đích.
+
+Các mô hình ngôn ngữ hiện đại thường chỉ sử dụng một trong hai khối: BERT \cite{devlin2019} và RoBERTa \cite{Liu2019} chỉ dùng Encoder (phù hợp cho phân loại, NER, truy xuất); GPT chỉ dùng Decoder (phù hợp cho sinh văn bản). Trong khung giải pháp VNAI, kiến trúc encoder-only được lựa chọn cho hai pipeline cốt lõi (NER và Retrieval) do bài toán chuẩn hóa địa chỉ chủ yếu yêu cầu hiểu (understanding) thay vì sinh văn bản (generation).
+
+Do cơ chế self-attention không có khả năng tự nhận biết thứ tự token (tính chất hoán vị bất biến), Transformer bổ sung biểu diễn vị trí (Positional Encoding --- PE) vào embedding đầu vào. Vaswani và cộng sự đề xuất sử dụng các hàm sin/cos:
+\begin{equation}
+PE_{(pos, 2i)} = \sin\!\left(\frac{pos}{10000^{2i/d_{\text{model}}}}\right),\quad
+PE_{(pos, 2i+1)} = \cos\!\left(\frac{pos}{10000^{2i/d_{\text{model}}}}\right)
+\label{eq:posenc}
+\end{equation}
+Cách mã hóa này cho phép mô hình tổng quát hóa với chuỗi dài hơn so với chuỗi đã thấy trong huấn luyện và học các quan hệ vị trí tương đối thông qua các phép biến đổi tuyến tính của PE.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.4\linewidth]{figs/fig-3-1.png}
+\caption{Kiến trúc tổng thể Transformer.}
+\label{fig:transformer-arch}
+\end{figure}
+
+% ---------------------------------------------------------------------
+\section{PhoBERT cho Nhận diện thực thể tên}
+\label{sec:phobert}
+
+\subsection{Từ BERT đến RoBERTa}
+
+BERT (Bidirectional Encoder Representations from Transformers) \cite{devlin2019} là mô hình tiên phong áp dụng kiến trúc Encoder-only của Transformer cho học biểu diễn ngôn ngữ phổ quát. BERT được tiền huấn luyện (pre-training) trên hai tác vụ: Masked Language Modeling (MLM) --- dự đoán các token bị che ngẫu nhiên trong câu --- và Next Sentence Prediction (NSP) --- dự đoán quan hệ giữa hai câu liên tiếp. Sau giai đoạn tiền huấn luyện trên ngữ liệu lớn, mô hình được tinh chỉnh (fine-tuning) cho các tác vụ hạ nguồn cụ thể.
+
+RoBERTa (Robustly Optimized BERT Approach) \cite{Liu2019} cải tiến BERT thông qua bốn thay đổi chính: (i) loại bỏ tác vụ NSP do thực nghiệm cho thấy không cải thiện chất lượng; (ii) áp dụng mặt nạ động (dynamic masking) thay vì mặt nạ tĩnh; (iii) huấn luyện với kích thước batch lớn hơn và số bước nhiều hơn; (iv) sử dụng ngữ liệu lớn hơn 10 lần so với BERT gốc. Những cải tiến này cho phép RoBERTa đạt hiệu năng vượt trội trên các benchmark chuẩn như GLUE và SQuAD, đồng thời trở thành nền tảng cho các mô hình ngôn ngữ đơn ngữ (monolingual) chất lượng cao.
+
+\subsection{PhoBERT --- Đơn ngữ hóa cho tiếng Việt}
+
+PhoBERT \cite{nguyen2020phobert} là mô hình ngôn ngữ tiền huấn luyện chuyên biệt cho tiếng Việt, được phát triển dựa trên kiến trúc RoBERTa. Mô hình có hai phiên bản: PhoBERT-base (135M tham số, 12 lớp encoder) và PhoBERT-large (370M tham số, 24 lớp encoder). PhoBERT được huấn luyện trên ngữ liệu khoảng 20GB văn bản tiếng Việt thu thập từ Wikipedia tiếng Việt và tập tin tức. Ba lựa chọn thiết kế cốt lõi của PhoBERT đáng chú ý đối với bài toán xử lý địa chỉ.
+
+Thứ nhất, tách từ bằng VnCoreNLP \cite{Vu2018VnCoreNLP}: tiếng Việt là ngôn ngữ đơn lập với ranh giới từ mờ, một từ tiếng Việt có thể gồm nhiều âm tiết phân tách bởi khoảng trắng (ví dụ: "Hà Nội", "Đại học"). PhoBERT yêu cầu văn bản đầu vào được tách từ trước khi mã hóa, qua đó giảm thiểu độ mơ hồ ngữ nghĩa so với việc xử lý ở mức âm tiết hoặc ký tự.
+
+Thứ hai, mã hóa subword bằng FastBPE: phương pháp Byte-Pair Encoding (BPE) cho phép xử lý các từ ngoài từ điển (Out-of-Vocabulary --- OOV) bằng cách phân rã chúng thành các đơn vị subword. Đây là tính chất cực kỳ quan trọng cho dữ liệu địa chỉ vốn chứa nhiều biến thể viết tắt, sai chính tả nhẹ, hoặc tên địa danh mới chưa có trong từ điển huấn luyện.
+
+Thứ ba, đơn ngữ hóa (monolingual): so với các mô hình đa ngôn ngữ như mBERT hay XLM-R, PhoBERT tập trung toàn bộ sức biểu diễn vào tiếng Việt, qua đó đạt hiệu năng cao hơn trên các tác vụ tiếng Việt với cùng số tham số. Theo \cite{nguyen2020phobert}, PhoBERT-base vượt XLM-R-base khoảng 1.6--1.9 điểm F1 trên VLSP NER, một cách biệt có ý nghĩa thống kê đối với bài toán nhận diện thực thể.
+
+\subsection{Bài toán NER và sơ đồ nhãn BIO}
+
+Nhận diện thực thể tên (Named Entity Recognition --- NER) là tác vụ gán nhãn cho mỗi token trong văn bản nhằm xác định nó có thuộc về một thực thể nào không, và nếu có thì thuộc loại thực thể nào. Đối với bài toán bóc tách địa chỉ Việt Nam, tập nhãn được thiết kế gồm các loại thực thể: \macode{HOUSENUM} (số nhà), \macode{ALLEY} (ngõ/ngách/hẻm), \macode{STREET} (tên đường), \macode{WARD} (phường/xã), \macode{DISTRICT} (quận/huyện --- vẫn cần cho dữ liệu lưỡng thời), \macode{PROVINCE} (tỉnh/thành phố), và \macode{LOCATION} (địa danh dân gian, POI).
+
+Sơ đồ nhãn được sử dụng rộng rãi nhất là BIO (Beginning, Inside, Outside): mỗi loại thực thể $T$ tạo ra hai nhãn \macode{B-T} (token bắt đầu của thực thể) và \macode{I-T} (token nằm bên trong thực thể), kèm theo nhãn \macode{O} (outside, không thuộc thực thể nào). Ví dụ, chuỗi đầu vào hậu cải cách 2025 sau khi tách từ ``\textit{268 Lý Thường\_Kiệt, Phường Diên\_Hồng, TP. HCM}'' sẽ được gán nhãn:
+\begin{center}
+\small
+\begin{tabular}{llllll}
+\textit{268} & \textit{Lý} & \textit{Thường\_Kiệt} & \textit{Phường} & \textit{Diên\_Hồng} & \textit{TP.\_HCM} \\
+B-HOUSENUM & B-STREET & I-STREET & O & B-WARD & B-PROVINCE
+\end{tabular}
+\end{center}
+Lưu ý: cặp nhãn \macode{B-DISTRICT}/\macode{I-DISTRICT} vẫn được giữ trong tập nhãn để xử lý dữ liệu \emph{lưỡng thời} --- các địa chỉ tiền cải cách (ví dụ ``\textit{268 Lý Thường\_Kiệt, Phường 14, Quận 10, TP.\_HCM}'') sẽ kích hoạt thêm hai nhãn này khi mô hình nhận ra cấp huyện cũ.
+
+\subsection{PhoBERT + BiLSTM-CRF cho NER địa chỉ}
+
+Kiến trúc kết hợp PhoBERT với một lớp BiLSTM (Bidirectional LSTM) và một lớp Conditional Random Field (CRF) đã trở thành chuẩn de facto cho NER tiếng Việt \cite{nguyen2020phobert}. Luồng xử lý gồm ba giai đoạn:
+\begin{enumerate}[leftmargin=*]
+\item PhoBERT mã hóa chuỗi đầu vào thành các vector biểu diễn ngữ cảnh $h_1, h_2, \dots, h_n \in \mathbb{R}^{d_h}$ ($d_h = 768$ cho PhoBERT-base).
+\item Lớp BiLSTM tinh chỉnh các vector này, bổ sung thông tin tuần tự cục bộ mà self-attention có thể bỏ sót: $\tilde{h}_i = [\overrightarrow{h_i}; \overleftarrow{h_i}]$.
+\item Lớp CRF mô hình hóa quan hệ giữa các nhãn liên tiếp. Khác với việc dự đoán độc lập từng nhãn (token-wise softmax), CRF học một ma trận chuyển trạng thái $A \in \mathbb{R}^{|L| \times |L|}$ ($|L|$ là số nhãn) để áp đặt các ràng buộc cấu trúc: ví dụ, nhãn \macode{I-WARD} không được phép xuất hiện ngay sau nhãn \macode{B-PROVINCE}.
+\end{enumerate}
+
+Hàm mất mát của CRF được định nghĩa qua xác suất có điều kiện của chuỗi nhãn $y = (y_1, \dots, y_n)$ cho chuỗi đầu vào $x$:
+\begin{equation}
+P(y \mid x) = \frac{\exp\!\left(\sum_{i=1}^{n} \tilde{h}_i[y_i] + \sum_{i=1}^{n-1} A[y_i, y_{i+1}]\right)}{\sum_{y' \in \mathcal{Y}} \exp\!\left(\sum_{i=1}^{n} \tilde{h}_i[y'_i] + \sum_{i=1}^{n-1} A[y'_i, y'_{i+1}]\right)}
+\label{eq:crf}
+\end{equation}
+Trong đó $\mathcal{Y}$ là tập tất cả các chuỗi nhãn hợp lệ. Quá trình giải mã ở thời điểm suy luận sử dụng thuật toán Viterbi để tìm chuỗi nhãn $y^* = \arg\max_y P(y \mid x)$ với độ phức tạp $O(n \cdot |L|^2)$. Toàn bộ luồng xử lý ba giai đoạn này được tóm lược tại \cref{fig:phobert-ner}.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.2\linewidth]{figs/fig-3-2.png}
+\caption{Kiến trúc PhoBERT + BiLSTM-CRF cho tác vụ NER địa chỉ tiếng Việt.}
+\label{fig:phobert-ner}
+\end{figure}
+
+\subsection{So sánh PhoBERT với mô hình đa ngôn ngữ}
+
+\Cref{tab:so-sanh-phobert} so sánh PhoBERT với hai mô hình đa ngôn ngữ phổ biến trên tác vụ NER tiếng Việt. Các con số hiệu năng được lấy từ kết quả công bố trong tài liệu PhoBERT \cite{nguyen2020phobert} trên benchmark VLSP NER 2018, làm cơ sở cho lựa chọn PhoBERT trong khung giải pháp VNAI.
+
+\begin{table}[h]
+\centering
+\caption{So sánh PhoBERT với mô hình đa ngôn ngữ trên tác vụ NER tiếng Việt}
+\label{tab:so-sanh-phobert}
+\small
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}p{2.6cm} c c c >{\raggedright\arraybackslash}X}
+\toprule
+\textbf{Mô hình} & \textbf{Tham số} & \textbf{Đơn/Đa ngôn ngữ} & \textbf{F1 VLSP NER} & \textbf{Đặc điểm} \\
+\midrule
+mBERT-base   & 110M & 104 ngôn ngữ & $\sim$92.7 & Word-piece tokenizer, không tách từ tiếng Việt \\
+XLM-R-base   & 270M & 100 ngôn ngữ & $\sim$93.8 & SentencePiece, ngữ liệu CC100 đa ngôn ngữ \\
+PhoBERT-base & 135M & Tiếng Việt    & $\sim$94.5--95.4 & FastBPE + VnCoreNLP, ngữ liệu 20GB tiếng Việt \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% ---------------------------------------------------------------------
+\section{mGTE và truy xuất ngữ nghĩa đa tầng}
+\label{sec:mgte}
+
+\subsection{Bài toán Semantic Retrieval}
+
+Sau khi pipeline NER tách chuỗi địa chỉ thô thành các thành phần có cấu trúc, bài toán tiếp theo là ánh xạ các thành phần này về cơ sở tri thức hành chính chuẩn (Master Administrative Table) để gán mã định danh. Đây là bài toán Truy xuất ngữ nghĩa (Semantic Retrieval): cho một truy vấn $q$ (chuỗi tên đơn vị hành chính có thể chứa lỗi chính tả, viết tắt, hoặc dùng tên dân gian) và một bộ sưu tập tài liệu $\mathcal{D} = \{d_1, d_2, \dots, d_N\}$ (các đơn vị hành chính chuẩn), tìm tài liệu $d^* \in \mathcal{D}$ sao cho:
+\begin{equation}
+d^* = \arg\max_{d \in \mathcal{D}} \mathrm{Sim}(q, d)
+\label{eq:retrieval}
+\end{equation}
+Trong đó $\mathrm{Sim}(\cdot, \cdot)$ là một hàm đo độ tương đồng ngữ nghĩa.
+
+Khác với tìm kiếm từ vựng truyền thống dựa trên BM25 hoặc TF-IDF \cite{manning2008IR} vốn chỉ khớp khi chuỗi truy vấn và tài liệu chia sẻ token cụ thể, truy xuất ngữ nghĩa cho phép khớp các biến thể không chia sẻ ký tự như "Sài Gòn" $\leftrightarrow$ "TP. Hồ Chí Minh" hoặc "Q. Nhất" $\leftrightarrow$ "Quận 1".
+
+\subsection{Mô hình nhúng văn bản và kiến trúc Bi-encoder}
+
+Nguyên lý cốt lõi của truy xuất ngữ nghĩa là biểu diễn cả truy vấn lẫn tài liệu dưới dạng vector mật độ cao trong cùng một không gian, sao cho khoảng cách giữa hai vector phản ánh độ tương đồng ngữ nghĩa. Các mô hình nhúng văn bản hiện đại như Sentence-BERT \cite{Reimers2019SBERT}, DPR \cite{Karpukhin2020DPR}, và mGTE \cite{mgte2024} áp dụng kiến trúc Bi-encoder (còn gọi là dual-encoder hoặc twin-encoder).
+
+Trong kiến trúc Bi-encoder, hai encoder $E_q$ và $E_d$ (thường chia sẻ trọng số) độc lập mã hóa truy vấn và tài liệu thành các vector cố định:
+\begin{equation}
+\vec{q} = E_q(q) \in \mathbb{R}^{d}, \quad \vec{d} = E_d(d) \in \mathbb{R}^{d}
+\label{eq:bi-encoder}
+\end{equation}
+
+Sau đó, độ tương đồng được tính bằng tích vô hướng hoặc cosine:
+\begin{equation}
+\mathrm{Sim}(q, d) = \cos(\vec{q}, \vec{d}) = \frac{\vec{q} \cdot \vec{d}}{\norm{\vec{q}} \cdot \norm{\vec{d}}}
+\label{eq:cosine}
+\end{equation}
+
+Ưu điểm cốt lõi của Bi-encoder là khả năng tiền tính toán: toàn bộ vector $\vec{d}$ của các tài liệu trong cơ sở tri thức được tính trước và lưu vào chỉ mục vector. Tại thời điểm truy vấn, hệ thống chỉ cần mã hóa $\vec{q}$ một lần và thực hiện tìm kiếm láng giềng gần nhất, qua đó đạt độ trễ thấp ngay cả với cơ sở tri thức hàng triệu bản ghi.
+
+\subsection{mGTE và Late Interaction}
+
+mGTE (multilingual Generalized long-context Text Embedding) \cite{mgte2024} là mô hình embedding đa ngôn ngữ thế hệ mới với hai đặc điểm phù hợp đặc biệt cho bài toán địa chỉ Việt Nam: (i) cửa sổ ngữ cảnh dài 8192 token cho phép mã hóa các tài liệu địa chỉ kèm metadata phong phú; (ii) hỗ trợ đa ngôn ngữ giúp xử lý các trường hợp địa chỉ pha tạp tiếng Việt và tiếng Anh (ví dụ: "District 1, HCMC").
+
+Tuy nhiên, kiến trúc Bi-encoder cổ điển có một hạn chế cốt lõi gọi là \textbf{Granularity Dilemma} (nghịch lý độ mịn). Việc nén toàn bộ chuỗi thành một vector duy nhất có thể làm mất các chi tiết hạt mịn quan trọng cho bài toán địa chỉ --- ví dụ, sự khác biệt giữa số nhà 90 và 92 trên cùng một con đường có thể bị triệt tiêu trong quá trình pooling. Để giải quyết, các nghiên cứu gần đây như ColBERT \cite{Khattab2020ColBERT} và mGTE-rerank đề xuất cơ chế Late Interaction: thay vì nén thành một vector, tài liệu được biểu diễn bằng tập hợp vector tại từng token, và độ tương đồng được tính như sau:
+\begin{equation}
+\mathrm{Sim}_{\text{Late}}(q, d) = \sum_{i=1}^{|q|} \max_{j=1}^{|d|} \cos(\vec{q}_i, \vec{d}_j)
+\label{eq:late-interaction}
+\end{equation}
+
+Toán tử MaxSim (cực đại của cosine giữa mỗi token truy vấn với mọi token tài liệu, sau đó tổng hợp qua các token truy vấn) cho phép duy trì độ chi tiết hạt mịn trong khi vẫn đảm bảo hiệu năng tương đối tốt thông qua việc đánh chỉ mục các vector token trước. \cref{fig:retrieval-arch} minh hoạ trực quan ba kiến trúc; \cref{tab:so-sanh-encoder} tóm lược điểm khác biệt.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.9\linewidth]{figs/fig-3-3.png}
+\caption{Ba kiến trúc retrieval: Bi-encoder, Late Interaction và Cross-encoder.}
+\label{fig:retrieval-arch}
+\end{figure}
+
+\begin{table}[h]
+\centering
+\caption{So sánh ba kiến trúc encoder cho bài toán retrieval}
+\label{tab:so-sanh-encoder}
+\small
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}p{2.5cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
+\toprule
+\textbf{Tiêu chí} & \textbf{Bi-encoder} & \textbf{Late Interaction} & \textbf{Cross-encoder} \\
+\midrule
+Biểu diễn       & 1 vector/tài liệu       & N vector/tài liệu          & Không tách rời \\
+Tiền tính toán  & Có (toàn bộ corpus)     & Có (toàn bộ token)         & Không thể \\
+Độ chi tiết     & Thô (single vector)     & Hạt mịn (per-token MaxSim) & Cao nhất (full attention) \\
+Latency truy vấn & Rất thấp ($\sim$ms)    & Thấp ($\sim$10ms)          & Cao ($\sim$100ms/cặp) \\
+Phù hợp cho     & Truy xuất sơ tuyển      & Re-ranking giữ chi tiết    & Re-ranking độ chính xác cao \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Approximate Nearest Neighbo - ANN}
+
+Trong thực tế triển khai với cơ sở tri thức hàng triệu vector, việc tính cosine với toàn bộ corpus (Exact Search) trở nên không khả thi về mặt hiệu năng. Khung giải pháp VNAI áp dụng kỹ thuật Tìm kiếm Láng giềng gần nhất Xấp xỉ (Approximate Nearest Neighbor --- ANN) để đạt độ trễ dưới mili-giây trên hàng triệu vector, với hai kỹ thuật cốt lõi:
+\begin{itemize}[leftmargin=*]
+\item \textbf{IVF (Inverted File Index)} \cite{Johnson2017FAISS}: phân cụm không gian vector thành $k$ cluster (sử dụng k-means), tại thời điểm truy vấn chỉ tìm trong $\text{nprobe}$ cluster gần nhất với truy vấn, qua đó giảm số phép tính tích vô hướng từ $N$ xuống $\sim N/k \cdot \text{nprobe}$.
+\item \textbf{HNSW (Hierarchical Navigable Small World)} \cite{Malkov2018HNSW}: xây dựng đồ thị phân cấp với các "đường tắt" ở tầng cao, tìm kiếm bằng cách di chuyển từ node bất kỳ ở tầng cao xuống tầng đáy theo nguyên tắc tham lam, đạt độ phức tạp $O(\log N)$ với độ phục hồi (recall) cao.
+\end{itemize}
+
+Cụ thể, thư viện FAISS được lựa chọn cho VNAI do hỗ trợ tốt cả CPU và GPU, có thể tích hợp trực tiếp với pipeline PyTorch.
+
+% ---------------------------------------------------------------------
+\section{Mạng Siamese (Siamese Network) và Học sâu so khớp (Deep Metric Learning)}
+\label{sec:siamese}
+
+\subsection{Kiến trúc Siamese}
+
+Mạng Siamese (Siamese Network) \cite{Bromley1993Siamese} là một kiến trúc gồm hai (hoặc nhiều) nhánh mạng nơ-ron chia sẻ trọng số, được thiết kế để học một hàm đo khoảng cách giữa các đầu vào. Mục tiêu của Siamese là học một không gian biểu diễn (embedding space) sao cho các mẫu tương tự nằm gần nhau và các mẫu khác biệt nằm xa nhau theo metric được chọn (thường là Euclidean hoặc cosine).
+
+Trong bài toán so khớp địa chỉ, kiến trúc Siamese được áp dụng theo mô hình: hai đầu vào là cặp $(q, d)$ gồm truy vấn và ứng viên đơn vị hành chính, hai nhánh encoder cùng kiến trúc (ví dụ cùng dùng mGTE) chia sẻ trọng số sinh ra cặp embedding $(\vec{q}, \vec{d})$, và đầu ra là điểm tương đồng. Việc chia sẻ trọng số đảm bảo tính đối xứng: $\mathrm{Sim}(q, d) = \mathrm{Sim}(d, q)$, đây là tính chất quan trọng cho bài toán matching.
+
+\subsection{Hàm mất mát: Contrastive Loss và Triplet Loss}
+
+Để huấn luyện mạng Siamese, hai hàm mất mát phổ biến được sử dụng. Thứ nhất, Contrastive Loss \cite{Hadsell2006Contrastive} hoạt động trên các cặp mẫu kèm nhãn nhị phân $y \in \{0, 1\}$ (1: cặp tương đồng, 0: cặp khác biệt):
+\begin{equation}
+\mathcal{L}_{\text{cont}} = y \cdot D^2 + (1 - y) \cdot \max(0, m - D)^2
+\label{eq:contrastive}
+\end{equation}
+Trong đó $D = \norm{\vec{q} - \vec{d}}$ là khoảng cách Euclidean, $m$ là margin (biên cách ly). Hàm mất mát này phạt khoảng cách lớn giữa cặp tương đồng và phạt khoảng cách nhỏ hơn margin giữa cặp khác biệt.
+
+Thứ hai, Triplet Loss \cite{Schroff2015FaceNet} hoạt động trên bộ ba mẫu $(a, p, n)$ gồm anchor, positive (mẫu tương tự anchor) và negative (mẫu khác biệt anchor):
+\begin{equation}
+\mathcal{L}_{\text{triplet}} = \max\!\Bigl(0,\; \norm{\vec{a} - \vec{p}}^2 - \norm{\vec{a} - \vec{n}}^2 + \alpha\Bigr)
+\label{eq:triplet}
+\end{equation}
+Trong đó $\alpha$ là margin yêu cầu khoảng cách anchor-negative phải lớn hơn anchor-positive ít nhất một lượng $\alpha$. Triplet Loss thường cho hiệu năng vượt trội Contrastive Loss trong các bài toán similarity learning quy mô lớn nhờ tính chất "học tương đối" giữa ba mẫu. \cref{fig:siamese-triplet} minh hoạ cấu trúc Siamese và hiệu ứng kéo gần --- đẩy xa của Triplet Loss trong không gian embedding.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.9\linewidth]{figs/fig-3-4.png}
+\caption{Mạng Siamese và minh hoạ hiệu ứng của Triplet Loss trong không gian embedding.}
+\label{fig:siamese-triplet}
+\end{figure}
+
+\subsection{Ứng dụng cho bài toán so khớp địa chỉ}
+
+Trong khung VNAI, mạng Siamese được áp dụng để fine-tune mô hình mGTE cho domain địa chỉ Việt Nam. Cách tiếp cận như sau:
+\begin{enumerate}[leftmargin=*]
+\item \textbf{Sinh dữ liệu huấn luyện}: từ cơ sở tri thức hành chính, sinh các bộ ba (anchor, positive, negative) với anchor là chuỗi địa chỉ thô, positive là phiên bản chuẩn hóa của cùng đơn vị, negative là đơn vị khác (ưu tiên hard negative --- các đơn vị có tên gần giống nhưng khác mã).
+\item \textbf{Fine-tuning}: huấn luyện mGTE với Triplet Loss trên tập dữ liệu sinh ra, qua đó kéo gần các biến thể của cùng đơn vị và đẩy xa các đơn vị khác biệt.
+\item \textbf{Suy luận}: tại thời điểm truy vấn, áp dụng pipeline retrieval đã trình bày tại Mục~\ref{sec:mgte} với encoder đã được fine-tune.
+\end{enumerate}
+
+% ---------------------------------------------------------------------
+\section{Hình học không gian và PostGIS}
+\label{sec:postgis}
+
+\subsection{Mô hình dữ liệu không gian}
+
+Tiêu chuẩn OGC Simple Feature Access \cite{OGC2011SFA} định nghĩa các kiểu hình học cơ bản tạo nên ngôn ngữ chung cho mọi hệ thống thông tin địa lý hiện đại, được PostGIS triển khai đầy đủ:
+\begin{itemize}[leftmargin=*]
+\item \textbf{Point}: cặp tọa độ $(x, y)$ biểu diễn một vị trí (ví dụ: tọa độ giao hàng).
+\item \textbf{LineString}: dãy các điểm liên tiếp tạo thành đường (ví dụ: đường phố).
+\item \textbf{Polygon}: vùng kín được giới hạn bởi một hoặc nhiều LineString khép kín, có thể có các "lỗ" bên trong (ví dụ: ranh giới phường).
+\item \textbf{MultiPolygon}: tập hợp các Polygon độc lập (ví dụ: ranh giới một tỉnh có đảo).
+\item \textbf{GeometryCollection}: tập hợp hỗn hợp nhiều kiểu hình học.
+\end{itemize}
+
+Trong VNAI, ranh giới đơn vị hành chính được lưu dưới dạng MultiPolygon trong bảng \macode{mat.area\_polygon}, cho phép biểu diễn chính xác các đơn vị hành chính có nhiều phần tách rời (đảo, vùng tách).
+
+\subsection{Hệ tọa độ địa lý và hệ tọa độ phẳng}
+
+Một điểm thiết yếu khi xử lý dữ liệu không gian là phân biệt hai loại Hệ Tham chiếu Tọa độ (Coordinate Reference System --- CRS):
+\begin{itemize}[leftmargin=*]
+\item \textbf{Hệ tọa độ địa lý (Geographic CRS)}: đơn vị đo là độ vĩ/kinh (degree). Phổ biến nhất là WGS84 (EPSG:4326), được sử dụng bởi GPS và hầu hết các API bản đồ. Tuy nhiên, WGS84 không phù hợp để đo khoảng cách trực tiếp do bề mặt Trái Đất cong và một độ kinh tuyến tại xích đạo dài hơn nhiều so với tại cực.
+\item \textbf{Hệ tọa độ phẳng (Projected CRS)}: đơn vị đo là mét, sử dụng các phép chiếu (projection) để biểu diễn bề mặt cong lên mặt phẳng. Tại Việt Nam, hệ phổ biến là VN-2000 (EPSG:3405 đến 3409 tùy múi chiếu) và UTM Zone 48N (EPSG:32648).
+\end{itemize}
+
+Trong các phép toán liên quan đến đo khoảng cách hoặc tính buffer theo đơn vị mét (ví dụ: mở rộng polygon thêm 50 mét), bắt buộc phải chuyển đổi từ WGS84 sang một hệ phẳng metric trước khi tính toán, sau đó chuyển ngược lại để lưu trữ. PostGIS hỗ trợ điều này thông qua hàm \macode{ST\_Transform(geom, srid)}.
+
+\subsection{Phép toán không gian PostGIS}
+
+PostGIS cung cấp hàng trăm hàm thao tác không gian. \Cref{tab:postgis-functions} liệt kê các phép toán cốt lõi được sử dụng trong VNAI.
+
+\begin{table}[h]
+\centering
+\caption{Các phép toán không gian PostGIS sử dụng trong VNAI}
+\label{tab:postgis-functions}
+\small
+\begin{tabularx}{\linewidth}{>{\ttfamily\raggedright\arraybackslash}p{4cm} >{\raggedright\arraybackslash}X}
+\toprule
+\textnormal{\textbf{Hàm}} & \textbf{Ý nghĩa} \\
+\midrule
+ST\_Contains(A, B) & Trả về TRUE nếu hình học A bao trùm hoàn toàn hình học B \\
+ST\_Within(A, B)   & Trả về TRUE nếu A nằm trong B (đối ngẫu của ST\_Contains) \\
+ST\_Intersects(A, B) & Trả về TRUE nếu A và B có ít nhất một điểm chung \\
+ST\_Distance(A, B) & Khoảng cách ngắn nhất giữa A và B (theo đơn vị của CRS) \\
+ST\_Buffer(A, r)   & Tạo polygon là vùng đệm bán kính $r$ quanh A \\
+ST\_Union(A, B)    & Hợp hình học của A và B \\
+ST\_ConcaveHull(A, t) & Bao lồi lõm với tham số ``target percent'' $t$ \\
+ST\_Transform(A, srid) & Chuyển A sang hệ tọa độ mới có mã SRID \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Thuật toán Point-in-Polygon: Ray Casting}
+
+Bài toán Point-in-Polygon (PIP) là nền tảng cho việc xác định một tọa độ (lat, lng) thuộc về đơn vị hành chính nào. Thuật toán cổ điển và phổ biến nhất là Ray Casting (thuật toán phóng tia) \cite{Shamos1976}: từ điểm cần kiểm tra $P$, vẽ một tia kéo dài vô hạn về một hướng tùy ý (thường là chiều dương trục $x$), đếm số lần tia đó cắt biên của polygon. Nếu số lần cắt là số lẻ, $P$ nằm trong polygon; nếu chẵn, $P$ nằm ngoài.
+
+Thuật toán có độ phức tạp $O(n)$ với $n$ là số đỉnh của polygon. Trong PostGIS, thuật toán này được tối ưu hóa thông qua chỉ mục không gian R-tree (GiST index) cho phép truy vấn nhanh ngay cả trên hàng nghìn polygon: PostGIS trước tiên dùng bounding box để loại bỏ các polygon không thể chứa điểm, sau đó chỉ áp dụng Ray Casting trên các ứng viên còn lại. Truy vấn xác định đơn vị hành chính chứa một tọa độ trong VNAI có dạng:
+\begin{verbatim}
+SELECT ward_id FROM mat.area_polygon
+WHERE ST_Contains(geom,
+                  ST_SetSRID(ST_MakePoint(lng, lat), 4326));
+\end{verbatim}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=1\linewidth]{figs/fig-3-5.png}
+\caption{Minh họa thuật toán Ray Casting cho bài toán Point-in-Polygon.}
+\label{fig:ray-casting}
+\end{figure}
+
+\subsection{Ba chiến lược hiệu chỉnh polygon}
+
+Trong thực tiễn vận hành, có nhiều trường hợp tọa độ giao nhận thực tế không nằm trong polygon hành chính được lưu trữ, do bốn nguyên nhân chính: (i) sai số GPS từ thiết bị di động (thường 5--15m), (ii) polygon trong cơ sở dữ liệu lỗi thời so với thực tế, (iii) ranh giới địa lý thực tế khác ranh giới pháp lý, và (iv) các điểm giao thông phức tạp tại ranh giới tiếp giáp. Để giải quyết, VNAI đề xuất ba chiến lược hiệu chỉnh polygon, mỗi chiến lược phù hợp với một dạng sai lệch khác nhau.
+
+\paragraph{Chiến lược 1: Buffer-Union.} Khi điểm ngoại vi $p$ nằm sát biên polygon $P$ với độ lệch nhỏ, hệ thống tạo một vùng đệm bán kính $r$ quanh $p$ rồi hợp với $P$:
+\begin{equation}
+P' = P \cup B(p, r), \quad B(p, r) = \{x \in \mathbb{R}^2 : \norm{x - p} \le r\}
+\label{eq:buffer-union}
+\end{equation}
+Cách tiếp cận này an toàn về mặt cấu trúc nhưng có rủi ro xâm phạm vùng lân cận khi $r$ quá lớn, do đó cần kiểm tra ràng buộc topology với các polygon kề.
+
+\paragraph{Chiến lược 2: Concave Hull (Alpha Shape).} Khi tích lũy đủ một đám mây điểm $\mathcal{P} = \{p_1, p_2, \dots, p_k\}$ (ví dụ: tập các điểm giao nhận thành công trong một phường), hệ thống tái dựng biên polygon từ $\mathcal{P}$ bằng thuật toán Alpha Shape \cite{Edelsbrunner1983AlphaShape}. Khác với bao lồi (Convex Hull) chỉ cho ra đa giác lồi, Alpha Shape cho phép biên có tính chất lõm (concave), bám sát hơn phân bố thực tế của các điểm. Tham số $\alpha$ kiểm soát độ chi tiết: $\alpha \to \infty$ cho ra Convex Hull, $\alpha \to 0$ cho biên rất chi tiết với nhiều ngóc ngách.
+
+\paragraph{Chiến lược 3: Edge Injection.} Khi chỉ có một (hoặc rất ít) điểm bất thường mà không muốn thay đổi lớn cấu trúc polygon, hệ thống áp dụng phẫu thuật vi mô: tìm cạnh $(v_i, v_{i+1})$ của polygon gần $p$ nhất, sau đó chèn $p$ vào danh sách đỉnh để tạo cạnh mới $(v_i, p, v_{i+1})$. Đây là chiến lược ít xâm lấn nhất, phù hợp khi cần điều chỉnh nhỏ mà giữ nguyên tổng thể polygon.
+
+\cref{fig:polygon-strategies} minh hoạ trực quan ba chiến lược; \cref{tab:so-sanh-polygon} tổng hợp về điều kiện áp dụng và mức độ thay đổi cấu trúc.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.9\linewidth]{figs/fig-3-6.png}
+\caption{Ba chiến lược hiệu chỉnh polygon: Buffer-Union, Concave Hull, Edge Injection.}
+\label{fig:polygon-strategies}
+\end{figure}
+
+\begin{table}[h]
+\centering
+\caption{So sánh ba chiến lược hiệu chỉnh polygon}
+\label{tab:so-sanh-polygon}
+\small
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}p{2.6cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}p{2cm}}
+\toprule
+\textbf{Chiến lược} & \textbf{Điều kiện áp dụng} & \textbf{Rủi ro chính} & \textbf{Mức xâm lấn} \\
+\midrule
+Buffer-Union   & Điểm sát biên, sai số nhỏ ($<$ 50m) & Xâm phạm polygon kề & Trung bình \\
+Concave Hull   & Đủ mật độ điểm ($\geq 30$ điểm/khu vực) & Cần chất lượng dữ liệu cao & Cao \\
+Edge Injection & Một vài điểm bất thường, cần giữ cấu trúc & Tạo polygon ``răng cưa'' & Thấp \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% ---------------------------------------------------------------------
+\section{Mô hình ACS --- Điểm tin cậy địa chỉ}
+\label{sec:acs}
+
+\subsection{Bài toán ra quyết định trong chuẩn hóa địa chỉ}
+
+Trong nghiệp vụ logistics và thương mại điện tử, kết quả chuẩn hóa địa chỉ không chỉ phục vụ mục đích lưu trữ mà trực tiếp dẫn đến các hành động vận hành: tự động phân tuyến giao hàng, yêu cầu khách hàng xác nhận lại, hay từ chối đơn hàng. Vì vậy, bên cạnh kết quả chuẩn hóa thuần túy, hệ thống cần cung cấp một độ tin cậy định lượng để dẫn đường ra quyết định.
+
+Bài toán này được hình thức hóa thành Hệ Hỗ trợ Ra Quyết định (Decision Support System --- DSS) với không gian quyết định mở rộng cho bối cảnh dữ liệu lưỡng thời:
+\begin{equation}
+\mathcal{A} = \{a_1, a_2, a_3, a_4\} = \{\text{Auto-Accept}, \text{Auto-Convert}, \text{Suggest}, \text{Reject}\}
+\label{eq:decision-space}
+\end{equation}
+Trong đó hành động Auto-Convert là điểm khác biệt cốt lõi của VNAI so với các hệ thống truyền thống, cho phép tự động ánh xạ địa chỉ tiền cải cách (Pre-2025) sang định danh hậu cải cách (Post-2025) khi độ tin cậy đủ cao.
+
+\subsection{Mô hình tổng trọng số (WSM)}
+
+Để tích hợp nhiều tín hiệu chất lượng khác nhau thành một điểm số duy nhất, VNAI sử dụng Mô hình Tổng Trọng số (Weighted Sum Model --- WSM) thuộc họ Đa Tiêu chí Ra Quyết định (Multi-Criteria Decision Making --- MCDM) \cite{hwang1981, saaty1980, zavadskas2019multiple}. WSM được lựa chọn nhờ ba ưu điểm phù hợp với bối cảnh DSS:
+\begin{itemize}[leftmargin=*]
+\item \textbf{Tính minh bạch (Transparency)}: mỗi thành phần đóng góp vào điểm cuối cùng có thể truy vết, đáp ứng yêu cầu giải thích quyết định (Decision Explanation).
+\item \textbf{Tính đơn giản tính toán}: chi phí tính toán $O(n)$ với $n$ là số tiêu chí, phù hợp với yêu cầu thời gian thực.
+\item \textbf{Khả năng tinh chỉnh trọng số}: cho phép điều chỉnh động dựa trên ngữ cảnh nghiệp vụ hoặc qua phản hồi người dùng.
+\end{itemize}
+
+\subsection{Công thức ACS với bốn thành phần}
+
+Điểm tin cậy địa chỉ (Address Confidence Score --- ACS) cho ứng viên $a_i$ trước truy vấn $q$ được định nghĩa:
+\begin{equation}
+\mathrm{ACS}(a_i \mid q) = \alpha \cdot S_{\text{text}}(q, a_i) + \beta \cdot S_{\text{sem}}(q, a_i) + \gamma \cdot V_{\text{hier}}(a_i) + \delta \cdot V_{\text{temporal}}(a_i)
+\label{eq:acs}
+\end{equation}
+với ràng buộc $\alpha + \beta + \gamma + \delta = 1$ và $\alpha, \beta, \gamma, \delta \geq 0$. Các thành phần được giải nghĩa như sau:
+\begin{itemize}[leftmargin=*]
+\item $S_{\text{text}}(q, a_i) \in [0, 1]$: điểm khớp văn bản, lấy từ Typesense BM25 score đã chuẩn hóa min-max trên tập ứng viên.
+\item $S_{\text{sem}}(q, a_i) \in [0, 1]$: độ tương đồng cosine giữa vector embedding của truy vấn và ứng viên (Mục~\ref{sec:mgte}).
+\item $V_{\text{hier}}(a_i) \in \{0, 1\}$: chỉ số kiểm tra tính hợp lệ phân cấp --- liệu Phường có thuộc Quận, Quận có thuộc Tỉnh trong cơ sở tri thức \macode{mat} hay không.
+\item $V_{\text{temporal}}(a_i) \in [0, 1]$: trọng số thời gian, ưu tiên các phiên bản hành chính hậu cải cách (\macode{is\_current = TRUE}) nhưng không loại bỏ phiên bản cũ; cụ thể $V_{\text{temporal}} = 1$ nếu là phiên bản hiện hành, $0.7$ nếu là phiên bản cũ vẫn nằm trong cửa sổ chuyển tiếp.
+\end{itemize}
+
+So với các phương pháp baseline chỉ dùng tích hợp tuyến tính giữa độ khớp văn bản và ngữ nghĩa, công thức ACS mở rộng có hai đóng góp cốt lõi: (i) đưa kiểm tra phân cấp $V_{\text{hier}}$ thành thành phần cứng để chống các lỗi mâu thuẫn cấu trúc mà mô hình ngôn ngữ có thể bỏ qua; (ii) đưa thời gian trở thành chiều quyết định bậc nhất qua $V_{\text{temporal}}$, đồng bộ với mô hình SCD Type 2 ở tầng dữ liệu.
+
+\subsection{Bảng quyết định bốn trạng thái}
+
+Dựa trên giá trị ACS, hệ thống thực hiện ánh xạ về một trong bốn hành động trong $\mathcal{A}$, theo bảng quyết định tại \cref{tab:decision-table}. Ngưỡng $\theta_{\text{high}} = 0.85$ và $\theta_{\text{low}} = 0.50$ được hiệu chuẩn từ phân tích chi phí--lợi ích trong nghiệp vụ logistics, sao cho cân bằng giữa tỷ lệ chấp nhận sai (False Positive --- gây hoàn hàng) và tỷ lệ từ chối sai (False Negative --- gây phiền khách hàng).
+
+\begin{table}[h]
+\centering
+\caption{Bảng quyết định theo điểm ACS}
+\label{tab:decision-table}
+\small
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}p{3.2cm} >{\raggedright\arraybackslash}p{2.6cm} >{\raggedright\arraybackslash}X}
+\toprule
+\textbf{Khoảng ACS} & \textbf{Hành động} & \textbf{Phản hồi cho người dùng / hệ thống} \\
+\midrule
+$\mathrm{ACS} \geq 0.85$ + $V_{\text{temporal}} = 1$ & Auto-Accept & ``Địa chỉ chính xác hoàn toàn.'' \\
+$\mathrm{ACS} \geq 0.85$ + $V_{\text{temporal}} < 1$ & Auto-Convert & ``Đã cập nhật sang đơn vị hành chính mới 2025.'' \\
+$0.50 \leq \mathrm{ACS} < 0.85$ & Suggest & ``Có phải bạn muốn tìm \textellipsis ?'' \\
+$\mathrm{ACS} < 0.50$ & Reject / Human Review & ``Không tìm thấy địa chỉ hợp lệ. Vui lòng nhập lại hoặc chuyển nhân viên xác minh.'' \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Đánh giá hiệu chuẩn: Expected Calibration Error}
+
+Một mô hình DSS được coi là well-calibrated khi điểm tin cậy mô hình dự báo phù hợp với xác suất đúng quan sát được trong thực tế --- nghĩa là, trong tất cả các trường hợp mô hình dự báo độ tin cậy 0.9, khoảng 90\% thực sự đúng. Để đo lường hiệu chuẩn, đề tài sử dụng chỉ số Sai số Hiệu chuẩn Kỳ vọng (Expected Calibration Error --- ECE) \cite{Guo2017Calibration}.
+
+Quy trình tính toán: chia dải điểm ACS thành $M$ khoảng giá trị bằng nhau (binning), với mỗi khoảng $B_m$ tính độ chính xác thực nghiệm $\mathrm{acc}(B_m)$ và độ tin cậy trung bình $\mathrm{conf}(B_m)$. ECE là trung bình trọng số của độ lệch tuyệt đối:
+\begin{equation}
+\mathrm{ECE} = \sum_{m=1}^{M} \frac{|B_m|}{n} \bigl|\mathrm{acc}(B_m) - \mathrm{conf}(B_m)\bigr|
+\label{eq:ece}
+\end{equation}
+Trong đó $n = \sum_m |B_m|$ là tổng số mẫu. Giá trị ECE thấp (dưới 0.05) cho thấy mô hình hiệu chuẩn tốt và có thể tin cậy điểm số đầu ra để tự động ra quyết định, đây là yêu cầu thiết yếu cho DSS hoạt động ở chế độ Auto-Accept và Auto-Convert. Toàn bộ luồng ra quyết định từ truy vấn đầu vào tới một trong bốn hành động cuối cùng được tóm lược tại \cref{fig:acs-decision}.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.7\linewidth]{figs/fig-3-7.png}
+\caption{Sơ đồ luồng ra quyết định dựa trên Điểm tin cậy địa chỉ (ACS) với bốn trạng thái.}
+\label{fig:acs-decision}
+\end{figure}
+
+% ---------------------------------------------------------------------
+\section{Tóm tắt chương}
+\label{sec:tom-tat-ch3}
+
+Chương này đã thiết lập sáu cụm nền tảng lý thuyết liên kết chặt chẽ với các bài toán cốt lõi của VNAI. Kiến trúc Transformer (\ref{sec:transformer}) làm nền cho mọi thành phần học sâu trong khung giải pháp; PhoBERT (\ref{sec:phobert}) cụ thể hóa Transformer cho bài toán nhận diện thực thể tên tiếng Việt với sơ đồ nhãn BIO và lớp CRF cho dự đoán có cấu trúc; mGTE (\ref{sec:mgte}) cùng cơ chế Late Interaction giải quyết nghịch lý độ mịn trong truy xuất ngữ nghĩa, hỗ trợ bởi tìm kiếm láng giềng gần xấp xỉ với FAISS/HNSW; mạng Siamese (\ref{sec:siamese}) cùng các hàm mất mát Contrastive và Triplet là khung huấn luyện để tinh chỉnh mGTE cho domain địa chỉ Việt Nam; PostGIS (\ref{sec:postgis}) cung cấp các phép toán không gian cốt lõi cùng ba chiến lược hiệu chỉnh polygon dựa trên dữ liệu giao nhận thực tế; cuối cùng, mô hình ACS (\ref{sec:acs}) tích hợp các tín hiệu trên thành một điểm tin cậy duy nhất, dẫn đường tầng ra quyết định bốn trạng thái với cơ chế đánh giá hiệu chuẩn ECE.
+
+Các nền tảng này sẽ được vận dụng trong Chương~\ref{ch:design} để xây dựng kiến trúc hệ thống VNAI, mô tả chi tiết pipeline xử lý đa nguồn, thiết kế module huấn luyện NER, kiến trúc retrieval đa tầng và logic suy luận của tầng LLM cho các trường hợp địa chỉ phức tạp.
+
+% =====================================================================
+% Khối draft cũ (TTTN-style) đã được thay thế bằng phiên bản hoàn chỉnh
+% từ Mục 3.1 đến Mục 3.8 ở phía trên. Giữ comment này để truy vết lịch sử.
+% =====================================================================

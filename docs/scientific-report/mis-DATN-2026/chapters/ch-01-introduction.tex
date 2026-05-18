@@ -1,0 +1,154 @@
+\chapter{MỞ ĐẦU}
+
+\section{Lý do hình thành đề tài}
+
+Trong kỷ nguyên số hóa, sự chuyển dịch mạnh mẽ từ mô hình bán lẻ truyền thống sang thương mại điện tử đã làm gia tăng đột biến khối lượng giao dịch kỹ thuật số. Yếu tố này kéo theo nhu cầu khắt khe về độ chính xác của dữ liệu địa chỉ giao nhận. đối với các doanh nghiệp hoạt động trong lĩnh vực logistics và chuỗi cung ứng, dữ liệu địa chỉ không chỉ đơn thuần là thông tin định vị mà đã trở thành một tài sản chiến lược, quyết định hiệu quả vận hành và tối ưu hóa chi phí chặng cuối (last-mile logistics) \cite{chow1994}.
+
+Tuy nhiên, cơ sở dữ liệu địa chỉ tại Việt Nam đang đối mặt với một thách thức mang tính lịch sử. Từ năm 2025, Việt Nam chính thức thực thi chính sách sắp xếp, sáp nhập các đơn vị hành chính trên phạm vi toàn quốc theo Nghị quyết số 202/2025/QH15 \cite{qh2025}. Cuộc cải cách này làm giảm số lượng đơn vị hành chính cấp tỉnh từ 63 xuống còn 34, đồng thời sáp nhập hàng nghìn đơn vị cấp xã/phường \cite{gso2025}. Quy mô thay đổi được tóm lược tại \cref{tab:admin-reform-scale}. Sự kiện này tạo ra một ``cú sốc dữ liệu'' (data shock) đối với các hệ thống thông tin, gây ra hiện tượng đứt gãy và bất đồng bộ khi địa chỉ cũ không còn tồn tại về mặt pháp lý nhưng vẫn được người dân sử dụng rộng rãi trong giao dịch. Hiện nay, sự thiếu hụt một hệ thống quản trị dữ liệu lưỡng thời (dual-epoch) có khả năng truy vết và ánh xạ lịch sử biến động đơn vị hành chính đang là rào cản lớn cho tính toàn vẹn dữ liệu doanh nghiệp.
+
+\begin{table}[h]
+\centering
+\caption{Quy mô thay đổi đơn vị hành chính theo Nghị quyết 202/2025/QH15 và 35/2023/UBTVQH15}
+\label{tab:admin-reform-scale}
+\small
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}p{3.6cm} c c >{\raggedright\arraybackslash}X}
+\toprule
+\textbf{Cấp hành chính} & \textbf{Trước 01/07/2025} & \textbf{Sau 01/07/2025} & \textbf{Ghi chú} \\
+\midrule
+Tỉnh / Thành phố trực thuộc Trung ương & 63 & \textbf{34} & Giảm gần một nửa; nhiều tỉnh sáp nhập \\
+Quận / Huyện / Thị xã / Thành phố thuộc tỉnh & 705 & \textbf{0} & Cấp này bị bãi bỏ trong định dạng địa chỉ chuẩn \\
+Phường / Xã / Thị trấn & 10.033 & \textbf{3.321} & Sáp nhập sâu rộng, đặc biệt tại nông thôn \\
+Tổng số ánh xạ mã định danh & \multicolumn{2}{c}{$\sim$ 10.571 quan hệ chuyển đổi} & Lưu trong \macode{mat.ward\_mapping} và \macode{mat.unit\_edge} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Đứng trước bối cảnh đó, việc đảm bảo tính nhất quán và khả năng cập nhật liên tục từ nguồn dữ liệu chính thống của Chính phủ trở thành yêu cầu cấp thiết. Giải pháp công nghệ tất yếu là ứng dụng các luồng công việc tự động (Data Orchestration) thông qua nền tảng n8n kết hợp với giao thức SOAP/REST API từ các cổng thông tin quốc gia \cite{n8n}. Cơ chế này cho phép thiết lập một "nguồn sự thật duy nhất" (Single Source of Truth), giúp doanh nghiệp chủ động đồng bộ danh mục hành chính ngay khi có biến động địa giới.
+
+Về mặt kỹ thuật xử lý, đặc thù phi cấu trúc và thói quen nhập liệu tự do của người Việt — như viết tắt, thiếu dấu hoặc sử dụng địa danh dân gian — đòi hỏi một cơ chế chuẩn hóa thông minh vượt ra ngoài các bộ quy tắc (rule-based) truyền thống. Điều này thúc đẩy việc ứng dụng các mô hình Học sâu (Deep Learning) tiên tiến trong xử lý ngôn ngữ tự nhiên (NLP). Hệ thống cần một pipeline AI đa tầng, tích hợp mô hình PhoBERT cho tác vụ nhận diện thực thể tên (NER) \cite{nguyen2020phobert}, mạng Siamese với mô hình nhúng mGTE cho bài toán truy xuất ngữ nghĩa (Retrieval) \cite{mgte2024}, và khả năng suy luận của mô hình ngôn ngữ lớn (LLM) Qwen để tinh chỉnh các trường hợp địa chỉ phức tạp.
+
+Bên cạnh đó, tính chính xác của địa chỉ còn phụ thuộc chặt chẽ vào dữ liệu địa không gian. Việc xác định ranh giới đơn vị hành chính thường gặp sai số lớn tại các khu vực tiếp giáp, gây ảnh hưởng trực tiếp đến việc phân vùng giao nhận. Do đó, việc tích hợp các thuật toán hình học không gian trong PostGIS để tự động hiệu chỉnh đa giác ranh giới (polygon) dựa trên lịch sử tọa độ thực tế là hướng tiếp cận mang tính đột phá nhằm thu hẹp khoảng cách giữa địa giới pháp lý và thực tế vận hành \cite{santos2018geo}.
+
+Thực tiễn vận hành cũng cho thấy việc phụ thuộc hoàn toàn vào các nền tảng bản đồ thương mại như Google Maps hay cộng đồng như OpenStreetMap (OSM) đang bộc lộ hai điểm nghẽn:
+\begin{itemize}
+\item \textbf{Độ trễ cập nhật (Update Latency):} Sự phản ứng chậm trước các quyết định sáp nhập địa giới hành chính gây rủi ro sai lệch dữ liệu.
+\item \textbf{Gánh nặng chi phí (Operational Cost):} Chi phí truy vấn API khổng lồ đối với các doanh nghiệp có lưu lượng đơn hàng lớn làm giảm đáng kể biên lợi nhuận.
+\end{itemize}
+
+Từ những thách thức trên, nghiên cứu đề xuất xây dựng hệ thống \textbf{VN Address Intelligence (VNAI)} dựa trên \textbf{Khung giải pháp tiếp cận đa nguồn (Multi-source Approach)}. Giải pháp này sử dụng mô hình thác nước (Waterfall Enrichment): ưu tiên dữ liệu hành chính lõi đồng bộ trực tiếp từ Chính phủ và chỉ khai thác tài nguyên từ OSM hay Google Maps khi cần thiết. Cách tiếp cận này không chỉ khắc phục triệt để độ trễ dữ liệu, tối ưu hóa chi phí API mà còn duy trì khả năng truy vết thông tin hành chính xuyên suốt cột mốc cải cách 2025.
+
+Xuất phát từ thực tiễn đó, đề tài \textbf{“Xây dựng khung giải pháp làm giàu và chuẩn hóa dữ liệu địa chỉ Việt Nam sử dụng tiếp cận đa nguồn và thuật toán hình học không gian trong bối cảnh sắp xếp đơn vị hành chính toàn quốc 2025”} được lựa chọn để nghiên cứu và triển khai nhằm cung cấp một giải pháp hạ tầng dữ liệu địa chỉ bền vững cho kinh tế số tại Việt Nam.
+
+\section{Mục tiêu đề tài}
+\label{sec:goals}
+
+\subsection{Mục tiêu tổng quát}
+Mục tiêu cốt lõi của đề tài là xây dựng một khung giải pháp (Framework) toàn diện và có khả năng mở rộng cho bài toán làm giàu, chuẩn hóa dữ liệu địa chỉ Việt Nam. Hệ thống được thiết kế để giải quyết triệt để sự đứt gãy dữ liệu địa chính trong bối cảnh thực thi chính sách sáp nhập đơn vị hành chính cấp tỉnh, huyện và xã vào năm 2025. Khung giải pháp này chuyển đổi các truy vấn địa chỉ phi cấu trúc, chứa nhiễu thành dữ liệu định danh chuẩn hóa có gắn tọa độ không gian và lịch sử biến động, hỗ trợ tối ưu hóa các hệ thống logistics và thương mại điện tử.
+
+\subsection{Mục tiêu cụ thể}
+
+Để hiện thực hóa khung giải pháp, đề tài tập trung vào các mục tiêu kỹ thuật cụ thể sau:
+
+\begin{enumerate}
+\item \textbf{Xây dựng cơ sở tri thức hành chính đa phiên bản (Temporal-Aware Ontology):} Thiết lập mô hình biểu diễn tri thức dựa trên kỹ thuật \textit{Slowly Changing Dimension} (SCD Type 2) để quản lý vòng đời các đơn vị hành chính \cite{kimball2013}. Mục tiêu là duy trì tính toàn vẹn của dữ liệu thông qua các quan hệ \textit{mergesInto}, \textit{renamedTo} và \textit{splitFrom}, cho phép ánh xạ chính xác từ địa danh cũ sang địa danh mới theo trục thời gian \cite{bilmener2022ontology}.
+
+\item \textbf{Phát triển Pipeline xử lý ngôn ngữ tự nhiên đa tầng:} 
+\begin{itemize}
+    \item Ứng dụng mô hình \textbf{PhoBERT} kết hợp \textbf{Bi-LSTM-CRF} để nhận diện thực thể tên (NER), bóc tách địa chỉ thô thành các thành phần: số nhà, tên đường, phường, quận, tỉnh \cite{nguyen2020phobert}.
+    \item Triển khai kiến trúc \textbf{Siamese Network} với mô hình nhúng \textbf{mGTE} để thực hiện so khớp ngữ nghĩa (Semantic Matching), ánh xạ kết quả NER về mã định danh GSOID trong cơ sở dữ liệu.
+    \item Tích hợp khả năng suy luận của \textbf{Large Language Models (Qwen)} để phân giải các trường hợp địa chỉ cực kỳ mơ hồ hoặc chỉ chứa thông tin mô tả vị trí dân gian.
+\end{itemize}
+
+\item \textbf{Đồng bộ hóa dữ liệu đa nguồn (Multi-source Enrichment):} Thiết kế luồng tự động hóa thông qua \textit{n8n workflow} để thu thập dữ liệu từ Cổng dịch vụ công Quốc gia (SOAP/REST API) và làm giàu dữ liệu không gian từ OpenStreetMap (OSM), Google Maps.
+
+\item \textbf{Tối ưu hóa và tự hiệu chỉnh không gian (Geospatial Geometry):} Ứng dụng các thuật toán hình học không gian trong \textbf{PostGIS} để kiểm tra điểm thuộc vùng (\textit{Point-in-Polygon}). Đề xuất các chiến lược \textit{Buffer-Union} và \textit{Concave Hull} để tự động hiệu chỉnh ranh giới polygon hành chính dựa trên tập hợp các tọa độ giao nhận thực tế của doanh nghiệp.
+
+\item \textbf{Thiết lập hệ thống đánh giá và Benchmarking:} Xây dựng bộ chỉ số đánh giá đa chiều bao gồm \textit{Address Confidence Score} (ACS) dựa trên mô hình \textit{Weighted Sum Model} (WSM) \cite{zavadskas2019multiple}. 
+\begin{equation}
+    ACS(d|q) = \sum_{j=1}^{n} w_j \times v_{ij}
+\end{equation}
+Đồng thời đo lường hiệu năng thông qua các chỉ số: $F1\text{-Score}$, $Precision@K$, $P95\text{ Latency}$ và $Throughput$ \cite{manning2008IR}.
+
+\end{enumerate}
+
+\subsection{Câu hỏi nghiên cứu}
+\label{sec:research-questions}
+
+Đề tài tập trung giải đáp các vấn đề khoa học sau:
+\begin{itemize}
+\item \textbf{RQ1:} Làm thế nào để mô hình hóa sự thay đổi ranh giới và định danh của đơn vị hành chính theo thời gian nhằm đảm bảo khả năng truy vết (traceability) dữ liệu lịch sử?
+\item \textbf{RQ2:} Sự kết hợp giữa mô hình học sâu đơn ngữ (PhoBERT) và mô hình nhúng đa ngôn ngữ ngữ cảnh dài (mGTE) mang lại hiệu quả như thế nào so với các phương pháp tìm kiếm từ vựng (Lexical Search) truyền thống?
+\item \textbf{RQ3:} Các thuật toán hình học không gian có thể đóng góp gì vào việc tự hiệu chỉnh sai lệch giữa ranh giới hành chính pháp lý và thực tế vận hành logistics?
+\end{itemize}
+\section{Phạm vi và Đối tượng nghiên cứu}
+\label{sec:phamvi_doituong}
+
+\subsection{Đối tượng nghiên cứu:}
+\begin{itemize}
+    \item Đối tượng chính của đề tài là dữ liệu địa chỉ tiếng Việt, bao gồm các cấu trúc phi tuyến (ngõ, ngách, hẻm), địa danh dân gian và các biến thể không dấu, viết tắt trong các hệ thống thông tin logistics, thương mại điện tử và hành chính công.
+    \item Các mô hình học máy và xử lý ngôn ngữ tự nhiên (NLP) tiên tiến như PhoBERT (nhận diện thực thể - NER), mGTE (so khớp ngữ nghĩa - Siamese), và Qwen3 (Mô hình ngôn ngữ lớn - LLM).
+    \item Các thuật toán hình học không gian (Geospatial Geometry) phục vụ bài toán đối soát và tự hiệu chỉnh ranh giới đa giác (polygon self-adjustment)
+\end{itemize}
+
+\subsection{Phạm vi nghiên cứu:}
+
+\begin{itemize}
+    \item \textit{Phạm vi không gian:} Toàn lãnh thổ Việt Nam, ưu tiên các vùng chịu ảnh hưởng mạnh bởi chính sách sáp nhập và các đô thị lớn như TP. Hồ Chí Minh, Hà Nội, Đà Nẵng.
+    \item \textit{Phạm vi thời gian:} Dữ liệu địa chỉ trong giai đoạn chuyển giao trước và sau cuộc cải cách hành chính toàn quốc có hiệu lực từ ngày 01/07/2025. Tập dữ liệu thực nghiệm được giới hạn ở phạm vi hơn 100.000 mẫu địa chỉ thô.
+    \item \textit{Phạm vi công nghệ:} Triển khai khung giải pháp trên kiến trúc microservices với hệ quản trị PostgreSQL/PostGIS, công cụ tìm kiếm Typesense, engine điều phối workflow n8n, và các framework AI như PyTorch, HuggingFace.
+\end{itemize}
+
+\section{Ý nghĩa Khoa học và Thực tiễn}
+\label{sec:significance}
+\subsection{Ý nghĩa khoa học}
+
+Nghiên cứu mang lại những đóng góp có giá trị về mặt học thuật trong lĩnh vực giao thoa giữa Xử lý ngôn ngữ tự nhiên (NLP), Hệ thống thông tin địa lý (GIS) và Quản trị dữ liệu, cụ thể trên bốn phương diện:
+
+\begin{itemize}
+\item \textbf{Thứ nhất}, nghiên cứu đề xuất một khung giải pháp (framework) toàn diện giải quyết bài toán "nghịch lý độ mịn" (\textit{granularity dilemma}) trong chuẩn hóa địa chỉ tiếng Việt. Hệ thống tích hợp kiến trúc đa mô hình lai (Hybrid AI Architecture) kết hợp mô hình PhoBERT cho tác vụ Nhận diện thực thể có tên (NER) \cite{nguyen2020phobert}, mô hình nhúng đa ngữ mGTE \cite{mgte2024} áp dụng theo kiến trúc Siamese \cite{cao2021deep} cho tìm kiếm ngữ nghĩa mờ, và mô hình ngôn ngữ lớn Qwen cho suy luận xử lý các trường hợp ngoại lệ. Thực nghiệm cho thấy việc kết hợp kỹ thuật RAG với LLM có tiềm năng cải thiện độ chính xác đáng kể so với các phương pháp đơn mô hình truyền thống.
+
+\item \textbf{Thứ hai}, nghiên cứu mở rộng cơ sở lý thuyết về GIS bằng việc phát triển và đánh giá thực nghiệm các chiến lược hiệu chỉnh đa giác không gian (\textit{polygon adjustment}) có khả năng tự học từ lịch sử tọa độ giao nhận thực tế thông qua các thuật toán hình học không gian tích hợp trong PostGIS. Các chiến lược bao gồm: ($i$) mở rộng vùng phủ theo kỹ thuật \textit{Buffer-Union}; ($ii$) tái dựng ranh giới theo thuật toán \textit{Concave Hull} / \textit{Alpha Shape}; và ($iii$) chỉnh sửa vi mô theo phương pháp \textit{Edge Injection}. 
+
+\item \textbf{Thứ ba}, nghiên cứu xây dựng mô hình "Chuẩn hóa địa chỉ nhận thức thời gian" (\textit{Temporal-Aware Address Standardization}) thông qua kỹ thuật SCD Type 2. Mô hình này cho phép hệ thống xử lý "lưỡng thời" (\textit{dual-epoch}) — ánh xạ chính xác các địa chỉ thuộc cả hai giai đoạn trước và sau sáp nhập hành chính 2025 theo Nghị quyết số 202/2025/QH15 và Nghị quyết số 35/2023/UBTVQH15 \cite{ubtvqh2023} — mà không gặp hiện tượng quên lãng thảm họa (\textit{catastrophic forgetting}).
+
+\item \textbf{Thứ tư}, nghiên cứu giải quyết vấn đề thiếu hụt bộ dữ liệu chuẩn quy mô lớn bằng việc ứng dụng AI Agent kết hợp LLM để tự động tạo sinh và gán nhãn dữ liệu từ các nguồn mở. Phương pháp này đảm bảo tính tái lập (\textit{reproducibility}) và minh bạch (\textit{transparency}) theo các tiêu chuẩn của hệ thống thu hồi thông tin hiện đại \cite{manning2008IR}.
+
+
+\end{itemize}
+
+\subsection{Ý nghĩa thực tiễn}
+
+Nghiên cứu mang lại giá trị ứng dụng trực tiếp cho các hệ thống thông tin tại Việt Nam trong bối cảnh cải cách địa chính:
+
+\begin{itemize}
+\item \textbf{Thứ nhất}, hệ thống cung cấp giải pháp khắc phục hiện tượng "đứt gãy dữ liệu" (\textit{data drift}) do sáp nhập hành chính 2025. Bằng cách tự động ánh xạ địa chỉ cũ sang định danh mới, nghiên cứu giúp duy trì tính liên tục của dữ liệu khách hàng trong các hệ thống CRM và logistics, trực tiếp giảm thiểu tỷ lệ giao hàng thất bại (\textit{last-mile failure rate}).
+
+\item \textbf{Thứ hai}, thiết lập nguồn dữ liệu hành chính nhất quán (\textit{single source of truth}) thông qua quy trình ETL tự động kết hợp SOAP API từ Tổng cục Thống kê \cite{gso2025}. Cơ chế này cho phép doanh nghiệp chủ động cập nhật danh mục đơn vị hành chính chính thức mà không phụ thuộc vào các nguồn dữ liệu cộng đồng thiếu tính pháp lý.
+
+\item \textbf{Thứ ba}, tối ưu hóa chi phí vận hành hạ tầng dữ liệu thông qua chiến lược "Fast and Free". Thay vì phụ thuộc vào các API thương mại đắt tiền như Google Maps \cite{google_maps_api}, hệ thống tích hợp nguồn dữ liệu mở từ OpenStreetMap và engine tìm kiếm nội bộ Typesense \cite{typesense} để tự động bổ sung tọa độ và ranh giới hành chính.
+
+\item \textbf{Thứ tư}, module hiệu chỉnh đa giác không gian mang lại ứng dụng thực tiễn trong vận hành tại các khu vực ven ranh giới địa lý. Hệ thống có khả năng học từ lịch sử tọa độ các đơn hàng đã xử lý thành công để tự động tinh chỉnh ranh giới phân vùng, từ đó tối ưu hóa việc điều phối và phân bổ đơn hàng trong chuỗi cung ứng chặng cuối.
+
+\end{itemize}
+
+
+\section{Bố cục đề tài}
+\label{sec:structure}
+
+Nội dung nghiên cứu được tổ chức thành 06 chương chính với cấu trúc logic như sau:
+
+\begin{itemize}
+\item \textbf{Chương 1: Mở đầu.} Trình bày bối cảnh và tính cấp thiết của nghiên cứu trước sự biến động địa chính. Chương này xác định mục tiêu, đối tượng, phạm vi nghiên cứu và khẳng định các đóng góp về mặt khoa học trong việc xây dựng khung giải pháp làm giàu dữ liệu địa chỉ tại Việt Nam.
+
+\item \textbf{Chương 2: Tổng quan.} Phân tích và đánh giá các công trình nghiên cứu hiện đại về xử lý ngôn ngữ tự nhiên (NLP) và hệ thống thông tin địa lý (GIS). Chương này tập trung nhận diện các khoảng trống tri thức trong việc chuẩn hóa địa chỉ phi cấu trúc và xử lý dữ liệu hành chính lưỡng thời, từ đó làm cơ sở cho hướng tiếp cận của đề tài.
+
+\item \textbf{Chương 3: Cơ sở lý thuyết.} Thiết lập nền tảng lý luận về kiến trúc Transformer, trọng tâm là mô hình PhoBERT cho tác vụ nhận diện thực thể tên (NER) và mô hình mGTE cho bài toán truy xuất ngữ nghĩa (Semantic Retrieval). Chương này cũng trình bày lý thuyết về học sâu, cơ chế Siamese Network trong so khớp dữ liệu và các thuật toán hình học không gian trong PostGIS nhằm xử lý ranh giới polygon.
+
+\item \textbf{Chương 4: Phân tích yêu cầu và thiết kế khung giải pháp.} Chi tiết hóa kiến trúc hệ thống VNAI với trọng tâm là pipeline xử lý AI toàn diện. Chương này mô tả quy trình thu nạp dữ liệu đa nguồn, thiết kế pipeline huấn luyện mô hình NER, kiến trúc retrieval đa tầng để ánh xạ địa chỉ và logic suy luận của mô hình ngôn ngữ lớn (LLM) trong việc xử lý các biến động hành chính phức tạp.
+
+\item \textbf{Chương 5: Thực nghiệm, Đánh giá hiệu năng và Tác động nghiệp vụ.} Trình bày kết quả thực hiện các kịch bản kiểm thử trên tập dữ liệu địa chỉ thực tế. Chương này tập trung đánh giá định lượng hiệu năng của mô hình AI thông qua các chỉ số F1-score, Exact Match cho tác vụ NER và độ chính xác của thuật toán retrieval, đồng thời phân tích khả năng tối ưu hóa vận hành thông qua các kỹ thuật AI đã đề xuất.
+
+\item \textbf{Chương 6: Kết luận và Hướng phát triển.} Tổng kết các kết quả đạt được, đối chiếu với mục tiêu ban đầu và khẳng định tính thực tiễn của khung giải pháp AI. Chương này cũng thảo luận về các hạn chế và đề xuất định hướng phát triển hệ thống theo hướng tự động hóa hoàn toàn quy trình làm giàu dữ liệu không gian.
+
+
+\end{itemize}
