@@ -1,5 +1,5 @@
 from __future__ import annotations
-from fastapi import FastAPI, Depends, Request, HTTPException, status, APIRouter, Query
+from fastapi import FastAPI, Depends, Request, HTTPException, status, APIRouter, Query, Body
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, StreamingResponse
@@ -119,6 +119,13 @@ class RegisterPayload(BaseModel):
     password: str
     verification_code: str
     display_name: Optional[str] = None
+
+class ParserAnalyzeRequest(BaseModel):
+    id: Optional[int] = None
+    raw_address: Optional[str] = None
+    ward_name: Optional[str] = None
+    district_name: Optional[str] = None
+    province_name: Optional[str] = None
 
 parser_runtime_lock = threading.Lock()
 parser_runtime_bundle = None
@@ -469,7 +476,31 @@ def _get_random_parser_sample(db: Session) -> AddressCleansingQueue:
 
 
 def _run_parser_research(sample: AddressCleansingQueue, target_model: Optional[str] = None) -> dict:
-    bundle = _get_parser_runtime_bundle()
+    # Check if models are ready - if bundle exists, use it; if loading in background, wait for it
+    global parser_runtime_bundle, parser_loading_state
+    
+    # If bundle is already built, use it directly
+    if parser_runtime_bundle is not None:
+        bundle = parser_runtime_bundle
+    else:
+        # Check if background loading is in progress
+        loading_status = parser_loading_state.get("status")
+        if loading_status == "loading":
+            current_model = parser_loading_state.get("currentModel", "unknown")
+            loaded_models = parser_loading_state.get("loadedModels", [])
+            raise HTTPException(
+                status_code=503,
+                detail={
+                    "error": "Models are still loading",
+                    "note": f"Currently loading: {current_model}. Loaded: {', '.join(loaded_models) if loaded_models else 'none'}. Please wait and try again.",
+                    "status": "loading",
+                    "currentModel": current_model,
+                    "loadedModels": loaded_models
+                }
+            )
+        # Otherwise, build bundle now (synchronous)
+        bundle = _get_parser_runtime_bundle()
+    
     raw_address = sample.raw_address or ""
     ward_name = sample.ward_name
     district_name = sample.district_name
@@ -2244,7 +2275,7 @@ def get_parser_sample(db: Session = Depends(get_db)):
 
 
 @api_router.post("/parser/analyze", tags=["AI Address Parser"], summary="Phân tích & So sánh mô hình AI")
-def analyze_parser_address(data: dict, model: Optional[str] = None, db: Session = Depends(get_db)):
+def analyze_parser_address(data: ParserAnalyzeRequest, model: Optional[str] = None, db: Session = Depends(get_db)):
     """
     Sử dụng đồng thời các mô hình (PhoBERT, mGTE, Qwen) để phân tách và chuẩn hóa địa chỉ.
     Dùng để so sánh độ chính xác giữa các thuật toán AI khác nhau.
@@ -2254,8 +2285,8 @@ def analyze_parser_address(data: dict, model: Optional[str] = None, db: Session 
     Hỗ trợ cả phân tích từ ID (trong DB) hoặc text thô.
     Tham số 'model' cho phép chỉ định chạy 1 mô hình cụ thể (incremental updates).
     """
-    sample_id = data.get("id")
-    raw_text = data.get("raw_address")
+    sample_id = data.id
+    raw_text = data.raw_address
     
     if sample_id:
         row = (
@@ -2268,9 +2299,9 @@ def analyze_parser_address(data: dict, model: Optional[str] = None, db: Session 
         # Tạo sample giả lập nếu chỉ có text
         sample = AddressCleansingQueue(
             raw_address=raw_text,
-            ward_name=data.get("ward_name"),
-            district_name=data.get("district_name"),
-            province_name=data.get("province_name")
+            ward_name=data.ward_name,
+            district_name=data.district_name,
+            province_name=data.province_name
         )
     else:
         raise HTTPException(status_code=400, detail="Missing id or raw_address")

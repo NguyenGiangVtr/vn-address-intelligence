@@ -61,9 +61,21 @@ F5 & Benchmarking       & Test Set $\to$ AI Models $\to$ Metrics $\to$ schema \s
 \subsection{Triết lý thiết kế}
 \label{sec:triet-ly}
 
-Bốn nguyên tắc thiết kế cốt lõi định hướng toàn bộ kiến trúc VNAI. \emph{Tách biệt mối quan tâm (Separation of Concerns)} --- bốn module nghiệp vụ (thu thập dữ liệu, chuẩn hóa AI, xác thực không gian, làm giàu dữ liệu) được hiện thực thành các thành phần độc lập, giao tiếp qua hợp đồng dữ liệu (data contract) rõ ràng thông qua các schema PostgreSQL chuyên biệt. \emph{Kho tri thức làm trung tâm (Knowledge Base First)} --- cơ sở dữ liệu hành chính chuẩn trong schema \schema{mat} được xem là Nguồn sự thật duy nhất (Single Source of Truth); mọi mô hình AI tra cứu Knowledge Base thay vì sinh (\thuat{hallucinate}) địa danh, qua đó loại trừ rủi ro tạo ra các định danh không tồn tại.
+Kiến trúc tổng thể của hệ thống VNAI được xây dựng dựa trên bốn nguyên tắc thiết kế cốt lõi, đảm bảo tính mô-đun hóa, tính nhất quán dữ liệu và khả năng mở rộng linh hoạt:
 
-\emph{Nhận thức thời gian (Temporal Awareness)} --- mọi thực thể hành chính đều mang thông tin thời gian theo mô hình Slowly Changing Dimension (SCD) Type 2, cho phép truy vết các phiên bản hành chính cũ và mới song song. \emph{Truy xuất lai (Hybrid Retrieval)} --- hệ thống kết hợp tìm kiếm từ vựng (Typesense BM25) với tìm kiếm ngữ nghĩa (mGTE/Siamese embedding) và Late Interaction để cân bằng giữa tốc độ và độ chính xác.
+\begin{itemize}[leftmargin=*]
+\item \textbf{Tách biệt mối quan tâm về mặt kiến trúc (Separation of Concerns).} 
+Thay vì tập trung toàn bộ thực thể vào một cơ sở dữ liệu nguyên khối, hệ thống áp dụng chiến lược phân tách logic thông qua các lược đồ (schema) chuyên biệt trên PostgreSQL. Các miền dữ liệu được cô lập bao gồm: lược đồ dữ liệu lõi (\texttt{mat}) quản lý danh mục hành chính; lược đồ không gian (\texttt{osm}); lược đồ huấn luyện và đo lường (\texttt{ath}); và lược đồ xử lý hàng đợi (\texttt{prq}). Tại tầng ứng dụng, logic điều phối giao diện lập trình (API routing) được tách biệt hoàn toàn khỏi logic nghiệp vụ và mô hình AI. Sự giao tiếp giữa các phân hệ tuân thủ nghiêm ngặt các hợp đồng dữ liệu (\textit{data contracts}) thông qua hệ thống khóa ngoại và định danh phiên bản, giúp triệt tiêu sự dư thừa mã nguồn và đảm bảo tính toàn vẹn của hệ thống khi mở rộng.
+
+\item \textbf{Lấy kho tri thức làm trung tâm (Knowledge Base First).} 
+Để khắc phục điểm yếu "ảo giác" (\textit{hallucination}) thường gặp ở các mô hình học sâu sinh thành, pipeline chuẩn hóa của VNAI không tự do dự đoán tên địa danh. Thay vào đó, hệ thống vận hành theo cơ chế truy hồi dựa trên nền tảng tri thức (\textit{retrieval-augmented}): mọi chuỗi đầu vào đều được đối chiếu và suy luận dựa trên "Nguồn sự thật duy nhất" (SSOT) được đồng bộ từ Tổng cục Thống kê (NSO). Bên cạnh đó, hệ thống thiết kế cơ chế suy thoái nhẹ (\textit{graceful degradation}); trong trường hợp các mô hình học sâu gặp sự cố hoặc quá tải, bộ quy tắc tiền xử lý (\textit{rule-based PreLabeler}) và từ điển định tuyến nội bộ sẽ lập tức tiếp quản, đảm bảo hệ thống luôn trả về phản hồi chuẩn hóa tối thiểu thay vì gián đoạn dịch vụ (\textit{downtime}).
+
+\item \textbf{Khả năng truy vết lịch sử (Temporal Awareness).} 
+Hệ thống giải quyết triệt để bài toán biến động ranh giới bằng cách tích hợp mô hình Slowly Changing Dimension (SCD Type 2) trực tiếp vào cấu trúc của mọi bản ghi hành chính. Mỗi đơn vị hành chính đều mang các thuộc tính thời gian (ngày hiệu lực, ngày hết hạn) và định danh phiên bản (trước và sau cải cách 2025). Ở luồng xử lý AI, hệ thống tích hợp các module phát hiện kỷ nguyên (\textit{Epoch Detector}) để tự động phân nhánh dữ liệu legacy. Cơ chế này cho phép duy trì song song hai hệ quy chiếu thời gian (\textit{dual-epoch}), giúp tính toán điểm tin cậy chuẩn xác mà không phá vỡ liên kết của các đơn hàng trong quá khứ.
+
+\item \textbf{Kiến trúc AI lai ghép đa tầng (Hybrid AI Pipeline).} 
+Thay vì phụ thuộc vào một mô hình đơn lẻ, giải pháp triển khai một đường ống lai ghép (rule-ML-retrieval-LLM) kết hợp thế mạnh của nhiều phương pháp. Trong môi trường vận hành thực tế (\textit{Production}), luồng xử lý diễn ra tuần tự: Trích xuất thực thể bằng PhoBERT NER $\to$ Truy xuất ngữ nghĩa (\textit{Semantic Retrieval}) bằng kiến trúc mạng Bi-encoder Siamese (sử dụng mGTE hoặc PhoBERT) dựa trên độ đo Cosine $\to$ Tinh chỉnh và chọn lọc ứng viên bằng Mô hình ngôn ngữ lớn (Qwen). Đặc biệt, hệ thống hỗ trợ chế độ chạy song song đa nhánh dành riêng cho phân hệ nghiên cứu (Research/UI), cho phép tiến hành thử nghiệm A/B (\textit{A/B testing}) và so sánh chéo hiệu năng giữa các kỹ thuật (từ Rule-based đến LLM) trong cùng một thời điểm đánh giá.
+\end{itemize}
 
 \subsection{Công nghệ (Technology Stack)}
 \label{sec:tech-stack}

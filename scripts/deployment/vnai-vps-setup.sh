@@ -64,7 +64,12 @@ apt-get install -y -qq \
     build-essential \
     git curl wget unzip \
     supervisor \
-    rsync
+    rsync \
+    liblzma-dev \
+    libbz2-dev \
+    libffi-dev \
+    libssl-dev \
+    zlib1g-dev
 
 # PostGIS (bổ sung cho PostgreSQL 12 đã có)
 echo "  Checking PostGIS..."

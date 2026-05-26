@@ -1,0 +1,12 @@
+---
+description: Prevents creating unsolicited markdown and documentation files
+globs: *
+alwaysApply: true
+---
+
+# Documentation Creation Policy
+
+- **CRITICAL**: NEVER create, generate, or stage new Markdown (`.md`) files, documentation files, or text notes automatically.
+- Only create `.md` or documentation files when the user explicitly requests it using direct commands (e.g., "Tạo file docs...", "Tạo file .md...", "Save this to a markdown file").
+- For all standard queries, provide explanations, instructions, and code snippets **directly within the chat interface**.
+- Do not attempt to bypass this by creating other documentation formats (e.g., `.txt`, `.json` for docs, or inline file creation blocks) unless asked.
