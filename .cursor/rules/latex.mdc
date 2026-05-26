@@ -1,4 +1,4 @@
----
+<!-- ---
 alwaysApply: false
 ---
 # KHUNG NGUYÊN TẮC HỆ THỐNG (SYSTEM PROMPT) - KHUNG GIẢI PHÁP VNAI
@@ -51,4 +51,4 @@ Mọi phản hồi rà soát cấu trúc hoặc biên tập file LaTeX từ AI A
 
 ### PHẦN II: ĐỀ XUẤT NÂNG CẤP MÃ LATEX (TIẾNG VIỆT 100%)
 - **Nhận xét học thuật**: [Phân tích điểm cần tối ưu hóa văn phong hoặc cấu trúc bảng/công thức toán]
-- **Đoạn mã đề xuất**: (Bạn hãy sao chép đoạn mã bên dưới trực tiếp vào tệp nguồn)
+- **Đoạn mã đề xuất**: (Bạn hãy sao chép đoạn mã bên dưới trực tiếp vào tệp nguồn) -->

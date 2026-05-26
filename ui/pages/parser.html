@@ -1,8 +1,20 @@
 <!-- ══════ PAGE: ADDRESS PARSER ══════ -->
 <div class="page" id="parser">
     <div class="page-header">
-        <h2>Vietnamese Address Intelligence Parser</h2>
-        <p>Nền tảng phân tích địa chỉ phục vụ nghiên cứu khoa học và triển khai SaaS</p>
+        <div class="page-header-left">
+            <h2>Vietnamese Address Intelligence Parser</h2>
+            <p>Chuẩn hóa địa chỉ Việt Nam bằng pipeline AI HYBRID_V1</p>
+        </div>
+        <div class="page-header-right">
+            <div class="mode-switcher" id="parser-mode-switcher">
+                <button class="mode-btn active" data-mode="quick" title="Chế độ nhanh - chỉ hiển thị kết quả cuối cùng">
+                    <i class="fa-solid fa-bolt"></i> Quick
+                </button>
+                <button class="mode-btn" data-mode="research" title="Chế độ nghiên cứu - hiển thị chi tiết pipeline">
+                    <i class="fa-solid fa-microscope"></i> Research
+                </button>
+            </div>
+        </div>
     </div>
     <!-- ── Model Status Bar ── -->
     <div class="parser-model-status-bar" id="parser-model-status-bar">
@@ -14,7 +26,7 @@
             <div class="pmsb-right">
                 <div class="pmsb-chips" id="pmsb-chips"></div>
                 <button class="pmsb-reload-btn" id="pmsb-reload-btn" type="button" title="Tải lại model AI">
-                    <i class="fa-solid fa-rotate-right"></i> Tải model
+                    <i class="fa-solid fa-rotate-right"></i>
                 </button>
             </div>
         </div>
@@ -52,108 +64,194 @@
         </div>
     </div>
 
-    <!-- ── NER Highlight Output ── -->
-    <div class="parser-ner-zone" id="parser-ner-zone">
-        <div class="parser-ner-header">
-            <span class="parser-section-label"><i class="fa-solid fa-tags"></i> NER (PreLabeler — tô màu)</span>
-            <div class="parser-ner-legend" id="parser-ner-legend"></div>
-        </div>
-        <div class="parser-ner-output">
-            <span class="parser-placeholder">
-                Vùng dưới dùng kết quả <strong>PreLabeler</strong> (rule/hybrid). Thẻ <strong>NER (HF/local)</strong> trong lưới hiển thị model <code>AddressNER</code> giống pipeline production.
-            </p>
+    <!-- ── Hero Output Card (Kết quả cuối cùng) ── -->
+    <div class="parser-hero-output" id="parser-hero-output" style="display:none">
+        <div class="hero-output-header">
+            <div class="hero-output-status">
+                <i class="fa-solid fa-circle-check" style="color:var(--success)"></i>
+                <span>Đã chuẩn hóa thành công</span>
+            </div>
+            <div class="hero-output-meta">
+                <span class="hero-meta-badge" id="hero-acs-badge">ACS 0.79</span>
+                <span class="hero-meta-badge" id="hero-decision-badge">AUTO_CONVERT</span>
+            </div>
         </div>
         
-        <div id="parser-output" class="parser-ner-output">
-            <span class="parser-placeholder">Kết quả span từ PreLabeler hiển thị tại đây; màu theo nhãn từ API</span>
+        <div class="hero-output-body">
+            <div class="hero-address-display">
+                <i class="fa-solid fa-location-dot" style="color:var(--primary);font-size:20px"></i>
+                <div class="hero-address-text" id="hero-address-text">
+                    268 Lý Thường Kiệt, Phường Diên Hồng, TP. Hồ Chí Minh, Việt Nam
+                </div>
+            </div>
+
+            <div class="hero-components-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Thành phần</th>
+                            <th>Mã hành chính</th>
+                        </tr>
+                    </thead>
+                    <tbody id="hero-components-tbody">
+                        <tr>
+                            <td><strong>Số nhà:</strong> <span id="hero-num">268</span></td>
+                            <td>—</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Đường:</strong> <span id="hero-str">Lý Thường Kiệt</span></td>
+                            <td>—</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Phường:</strong> <span id="hero-ward">Phường Diên Hồng</span></td>
+                            <td><span id="hero-ward-code">27262</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Quận:</strong> <span id="hero-district">(đã hợp nhất 2025)</span></td>
+                            <td>—</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Tỉnh/TP:</strong> <span id="hero-province">TP. Hồ Chí Minh</span></td>
+                            <td><span id="hero-province-code">79</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="hero-metadata-row">
+                <div class="hero-meta-item">
+                    <i class="fa-solid fa-map-pin"></i>
+                    <span><strong>Tọa độ:</strong> <span id="hero-coords">10.7713°N, 106.6589°E</span></span>
+                </div>
+                <div class="hero-meta-item">
+                    <i class="fa-solid fa-clock"></i>
+                    <span><strong>Epoch:</strong> <span id="hero-epoch">POST_2025 (hậu cải cách hành chính 01/07/2025)</span></span>
+                </div>
+            </div>
+
+            <div class="hero-minimap" id="hero-minimap">
+                <div class="minimap-placeholder">
+                    <i class="fa-solid fa-map"></i>
+                    <span>Mini-map (click để mở bản đồ đầy đủ)</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="hero-output-actions">
+            <button class="hero-action-btn primary" id="btn-hero-copy-json" title="Sao chép kết quả dạng JSON">
+                <i class="fa-solid fa-copy"></i> Sao chép JSON
+            </button>
+            <button class="hero-action-btn" id="btn-hero-map" title="Xem trên bản đồ">
+                <i class="fa-solid fa-map"></i> Bản đồ
+            </button>
+            <button class="hero-action-btn" id="btn-hero-code" title="Lấy code snippet">
+                <i class="fa-solid fa-code"></i> Code
+            </button>
+            <button class="hero-action-btn" id="btn-hero-report" title="Báo cáo kết quả sai">
+                <i class="fa-solid fa-flag"></i> Báo lỗi
+            </button>
+            <button class="hero-action-btn" id="btn-hero-save" title="Lưu vào danh sách">
+                <i class="fa-solid fa-star"></i> Lưu
+            </button>
         </div>
     </div>
 
-    <!-- ── 4 Model Cards Grid ── -->
-    <div class="parser-models-grid mt-12" id="parser-models-grid">
+    <!-- ── Pipeline Details Accordion ── -->
+    <div class="parser-pipeline-accordion" id="parser-pipeline-accordion" style="display:none">
+        <button class="pipeline-accordion-toggle" id="pipeline-accordion-toggle">
+            <i class="fa-solid fa-chevron-down"></i>
+            <span>Xem chi tiết 4 tầng xử lý của pipeline</span>
+            <span class="pipeline-summary" id="pipeline-summary">(NER → Retrieval → LLM → ACS — tổng 6.8s)</span>
+        </button>
         
-        <div class="pmodel-card" id="pcard-address_ner" data-model="address_ner">
-            <div class="pmodel-header">
-                <div class="pmodel-icon" style="--mc:#38bdf8"><i class="fa-solid fa-sitemap"></i></div>
-                <div class="pmodel-title">
-                    <div class="pmodel-name">NER (HF / local)</div>
-                    <div class="pmodel-sub"><code>AddressNER</code> — token classification hoặc regex; đồng bộ production</div>
+        <div class="pipeline-accordion-content" id="pipeline-accordion-content">
+            <!-- ── NER Highlight Output ── -->
+            <div class="parser-ner-zone" id="parser-ner-zone">
+                <div class="parser-ner-header">
+                    <span class="parser-section-label"><i class="fa-solid fa-tags"></i> Trích xuất thực thể (NER) — tô màu từ PreLabeler</span>
+                    <div class="parser-ner-legend" id="parser-ner-legend"></div>
                 </div>
-                <div class="pmodel-badge" id="pbadge-address_ner"><span class="pmodel-badge-idle">READY</span></div>
-            </div>
-            <div class="pmodel-body">
-                <div class="pmodel-result" id="presult-address_ner">
-                    <span class="pmodel-idle-hint">Nhập địa chỉ và nhấn Phân tích</span>
+                <div class="parser-ner-output">
+                    <span class="parser-placeholder">
+                        Vùng này hiển thị kết quả <strong>PreLabeler</strong> (rule-based fallback). Card bên dưới hiển thị model <code>AddressNER</code> (ML production).
+                    </span>
                 </div>
-                <div class="pmodel-stats" id="pstats-address_ner"></div>
+                
+                <div id="parser-output" class="parser-ner-output">
+                    <span class="parser-placeholder">Kết quả span từ PreLabeler hiển thị tại đây; màu theo nhãn từ API</span>
+                </div>
             </div>
-        </div>
 
-        <div class="pmodel-card" id="pcard-prelabeler" data-model="prelabeler">
-            <div class="pmodel-header">
-                <div class="pmodel-icon" style="--mc:#fbbf24"><i class="fa-solid fa-bolt"></i></div>
-                <div class="pmodel-title">
-                    <div class="pmodel-name">PreLabeler</div>
-                    <div class="pmodel-sub">Trích xuất thực thể NER (NUM, STR, WDS, DST, PRO...)</div>
+            <!-- ── 4 Model Cards Grid ── -->
+            <div class="parser-models-grid mt-12" id="parser-models-grid">
+                
+                <div class="pmodel-card" id="pcard-address_ner" data-model="address_ner">
+                    <div class="pmodel-header">
+                        <div class="pmodel-icon" style="--mc:#38bdf8"><i class="fa-solid fa-sitemap"></i></div>
+                        <div class="pmodel-title">
+                            <div class="pmodel-name">NER (ML Production)</div>
+                            <div class="pmodel-sub"><code>AddressNER</code> — token classification; đồng bộ production pipeline</div>
+                        </div>
+                        <div class="pmodel-badge" id="pbadge-address_ner"><span class="pmodel-badge-idle">READY</span></div>
+                    </div>
+                    <div class="pmodel-body">
+                        <div class="pmodel-result" id="presult-address_ner">
+                            <span class="pmodel-idle-hint">Nhập địa chỉ và nhấn Phân tích</span>
+                        </div>
+                        <div class="pmodel-stats" id="pstats-address_ner"></div>
+                    </div>
                 </div>
-                <div class="pmodel-badge" id="pbadge-prelabeler"><span class="pmodel-badge-idle">READY</span></div>
-            </div>
-            <div class="pmodel-body">
-                <div class="pmodel-result" id="presult-prelabeler">
-                    <span class="pmodel-idle-hint">Nhập địa chỉ và nhấn Phân tích</span>
-                </div>
-                <div class="pmodel-stats" id="pstats-prelabeler"></div>
-            </div>
-        </div>
 
-        <div class="pmodel-card" id="pcard-phobert" data-model="phobert">
-            <div class="pmodel-header">
-                <div class="pmodel-icon" style="--mc:#818cf8"><i class="fa-solid fa-brain"></i></div>
-                <div class="pmodel-title">
-                    <div class="pmodel-name">PhoBERT Siamese</div>
-                    <div class="pmodel-sub">Chuẩn hóa địa chỉ bằng similarity retrieval (Siamese)</div>
+                <div class="pmodel-card" id="pcard-phobert" data-model="phobert">
+                    <div class="pmodel-header">
+                        <div class="pmodel-icon" style="--mc:#818cf8"><i class="fa-solid fa-brain"></i></div>
+                        <div class="pmodel-title">
+                            <div class="pmodel-name">PhoBERT Siamese</div>
+                            <div class="pmodel-sub">Ứng viên gần nhất trong corpus (chỉ đơn vị hành chính, không đổi số nhà)</div>
+                        </div>
+                        <div class="pmodel-badge" id="pbadge-phobert"><span class="pmodel-badge-idle">READY</span></div>
+                    </div>
+                    <div class="pmodel-body">
+                        <div class="pmodel-result" id="presult-phobert">
+                            <span class="pmodel-idle-hint">Nhập địa chỉ và nhấn Phân tích</span>
+                        </div>
+                        <div class="pmodel-stats" id="pstats-phobert"></div>
+                    </div>
                 </div>
-                <div class="pmodel-badge" id="pbadge-phobert"><span class="pmodel-badge-idle">READY</span></div>
-            </div>
-            <div class="pmodel-body">
-                <div class="pmodel-result" id="presult-phobert">
-                    <span class="pmodel-idle-hint">Nhập địa chỉ và nhấn Phân tích</span>
-                </div>
-                <div class="pmodel-stats" id="pstats-phobert"></div>
-            </div>
-        </div>
 
-        <div class="pmodel-card" id="pcard-mgte" data-model="mgte">
-            <div class="pmodel-header">
-                <div class="pmodel-icon" style="--mc:#34d399"><i class="fa-solid fa-vector-square"></i></div>
-                <div class="pmodel-title">
-                    <div class="pmodel-name">mGTE Siamese</div>
-                    <div class="pmodel-sub">Chuẩn hóa địa chỉ bằng embedding đa ngôn ngữ (Siamese)</div>
+                <div class="pmodel-card" id="pcard-mgte" data-model="mgte">
+                    <div class="pmodel-header">
+                        <div class="pmodel-icon" style="--mc:#34d399"><i class="fa-solid fa-vector-square"></i></div>
+                        <div class="pmodel-title">
+                            <div class="pmodel-name">mGTE Siamese</div>
+                            <div class="pmodel-sub">Ứng viên gần nhất trong corpus (embedding đa ngôn ngữ)</div>
+                        </div>
+                        <div class="pmodel-badge" id="pbadge-mgte"><span class="pmodel-badge-idle">READY</span></div>
+                    </div>
+                    <div class="pmodel-body">
+                        <div class="pmodel-result" id="presult-mgte">
+                            <span class="pmodel-idle-hint">Nhập địa chỉ và nhấn Phân tích</span>
+                        </div>
+                        <div class="pmodel-stats" id="pstats-mgte"></div>
+                    </div>
                 </div>
-                <div class="pmodel-badge" id="pbadge-mgte"><span class="pmodel-badge-idle">READY</span></div>
-            </div>
-            <div class="pmodel-body">
-                <div class="pmodel-result" id="presult-mgte">
-                    <span class="pmodel-idle-hint">Nhập địa chỉ và nhấn Phân tích</span>
-                </div>
-                <div class="pmodel-stats" id="pstats-mgte"></div>
-            </div>
-        </div>
 
-        <div class="pmodel-card" id="pcard-llm" data-model="llm">
-            <div class="pmodel-header">
-                <div class="pmodel-icon" style="--mc:#f472b6"><i class="fa-solid fa-sparkles"></i></div>
-                <div class="pmodel-title">
-                    <div class="pmodel-name">Qwen 2.5 LLM</div>
-                    <div class="pmodel-sub">Chuẩn hóa địa chỉ bằng suy luận ngôn ngữ (RAG + LLM)</div>
+                <div class="pmodel-card" id="pcard-llm" data-model="llm">
+                    <div class="pmodel-header">
+                        <div class="pmodel-icon" style="--mc:#f472b6"><i class="fa-solid fa-sparkles"></i></div>
+                        <div class="pmodel-title">
+                            <div class="pmodel-name">Qwen 2.5 LLM</div>
+                            <div class="pmodel-sub">Chuẩn hóa địa chỉ bằng suy luận ngôn ngữ (RAG + LLM)</div>
+                        </div>
+                        <div class="pmodel-badge" id="pbadge-llm"><span class="pmodel-badge-idle">READY</span></div>
+                    </div>
+                    <div class="pmodel-body">
+                        <div class="pmodel-result" id="presult-llm">
+                            <span class="pmodel-idle-hint">Nhập địa chỉ và nhấn Phân tích</span>
+                        </div>
+                        <div class="pmodel-stats" id="pstats-llm"></div>
+                    </div>
                 </div>
-                <div class="pmodel-badge" id="pbadge-llm"><span class="pmodel-badge-idle">READY</span></div>
-            </div>
-            <div class="pmodel-body">
-                <div class="pmodel-result" id="presult-llm">
-                    <span class="pmodel-idle-hint">Nhập địa chỉ và nhấn Phân tích</span>
-                </div>
-                <div class="pmodel-stats" id="pstats-llm"></div>
             </div>
         </div>
     </div>
@@ -165,16 +263,6 @@
                     <i class="fa-solid fa-database" style="color:var(--info);font-size:13px"></i>
                     <span id="parser-meta-corpus-line" class="text-secondary" style="font-size:12px"><strong>Đang tải...</strong> địa chỉ trong corpus</span>
                 </div>
-                <div style="width:4px;height:4px;border-radius:50%;background:var(--border-default);"></div>
-                <div style="display:flex;align-items:center;gap:6px">
-                    <i class="fa-solid fa-chart-line" style="color:var(--success);font-size:13px"></i>
-                    <span id="parser-meta-acs-line" style="font-size:12px;color:var(--text-secondary)">ACS <strong style="color:var(--warning)">79.8%</strong> · AUTO_CONVERT</span>
-                </div>
-                <div style="width:4px;height:4px;border-radius:50%;background:var(--border-default);"></div>
-                <div style="display:flex;align-items:center;gap:6px">
-                    <i class="fa-solid fa-code-commit" style="color:var(--text-tertiary);font-size:13px"></i>
-                    <span id="parser-meta-epoch-line" style="font-size:12px;color:var(--text-tertiary)">Epoch: PRE_2025</span>
-                </div>
             </div>
         </div>
         
@@ -182,10 +270,6 @@
             <button class="quick-action-btn" data-goto="label-registry" title="Danh sách nhãn NER"><i class="fa-solid fa-tags"></i> <span>Nhãn NER</span></button>
             <button class="quick-action-btn" data-goto="batch" title="Xử lý hàng loạt"><i class="fa-solid fa-layer-group"></i> <span>Hàng loạt</span></button>
             <button class="quick-action-btn" data-goto="experiments" title="So sánh mô hình"><i class="fa-solid fa-flask-vial"></i> <span>So sánh</span></button>
-            <div class="quick-actions-divider"></div>
-            <button class="quick-action-btn icon-only" id="btn-export-result" title="Xuất kết quả"><i class="fa-solid fa-download"></i></button>
-            <button class="quick-action-btn icon-only" id="btn-copy-json" title="Copy JSON"><i class="fa-solid fa-copy"></i></button>
-            <button class="quick-action-btn icon-only" id="btn-parser-help" title="Trợ giúp"><i class="fa-solid fa-question-circle"></i></button>
         </div>
     </div>
 </div>

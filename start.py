@@ -13,7 +13,7 @@ elif project_root not in sys.path:
 if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "serve-ui":
         import uvicorn
-        uvicorn.run("app.api.server:app", host="0.0.0.0", port=8081, reload=True)
+        uvicorn.run("app.api.server:app", host="0.0.0.0", port=8081, reload=False)
     else:
         from app.main import cli
         cli()

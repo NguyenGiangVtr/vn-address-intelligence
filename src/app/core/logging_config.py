@@ -61,8 +61,9 @@ def setup_logging():
                 elasticapm.instrumentation.control.instrument()
                 
                 # Tự động gom toàn bộ log từ logging mặc định của Python đẩy vào APM
+                # Chỉ gửi WARNING trở lên để tránh spam Kibana với INFO logs
                 apm_handler = LoggingHandler(client=apm_client)
-                apm_handler.setLevel(logging.INFO)
+                apm_handler.setLevel(logging.WARNING)
                 logging.getLogger().addHandler(apm_handler)
                 
                 logger.info(f"Elastic APM logging integrated at {Config.KIBANA_LOG_HOST}:{Config.KIBANA_LOG_PORT}")

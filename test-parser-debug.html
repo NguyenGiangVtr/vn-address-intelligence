@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Parser Debug Test</title>
+    <style>
+        body { font-family: Arial; padding: 20px; background: #1a1a1a; color: #fff; }
+        .hero-output { 
+            display: none; 
+            background: #2a2a2a; 
+            padding: 20px; 
+            margin: 20px 0; 
+            border-radius: 8px;
+            border: 2px solid #4a4a4a;
+        }
+        .hero-output.show { display: block; }
+        button { padding: 10px 20px; margin: 5px; background: #4a90e2; color: white; border: none; cursor: pointer; }
+        pre { background: #0a0a0a; padding: 10px; overflow: auto; }
+        .status { padding: 10px; margin: 10px 0; background: #333; }
+    </style>
+</head>
+<body>
+    <h1>Parser Debug Test</h1>
+    
+    <button onclick="testParser()">Test Parser Flow</button>
+    <button onclick="clearLogs()">Clear Logs</button>
+    
+    <div class="status" id="status">Ready</div>
+    
+    <div class="hero-output" id="hero-output">
+        <h3>Hero Output Card</h3>
+        <p><strong>Địa chỉ:</strong> <span id="hero-address">-</span></p>
+        <p><strong>Số nhà:</strong> <span id="hero-num">-</span></p>
+        <p><strong>Đường:</strong> <span id="hero-str">-</span></p>
+        <p><strong>Phường:</strong> <span id="hero-ward">-</span></p>
+    </div>
+    
+    <h3>Console Logs:</h3>
+    <pre id="logs"></pre>
+    
+    <script>
+        const API_BASE = 'http://localhost:8081/api';
+        let logs = [];
+        
+        function log(msg) {
+            const timestamp = new Date().toISOString().split('T')[1].slice(0, -1);
+            logs.push(`[${timestamp}] ${msg}`);
+            document.getElementById('logs').textContent = logs.join('\n');
+            console.log(msg);
+        }
+        
+        function clearLogs() {
+            logs = [];
+            document.getElementById('logs').textContent = '';
+        }
+        
+        async function testParser() {
+            clearLogs();
+            log('=== Starting Parser Test ===');
+            
+            const address = "268 Ly Thuong Kiet, Phuong Dien Hong, Ho Chi Minh";
+            const models = ['prelabeler', 'address_ner', 'phobert', 'mgte', 'llm'];
+            
+            let prelabelerEntities = [];
+            let completedCount = 0;
+            
+            document.getElementById('status').textContent = 'Đang phân tích...';
+            
+            // Fetch all models
+            for (const model of models) {
+                try {
+                    log(`Fetching ${model}...`);
+                    
+                    const response = await fetch(`${API_BASE}/parser/analyze?model=${model}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ raw_address: address })
+                    });
+                    
+                    const data = await response.json();
+                    completedCount++;
+                    
+                    log(`${model} completed (${completedCount}/${models.length})`);
+                    
+                    if (model === 'prelabeler' && data.outputs && data.outputs.prelabeler) {
+                        prelabelerEntities = data.outputs.prelabeler.result || [];
+                        log(`Saved ${prelabelerEntities.length} prelabeler entities`);
+                    }
+                    
+                    document.getElementById('status').textContent = `Đang phân tích — ${completedCount}/${models.length} model hoàn thành...`;
+                    
+                } catch (error) {
+                    log(`ERROR in ${model}: ${error.message}`);
+                }
+            }
+            
+            log('=== All models completed ===');
+            log(`prelabelerEntities count: ${prelabelerEntities.length}`);
+            
+            // Extract components
+            const components = {
+                house_number: "",
+                street: "",
+                ward: { name: "" }
+            };
+            
+            if (prelabelerEntities.length > 0) {
+                log('Extracting components from entities...');
+                
+                prelabelerEntities.forEach((entity, idx) => {
+                    const label = entity.value?.labels?.[0] || entity.label || "";
+                    const text = entity.value?.text || entity.text || "";
+                    
+                    log(`Entity ${idx}: label=${label}, text=${text}`);
+                    
+                    if (label === "NUM") components.house_number = text;
+                    else if (label === "STR") components.street = text;
+                    else if (label === "WDS") components.ward.name = text;
+                });
+                
+                log(`Extracted components: ${JSON.stringify(components)}`);
+            } else {
+                log('WARNING: No prelabelerEntities found!');
+            }
+            
+            // Update UI
+            log('Updating Hero Output...');
+            
+            const heroOutput = document.getElementById('hero-output');
+            document.getElementById('hero-address').textContent = address;
+            document.getElementById('hero-num').textContent = components.house_number || '-';
+            document.getElementById('hero-str').textContent = components.street || '-';
+            document.getElementById('hero-ward').textContent = components.ward.name || '-';
+            
+            heroOutput.classList.add('show');
+            
+            document.getElementById('status').textContent = `Hoàn thành — ${models.length}/${models.length} model`;
+            
+            log('=== Hero Output displayed ===');
+        }
+    </script>
+</body>
+</html>

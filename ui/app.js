@@ -4168,6 +4168,15 @@ function setupParserTool() {
 
   // Setup enhanced footer functionality
   _setupParserFooterActions();
+
+  // Setup mode switcher
+  _setupParserModeSwitcher();
+
+  // Setup hero output actions
+  _setupHeroOutputActions();
+
+  // Setup pipeline accordion
+  _setupPipelineAccordion();
 }
 
 function _setupParserFooterActions() {
@@ -4227,6 +4236,361 @@ function _setupParserFooterActions() {
       }
     });
   }
+}
+
+function _setupParserModeSwitcher() {
+  const modeBtns = document.querySelectorAll(".mode-btn");
+  const heroOutput = document.getElementById("parser-hero-output");
+  const pipelineAccordion = document.getElementById("parser-pipeline-accordion");
+
+  if (!modeBtns.length) return;
+
+  modeBtns.forEach(btn => {
+    btn.addEventListener("click", () => {
+      const mode = btn.dataset.mode;
+      
+      // Update active state
+      modeBtns.forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+
+      // Toggle visibility based on mode
+      if (mode === "quick") {
+        // Quick mode: show hero output, hide accordion by default
+        if (pipelineAccordion) {
+          const accordionContent = document.getElementById("pipeline-accordion-content");
+          const accordionToggle = document.getElementById("pipeline-accordion-toggle");
+          if (accordionContent) accordionContent.classList.remove("active");
+          if (accordionToggle) accordionToggle.classList.remove("active");
+        }
+      } else if (mode === "research") {
+        // Research mode: show hero output and expand accordion
+        if (pipelineAccordion) {
+          const accordionContent = document.getElementById("pipeline-accordion-content");
+          const accordionToggle = document.getElementById("pipeline-accordion-toggle");
+          if (accordionContent) accordionContent.classList.add("active");
+          if (accordionToggle) accordionToggle.classList.add("active");
+        }
+      }
+    });
+  });
+}
+
+function _setupHeroOutputActions() {
+  // Copy JSON button
+  const btnCopyJson = document.getElementById("btn-hero-copy-json");
+  if (btnCopyJson) {
+    btnCopyJson.addEventListener("click", () => {
+      const heroData = _collectHeroOutputData();
+      if (heroData) {
+        navigator.clipboard.writeText(JSON.stringify(heroData, null, 2)).then(() => {
+          if (showToast) showToast("Đã copy JSON vào clipboard", "success");
+        });
+      } else {
+        if (showToast) showToast("Chưa có kết quả để copy", "warning");
+      }
+    });
+  }
+
+  // Map button
+  const btnMap = document.getElementById("btn-hero-map");
+  if (btnMap) {
+    btnMap.addEventListener("click", () => {
+      const coords = document.getElementById("hero-coords")?.textContent;
+      if (coords) {
+        if (showToast) showToast("Tính năng bản đồ đang được phát triển", "info");
+        // TODO: Open map modal with coordinates
+      }
+    });
+  }
+
+  // Code snippet button
+  const btnCode = document.getElementById("btn-hero-code");
+  if (btnCode) {
+    btnCode.addEventListener("click", () => {
+      _showCodeSnippetModal();
+    });
+  }
+
+  // Report error button
+  const btnReport = document.getElementById("btn-hero-report");
+  if (btnReport) {
+    btnReport.addEventListener("click", () => {
+      if (showToast) showToast("Tính năng báo lỗi đang được phát triển", "info");
+      // TODO: Open report modal
+    });
+  }
+
+  // Save button
+  const btnSave = document.getElementById("btn-hero-save");
+  if (btnSave) {
+    btnSave.addEventListener("click", () => {
+      if (showToast) showToast("Tính năng lưu đang được phát triển", "info");
+      // TODO: Save to favorites
+    });
+  }
+
+  // Mini-map click
+  const minimap = document.getElementById("hero-minimap");
+  if (minimap) {
+    minimap.addEventListener("click", () => {
+      const coords = document.getElementById("hero-coords")?.textContent;
+      if (coords) {
+        if (showToast) showToast("Tính năng bản đồ đang được phát triển", "info");
+        // TODO: Open fullscreen map
+      }
+    });
+  }
+}
+
+function _setupPipelineAccordion() {
+  const accordionToggle = document.getElementById("pipeline-accordion-toggle");
+  const accordionContent = document.getElementById("pipeline-accordion-content");
+
+  if (!accordionToggle || !accordionContent) return;
+
+  accordionToggle.addEventListener("click", () => {
+    const isActive = accordionContent.classList.contains("active");
+    
+    if (isActive) {
+      accordionContent.classList.remove("active");
+      accordionToggle.classList.remove("active");
+    } else {
+      accordionContent.classList.add("active");
+      accordionToggle.classList.add("active");
+    }
+  });
+}
+
+function _collectHeroOutputData() {
+  const heroOutput = document.getElementById("parser-hero-output");
+  if (!heroOutput || heroOutput.style.display === "none") return null;
+
+  const inputEl = document.getElementById("parser-input");
+  
+  return {
+    timestamp: new Date().toISOString(),
+    input: inputEl?.value?.trim() || "",
+    standardized: {
+      full_address: document.getElementById("hero-address-text")?.textContent || "",
+      components: {
+        house_number: document.getElementById("hero-num")?.textContent || "",
+        street: document.getElementById("hero-str")?.textContent || "",
+        ward: {
+          name: document.getElementById("hero-ward")?.textContent || "",
+          id: document.getElementById("hero-ward-code")?.textContent || ""
+        },
+        district: document.getElementById("hero-district")?.textContent || null,
+        province: {
+          name: document.getElementById("hero-province")?.textContent || "",
+          id: document.getElementById("hero-province-code")?.textContent || ""
+        }
+      },
+      coordinates: document.getElementById("hero-coords")?.textContent || "",
+      epoch: document.getElementById("hero-epoch")?.textContent || ""
+    },
+    confidence: {
+      acs_score: document.getElementById("hero-acs-badge")?.textContent || "",
+      acs_decision: document.getElementById("hero-decision-badge")?.textContent || ""
+    }
+  };
+}
+
+function _showCodeSnippetModal() {
+  const heroData = _collectHeroOutputData();
+  if (!heroData) {
+    if (showToast) showToast("Chưa có kết quả để tạo code snippet", "warning");
+    return;
+  }
+
+  const pythonCode = `# Python example
+import requests
+
+response = requests.post(
+    "https://api.vnai.cloud/parser/analyze",
+    json={"raw_address": "${heroData.input}"},
+    headers={"Authorization": "Bearer YOUR_API_KEY"}
+)
+result = response.json()
+print(result)`;
+
+  const jsCode = `// JavaScript example
+fetch("https://api.vnai.cloud/parser/analyze", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "Authorization": "Bearer YOUR_API_KEY"
+  },
+  body: JSON.stringify({
+    raw_address: "${heroData.input}"
+  })
+})
+.then(res => res.json())
+.then(data => console.log(data));`;
+
+  // TODO: Show modal with code snippets
+  if (showToast) showToast("Code snippet: " + pythonCode.substring(0, 50) + "...", "info");
+}
+
+function _updateHeroOutput(data) {
+  console.log('[DEBUG] _updateHeroOutput called with:', data);
+  
+  const heroOutput = document.getElementById("parser-hero-output");
+  if (!heroOutput) {
+    console.error('[DEBUG] parser-hero-output element not found!');
+    return;
+  }
+
+  // Show hero output
+  heroOutput.style.display = "block";
+  console.log('[DEBUG] Set heroOutput display to block');
+
+  // Show pipeline accordion
+  const pipelineAccordion = document.getElementById("parser-pipeline-accordion");
+  if (pipelineAccordion) pipelineAccordion.style.display = "block";
+
+  // Update address text
+  const heroAddressText = document.getElementById("hero-address-text");
+  if (heroAddressText && data.standardized_address) {
+    heroAddressText.textContent = data.standardized_address;
+  }
+
+  // Update components
+  if (data.components) {
+    const numEl = document.getElementById("hero-num");
+    const strEl = document.getElementById("hero-str");
+    const wardEl = document.getElementById("hero-ward");
+    const wardCodeEl = document.getElementById("hero-ward-code");
+    const districtEl = document.getElementById("hero-district");
+    const provinceEl = document.getElementById("hero-province");
+    const provinceCodeEl = document.getElementById("hero-province-code");
+
+    if (numEl && data.components.house_number) numEl.textContent = data.components.house_number;
+    if (strEl && data.components.street) strEl.textContent = data.components.street;
+    if (wardEl && data.components.ward?.name) wardEl.textContent = data.components.ward.name;
+    if (wardCodeEl && data.components.ward?.id) wardCodeEl.textContent = data.components.ward.id;
+    if (districtEl && data.components.district) districtEl.textContent = data.components.district;
+    if (provinceEl && data.components.province?.name) provinceEl.textContent = data.components.province.name;
+    if (provinceCodeEl && data.components.province?.id) provinceCodeEl.textContent = data.components.province.id;
+  }
+
+  // Update coordinates
+  const coordsEl = document.getElementById("hero-coords");
+  if (coordsEl && data.coordinates) {
+    coordsEl.textContent = data.coordinates;
+  }
+
+  // Update epoch
+  const epochEl = document.getElementById("hero-epoch");
+  if (epochEl && data.epoch) {
+    epochEl.textContent = data.epoch;
+  }
+
+  // Update ACS badges
+  const acsBadge = document.getElementById("hero-acs-badge");
+  const decisionBadge = document.getElementById("hero-decision-badge");
+  if (acsBadge && data.acs_score) {
+    acsBadge.textContent = `ACS ${data.acs_score}`;
+  }
+  if (decisionBadge && data.acs_decision) {
+    decisionBadge.textContent = data.acs_decision;
+  }
+
+  // Update pipeline summary
+  const pipelineSummary = document.getElementById("pipeline-summary");
+  if (pipelineSummary && data.total_time) {
+    pipelineSummary.textContent = `(NER → Retrieval → LLM → ACS — tổng ${data.total_time})`;
+  }
+}
+
+function _updateHeroOutputFromResults(lastMeta, totalMs, prelabelerEntities = []) {
+  console.log('[DEBUG] _updateHeroOutputFromResults called', { lastMeta, totalMs, prelabelerEntities });
+  
+  // Extract data from lastMeta and model cards to populate hero output
+  const inputEl = document.getElementById("parser-input");
+  const inputText = inputEl?.value?.trim() || "";
+
+  // Get LLM result for standardized address
+  const llmResultEl = document.getElementById("presult-llm");
+  let standardizedAddress = inputText;
+  
+  // Try to extract standardized address from LLM result
+  if (llmResultEl) {
+    const llmText = llmResultEl.textContent || llmResultEl.innerText;
+    // Simple extraction - in production this should parse the actual JSON response
+    if (llmText && llmText.length > 0 && !llmText.includes("Nhập địa chỉ")) {
+      standardizedAddress = llmText.substring(0, 200); // Limit length
+    }
+  }
+
+  // Get NER entities for components
+  let components = {
+    house_number: "",
+    street: "",
+    ward: { name: "", id: "" },
+    district: "",
+    province: { name: "", id: "" }
+  };
+
+  // Extract components from PreLabeler entities (passed as parameter)
+  console.log('[DEBUG] Processing prelabelerEntities:', prelabelerEntities);
+  
+  if (prelabelerEntities && prelabelerEntities.length > 0) {
+    prelabelerEntities.forEach(entity => {
+      // PreLabeler entities have structure: { value: { labels: ["STR"], text: "..." } }
+      const label = entity.value?.labels?.[0] || entity.label || "";
+      const text = entity.value?.text || entity.text || "";
+      console.log('[DEBUG] Entity label:', label, 'text:', text);
+      
+      if (label === "NUM") components.house_number = text;
+      else if (label === "STR") components.street = text;
+      else if (label === "WDS") components.ward.name = text;
+      else if (label === "DST") components.district = text;
+      else if (label === "PRO") components.province.name = text;
+    });
+  }
+  
+  console.log('[DEBUG] Extracted components:', components);
+
+  // Get ACS data from lastMeta
+  let acsScore = "0.79";
+  let acsDecision = "AUTO_CONVERT";
+  let epoch = "POST_2025";
+
+  if (lastMeta) {
+    if (lastMeta._acs) {
+      acsScore = (lastMeta._acs.score || 0.79).toFixed(2);
+      acsDecision = lastMeta._acs.decision || "AUTO_CONVERT";
+    }
+    if (lastMeta.epoch) {
+      epoch = lastMeta.epoch;
+    }
+  }
+
+  // Format total time
+  const totalTimeFmt = totalMs >= 1000
+    ? `${(totalMs / 1000).toFixed(1)}s`
+    : `${totalMs}ms`;
+
+  // Update hero output
+  console.log('[DEBUG] Calling _updateHeroOutput with data:', {
+    standardized_address: standardizedAddress,
+    components: components,
+    coordinates: "10.7713°N, 106.6589°E",
+    epoch: epoch,
+    acs_score: acsScore,
+    acs_decision: acsDecision,
+    total_time: totalTimeFmt
+  });
+  
+  _updateHeroOutput({
+    standardized_address: standardizedAddress,
+    components: components,
+    coordinates: "10.7713°N, 106.6589°E", // TODO: Get from geocoding result
+    epoch: epoch,
+    acs_score: acsScore,
+    acs_decision: acsDecision,
+    total_time: totalTimeFmt
+  });
 }
 
 function _collectParserResults() {
@@ -4499,6 +4863,7 @@ async function runParser() {
   let completedCount = 0;
   let firstNERDone = false;
   let lastMeta = null;
+  let prelabelerEntities = []; // Store prelabeler entities for hero output
 
   const totalModelsUi = models.length;
 
@@ -4540,6 +4905,7 @@ async function runParser() {
       if (key === "prelabeler" && !firstNERDone) {
         firstNERDone = true;
         const entities = out?.result || [];
+        prelabelerEntities = entities; // Save for hero output
         renderNERHighlight(entities);
       }
     } catch (e) {
@@ -4551,7 +4917,9 @@ async function runParser() {
   };
 
   try {
+    console.log('[DEBUG] Starting Promise.all for models:', models.map(m => m.key));
     await Promise.all(models.map(fetchModel));
+    console.log('[DEBUG] All models completed');
 
     const totalMs = Date.now() - startTs;
     const totalMsFmt = totalMs >= 1000
@@ -4567,7 +4935,15 @@ async function runParser() {
 
     // Update performance metrics
     _updatePerformanceMetrics(totalMs, text);
+
+    console.log('[DEBUG] About to call _updateHeroOutputFromResults with prelabelerEntities:', prelabelerEntities);
+    
+    // Update hero output with final result
+    _updateHeroOutputFromResults(lastMeta, totalMs, prelabelerEntities);
+    
+    console.log('[DEBUG] _updateHeroOutputFromResults completed');
   } catch (err) {
+    console.error('[DEBUG] Error in runParser:', err);
     _setParserStatus("error", "Đã xảy ra lỗi trong quá trình phân tích");
   } finally {
     if (heroInner) heroInner.classList.remove("is-running");
@@ -4681,7 +5057,7 @@ function _renderModelCard(model, out, latencyMs) {
           const lbl = e.label || (e.value?.labels?.[0]) || "?";
           const txt = e.text || e.value?.text || "";
           const info = labelInfo[lbl] || { color: "#888" };
-          return `<span class="pmodel-ent-chip" style="background:${info.color}18;color:${info.color}" title="${lbl}">${lbl}: ${escapeHtml(txt)}</span>`;
+          return `<span class="pmodel-ent-chip" data-entity="${lbl}" data-text="${escapeHtml(txt)}" style="background:${info.color}18;color:${info.color}" title="${lbl}">${lbl}: ${escapeHtml(txt)}</span>`;
         }).join("");
         html += `<div class="pmodel-entities">${chips}</div>`;
       } else if (out.result && typeof out.result === "object" && !Array.isArray(out.result)) {

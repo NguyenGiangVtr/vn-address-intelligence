@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Parser Test</title>
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        .result { margin: 20px 0; padding: 10px; border: 1px solid #ccc; }
+        button { padding: 10px 20px; margin: 5px; }
+        pre { background: #f5f5f5; padding: 10px; overflow: auto; }
+    </style>
+</head>
+<body>
+    <h1>Parser API Test</h1>
+    
+    <input type="text" id="address" value="268 Ly Thuong Kiet, Phuong Dien Hong, Ho Chi Minh" style="width: 500px; padding: 8px;">
+    <br><br>
+    <button onclick="testPrelabeler()">Test PreLabeler</button>
+    <button onclick="testAddressNER()">Test AddressNER</button>
+    <button onclick="testAll()">Test All Models</button>
+    
+    <div id="result" class="result"></div>
+    
+    <script>
+        const API_BASE = 'http://localhost:8081/api';
+        
+        async function testPrelabeler() {
+            const address = document.getElementById('address').value;
+            const resultDiv = document.getElementById('result');
+            
+            resultDiv.innerHTML = '<p>Loading prelabeler...</p>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/parser/analyze?model=prelabeler`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ raw_address: address })
+                });
+                
+                const data = await response.json();
+                
+                console.log('PreLabeler response:', data);
+                
+                let html = '<h3>PreLabeler Result</h3>';
+                html += `<p>Status: ${response.status}</p>`;
+                
+                if (data.outputs && data.outputs.prelabeler) {
+                    const prelabeler = data.outputs.prelabeler;
+                    html += `<p>Mode: ${prelabeler.mode}</p>`;
+                    html += `<p>Entity Count: ${prelabeler.entityCount}</p>`;
+                    
+                    if (prelabeler.result && prelabeler.result.length > 0) {
+                        html += '<h4>Entities:</h4><ul>';
+                        prelabeler.result.forEach(entity => {
+                            const label = entity.label || entity.value?.labels?.[0] || '?';
+                            const text = entity.text || entity.value?.text || '?';
+                            html += `<li><strong>${label}:</strong> ${text}</li>`;
+                        });
+                        html += '</ul>';
+                    }
+                }
+                
+                if (data.error) {
+                    html += `<p style="color: red;">Error: ${data.error}</p>`;
+                }
+                
+                html += '<h4>Full Response:</h4>';
+                html += `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+                
+                resultDiv.innerHTML = html;
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+                console.error('Error:', error);
+            }
+        }
+        
+        async function testAddressNER() {
+            const address = document.getElementById('address').value;
+            const resultDiv = document.getElementById('result');
+            
+            resultDiv.innerHTML = '<p>Loading address_ner...</p>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/parser/analyze?model=address_ner`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ raw_address: address })
+                });
+                
+                const data = await response.json();
+                
+                console.log('AddressNER response:', data);
+                
+                let html = '<h3>AddressNER Result</h3>';
+                html += `<p>Status: ${response.status}</p>`;
+                html += '<h4>Full Response:</h4>';
+                html += `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+                
+                resultDiv.innerHTML = html;
+                
+            } catch (error) {
+                resultDiv.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+                console.error('Error:', error);
+            }
+        }
+        
+        async function testAll() {
+            const address = document.getElementById('address').value;
+            const resultDiv = document.getElementById('result');
+            
+            resultDiv.innerHTML = '<p>Testing all models...</p>';
+            
+            const models = ['prelabeler', 'address_ner', 'phobert', 'mgte'];
+            const results = {};
+            
+            for (const model of models) {
+                try {
+                    const response = await fetch(`${API_BASE}/parser/analyze?model=${model}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ raw_address: address })
+                    });
+                    
+                    const data = await response.json();
+                    results[model] = { status: response.status, data };
+                    
+                } catch (error) {
+                    results[model] = { error: error.message };
+                }
+            }
+            
+            let html = '<h3>All Models Results</h3>';
+            
+            for (const [model, result] of Object.entries(results)) {
+                html += `<h4>${model}</h4>`;
+                if (result.error) {
+                    html += `<p style="color: red;">Error: ${result.error}</p>`;
+                } else {
+                    html += `<p>Status: ${result.status}</p>`;
+                    html += `<pre>${JSON.stringify(result.data, null, 2)}</pre>`;
+                }
+            }
+            
+            resultDiv.innerHTML = html;
+        }
+    </script>
+</body>
+</html>
